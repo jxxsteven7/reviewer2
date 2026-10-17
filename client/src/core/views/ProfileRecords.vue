@@ -115,7 +115,7 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
             <span v-else class="verdict">{{ short(record.verdict) }}</span>
           </span>
           <button
-            v-if="record.replay && games[record.game]"
+            v-if="games[record.game]"
             type="button"
             class="watch"
             :disabled="busy"

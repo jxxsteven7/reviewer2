@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
+import { useScrolled } from '../useScrolled';
 import { canGoBack } from './BackButton.vue';
 import SiteWordmark from './SiteWordmark.vue';
 
@@ -20,16 +21,8 @@ const props = withDefaults(defineProps<{ compact?: boolean; pinned?: boolean; ba
 });
 const yields = props.back && canGoBack();
 const stays = computed(() => (!props.compact || props.pinned) && !yields);
-const scrolled = ref(false);
-const onScroll = () => {
-  scrolled.value = window.scrollY > 0;
-};
-onMounted(() => {
-  if (yields) return;
-  onScroll();
-  window.addEventListener('scroll', onScroll, { passive: true });
-});
-onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
+// A masthead that scrolls away has no shade to draw, and no scrolling to watch.
+const scrolled = yields ? ref(false) : useScrolled();
 </script>
 
 <template>
@@ -83,6 +76,14 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll));
 
 .masthead.scrolled::after {
   opacity: 1;
+}
+
+/* In a waiting room, the chair's start bar stays under the masthead, and once it is stuck there it
+   draws the shade itself (KeywordsLobby.vue): the lowest bar that is stuck has it. The whole
+   selector is global: a scoped selector can't reach the html element, and a `:global()` that stops
+   before the masthead's own part would be compiled down to the html element alone. */
+:global(html:has(.start-dock.stuck) .masthead.scrolled::after) {
+  opacity: 0;
 }
 
 /* A room's masthead that stays sits under the banner while the page reconnects, and is as tall as

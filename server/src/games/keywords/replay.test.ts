@@ -13,7 +13,8 @@ import { pick, seededRng } from '../../core/random';
 import type { Room } from '../../core/room';
 import { Rooms } from '../../core/rooms';
 import { keywordsGame, type KeywordsData } from './index';
-import { shownReplay } from './replay';
+import { keyFor } from '../../store/recount';
+import { recountOf, shownReplay } from './replay';
 import { seatOf } from './seats';
 import { LAYOUT } from './testing';
 
@@ -33,11 +34,12 @@ const settings: KeywordsSettings = {
   clueTime: 30,
   guessTime: 30,
 };
-const setup = { language: 'en', settings, startingTeam: 'red', cards };
+const setup = { settings, startingTeam: 'red', cards };
 const shown = (log: GameLogData, accounts: [string, string][] = [], viewer: string[] = []) =>
   shownReplay({
     setup,
     log,
+    language: 'en',
     accounts: new Map(accounts.map(([id, username]) => [id, { username, avatar: null, handle: `h-${id}` }])),
     viewer: new Set(viewer),
   });
@@ -365,6 +367,7 @@ describe('the replay of a random game', () => {
       const replay = shownReplay({
         setup: record.setup,
         log: record.log,
+        language: room.language,
         accounts: new Map(
           [...accounts].map(([id, number]) => [
             id,
@@ -413,6 +416,38 @@ describe('the replay of a random game', () => {
     }
     // Enough of the games finished for this to say something.
     expect(finished).toBeGreaterThan(40);
+  });
+
+  test('counts again, from the record, what the room counted as the game ended, for every account', () => {
+    let finished = 0;
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const { room } = play(seed);
+      if (room.phase === 'playing') room.withdraw(room.gameId as string);
+      const record = room.record();
+      if (!record || record.ending !== 'finished') continue;
+      finished += 1;
+      // Who was who, as the record and its log have it (store/recount.ts).
+      const who = new Map(record.accounts.map(({ playerId, accountId }) => [playerId, accountId]));
+      const keyOf = keyFor(who, record.log);
+      const count = recountOf({ setup: record.setup, log: record.log, language: room.language, keyOf });
+      if (!count) throw new Error(`game ${seed} cannot be counted`);
+      const points = new Map(count.scores.map(({ key, points: won }) => [key, won]));
+      const live = room.points();
+      for (const result of room.results() ?? []) {
+        const member = room.members.get(result.playerId);
+        if (!member?.account) continue;
+        const again = count.results.find(({ playerId }) => playerId === result.playerId);
+        expect(again, `game ${seed}, ${result.playerId}`).toMatchObject({
+          side: result.side,
+          role: result.role,
+          won: result.won,
+          verdict: result.verdict,
+          titles: result.titles,
+        });
+        expect(points.get(keyOf(result.playerId)), `game ${seed}, ${result.playerId}`).toBe(live?.get(member.key) ?? 0);
+      }
+    }
+    expect(finished).toBeGreaterThan(60);
   });
 });
 
@@ -474,10 +509,11 @@ function roomWithGuest(settings: Partial<KeywordsSettings>) {
 
 // A guest who leaves during the game and comes back with the same browser has their number again,
 // and keeps it for what they did before leaving once they log in: the record of the game numbers
-// both IDs they had as a guest, and the account they have since is theirs from then on. What the
-// game counts of what they did under either ID, as points and titles, is the account's then too.
+// both IDs they had as a guest, and the account they have since is theirs for both, so that what
+// the game counts of what they did under either ID, as points and titles, is the account's, now
+// and when the record is counted again.
 describe('the replay of a game in which a guest logged in', () => {
-  test('shows what they did as a guest by their number, and what they did since as the account', () => {
+  test('shows them as the account under both IDs they had, which the record numbers as the guest', () => {
     const { room, account, join, seat, game, moment, own, redsTurn, ann, bob, cat, guest } = roomWithGuest({
       firstClueTime: 0,
       clueTime: 0,
@@ -506,10 +542,12 @@ describe('the replay of a game in which a guest logged in', () => {
     if (!record?.log) throw new Error('no record');
     expect(record.log.guests).toEqual({ [guest]: 1 });
     expect(record.accounts).toContainEqual({ playerId: back, accountId: 9 });
+    expect(record.accounts).toContainEqual({ playerId: guest, accountId: 9 });
     expect(record.counts).toEqual({ accounts: 4, guests: 0, agents: 0 });
     const replay = shownReplay({
       setup: record.setup,
       log: record.log,
+      language: room.language,
       accounts: new Map(
         record.accounts.map(({ playerId, accountId }) => [
           playerId,
@@ -522,7 +560,7 @@ describe('the replay of a game in which a guest logged in', () => {
       { team: 'red', captain: ann, guessers: [back] },
       { team: 'blue', captain: bob, guessers: [cat] },
     ]);
-    expect(replay?.people[guest]).toEqual({ guest: 1 });
+    expect(replay?.people[guest]).toMatchObject({ name: 'User9' });
     expect(replay?.people[back]).toMatchObject({ name: 'User9' });
   });
 

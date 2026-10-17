@@ -29,6 +29,7 @@ export const ROOM_ERRORS = [
   'too_many_rooms',
   'room_not_found',
   'room_full',
+  'room_crowded',
   'screens_full',
   'play_required',
   'account_required',
@@ -129,16 +130,11 @@ export interface Session {
 // seen the key while the students are guessing.
 export const EMOTES = [
   'waiting',
-  'deadline',
-  'reviewer2',
-  'accept',
   'great_clue',
   'p_hacking',
-  'major_revision',
   'resubmit',
   'first_author',
   'coauthor',
-  'all_nighter',
   'mine_mine',
 ] as const;
 export type Emote = (typeof EMOTES)[number];

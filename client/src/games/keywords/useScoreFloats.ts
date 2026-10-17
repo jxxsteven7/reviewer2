@@ -1,7 +1,7 @@
-import type { KeywordsRoomData, RoomView } from '@reviewer2/shared';
+import type { KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, ref, shallowRef, type Ref } from 'vue';
 import type { Float, Shown } from '../../core/components/ScoreFloat.vue';
-import { endFloats, endsBetween, revealedBetween, revealFloats } from './floats';
+import { endFloats, endsBetween, openingRose, revealedBetween, revealFloats } from './floats';
 import { useLiveViews } from './useLiveViews';
 
 // How long a number rises on a card or an avatar, and in the middle of the screen at the end, a
@@ -12,9 +12,10 @@ export const END_FLOAT_MS = 2600;
 const AFTER_REVEAL_MS = 900;
 
 // The numbers that rise as the game goes (floats.ts): on the card that has just been revealed, the
-// viewer's own; on the avatars of the players whose points it changed, each their own, which the
-// game shows where the groups stand beside the board; and at the end of the game, what it added to
-// the viewer's points, in the middle of the screen, and to each player's, on their avatar.
+// viewer's own, the bonus it brings included; on the avatars of the players whose points it changed,
+// each their own, which the game shows where the groups stand beside the board; and at the end of
+// the game, what it added to the viewer's points, in the middle of the screen, and to each player's,
+// on their avatar.
 //
 // Only what happens in front of the viewer rises (useLiveViews.ts): a snapshot that comes with a
 // new connection, as after a reload or a locked screen, or while the page is out of sight, catches
@@ -26,6 +27,9 @@ export function useScoreFloats(room: Ref<RoomView>) {
   const end = ref<Shown | null>(null);
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let key = 0;
+  // The groups whose opening record rose with its card in front of the viewer, in the game it rose
+  // in: the end's number allows for it where the heavenly hand outdoes it (endFloats()).
+  let risen: { gameId: string; teams: Set<Team> } | null = null;
 
   function later(ms: number, run: () => void) {
     const timer = setTimeout(() => {
@@ -61,7 +65,11 @@ export function useScoreFloats(room: Ref<RoomView>) {
       const data = room.value.data as KeywordsRoomData;
       const reveal = revealedBetween(last, view);
       if (reveal) {
-        const { mine, players: others } = revealFloats(data, room.value.me, reveal);
+        if (openingRose(last, view, reveal.by)) {
+          if (risen?.gameId !== view.gameId) risen = { gameId: view.gameId, teams: new Set() };
+          risen.teams.add(reveal.by);
+        }
+        const { mine, players: others } = revealFloats(data, room.value.me, reveal, last, view);
         if (mine) {
           key += 1;
           const shown = { ...mine, key, card: reveal.card };
@@ -73,7 +81,8 @@ export function useScoreFloats(room: Ref<RoomView>) {
         showPlayers(others, FLOAT_MS);
       }
       if (endsBetween(last, view)) {
-        const { mine, players: others } = endFloats(data, room.value.me, room.value.points);
+        const outdone = risen?.gameId === view.gameId ? risen.teams : new Set<Team>();
+        const { mine, players: others } = endFloats(data, room.value.me, room.value.points, outdone);
         if (mine) {
           key += 1;
           const shown = { ...mine, key };

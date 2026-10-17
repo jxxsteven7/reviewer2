@@ -5,6 +5,7 @@ import { AccountStore } from './accounts';
 import { openDatabase } from './database';
 import { FriendStore } from './friends';
 import { DUOS_SQL, RecordStore } from './records';
+import { keepGame } from '../../test/keptGame';
 
 // What friends have played together (docs/architecture.md#friend-duos), counted from the records
 // of the games that both played in: teammates on the same side, opponents on another, friends
@@ -42,6 +43,11 @@ let games = 0;
 function game(sides: Record<string, number[]>, winner: string, name = 'keywords', agents = false) {
   games += 1;
   const gameId = `game-${games}`;
+  keepGame(db, gameId, {
+    game: name,
+    outcome: { winner, reason: 'found' },
+    counts: { accounts: 1, guests: 0, agents: agents ? 1 : 0 },
+  });
   for (const [side, players] of Object.entries(sides)) {
     for (const accountId of players) {
       records.add(accountId, {
@@ -49,11 +55,9 @@ function game(sides: Record<string, number[]>, winner: string, name = 'keywords'
         gameId,
         side,
         role: 'guesser',
-        winner,
         won: side === winner,
         verdict: 'v',
         points: 0,
-        agents,
       });
     }
   }

@@ -144,7 +144,7 @@ describe('TitlePills', () => {
     }
     expect(explained[0]).toContain('in the turn of its very first clue');
     expect(explained[1]).toContain('Earned again with every missed deadline');
-    expect(explained[2]).toContain('names 3 cards or more');
+    expect(explained[2]).toContain('names 4 cards or more');
     wrapper.unmount();
     const chinese = mount(TitlePills, { props: { titles }, global: global('zh') });
     expect(chinese.findAll('li > button.pill').map((pill) => pill.text())).toEqual([

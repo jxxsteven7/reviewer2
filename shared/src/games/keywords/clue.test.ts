@@ -212,7 +212,8 @@ describe('a clue must not repeat a word on the board', () => {
     expect(problemOf("Bachelor's", ["Master's"])).toBeNull();
     expect(problemOf('US', ['U-Net'])).toBeNull();
     expect(problemOf("can't", ['T-test'])).toBeNull();
-    expect(problemOf('p', ['P-value'])).toBeNull();
+    // "P" is no part of "P-value", but "P-value" starts with it (the prefix rule below).
+    expect(checkClue('p', board('P-value')).conflict).toEqual({ card: 0, text: 'P-value', kind: 'prefix' });
     // The rest of such a word still counts, and so does a word of one letter.
     expect(problemOf('net', ['U-Net'])).toBe('clue_on_board');
     expect(problemOf('unet', ['U-Net'])).toBe('clue_on_board');
@@ -247,7 +248,6 @@ describe('a clue must not repeat a word on the board', () => {
       ['rates', 'Rat'],
       ['planes', 'Plan'],
       ['notes', 'Not'],
-      ['slid', 'Slides'],
     ] as const) {
       expect(checkClue(clue, board(word)), clue).toEqual({
         problem: null,
@@ -255,6 +255,8 @@ describe('a clue must not repeat a word on the board', () => {
         similar: [{ card: 0, text: word, kind: 'similar' }],
       });
     }
+    // "Slid" is no plural of "Slides" either, but "Slides" starts with it (the prefix rule below).
+    expect(checkClue('slid', board('Slides')).conflict).toEqual({ card: 0, text: 'Slides', kind: 'prefix' });
   });
 
   test('refuses Chinese words that contain each other', () => {
@@ -275,7 +277,8 @@ describe('a clue must not repeat a word on the board', () => {
   test('does not look for Latin words inside other words', () => {
     expect(problemOf('email', ['AI'])).toBeNull();
     expect(problemOf('ai', ['Email'])).toBeNull();
-    expect(problemOf('mode', ['Model'])).toBeNull();
+    // The start of a word is another matter (the prefix rule below).
+    expect(checkClue('mode', board('Model')).conflict).toEqual({ card: 0, text: 'Model', kind: 'prefix' });
   });
 
   test('ignores revealed cards', () => {
@@ -583,10 +586,11 @@ describe('the strict and the loose clue rules', () => {
     expect(zhStrict('Pythonic', [card('Python')]).conflict).toEqual(inside('Python'));
     expect(zhStrict('metadata', [card('Big data')]).conflict).toEqual(inside('Big data'));
     expect(zhLoose('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
-    // Shorter words are left alone, and so are clues inside a word.
+    // Shorter words are left alone, and so are clues inside a word; a clue that a word starts with
+    // is the prefix rule's.
     expect(zhStrict('email', [card('AI')]).problem).toBeNull();
     expect(zhStrict('datum', [card('Dat')]).problem).toBeNull();
-    expect(zhStrict('data', [card('Datacenter')]).problem).toBeNull();
+    expect(zhStrict('data', [card('Datacenter')]).conflict).toEqual({ card: 0, text: 'Datacenter', kind: 'prefix' });
   });
 
   test('is a warning under both rules in an English room, where every card is Latin', () => {
@@ -597,10 +601,17 @@ describe('the strict and the loose clue rules', () => {
       expect(check('datacenter', [card('Data')]).similar).toEqual([inside('Data')]);
       expect(check('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
     }
-    // A clue of several words contains what runs across its words as well.
+    // A clue of several words contains what runs across its words as well; here one of its words,
+    // "data", is also what "Datacenter" starts with, which the strict rule refuses first.
     expect(
-      checkClue('big data center', [card('Datacenter')], { words: 3, length: null, strict: true }).similar,
-    ).toEqual([inside('Datacenter')]);
+      checkClue('big data center', [card('Datacenter')], { words: 3, length: null, strict: false }).similar,
+    ).toEqual([{ card: 0, text: 'Datacenter', kind: 'prefix' }]);
+    expect(
+      checkClue('big data center', [card('Datacenter')], { words: 3, length: null, strict: true }).conflict,
+    ).toEqual({ card: 0, text: 'Datacenter', kind: 'prefix' });
+    expect(checkClue('bigdata center', [card('Datacenter')], { words: 3, length: null, strict: true }).similar).toEqual(
+      [inside('Datacenter')],
+    );
     // The same for a card's term in another language is a warning under both rules, in either room.
     for (const check of [strict, loose, zhStrict, zhLoose]) {
       expect(check('datacenter', [card(DATA, { translations: ['Data'] })])).toEqual({
@@ -643,6 +654,59 @@ describe('the strict and the loose clue rules', () => {
   test('gives each card one warning, the strongest', () => {
     const cards = [card('Data', { forms: ['datacenter'] }), card('Model')];
     expect(loose('datacenter', cards).similar).toEqual([{ card: 0, text: 'datacenter', kind: 'form' }]);
+  });
+});
+
+describe('a clue that a word on the board starts with', () => {
+  const card = (word: string, more: { translations?: string[] } = {}) => ({ word, revealed: false, ...more });
+  const strict = (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: null, strict: true });
+  const loose = (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: null, strict: false });
+  const zhStrict = (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: 10, strict: true });
+  const prefix = (text: string) => ({ card: 0, text, kind: 'prefix' });
+
+  test('is refused under the strict rule and a warning under the loose one, however short the clue', () => {
+    for (const [clue, word] of [
+      ['s', 'SEI'],
+      ['S', 'SEI\u819c'],
+      ['p', 'P-value'],
+      ['mode', 'Model'],
+      ['data', 'Datacenter'],
+      ['sci', 'Data science'],
+      ['u', 'U-Net'],
+    ] as const) {
+      expect(strict(clue, [card(word)]), clue).toEqual({
+        problem: 'clue_on_board',
+        conflict: prefix(word),
+        similar: [],
+      });
+      expect(loose(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [prefix(word)] });
+    }
+    expect(zhStrict('s', [card('SEI\u819c')]).conflict).toEqual(prefix('SEI\u819c'));
+  });
+
+  test('is not a clue inside a word, a word of other letters, or the word itself', () => {
+    expect(strict('ai', [card('Email')]).problem).toBeNull();
+    expect(strict('ai', [card('Email')]).similar).toEqual([]);
+    expect(strict('center', [card('Datacenter')]).problem).toBeNull();
+    // Digits and Chinese characters in the clue are not Latin letters alone.
+    expect(strict('s1', [card('S2 cells')]).conflict).toBeNull();
+    expect(strict(NOTICE, [card(ATTENTION)]).conflict).toEqual({ card: 0, text: ATTENTION, kind: 'same' });
+    // The word itself, or a part of it, is refused as the same word, under either rule.
+    expect(loose('sei', [card('SEI')]).problem).toBe('clue_on_board');
+    expect(loose('data', [card('Data science')]).problem).toBe('clue_on_board');
+  });
+
+  test("is a warning under either rule for a card's term in another language", () => {
+    for (const check of [strict, loose]) {
+      expect(check('dat', [card(DATA, { translations: ['Data'] })])).toEqual({
+        problem: null,
+        conflict: null,
+        similar: [{ card: 0, text: 'Data', kind: 'prefix' }],
+      });
+    }
   });
 });
 

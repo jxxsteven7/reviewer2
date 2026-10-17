@@ -3,9 +3,11 @@ import type { GameModule } from '../src/core/game';
 // A tiny game for testing the shared layer. Players press a button; each viewer sees a line
 // meant only for them, which shows whether snapshots are really built per connection. A player can
 // also break one part of the game, which then throws until someone mends it, and set an alarm,
-// which rings by itself at its time, and say something, as in a chat. The game has one setting, a
+// which rings by itself at its time, say something, as in a chat, and sit back after being moved
+// to the spectators, which is a change of seat rather than a move. The game has one setting, a
 // level from 1 to 3. A game that is finished, rather than withdrawn, is won by everyone who came to
-// play, for the records.
+// play, for the records, and brings whoever said something in it the Deadline Hero title, so that
+// the titles of the records can be tested; it scores no points.
 
 export interface FakeData {
   joined: string[];
@@ -27,8 +29,9 @@ export interface FakeData {
   // When the alarm rings, on the room's clock, and how often it has rung.
   alarm: number | null;
   rings: number;
-  // How many things have been said.
+  // How many things have been said, and by whom.
   said: number;
+  talkers: string[];
 }
 
 // The view leaves the game's ID out on purpose: the chair's controls have to work with what the
@@ -50,6 +53,8 @@ interface Breakage {
 
 const isLevel = (value: unknown): value is number =>
   Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 3;
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
@@ -72,6 +77,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     alarm: null,
     rings: 0,
     said: 0,
+    talkers: [],
   }),
   configure(data, _ctx, settings) {
     const { level } = (settings ?? {}) as { level?: unknown };
@@ -104,6 +110,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     presses: 0,
     over: false,
     withdrawn: false,
+    talkers: [],
   }),
   isOver: (data) => data.over,
   withdraw(data, gameId) {
@@ -121,6 +128,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
           winner: 'all',
           won: true,
           verdict: `pressed ${data.presses}`,
+          titles: data.talkers.includes(playerId) ? [{ title: 'deadline_hero' as const, turn: 1 }] : [],
         })),
   // How the game began, for its record: the words. How it came out: everyone won, by finishing.
   setup: (data) => ({ words: data.words }),
@@ -138,9 +146,51 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   // others watch. The log keeps what a press carried and what was said. The game waits for its
   // players while the alarm is set.
   participants: (data, ctx) => data.players.map((id) => ctx.keyOf(id)),
+  // A kept game counted again (store/recount.ts), as results() counts it: everyone who came to play,
+  // as the log seats them, won by finishing, with the presses in the verdict and the title for
+  // whoever said something, and no points. A game that didn't finish counts for nothing.
+  recount: ({ log, keyOf }) => {
+    const end = log.entries.findIndex(({ type }) => type === 'end');
+    if (end === -1 || log.entries[end]?.data !== undefined) return null;
+    const before = log.entries.slice(0, end);
+    const presses = before.filter(({ type }) => type === 'test:press').length;
+    const players = Object.entries(log.start ?? {})
+      .filter(([, seat]) => seat === 'player')
+      .map(([id]) => id);
+    for (const { by, type, data } of before) {
+      if (type === 'join' && by !== null && (data as { seat?: unknown } | undefined)?.seat === 'player')
+        players.push(by);
+    }
+    const talkers = new Set(before.filter(({ type }) => type === 'test:say').map(({ by }) => by));
+    const results = players.map((playerId) => ({
+      playerId,
+      side: 'all',
+      role: 'player',
+      winner: 'all',
+      won: true,
+      verdict: `pressed ${presses}`,
+      titles: talkers.has(playerId) ? [{ title: 'deadline_hero' as const, turn: 1 }] : [],
+    }));
+    return { results, scores: players.map((playerId) => ({ key: keyOf(playerId), points: 0, detail: null })) };
+  },
+  // The shapes of the game's own, for the check of the data: how a game began, its one setting, its
+  // one role, and what it counts of an AI player.
+  shapes: {
+    setup: (value) =>
+      isObject(value) && Array.isArray(value.words) && value.words.every((word) => typeof word === 'string'),
+    settings: (value) => isObject(value) && isLevel(value.level),
+    role: (role) => role === 'player',
+    feats: (value) => isObject(value) && Number.isInteger(value.presses),
+  },
   seated: (data, id) => (data.players.includes(id) ? 'player' : 'watcher'),
   logged: (type, payload) =>
-    type === 'test:press' ? { data: payload ?? null } : type === 'test:say' ? { said: String(payload) } : {},
+    type === 'test:press'
+      ? { data: payload ?? null }
+      : type === 'test:say'
+        ? { said: String(payload) }
+        : type === 'test:sit'
+          ? { seat: true }
+          : {},
   due: (data) => (data.alarm === null ? [] : data.players),
   again: (data) => ({ ...data, words: [], gameId: null, over: false, alarm: null }),
   handle(data, ctx, _playerId, type, payload) {
@@ -160,7 +210,13 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (type === 'test:throw') throw payload;
     if (ctx.phase !== 'playing') return { ok: false, error: 'wrong_phase' };
     if (type === 'test:press') return { ok: true, data: { ...data, presses: data.presses + 1 } };
-    if (type === 'test:say') return { ok: true, data: { ...data, said: data.said + 1 } };
+    if (type === 'test:say') {
+      const talkers = data.talkers.includes(_playerId) ? data.talkers : [...data.talkers, _playerId];
+      return { ok: true, data: { ...data, said: data.said + 1, talkers } };
+    }
+    // A player who was moved to the spectators sits back: a change of seat, not a move of the game.
+    if (type === 'test:sit')
+      return { ok: true, data: { ...data, benched: data.benched.filter((id) => id !== _playerId) } };
     if (type === 'test:finish') return { ok: true, data: { ...data, over: true, alarm: null } };
     // The alarm rings this many milliseconds from now, by the room's clock.
     if (type === 'test:alarm') return { ok: true, data: { ...data, alarm: ctx.now() + (payload as number) } };

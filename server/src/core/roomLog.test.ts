@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
+import { CROWDED_GAME_LOG_BYTES } from './gameLog';
 import { seededRng } from './random';
-import type { Member, Room } from './room';
+import { MAX_LOGGED_PER_MEMBER, type Member, type Room } from './room';
 import { Rooms } from './rooms';
 
 // What a room notes in the log of the game it plays (docs/architecture.md#game-records).
@@ -270,12 +271,122 @@ describe('the record of a game', () => {
     expect(room.record()?.log?.entries.at(-1)).toMatchObject({ type: 'end', data: { ending: 'interrupted' } });
   });
 
-  test('says when an AI played for someone who was offline', () => {
+  test("numbers everyone in a match in its log, keeps a guest's number through a login, and notes a line that went into another", () => {
+    // The fake game played as a match: everyone who plays scores nothing.
+    const matchGame: typeof fakeGame = {
+      ...fakeGame,
+      match: {
+        setup: (data) => data,
+        score: (data, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
+        lineup: (data) => data.players,
+      },
+    };
+    const { room, ann, bob } = table(matchGame);
+    expect(room.startMatch({ games: 3, teams: 'switch', grouping: 'choose' })).toEqual({ ok: true });
+    // Nothing of a match in the record of an ordinary game: one that nobody is numbered in yet.
+    room.start(0);
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.log.match).toEqual({ numbers: { [ann.id]: 1, [bob.id]: 2 } });
+    room.again(room.gameId as string);
+    // Bob, a guest, logs in to a new account: his number stays, and Cat, who comes to watch, has
+    // none until she plays.
+    const account = { id: 2, handle: 'b2c3d4e5f6a1', avatar: null, rank: 'undergraduate' as const, agents: false };
+    expect(room.adopt(bob.id, 'key-bob-account', 'Bob', account)).toBe(true);
+    const joined = room.join('key-cat', false);
+    if (!joined.ok) throw new Error(joined.error);
+    room.start(1);
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()?.log.match).toEqual({ numbers: { [ann.id]: 1, [bob.id]: 2 } });
+    room.again(room.gameId as string);
+    // Ann leaves and comes back as a guest, who plays the third game and then logs in to her
+    // account: the guest's line goes into hers, which the log says.
+    room.drop(ann.id);
+    const back = room.join('key-ann-guest', true);
+    if (!back.ok) throw new Error(back.error);
+    room.attach(back.member, 'socket-ann-2');
+    room.start(2);
+    expect(room.record()).toBeNull();
+    expect(
+      room.adopt(back.member.id, 'key-ann', 'Ann', {
+        id: 1,
+        handle: 'a1b2c3d4e5f6',
+        avatar: null,
+        rank: 'undergraduate',
+        agents: false,
+      }),
+    ).toBe(true);
+    room.act(back.member.id, 'test:finish', undefined);
+    expect(room.record()?.log.match).toEqual({ numbers: { [back.member.id]: 1, [bob.id]: 2 }, merged: { '3': 1 } });
+  });
+
+  test('says when an AI played for someone who was offline, with the AI log, which an AI that made no move leaves none of', () => {
     const { room, ann, bob } = table();
     room.start(0);
+    const step = { by: bob.id, persona: 'reviewer1' as const, takeover: true as const, kind: 'press' };
+    // The AI was asked for Bob, and its answer came once Bob was back: no move was made.
+    room.noteAgent(room.gameId, 1, { ...step, late: true });
+    room.act(ann.id, 'test:finish', undefined);
+    expect(room.record()).toMatchObject({ takeover: false, agentLog: null, counts: { agents: 0 } });
+    room.again(room.gameId as string);
+
+    room.start(1);
+    room.noteAgent(room.gameId, 2, { ...step, answer: 'for Bob' });
     room.act(bob.id, 'test:press', 'for Bob', 'reviewer1');
     room.act(ann.id, 'test:finish', undefined);
     expect(room.record()?.takeover).toBe(true);
     expect(room.record()?.log?.entries[0]).toMatchObject({ by: bob.id, agent: 'reviewer1' });
+    expect(room.record()?.agentLog?.steps).toEqual([{ t: 2, ...step, answer: 'for Bob' }]);
+  });
+
+  test('takes at most MAX_LOGGED_PER_MEMBER entries from one member, who is then refused, and taken in no more', () => {
+    const { room, ann, bob } = table();
+    room.start(0);
+    for (let press = 0; press < MAX_LOGGED_PER_MEMBER; press += 1) {
+      expect(room.act(bob.id, 'test:press', press)).toMatchObject({ ok: true });
+    }
+    expect(room.act(bob.id, 'test:press', 'one more')).toEqual({ ok: false, error: 'rate_limited' });
+    expect(room.act(ann.id, 'test:press', 'for Ann')).toMatchObject({ ok: true });
+    // Bob leaves and comes back with the same browser: the count is his still.
+    room.drop(bob.id);
+    expect(room.join('key-bob', true)).toEqual({ ok: false, error: 'rate_limited' });
+    room.act(ann.id, 'test:finish', undefined);
+    const log = room.record()?.log;
+    expect(log?.entries.filter(({ by }) => by === bob.id)).toHaveLength(MAX_LOGGED_PER_MEMBER + 1);
+    expect(log?.entries.filter(({ type }) => type === 'test:press')).toHaveLength(MAX_LOGGED_PER_MEMBER + 1);
+    // The next game starts afresh.
+    room.again(room.gameId as string);
+    expect(room.join('key-bob', true)).toMatchObject({ ok: true });
+  });
+
+  test('takes nobody in and lets nobody change seats once the log is crowded, and lets the game go on', () => {
+    const { room, ann, bob } = table();
+    room.start(0);
+    // Presses of a kilobyte each, well within what one member may add, crowd the log; Bob sits
+    // back after each, as long as he may.
+    const press = 'x'.repeat(1024);
+    let presses = 0;
+    while (room.act(bob.id, 'test:sit', undefined).ok) {
+      expect(room.act(ann.id, 'test:press', press)).toMatchObject({ ok: true });
+      presses += 1;
+    }
+    expect(presses).toBeGreaterThan(CROWDED_GAME_LOG_BYTES / 2048);
+    expect(presses).toBeLessThan(MAX_LOGGED_PER_MEMBER);
+    expect(room.join('key-new', true)).toEqual({ ok: false, error: 'room_crowded' });
+    expect(room.act(bob.id, 'test:sit', undefined)).toEqual({ ok: false, error: 'room_crowded' });
+    // The game's own moves go on, and whoever leaves is noted and can't come back for this game.
+    expect(room.act(bob.id, 'test:press', 'still playing')).toMatchObject({ ok: true });
+    room.drop(bob.id);
+    expect(room.join('key-bob', true)).toEqual({ ok: false, error: 'room_crowded' });
+    expect(room.logFull).toBe(false);
+    expect(entries(room).slice(-4)).toEqual([
+      [0, bob.id, 'test:press', 'still playing'],
+      [0, bob.id, 'leave', undefined],
+      [0, ann.id, 'test:finish', undefined],
+      [0, null, 'end', undefined],
+    ]);
+    // After the end, and in the next game, the room is open again.
+    expect(room.join('key-new', true)).toMatchObject({ ok: true });
+    room.again(room.gameId as string);
+    expect(room.join('key-bob', true)).toMatchObject({ ok: true });
   });
 });

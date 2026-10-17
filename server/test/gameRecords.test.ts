@@ -173,14 +173,16 @@ describe('the record of a game of the team word guessing game', () => {
       language: 'en',
       fields: '["general"]',
       version: 'test',
-      rules: 4,
+      rules: 5,
       words: expect.stringMatching(/^[0-9a-f]{16}$/),
       ordered: 1,
     });
-    // How it began: the board with every color, and the settings.
+    // How it began: the board with every color, each card a word of the lists, and the settings;
+    // the language is the record's own.
     const setup = JSON.parse(kind?.setup as string) as { cards: { word: string; color: string }[]; settings: unknown };
-    expect(setup.cards).toEqual(cards.map(({ word, color }) => ({ word, color })));
-    expect(setup).toMatchObject({ language: 'en', startingTeam: expect.any(String), settings: expect.any(Object) });
+    expect(setup.cards).toEqual(cards.map(({ word, color }) => ({ word, color, custom: false })));
+    expect(setup).toMatchObject({ startingTeam: expect.any(String), settings: expect.any(Object) });
+    expect(setup).not.toHaveProperty('language');
     // Where everyone was at the start, Eve, who watched, included.
     expect(log.start?.[fayId]).toEqual({ team: 'red', role: 'guesser' });
     expect(log.start?.[eve.state?.me as string]).toEqual({ team: null, role: 'spectator' });
@@ -518,25 +520,33 @@ describe('the record of a game', () => {
     expect(kinds()).toMatchObject([{ ending: 'interrupted', replay: 0 }]);
   });
 
-  test("is not kept for a game with words of the chair's own", async () => {
+  test("is kept for a game with words of the chair's own, like any other", async () => {
     server = await startServer();
     const { ann } = await playing({ words: ['Alpha', 'Bravo', 'Charlie', 'Delta'] });
     await ann.send('test:finish');
     await ann.waitFor((state) => state.phase === 'ended');
-    // The end of the game has been seen to by now: the snapshot that says so goes after it.
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(kept()).toEqual([]);
+    await until(() => kept().length === 1, 'the record');
+    expect(kinds()).toMatchObject([{ ending: 'finished', replay: 1 }]);
   });
 
-  test('keeps the players without a log that grew too long, and so without a replay, and says so', async () => {
+  test('closes the room with the game cut short, and the log kept whole, when the log is flooded', async () => {
     server = await startServer({ games: [fakeGame] });
-    const { anns, gameId } = await played({ press: 'x'.repeat(10_000), times: 14 });
-    await until(() => server.logs.some(({ event }) => event === 'game_log_too_large'), 'the log line');
+    const { ann, bob } = await playing();
+    // Presses of 10 KB each, until the log is full: the room closes on the one that fills it.
+    const press = 'x'.repeat(10_000);
+    for (let i = 0; i < 14; i += 1) await ann.send('test:press', press);
+    await until(
+      () => server.logs.some(({ event, fields }) => event === 'room_closed' && fields?.why === 'flood'),
+      'the room closing',
+    );
+    await until(() => ann.closed.length > 0 && bob.closed.length > 0, 'everyone told');
+    expect(ann.closed).toEqual(['expired']);
+    expect(bob.closed).toEqual(['expired']);
     await until(() => kept().length === 1, 'the record');
-    expect(kept()[0]?.log).toBeNull();
-    expect(kinds()).toMatchObject([{ ending: 'finished', replay: 0 }]);
-    expect(players()).toHaveLength(1);
-    expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
+    expect(kinds()).toMatchObject([{ ending: 'abandoned', replay: 0 }]);
+    const log = JSON.parse(kept()[0]?.log as string) as GameLogData;
+    expect(log.entries.filter(({ type }) => type === 'test:press')).toHaveLength(14);
+    expect(log.entries.at(-1)).toMatchObject({ type: 'end', data: { ending: 'abandoned', why: 'flood' } });
   });
 
   test("keeps the other players' records and the game when the database refuses one player's record", async () => {

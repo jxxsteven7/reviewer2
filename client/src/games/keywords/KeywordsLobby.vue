@@ -30,6 +30,7 @@ import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 import { act, reconnecting } from '../../core/socket';
 import { ROOM_ACTIONS } from '../../core/useRoomPage';
+import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
@@ -200,6 +201,7 @@ const readiness = computed(() => {
 // focus comes into view below it, however many rows the bar has.
 const dock = ref<HTMLElement | null>(null);
 useStickyHeight(dock);
+const stuck = useStuck(dock);
 
 // The chair switches the room between public and private from the tag beside the heading, as in
 // the room menu, and without asking again. Listing it takes an account: a guest is told so, with
@@ -241,7 +243,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
       v-if="(isChair || mayInviteFriends) && !finished"
       ref="dock"
       class="start-dock"
-      :class="{ 'below-banner': reconnecting }"
+      :class="{ 'below-banner': reconnecting, stuck }"
     >
       <div class="start-bar" :class="{ member: !isChair }">
         <div class="ready-line">
@@ -501,10 +503,11 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 
 /* The chair's start bar, which stays at the top of the screen as the page scrolls, under the
    room's masthead, which stays there too in the waiting room (--pinned-height, PageMasthead.vue),
-   and under the banner while the page reconnects, as the game's clock does. Its background reaches the edges of
-   the screen and covers its own sticker's shadow, so that nothing shows through beside it. A field
-   of the desk that the page brings into view stays below it: the bar's height, as measured
-   (useStickyHeight), and the banner's go into the page's scroll padding. */
+   and under the banner while the page reconnects, as the game's clock does. Its background reaches
+   the edges of the screen, as a masthead's does (PageMasthead.vue), and covers its own sticker's
+   shadow, so that nothing shows through beside it, and nothing below it, where the shade falls on
+   what passes under the bar. A field of the desk that the page brings into view stays below it: the
+   bar's height, as measured (useStickyHeight), and the banner's go into the page's scroll padding. */
 .start-dock {
   position: sticky;
   top: var(--pinned-height, 0px);
@@ -512,8 +515,27 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   margin-bottom: var(--space-2);
   padding: var(--space-2) 0 var(--space-3);
   background: var(--bg);
-  box-shadow: 0 0 0 100vmax var(--bg);
-  clip-path: inset(0 -100vmax);
+  border-image: linear-gradient(var(--bg), var(--bg)) 0 fill / 0 / 0 100vmax;
+}
+
+/* The soft shadow under the bar while it is stuck under the masthead with the page passing under
+   it, as under a page's masthead (PageMasthead.vue), which draws none while this bar stays under
+   it: the lowest bar that stays has the shade. */
+.start-dock::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 12px;
+  border-image: linear-gradient(var(--shade), transparent) 0 fill / 0 / 0 100vmax;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion);
+}
+
+.start-dock.stuck::after {
+  opacity: 1;
 }
 
 .start-dock.below-banner {

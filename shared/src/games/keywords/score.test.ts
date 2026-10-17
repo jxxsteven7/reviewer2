@@ -3,17 +3,30 @@ import {
   bigClueCards,
   bonusPoints,
   cardPoints,
+  endPoints,
   missedPoints,
   POINTS,
   pointsFor,
+  revealBonus,
   revealPoints,
   type KeywordsScoreDetail,
 } from './score';
+import type { ClueRecord } from './types';
 
 // The points of a game (docs/games/keywords.md#matches): what a group's own cards and a win give
 // everyone in the group, what a wrong card costs every student and, more, the PI, and the bonuses.
 
-const NOTHING = { found: 0, won: false, irrelevant: 0, wrong: 0, reviewer2: 0 };
+const NOTHING = {
+  found: 0,
+  won: false,
+  irrelevant: 0,
+  wrong: 0,
+  reviewer2: 0,
+  bigClues: 0,
+  missed: 0,
+  openingRecord: false,
+  heavenlyHand: false,
+};
 const student = (detail: Partial<KeywordsScoreDetail>) => pointsFor({ ...NOTHING, role: 'guesser', ...detail });
 const pi = (detail: Partial<KeywordsScoreDetail>) => pointsFor({ ...NOTHING, role: 'captain', ...detail });
 
@@ -43,11 +56,11 @@ describe('the points of a game', () => {
     expect(pi({ found: 5, bigClues: 2 })).toBe(7);
   });
 
-  test('give everyone 1 for the opening record, and a student 1 and the PI 3 for the heavenly hand', () => {
-    expect(student({ found: 3, openingRecord: true })).toBe(4);
-    expect(pi({ found: 3, openingRecord: true })).toBe(4);
-    expect(student({ found: 9, won: true, openingRecord: true, heavenlyHand: true })).toBe(9 + 3 + 1 + 1);
-    expect(pi({ found: 9, won: true, bigClues: 6, openingRecord: true, heavenlyHand: true })).toBe(9 + 4 + 6 + 1 + 3);
+  test('give a student 1 for the opening record and the PI nothing, and a student 1 and the PI 3 for the heavenly hand', () => {
+    expect(student({ found: 4, openingRecord: true })).toBe(5);
+    expect(pi({ found: 4, openingRecord: true, bigClues: 1 })).toBe(5);
+    expect(student({ found: 9, won: true, heavenlyHand: true })).toBe(9 + 3 + 1);
+    expect(pi({ found: 9, won: true, bigClues: 6, heavenlyHand: true })).toBe(9 + 4 + 6 + 3);
   });
 
   test('cost the PI 5 for each missed deadline, and the students nothing', () => {
@@ -55,10 +68,6 @@ describe('the points of a game', () => {
     expect(pi({ missed: 1 })).toBe(-5);
     expect(pi({ found: 9, won: true, missed: 2 })).toBe(9 + 4 - 10);
     expect(student({ found: 9, won: true })).toBe(9 + 3);
-  });
-
-  test("read a detail from before the PI's stakes as a student's, without bonuses", () => {
-    expect(pointsFor({ found: 4, won: true, irrelevant: 1, wrong: 0, reviewer2: 1 })).toBe(4 + 3 - 1 - 3);
   });
 });
 
@@ -80,6 +89,52 @@ describe('a revealed card', () => {
       expect(revealPoints(color, 'red', 'blue', 'captain')).toBe(0);
     }
   });
+
+  // Red's first clue names 5 cards; its students reveal them one by one, then a blue card.
+  const guess = (color: ClueRecord['guesses'][number]['color'], card: number) => ({
+    card,
+    color,
+    player: 'bob',
+    at: 0,
+  });
+  const after = (guesses: ClueRecord['guesses']) => ({
+    history: [{ turn: 1, team: 'red' as const, at: 0, word: 'Hint', count: 5, captain: 'ann', guesses }],
+    result: null,
+  });
+  const own = Array.from({ length: 5 }, (_, i) => guess('red', i));
+  const steps = Array.from({ length: 6 }, (_, i) => after(own.slice(0, i)));
+  const bonus = (step: number, role: 'captain' | 'guesser', player = role === 'captain' ? 'ann' : 'bob') =>
+    revealBonus(
+      steps[step - 1] as (typeof steps)[number],
+      steps[step] as (typeof steps)[number],
+      'red',
+      'red',
+      role,
+      player,
+    );
+
+  test('brings the PI who gave the clue a point of the big clue with each own card from the fourth on', () => {
+    expect([1, 2, 3, 4, 5].map((step) => bonus(step, 'captain'))).toEqual([0, 0, 0, 1, 1]);
+    // Another PI of the group, as one who took the seat over, has no big clue.
+    expect([4, 5].map((step) => bonus(step, 'captain', 'eve'))).toEqual([0, 0]);
+  });
+
+  test('brings the students the point of the opening record with the card that makes it', () => {
+    expect([1, 2, 3, 4, 5].map((step) => bonus(step, 'guesser'))).toEqual([0, 0, 0, 0, 1]);
+    // A wrong card brings nobody a bonus, and neither does a card that the other group reveals.
+    const wrong = after([...own.slice(0, 4), guess('blue', 9)]);
+    expect(revealBonus(steps[4] as (typeof steps)[number], wrong, 'red', 'red', 'captain', 'ann')).toBe(0);
+    expect(
+      revealBonus(
+        steps[4] as (typeof steps)[number],
+        steps[5] as (typeof steps)[number],
+        'red',
+        'blue',
+        'guesser',
+        'dan',
+      ),
+    ).toBe(0);
+  });
 });
 
 describe('the points of a game split up', () => {
@@ -97,11 +152,19 @@ describe('the points of a game split up', () => {
       missed: 1,
     };
     expect(cardPoints(detail)).toBe(6 - 2 - 3);
-    expect(bonusPoints(detail)).toBe(4 + 2 + 1);
+    expect(bonusPoints(detail)).toBe(4 + 2 + 0);
     expect(missedPoints(detail)).toBe(-5);
     expect(cardPoints(detail) + bonusPoints(detail) + missedPoints(detail)).toBe(pointsFor(detail));
-    expect(missedPoints({ ...NOTHING, found: 3 })).toBe(0);
+    expect(missedPoints({ ...NOTHING, role: 'captain', found: 3 })).toBe(0);
     expect(bonusPoints({ ...NOTHING, role: 'guesser', won: true })).toBe(3);
-    expect(bonusPoints({ ...NOTHING, found: 3 })).toBe(0);
+    expect(bonusPoints({ ...NOTHING, role: 'guesser', found: 3 })).toBe(0);
+  });
+
+  test('end with the win and the heavenly hand alone, the big clues and the opening record having risen with their cards', () => {
+    expect(endPoints({ ...NOTHING, role: 'captain', won: true, bigClues: 2, openingRecord: true })).toBe(4);
+    expect(endPoints({ ...NOTHING, role: 'guesser', won: true, openingRecord: true })).toBe(3);
+    expect(endPoints({ ...NOTHING, role: 'captain', won: true, heavenlyHand: true, bigClues: 6 })).toBe(7);
+    expect(endPoints({ ...NOTHING, role: 'guesser', won: true, heavenlyHand: true })).toBe(4);
+    expect(endPoints({ ...NOTHING, role: 'guesser', found: 5 })).toBe(0);
   });
 });

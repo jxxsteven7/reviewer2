@@ -147,12 +147,22 @@ export type EmailState = (typeof EMAIL_STATES)[number];
 // was won. A match that runs its course awards its two to the top and the bottom of its ranking
 // (MATCH_TITLES); a game brings the others to the players with accounts whose game goes on the
 // record, each time they earn one (docs/games/keywords.md#titles): a PI who gives no clue in time
-// misses the deadline, one who gives it in its last seconds, and a student who finds one of the
-// group's cards in the last seconds of the guesses, is a deadline hero, a group's first clue may
-// make the opening record, and a group that wins with its first clue has the heavenly hand.
+// misses the deadline, one whose last-second clue the students follow to the letter, and a student
+// who finds one of the group's cards in the last seconds of the guesses, is a deadline hero; a
+// group's first clue may make the opening record, or win the game outright for the heavenly hand,
+// and a group whose first card is Reviewer 2 is desk rejected on the spot, or falls at the first
+// hurdle when Reviewer 2 comes later in the turn of its first clue.
 export const MATCH_TITLES = ['best_paper', 'black_hole'] as const;
 export type MatchTitle = (typeof MATCH_TITLES)[number];
-export const TITLES = [...MATCH_TITLES, 'missed_deadline', 'deadline_hero', 'opening_record', 'heavenly_hand'] as const;
+export const TITLES = [
+  ...MATCH_TITLES,
+  'missed_deadline',
+  'deadline_hero',
+  'opening_record',
+  'heavenly_hand',
+  'instant_reject',
+  'first_turn_reject',
+] as const;
 export type Title = (typeof TITLES)[number];
 
 export interface TitleCount {
@@ -196,17 +206,19 @@ export interface AccountSummary {
   roomSetup: RoomSetup;
 }
 
-// How an account last set up a room and a practice room (docs/architecture.md#accounts), which the
-// next setup starts from: what the room took when it was made, kept by the server as the room was
-// created. The page checks it again as it reads it back, since the word lists, the rules and the
-// language may have changed meanwhile, and drops what no longer holds.
-export interface RoomSetup {
+// How an account last set up a room and a practice room of each game (docs/architecture.md#accounts),
+// by the game's ID, which the next setup of that game starts from: what the room took when it was
+// made, kept by the server as the room was created (migration 24). The page checks it again as it
+// reads it back, since the word lists, the rules and the language may have changed meanwhile, and
+// drops what no longer holds.
+export type RoomSetup = Record<string, GameRoomSetup>;
+
+export interface GameRoomSetup {
   room?: {
-    game: string;
     // The room's language, which isn't restored, since a room's is the page's, but which says what
     // the settings were for: a clue's length is counted in characters in one language and in words
-    // in another. Missing from a setup kept before it was.
-    language?: Language;
+    // in another.
+    language: Language;
     fields: string[];
     randomFields: boolean;
     // The game's own settings, as the game took them, or none for its defaults.
@@ -218,7 +230,8 @@ export interface RoomSetup {
   practice?: { role: string; fields: string[] };
 }
 
-// The most that the server keeps of a setup, as JSON: a setup that would take more isn't kept.
+// The most that the server keeps of one game's setup, as JSON: a setup that would take more isn't
+// kept.
 export const MAX_ROOM_SETUP = 4096;
 
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
@@ -265,17 +278,15 @@ export interface AccountState {
 }
 
 // One game on an account's record, as the game module described the player's part in it. For
-// the team word guessing game, `side` is the group and `role` is captain or guesser. `replay`
-// says whether the server kept the game to watch again (docs/architecture.md#replays), which the
-// page asks for with the game's ID. `match` says which game of a match it was, from 1, and how many
-// games the match was to have, or is null for a game outside a match. `agents` says that an AI
-// played in it, as a player or for someone who was offline, which brought nobody points
-// (docs/architecture.md#ai-players).
+// the team word guessing game, `side` is the group and `role` is captain or guesser. Every game on
+// the record can be watched again (docs/architecture.md#replays), which the page asks for with the
+// game's ID. `match` says which game of a match it was, from 1, and how many games the match was to
+// have, or is null for a game outside a match. `agents` says that an AI played in it, as a player
+// or for someone who was offline, which brought nobody points (docs/architecture.md#ai-players).
 export interface GameRecord {
   game: string;
   gameId: string;
   endedAt: string;
-  replay: boolean;
   side: string;
   role: string;
   winner: string;

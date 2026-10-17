@@ -1189,21 +1189,22 @@ describe('data check', () => {
 
   test('prints each rule broken with how many rows break it and the first few, by id, and exits with 1', () => {
     const account = ann();
-    accounts.store.setAvatar(account.id, 'gone.webp');
-    const many = Array.from({ length: 12 }, (_, i) => `('x${String(i).padStart(2, '0')}', 'p', ${account.id})`);
-    database.db.exec(`INSERT INTO game_players VALUES ${many.join(', ')}`);
+    accounts.store.setAvatar(account.id, `${'a'.repeat(64)}.webp`);
+    const many = Array.from({ length: 12 }, () => "('t', 'rant', 'x', 'v', 'en', 'home')");
+    database.db.exec(
+      `INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ${many.join(', ')}`,
+    );
     expect(run('data', 'check')).toBe(1);
     expect(printed).toEqual([
       'accounts whose avatar file is missing: 1 row: 1',
-      'players of games that are not kept: 12 rows: ' +
-        'x00:p, x01:p, x02:p, x03:p, x04:p, x05:p, x06:p, x07:p, x08:p, x09:p and 2 more',
+      'feedback of a kind there is not: 12 rows: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 and 2 more',
       '2 checks failed.',
     ]);
   });
 
   test('leaves the avatar files unchecked where there is no directory of them, and says so', () => {
     const account = ann();
-    accounts.store.setAvatar(account.id, 'gone.webp');
+    accounts.store.setAvatar(account.id, `${'a'.repeat(64)}.webp`);
     rmSync(join(dir, AVATAR_DIR), { recursive: true });
     expect(run('data', 'check')).toBe(0);
     expect(printed).toEqual([

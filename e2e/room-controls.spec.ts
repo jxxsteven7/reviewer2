@@ -67,6 +67,27 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
 
   const [bob] = await seatRoom(browser, ann, url);
   await expect(bar.locator('.ready')).toHaveText(text.lobby.ready);
+  // The page is drawn, with the bar in it: an html rule for the bar's shade reached the html
+  // element itself once (PageMasthead.vue). Of the masthead and the bar, which both stay, the
+  // lowest one that is stuck draws the shade under it: at the top of the page neither, a little
+  // down the masthead, with the bar still lower down, and at the foot the bar, stuck under the
+  // masthead, which then draws none.
+  const shadeOf = (selector: string) =>
+    ann.evaluate((found) => getComputedStyle(document.querySelector(found) as Element, '::after').opacity, selector);
+  expect(await ann.evaluate(() => getComputedStyle(document.documentElement).opacity)).toBe('1');
+  await expect(ann.locator('.start-dock')).not.toHaveClass(/\bstuck\b/);
+  expect(await shadeOf('header.masthead')).toBe('0');
+  expect(await shadeOf('.start-dock')).toBe('0');
+  await ann.evaluate(() => window.scrollTo(0, 24));
+  await expect.poll(() => shadeOf('header.masthead')).toBe('1');
+  await expect(ann.locator('.start-dock')).not.toHaveClass(/\bstuck\b/);
+  expect(await shadeOf('.start-dock')).toBe('0');
+  await scrollToFoot(ann);
+  await expect(ann.locator('.start-dock')).toHaveClass(/\bstuck\b/);
+  await expect.poll(() => shadeOf('.start-dock')).toBe('1');
+  await expect.poll(() => shadeOf('header.masthead')).toBe('0');
+  await ann.evaluate(() => window.scrollTo(0, 0));
+  await expect(ann.locator('.start-dock')).not.toHaveClass(/\bstuck\b/);
   // The page has one start button, the chair's, in the bar above the groups.
   await expect(ann.getByRole('button', { name: text.lobby.start })).toHaveCount(1);
   expect((await box(ann, '.start-bar')).bottom).toBeLessThanOrEqual((await box(ann, '.groups')).top);

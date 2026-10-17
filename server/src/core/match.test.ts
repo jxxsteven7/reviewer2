@@ -240,6 +240,29 @@ describe('the table of a match', () => {
     ]);
   });
 
+  test('numbers the players in the order they enter, and keeps a number through a login or merges it into the account', () => {
+    const match = new Match({ ...RULES, games: 3 });
+    match.enter('ann', who('Ann'));
+    match.enter('guest', who('Guest 1', null, 1));
+    match.enter('ann', who('Ann'));
+    expect([match.numberOf('ann'), match.numberOf('guest'), match.numberOf('nobody')]).toEqual([1, 2, null]);
+    match.score('g1', scores({ ann: 1, guest: 3, late: 2 }), presentOnly('ann', 'guest', 'late'));
+    expect(match.numberOf('late')).toBe(3);
+    // A guest who logs in to an account that is new to the match keeps the number.
+    match.rekey('guest', 'bob', who('Bob'));
+    expect([match.numberOf('bob'), match.numberOf('guest')]).toEqual([2, null]);
+    expect(match.merged).toEqual(new Map());
+    // A guest who logs in to an account that played earlier goes into the account's number.
+    match.enter('cat', who('Cat'));
+    match.enter('visitor', who('Guest 2', null, 2));
+    match.rekey('visitor', 'cat', who('Cat'));
+    expect([match.numberOf('cat'), match.numberOf('visitor')]).toEqual([4, null]);
+    expect(match.merged).toEqual(new Map([[5, 4]]));
+    // A number is never given out twice.
+    match.enter('dee', who('Dee'));
+    expect(match.numberOf('dee')).toBe(6);
+  });
+
   test("shows a guest's line that became an account's as the account, also once it has left", () => {
     const match = new Match({ ...RULES, games: 3 });
     match.score('g1', scores({ guest: 3 }), (key) =>

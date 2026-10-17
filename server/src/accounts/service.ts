@@ -26,13 +26,15 @@ import {
   type MailKind,
   type ProfileView,
   type Rank,
+  type GameRoomSetup,
+  type MatchTitle,
   type RecordsView,
   type RoomSetup,
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
 import type { KeptReplay, ShownAccount } from '../core/game';
-import type { GameLogEntry } from '../core/gameLog';
+import type { GameLogEntry, MatchNumbers } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
 import { FeedbackStore } from '../store/feedback';
@@ -175,7 +177,7 @@ export class Accounts {
     this.records = new RecordStore(options.db, clock);
     this.replays = new ReplayStore(options.db, clock);
     this.agentPlays = new AgentPlayStore(options.db);
-    this.titles = new TitleStore(options.db, clock);
+    this.titles = new TitleStore(options.db);
     this.#feedback = options.feedback ?? new FeedbackStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
     this.likes = new LikeStore(options.db, clock);
@@ -216,8 +218,8 @@ export class Accounts {
     };
   }
 
-  // How the account last set up a room and a practice room (RoomSetup), or nothing of what can't
-  // be read.
+  // How the account last set up a room and a practice room of each game (RoomSetup), or nothing of
+  // what can't be read.
   roomSetupOf(accountId: number): RoomSetup {
     const text = this.store.roomSetup(accountId);
     if (text === null) return {};
@@ -229,12 +231,14 @@ export class Accounts {
     }
   }
 
-  // Keeps how the account has just set up a room or a practice room, the other part as it was. A
-  // setup too large to keep, or a database too full to write it to, leaves the last one in place.
-  rememberRoomSetup(accountId: number, part: RoomSetup): void {
-    const text = JSON.stringify({ ...this.roomSetupOf(accountId), ...part });
-    if (text.length > MAX_ROOM_SETUP || this.#full()) return;
-    this.store.setRoomSetup(accountId, text);
+  // Keeps how the account has just set up a room or a practice room of the game `game`, the other
+  // part of that game's and the other games' as they were. A game's setup too large to keep, or a
+  // database too full to write it to, leaves the last one in place.
+  rememberRoomSetup(accountId: number, game: string, part: GameRoomSetup): void {
+    const kept = this.roomSetupOf(accountId);
+    const own = { ...kept[game], ...part };
+    if (JSON.stringify(own).length > MAX_ROOM_SETUP || this.#full()) return;
+    this.store.setRoomSetup(accountId, JSON.stringify({ ...kept, [game]: own }));
   }
 
   // The public profile of the account with this handle, as the viewer sees it
@@ -775,7 +779,9 @@ export class Accounts {
   // Keeps a game on an account's record, as the game module described it, with the streak that it
   // brings the account to and the titles that it brought them (docs/architecture.md#titles), in one
   // transaction, unless the database is full. Gives the streak back, or null when the game wasn't
-  // kept, as one that was on the record already, whose titles were awarded with it.
+  // kept, as one that was on the record already, whose titles were awarded with it, or one that an
+  // AI played in, which brings none. The record of the game comes first (keepGame): the database
+  // refuses a record of a game that isn't kept.
   record(accountId: number, record: NewRecord): Streak | null {
     if (this.#full() || this.store.byId(accountId) === undefined) return null;
     return this.store.transaction(() => {
@@ -791,11 +797,10 @@ export class Accounts {
 
   // Keeps the record of a game (docs/architecture.md#game-records), however it ended, with how it
   // began, its logs and which player was which account, once for each game, unless the database is
-  // full, which the log says. The game's log has a limit of its own (gameLog.ts). Says whether the
-  // game was kept.
+  // full, which the log says. Says whether the game is kept, now or from before.
   keepGame(game: NewReplay): boolean {
     if (this.#full()) return false;
-    return this.store.transaction(() => this.replays.add(game));
+    return this.store.transaction(() => this.replays.add(game) || this.replays.has(game.gameId));
   }
 
   // Adds what the groups said after the end of a game to its record (ReplayStore.addToLog), in one
@@ -805,9 +810,10 @@ export class Accounts {
     entries: readonly GameLogEntry[],
     players: readonly { playerId: string; accountId: number }[],
     deleted: Iterable<string> = [],
+    match: MatchNumbers | null = null,
   ): boolean {
     if (this.#full()) return false;
-    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players, deleted));
+    return this.store.transaction(() => this.replays.addToLog(gameId, entries, players, deleted, match));
   }
 
   // What it takes to show the replay of a game that the account played in (GameModule.showReplay):
@@ -825,17 +831,17 @@ export class Accounts {
       accounts.set(playerId, { username: account.username, avatar: avatarUrl(account), handle: account.handle });
       if (accountId === login.account.id) viewer.add(playerId);
     }
-    return { game: kept.game, setup: kept.setup, log: kept.log, accounts, viewer };
+    return { game: kept.game, setup: kept.setup, log: kept.log, language: kept.language, accounts, viewer };
   }
 
   // Keeps a match that has run its course on an account's record, with the title that it awarded,
-  // in one transaction, unless the database is full. A match is kept, and its title awarded, once
-  // for each account, however often this is called. Says whether the match was new.
-  recordMatch(accountId: number, record: NewMatchRecord): boolean {
+  // if any, in one transaction, unless the database is full. A match is kept, and its title awarded,
+  // once for each account, however often this is called. Says whether the match was new.
+  recordMatch(accountId: number, record: NewMatchRecord, title: MatchTitle | null): boolean {
     if (this.#full() || this.store.byId(accountId) === undefined) return false;
     return this.store.transaction(() => {
       const added = this.records.addMatch(accountId, record);
-      if (added && record.title) this.titles.award(accountId, record.game, record.title, record.matchId);
+      if (added && title) this.titles.award(accountId, record.game, title, record.matchId);
       return added;
     });
   }

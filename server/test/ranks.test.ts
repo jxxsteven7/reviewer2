@@ -2,6 +2,7 @@ import { RANK_POINTS, type KeywordsRoomData, type KeywordsView, type Team } from
 import { afterEach, describe, expect, test } from 'vitest';
 import { keywordsGame } from '../src/games/keywords';
 import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
+import { keepGame } from './keptGame';
 
 // Academic ranks over real sockets (docs/architecture.md#academic-ranks): every finished game of
 // the team word guessing game puts its points on the records of the players with accounts, and the
@@ -38,12 +39,12 @@ describe('academic ranks', () => {
     const bobs = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
     expect((await bobs.register('Bob')).body).toEqual({ ok: true });
+    keepGame(server.db, 'earlier');
     server.accounts.records.add(1, {
       game: 'keywords',
       gameId: 'earlier',
       side: 'red',
       role: 'captain',
-      winner: 'red',
       won: true,
       verdict: 'oral',
       points: RANK_POINTS.master - 1,
@@ -114,8 +115,10 @@ describe('academic ranks', () => {
     await until(() => records.points(1) === RANK_POINTS.master - 1 + points.Ann, "Ann's points");
     expect(records.points(2)).toBe(points.Bob);
     // The game went on the records with its points, and once to the replays, to watch again.
-    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: true, replay: true });
-    expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
+    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: true });
+    expect(server.db.prepare("SELECT count(*) AS count FROM replays WHERE game_id <> 'earlier'").get()).toEqual({
+      count: 1,
+    });
     // The snapshot that ends the game shows the ranks as they are now: Ann is a master's student
     // either way, with 503 or 504 points, and Bob still a kindergartner, with 3 or 4.
     expect(rankOf(dan, 'Ann')).toBe('master');

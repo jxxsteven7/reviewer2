@@ -16,7 +16,15 @@ import { History, watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
 import { FeedbackStore, feedbackLimits } from './store/feedback';
-import { SNAPSHOT_MS, Snapshots } from './store/snapshots';
+import { hasGamesOf, recountDue, recountRecords } from './store/recount';
+import {
+  BEFORE_RECOUNT_SUFFIX,
+  pruneSnapshots,
+  SNAPSHOT_MS,
+  Snapshots,
+  snapshotName,
+  writeSnapshot,
+} from './store/snapshots';
 import { ThanksLists } from './thanks';
 
 // Starts the server and stops it (docs/architecture.md): the settings, the word library, the
@@ -92,6 +100,34 @@ export async function main({
     if (database.migratedFrom !== null) {
       const snapshot = database.beforeMigration === null ? null : basename(database.beforeMigration);
       log('database_migrated', { from: database.migratedFrom, to: database.schema, snapshot });
+    }
+  }
+  // The records of a game whose rules have changed since they were counted are counted again from
+  // the record of every game (store/recount.ts), after a snapshot, as a migration runs: the one
+  // from before a migration this start, which holds the records as they were too, or else one of
+  // its own, of which the latest alone is kept, as of a migration's, since a recount that keeps
+  // failing, with the service started again and again, would otherwise fill the disk with them. A
+  // record that can't be counted again stops the server, as a migration that fails does, with the
+  // database as it was. A database with no game of the kind to count, as a new one, gets no
+  // snapshot and no line, only the note of the rules it is counted under.
+  const due = recountDue(db, GAMES);
+  if (due.length > 0) {
+    let snapshot = database.beforeMigration;
+    if (snapshot === null && database.snapshots !== null && hasGamesOf(db, due)) {
+      snapshot = await writeSnapshot(db, database.snapshots, snapshotName(Date.now(), BEFORE_RECOUNT_SUFFIX));
+      try {
+        pruneSnapshots(database.snapshots, Date.now());
+      } catch (error) {
+        log('snapshots_not_pruned', { message: (error as Error).message });
+      }
+    }
+    const report = recountRecords(db, due);
+    if (report.games > 0) {
+      log('records_recounted', {
+        rules: due.map(({ id, rulesVersion }) => ({ game: id, version: rulesVersion })),
+        ...report,
+        snapshot: snapshot === null ? null : basename(snapshot),
+      });
     }
   }
   const feedback = new FeedbackStore(db, undefined, feedbackLimits(config.maxFeedback));

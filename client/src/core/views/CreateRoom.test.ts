@@ -129,12 +129,15 @@ describe('the room setup', () => {
     writeStored(
       'r2.roomSetup',
       JSON.stringify({
-        game: 'keywords',
-        fields: ['ml', 'gone'],
-        randomFields: false,
-        match: { games: 5, teams: 'switch', grouping: 'random' },
-        public: true,
-        play: false,
+        keywords: {
+          fields: ['ml', 'gone'],
+          randomFields: false,
+          match: { games: 5, teams: 'switch', grouping: 'random' },
+          public: true,
+          play: false,
+        },
+        // Another game's last room is another game's.
+        chess: { fields: ['openings'], play: true },
       }),
     );
     const wrapper = await opened();
@@ -153,19 +156,38 @@ describe('the room setup', () => {
     });
     expect(payload).not.toHaveProperty('public');
     expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toEqual({
-      game: 'keywords',
-      language: 'en',
-      fields: ['ml'],
-      randomFields: false,
-      match: { games: 5, teams: 'switch', grouping: 'random' },
-      public: false,
-      play: false,
+      keywords: {
+        language: 'en',
+        fields: ['ml'],
+        randomFields: false,
+        match: { games: 5, teams: 'switch', grouping: 'random' },
+        public: false,
+        play: false,
+      },
+      chess: { fields: ['openings'], play: true },
+    });
+  });
+
+  test('leaves a last room kept before rooms were kept by game behind, and writes this one in its place', async () => {
+    writeStored(
+      'r2.roomSetup',
+      JSON.stringify({ game: 'keywords', fields: ['ml'], match: null, public: true, play: false }),
+    );
+    const wrapper = await opened();
+    expect(box(wrapper, 0).element.checked).toBe(false);
+    expect(box(wrapper, 1).element.checked).toBe(false);
+    await box(wrapper, 0).setValue(true);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({ fields: ['general'], play: true });
+    expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toEqual({
+      keywords: { language: 'en', fields: ['general'], randomFields: false, match: null, public: false, play: true },
     });
   });
 
   test('creates no room from the last setup before the lists have come, which check its lists', async () => {
     fields.value = null;
-    writeStored('r2.roomSetup', JSON.stringify({ game: 'keywords', fields: ['ml', 'gone'] }));
+    writeStored('r2.roomSetup', JSON.stringify({ keywords: { fields: ['ml', 'gone'] } }));
     const wrapper = await opened();
     expect(submit(wrapper).attributes('disabled')).toBeDefined();
     await wrapper.get('form').trigger('submit');
@@ -189,12 +211,12 @@ describe('the room setup', () => {
     try {
       writeStored(
         'r2.roomSetup',
-        JSON.stringify({ game: 'keywords', language: 'zh', fields: ['ml'], settings: { clueLength: 2 } }),
+        JSON.stringify({ keywords: { language: 'zh', fields: ['ml'], settings: { clueLength: 2 } } }),
       );
       await opened();
       expect(restoreSettings).toHaveBeenLastCalledWith({ clueLength: 2 }, 'en', 'zh');
       // A setup kept before the language was, or with one that is none, says nothing of it.
-      writeStored('r2.roomSetup', JSON.stringify({ game: 'keywords', language: 'xx', fields: ['ml'], settings: {} }));
+      writeStored('r2.roomSetup', JSON.stringify({ keywords: { language: 'xx', fields: ['ml'], settings: {} } }));
       await opened();
       expect(restoreSettings).toHaveBeenLastCalledWith({}, 'en', null);
     } finally {
@@ -203,8 +225,8 @@ describe('the room setup', () => {
   });
 
   test("starts an account's room from the setup that the server kept for it", async () => {
-    const room = { game: 'keywords', fields: ['general'], randomFields: false, match: null, public: true, play: true };
-    signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: { room } };
+    const room = { language: 'en', fields: ['general'], randomFields: false, match: null, public: true, play: true };
+    signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: { keywords: { room } } };
     const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
     expect(box(wrapper, 0).element.checked).toBe(true);
     await wrapper.get('form').trigger('submit');

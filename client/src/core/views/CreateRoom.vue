@@ -32,7 +32,7 @@ const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
 const router = useRouter();
 
-const last = lastRoom();
+const last = lastRoom(props.game);
 const chosen = ref<string[]>(keptFields(last?.fields));
 const randomFields = ref(last?.randomFields === true);
 const play = ref(typeof last?.play === 'boolean' ? last.play : true);
@@ -44,10 +44,11 @@ const usable = computed(() =>
   (fields.value ?? []).filter((field) => field.counts[language.value] >= props.wordsNeeded),
 );
 // The game's settings, with its own form, which also says whether they will do: those of the last
-// room, which the game reads for this language, knowing the last room's, if it was kept.
+// room of this game, which the game reads for this language, knowing the last room's, if it was
+// kept.
 const screens = computed(() => games[props.game]);
 const settings = ref<object | undefined>(
-  last?.game === props.game && last.settings !== undefined
+  last?.settings !== undefined
     ? screens.value?.restoreSettings(
         last.settings,
         language.value,
@@ -114,9 +115,8 @@ async function create() {
     formError.value = t(errorKey(reply.error));
     return;
   }
-  keepRoomSetup({
+  keepRoomSetup(props.game, {
     room: {
-      game: props.game,
       language: currentLanguage(),
       fields: [...chosen.value],
       randomFields: randomFields.value,

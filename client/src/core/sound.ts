@@ -2,10 +2,14 @@ import type { Emote } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { readStored, writeStored } from './storage';
 
-// The sounds of the quick reactions. They are made with Web Audio as they play, so that the page
+// The sounds of the quick reactions, and of the room's calls about a player or a group
+// (emotes.ts): the deadline that passed, the acceptance of a deadline hero and of a group's first
+// clue, and Reviewer 2 on the way. They are made with Web Audio as they play, so that the page
 // carries no audio files. Phones, WeChat's browser among them, let a page make a sound only after
 // the player has touched it, so the audio is unlocked by a touch, click or key press, and stays
 // silent until then. Whoever turns the sounds off keeps them off on their next visit.
+
+export type Sound = Emote | 'deadline' | 'accept' | 'reviewer2';
 
 const MUTED = 'r2.muted';
 
@@ -57,7 +61,7 @@ function tone(audio: AudioContext, { type, from, to = from, at, length, volume =
 // To play a recording instead, put the file in client/src/assets, so that the build serves it from
 // our own server, fetch it and decode it once with audio.decodeAudioData(), and play the buffer here
 // through an AudioBufferSourceNode connected to audio.destination.
-const SOUNDS: Record<Emote, (audio: AudioContext, at: number) => void> = {
+const SOUNDS: Record<Sound, (audio: AudioContext, at: number) => void> = {
   // A sagging "wah, wah, wah, waaah": the flowers have wilted.
   waiting(audio, at) {
     const steps = [
@@ -112,11 +116,6 @@ const SOUNDS: Record<Emote, (audio: AudioContext, at: number) => void> = {
       }),
     );
   },
-  // A rubber stamp coming down, then a low buzz: sent back for a major revision.
-  major_revision(audio, at) {
-    tone(audio, { type: 'sine', from: 160, to: 60, at, length: 0.12, volume: 0.3 });
-    tone(audio, { type: 'square', from: 196, at: at + 0.2, length: 0.4, volume: 0.08, filter: 800 });
-  },
   // A long sigh down, and a small hopeful note back up: on to the next venue.
   resubmit(audio, at) {
     tone(audio, { type: 'sine', from: 440, to: 300, at, length: 0.6, volume: 0.18 });
@@ -132,13 +131,6 @@ const SOUNDS: Record<Emote, (audio: AudioContext, at: number) => void> = {
   coauthor(audio, at) {
     tone(audio, { type: 'triangle', from: 659, at, length: 0.35, volume: 0.18 });
     tone(audio, { type: 'triangle', from: 523, at: at + 0.3, length: 0.6, volume: 0.18 });
-  },
-  // Typing late at night, then the carriage bell: an all-nighter.
-  all_nighter(audio, at) {
-    for (let i = 0; i < 5; i += 1) {
-      tone(audio, { type: 'square', from: 1800, at: at + i * 0.09, length: 0.02, volume: 0.05 });
-    }
-    tone(audio, { type: 'sine', from: 1568, at: at + 0.5, length: 0.5, volume: 0.12 });
   },
   // Two little hops up, twice: mine, mine.
   mine_mine(audio, at) {
@@ -203,10 +195,10 @@ function unlock(): void {
 for (const gesture of GESTURES) window.addEventListener(gesture, unlock, { capture: true, passive: true });
 
 // Plays a reaction's sound, unless the sounds are off or the player hasn't touched the page yet.
-export function playSound(emote: Emote): void {
+export function playSound(sound: Sound): void {
   if (muted.value || !audio || audio.state !== 'running') return;
   try {
-    SOUNDS[emote](audio, audio.currentTime + 0.01);
+    SOUNDS[sound](audio, audio.currentTime + 0.01);
   } catch {
     // A sound that can't be made is no reason to stop the game.
   }

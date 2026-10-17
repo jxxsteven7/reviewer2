@@ -169,10 +169,10 @@ watch(
           <DuoSummary :duo="profile.duo" />
         </section>
 
-        <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
         <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">{{
           profile.link
         }}</a>
+        <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
 
         <RecordStats v-if="profile.record" :counts="profile.record" />
 

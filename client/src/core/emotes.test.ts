@@ -41,9 +41,9 @@ afterEach(() => {
 
 describe('quick reactions', () => {
   test('show and sound for the room on the page, with the sender by name', () => {
-    emit({ roomId: 'room-a', playerId: 'bob', emote: 'reviewer2' });
-    expect(bubbles).toEqual([{ id: expect.any(Number), name: 'Bob', emote: 'reviewer2' }]);
-    expect(mock.playSound).toHaveBeenCalledWith('reviewer2');
+    emit({ roomId: 'room-a', playerId: 'bob', emote: 'coauthor' });
+    expect(bubbles).toEqual([{ id: expect.any(Number), name: 'Bob', emote: 'coauthor' }]);
+    expect(mock.playSound).toHaveBeenCalledWith('coauthor');
   });
 
   test("of another room, of someone the page doesn't know, or of a kind it doesn't know, do nothing", () => {
@@ -57,17 +57,17 @@ describe('quick reactions', () => {
   });
 
   test('stay for four seconds, three at most', () => {
-    for (const emote of ['waiting', 'deadline', 'reviewer2', 'waiting']) {
+    for (const emote of ['waiting', 'p_hacking', 'coauthor', 'waiting']) {
       emit({ roomId: 'room-a', playerId: 'ann', emote });
       vi.advanceTimersByTime(1000);
     }
     expect(bubbles.map((bubble) => ('emote' in bubble ? bubble.emote : null))).toEqual([
-      'deadline',
-      'reviewer2',
+      'p_hacking',
+      'coauthor',
       'waiting',
     ]);
     vi.advanceTimersByTime(1000);
-    expect(bubbles.map((bubble) => ('emote' in bubble ? bubble.emote : null))).toEqual(['reviewer2', 'waiting']);
+    expect(bubbles.map((bubble) => ('emote' in bubble ? bubble.emote : null))).toEqual(['coauthor', 'waiting']);
     vi.advanceTimersByTime(2000);
     expect(bubbles).toEqual([]);
   });
@@ -86,11 +86,11 @@ describe('quick reactions', () => {
 
   test('keep a call while the reactions to it crowd in, until nothing but calls is left', () => {
     callOut({ name: 'Ann' }, 'Ann missed the deadline', 'deadline');
-    for (const emote of ['deadline', 'waiting', 'reviewer2']) emit({ roomId: 'room-a', playerId: 'bob', emote });
+    for (const emote of ['p_hacking', 'waiting', 'coauthor']) emit({ roomId: 'room-a', playerId: 'bob', emote });
     expect(bubbles.map((bubble) => ('call' in bubble ? bubble.call : bubble.emote))).toEqual([
       'Ann missed the deadline',
       'waiting',
-      'reviewer2',
+      'coauthor',
     ]);
     callOut({ name: 'Bob' }, 'Bob missed the deadline', 'deadline');
     callOut({ name: 'Cat' }, 'Cat missed the deadline', 'deadline');
@@ -104,24 +104,24 @@ describe('quick reactions', () => {
 
   test('wait ten seconds after one has gone, or as long as the server says, unless it never got there', async () => {
     const start = Date.now();
-    await sendEmote('deadline');
-    expect(mock.act).toHaveBeenLastCalledWith('room:emote', { emote: 'deadline' });
+    await sendEmote('waiting');
+    expect(mock.act).toHaveBeenLastCalledWith('room:emote', { emote: 'waiting' });
     expect(readyAt.value).toBe(start + 10_000);
     // Another tab sent one eight seconds ago.
     mock.act.mockResolvedValueOnce({ ok: false, error: 'emote_cooldown', waitMs: 2000 });
-    await sendEmote('deadline');
+    await sendEmote('waiting');
     expect(readyAt.value).toBe(start + 2000);
     mock.act.mockResolvedValueOnce({ ok: false, error: 'emote_cooldown' });
-    await sendEmote('deadline');
+    await sendEmote('waiting');
     expect(readyAt.value).toBe(start + 10_000);
     mock.act.mockResolvedValueOnce({ ok: false, error: 'offline' });
-    await sendEmote('deadline');
+    await sendEmote('waiting');
     expect(readyAt.value).toBe(0);
   });
 
   test('stay behind, with the wait, when the page shows another room or none', async () => {
     emit({ roomId: 'room-a', playerId: 'ann', emote: 'waiting' });
-    await sendEmote('deadline');
+    await sendEmote('waiting');
     expect(bubbles).toHaveLength(1);
     expect(readyAt.value).toBeGreaterThan(0);
     room.value = { ...shown, roomId: 'room-b' };

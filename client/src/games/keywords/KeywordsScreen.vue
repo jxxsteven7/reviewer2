@@ -16,14 +16,16 @@ import PausedNotice from './PausedNotice.vue';
 import TurnStrip from './TurnStrip.vue';
 import { useKeywords } from './useKeywords';
 import { useDeadlineHeroes } from './useDeadlineHeroes';
+import { useGroupCalls } from './useGroupCalls';
 import { useMissedDeadlines } from './useMissedDeadlines';
 
 // The room on a big screen. In the waiting room: how to join, and who sits where. During the
 // game: the board as spectators see it, with the turn and the clue log. A screen never gets the
 // key, so it can stay on the wall for everyone. A match's table, or its ranking, is shown too, and
 // so are the winning streaks that a game has just brought players to, for the room to cheer, a PI
-// who misses the deadline for a clue, for the room to tease (useMissedDeadlines.ts), and a deadline
-// hero, for the room to cheer (useDeadlineHeroes.ts).
+// who misses the deadline for a clue, for the room to tease (useMissedDeadlines.ts), a deadline
+// hero, for the room to cheer (useDeadlineHeroes.ts), and a group whose card brings it a title
+// (useGroupCalls.ts).
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { data, groups, spectators } = useKeywords(toRef(props, 'room'));
@@ -38,6 +40,7 @@ useDeadlineHeroes(
   game,
   computed(() => props.room.players),
 );
+useGroupCalls(game);
 </script>
 
 <template>

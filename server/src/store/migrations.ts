@@ -915,4 +915,293 @@ export const MIGRATIONS: readonly string[] = [
   CREATE INDEX agent_plays_persona ON agent_plays (persona);
   CREATE INDEX agent_plays_account ON agent_plays (account_id);
   `,
+  // 24: every row of a game's data goes with the record of its game, every game is kept, what the
+  // records can give is kept once, and the records are counted again from the record of the game
+  // when the rules change (docs/architecture.md#game-records, docs/rules/constraints.md#data), as
+  // the maintainers decided before the first public release. The tables are rebuilt as migration 22
+  // rebuilt the records, every row kept with its id and the count that AUTOINCREMENT goes on from,
+  // so that nothing in an old format comes back. First the rows are held against each other, and a
+  // row that differs stops the migration, so that nothing is lost unnoticed:
+  //
+  // - a match's title, which the records of matches and the titles both kept, must be the same in
+  //   both;
+  // - the records of a game must agree with the record of the game, and with each other, on the
+  //   game, who won, whether an AI played, its place in its match and when it ended, within a
+  //   minute, since the records were written just before the record of the game;
+  // - how the first game began (`setup`) must name the language of the record of the game, which
+  //   it goes on naming alone;
+  // - every kept game must have its log, which the records are counted again from;
+  // - the games of a match must be ones whose players can be numbered (below): no guest and no
+  //   account deleted since among them, and everyone on the record of the match among the players
+  //   of its games, as the maintainers' own data has them. Other data would need a hand.
+  //
+  // Then what can't be brought over goes, with whatever depends on it, which the maintainers' own
+  // data has none of: the records of games that have no record of the game, from before every game
+  // was kept, whose start and players nothing says any more, with their titles; and the records of
+  // matches left with no game of theirs on the record, with their titles. Then:
+  //
+  // - replays (the record of every game) gets a unique index on the game and its ID, which every
+  //   row of a game's data points at (FOREIGN KEY ... ON DELETE CASCADE): game_records, game_players,
+  //   which gets the game too, and agent_plays. It gets the place of a game in its match, which the
+  //   records of the game kept one copy of each: the match's ID, the number of the game in it and
+  //   how many games the match was to have, for a game that a match scored, which finished with no
+  //   AI; `in_match` stays, for the games of a match room that weren't scored. Its log is never
+  //   null: a game of a match gets everyone's number in the match into its log (GameLogData.match),
+  //   by player ID, as the room writes it from now on, the numbers given here to every account that
+  //   played in a game of the match, also one that left before the end and has no record of the
+  //   game, since the match scored them all the same, in the order of the accounts' ids, which
+  //   changes no place and no total; how the first game began
+  //   loses the language and marks every card as a word of the lists (`custom`), since no game with
+  //   the chair's own words was kept before this migration. The AI log of a game that no AI made a
+  //   move in, as of one asked for someone who was back before it answered, goes: the room keeps
+  //   none such any more (Room.record), and the check of the data takes none.
+  // - game_records keeps what is the player's alone: the side, the role, whether they won, the
+  //   verdict and the points. The winner, the time, whether an AI played and the place in the match
+  //   are the record of the game's.
+  // - match_records loses the title, which the titles keep, one for each account and match.
+  // - titles point at the record of the game or of the match that each goes with, by the account
+  //   and the game or the match, and lose the time of the award, which the record of the game or
+  //   the match has.
+  // - accounts' last room setup is kept by game (RoomSetup in shared/src/accounts.ts), with the
+  //   game taken out of the room's part, which is the first game's, and the room's language
+  //   required: a room setup without one, which nothing has, would go.
+  `
+  CREATE TEMP TABLE match_titles_differ (
+    id INTEGER CONSTRAINT match_titles_differ_between_the_records_and_the_titles CHECK (id IS NULL)
+  );
+  INSERT INTO match_titles_differ
+    SELECT m.id FROM match_records AS m WHERE m.title IS NOT (
+      SELECT t.title FROM titles AS t WHERE t.match_id = m.match_id AND t.account_id = m.account_id
+    )
+    UNION SELECT t.id FROM titles AS t WHERE t.match_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM match_records AS m
+      WHERE m.match_id = t.match_id AND m.account_id = t.account_id AND m.title = t.title
+    );
+  DROP TABLE match_titles_differ;
+
+  CREATE TEMP TABLE records_differ (
+    id INTEGER CONSTRAINT records_differ_from_the_record_of_the_game CHECK (id IS NULL)
+  );
+  INSERT INTO records_differ
+    SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id
+    WHERE r.game <> g.game OR g.ending <> 'finished' OR r.winner IS NOT g.winner OR r.won <> (r.side = g.winner)
+      OR r.agents <> (g.agents > 0 OR g.takeover = 1)
+      OR (r.match_id IS NOT NULL) <> (g.in_match = 1)
+      OR abs(julianday(r.ended_at) - julianday(g.ended_at)) > 1.0 / 1440
+    UNION SELECT r.id FROM game_records AS r WHERE EXISTS (
+      SELECT 1 FROM game_records AS o WHERE o.game_id = r.game_id AND (
+        o.match_id IS NOT r.match_id OR o.match_game IS NOT r.match_game OR o.match_games IS NOT r.match_games
+      )
+    );
+  DROP TABLE records_differ;
+
+  CREATE TEMP TABLE setup_language_differs (
+    id TEXT CONSTRAINT setup_language_differs_from_the_record_of_the_game CHECK (id IS NULL)
+  );
+  INSERT INTO setup_language_differs
+    SELECT game_id FROM replays WHERE setup IS NOT NULL AND json_extract(setup, '$.language') IS NOT language;
+  DROP TABLE setup_language_differs;
+
+  CREATE TEMP TABLE games_without_log (id TEXT CONSTRAINT games_kept_without_their_log CHECK (id IS NULL));
+  INSERT INTO games_without_log SELECT game_id FROM replays WHERE log IS NULL;
+  DROP TABLE games_without_log;
+
+  CREATE TEMP TABLE match_games_unnumbered (
+    id TEXT CONSTRAINT match_games_whose_players_cannot_be_numbered CHECK (id IS NULL)
+  );
+  INSERT INTO match_games_unnumbered
+    SELECT g.game_id FROM replays AS g
+    WHERE EXISTS (SELECT 1 FROM game_records AS r WHERE r.game_id = g.game_id AND r.match_id IS NOT NULL)
+      AND (g.guests > 0 OR json_array_length(g.log, '$.deleted') > 0)
+    UNION SELECT m.match_id FROM match_records AS m
+    WHERE EXISTS (
+      SELECT 1 FROM game_records AS r WHERE r.match_id = m.match_id AND r.game_id IN (SELECT game_id FROM replays)
+    ) AND NOT EXISTS (
+      SELECT 1 FROM game_players AS p JOIN game_records AS r ON r.game_id = p.game_id
+      WHERE r.match_id = m.match_id AND p.account_id = m.account_id
+    );
+  DROP TABLE match_games_unnumbered;
+
+  DELETE FROM titles WHERE game_id IS NOT NULL AND game_id NOT IN (SELECT game_id FROM replays);
+  DELETE FROM game_records WHERE game_id NOT IN (SELECT game_id FROM replays);
+  DELETE FROM titles WHERE match_id IS NOT NULL AND NOT EXISTS (
+    SELECT 1 FROM game_records AS r WHERE r.match_id = titles.match_id AND r.account_id = titles.account_id
+  );
+  DELETE FROM match_records WHERE NOT EXISTS (
+    SELECT 1 FROM game_records AS r WHERE r.match_id = match_records.match_id AND r.account_id = match_records.account_id
+  );
+
+  CREATE TABLE new_replays (
+    game_id TEXT PRIMARY KEY,
+    game TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    log TEXT NOT NULL,
+    agent_log TEXT,
+    ending TEXT NOT NULL CHECK (ending IN ('finished', 'withdrawn', 'abandoned', 'interrupted')),
+    winner TEXT,
+    reason TEXT,
+    started_at TEXT NOT NULL,
+    setup TEXT,
+    accounts INTEGER NOT NULL,
+    guests INTEGER NOT NULL,
+    agents INTEGER NOT NULL,
+    takeover INTEGER NOT NULL CHECK (takeover IN (0, 1)),
+    in_match INTEGER NOT NULL CHECK (in_match IN (0, 1)),
+    practice INTEGER NOT NULL CHECK (practice IN (0, 1)),
+    language TEXT NOT NULL,
+    fields TEXT NOT NULL,
+    version TEXT NOT NULL,
+    rules INTEGER,
+    words TEXT NOT NULL,
+    match_id TEXT,
+    match_game INTEGER,
+    match_games INTEGER,
+    CHECK (ending = 'finished' OR (winner IS NULL AND reason IS NULL)),
+    CHECK ((match_id IS NULL) = (match_game IS NULL) AND (match_id IS NULL) = (match_games IS NULL)),
+    CHECK (match_game BETWEEN 1 AND match_games),
+    CHECK (match_id IS NULL OR (in_match = 1 AND ending = 'finished' AND agents = 0 AND takeover = 0))
+  ) STRICT;
+  INSERT INTO new_replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup,
+      accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, words,
+      match_id, match_game, match_games)
+    SELECT game_id, game, ended_at, log, CASE WHEN agents > 0 OR takeover = 1 THEN agent_log END, ending, winner, reason,
+      started_at,
+      CASE WHEN game = 'keywords' AND setup IS NOT NULL THEN json_set(json_remove(setup, '$.language'), '$.cards', (
+        SELECT json_group_array(json_set(card.value, '$.custom', json('false')) ORDER BY card.key)
+        FROM json_each(replays.setup, '$.cards') AS card
+      )) ELSE setup END,
+      accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, words,
+      (SELECT match_id FROM game_records WHERE game_records.game_id = replays.game_id),
+      (SELECT match_game FROM game_records WHERE game_records.game_id = replays.game_id),
+      (SELECT match_games FROM game_records WHERE game_records.game_id = replays.game_id)
+    FROM replays;
+  DROP TABLE replays;
+  ALTER TABLE new_replays RENAME TO replays;
+  CREATE UNIQUE INDEX replays_game ON replays (game_id, game);
+
+  CREATE TEMP TABLE match_numbers AS
+    SELECT match_id, account_id, dense_rank() OVER (PARTITION BY match_id ORDER BY account_id) AS number
+    FROM (SELECT DISTINCT g.match_id, p.account_id FROM replays AS g
+      JOIN game_players AS p ON p.game_id = g.game_id WHERE g.match_id IS NOT NULL);
+  UPDATE replays SET log = json_set(log, '$.match', json_object('numbers', (
+    SELECT json_group_object(p.player_id, n.number) FROM game_players AS p
+    JOIN match_numbers AS n ON n.match_id = replays.match_id AND n.account_id = p.account_id
+    WHERE p.game_id = replays.game_id
+  ))) WHERE match_id IS NOT NULL;
+  DROP TABLE match_numbers;
+
+  CREATE TABLE new_game_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    side TEXT NOT NULL,
+    role TEXT NOT NULL,
+    won INTEGER NOT NULL CHECK (won IN (0, 1)),
+    verdict TEXT NOT NULL,
+    points INTEGER NOT NULL,
+    UNIQUE (account_id, game_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+  INSERT INTO new_game_records (id, account_id, game, game_id, side, role, won, verdict, points)
+    SELECT id, account_id, game, game_id, side, role, won, verdict, points FROM game_records;
+  DELETE FROM sqlite_sequence WHERE name = 'new_game_records';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_game_records', seq FROM sqlite_sequence WHERE name = 'game_records';
+  DROP TABLE game_records;
+  ALTER TABLE new_game_records RENAME TO game_records;
+  CREATE INDEX game_records_recent ON game_records (account_id, id DESC);
+  CREATE INDEX game_records_game ON game_records (game_id);
+
+  CREATE TABLE new_match_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    match_id TEXT NOT NULL,
+    ended_at TEXT NOT NULL,
+    games INTEGER NOT NULL,
+    rank INTEGER NOT NULL,
+    players INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    UNIQUE (account_id, match_id)
+  ) STRICT;
+  INSERT INTO new_match_records (id, account_id, game, match_id, ended_at, games, rank, players, score)
+    SELECT id, account_id, game, match_id, ended_at, games, rank, players, score FROM match_records;
+  DELETE FROM sqlite_sequence WHERE name = 'new_match_records';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_match_records', seq FROM sqlite_sequence WHERE name = 'match_records';
+  DROP TABLE match_records;
+  ALTER TABLE new_match_records RENAME TO match_records;
+  CREATE INDEX match_records_recent ON match_records (account_id, id DESC);
+
+  CREATE TABLE new_titles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    title TEXT NOT NULL,
+    match_id TEXT,
+    game_id TEXT,
+    turn INTEGER CHECK (turn > 0),
+    CHECK ((game_id IS NULL) = (turn IS NULL)),
+    CHECK ((match_id IS NULL) <> (game_id IS NULL)),
+    FOREIGN KEY (account_id, game_id) REFERENCES game_records (account_id, game_id) ON DELETE CASCADE,
+    FOREIGN KEY (account_id, match_id) REFERENCES match_records (account_id, match_id) ON DELETE CASCADE
+  ) STRICT;
+  INSERT INTO new_titles (id, account_id, game, title, match_id, game_id, turn)
+    SELECT id, account_id, game, title, match_id, game_id, turn FROM titles;
+  DELETE FROM sqlite_sequence WHERE name = 'new_titles';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_titles', seq FROM sqlite_sequence WHERE name = 'titles';
+  DROP TABLE titles;
+  ALTER TABLE new_titles RENAME TO titles;
+  CREATE INDEX titles_account ON titles (account_id);
+  CREATE UNIQUE INDEX titles_match ON titles (account_id, match_id) WHERE match_id IS NOT NULL;
+  CREATE UNIQUE INDEX titles_game ON titles (account_id, title, game_id, turn) WHERE game_id IS NOT NULL;
+
+  CREATE TABLE new_game_players (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    game TEXT NOT NULL,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    PRIMARY KEY (game_id, player_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+  INSERT INTO new_game_players (game_id, player_id, game, account_id)
+    SELECT p.game_id, p.player_id, g.game, p.account_id FROM game_players AS p JOIN replays AS g ON g.game_id = p.game_id;
+  DROP TABLE game_players;
+  ALTER TABLE new_game_players RENAME TO game_players;
+  CREATE INDEX game_players_account ON game_players (account_id);
+
+  CREATE TABLE new_agent_plays (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    game TEXT NOT NULL,
+    persona TEXT NOT NULL,
+    takeover INTEGER NOT NULL CHECK (takeover IN (0, 1)),
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    side TEXT,
+    role TEXT,
+    won INTEGER CHECK (won IN (0, 1)),
+    feats TEXT CHECK (feats IS NULL OR json_type(feats) = 'object'),
+    PRIMARY KEY (game_id, player_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+  INSERT INTO new_agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, won, feats)
+    SELECT game_id, player_id, game, persona, takeover, account_id, side, role, won, feats FROM agent_plays;
+  DROP TABLE agent_plays;
+  ALTER TABLE new_agent_plays RENAME TO agent_plays;
+  CREATE INDEX agent_plays_persona ON agent_plays (persona);
+  CREATE INDEX agent_plays_account ON agent_plays (account_id);
+
+  UPDATE accounts SET room_setup = json_object(
+    coalesce(json_extract(room_setup, '$.room.game'), 'keywords'),
+    json_patch(
+      CASE WHEN json_type(room_setup, '$.room.language') = 'text'
+        THEN json_object('room', json_remove(json_extract(room_setup, '$.room'), '$.game'))
+        ELSE json_object() END,
+      CASE WHEN json_type(room_setup, '$.practice') = 'object'
+        THEN json_object('practice', json_extract(room_setup, '$.practice'))
+        ELSE json_object() END
+    )
+  ) WHERE room_setup IS NOT NULL;
+  UPDATE accounts SET room_setup = NULL
+    WHERE room_setup IS NOT NULL AND (SELECT count(*) FROM json_tree(room_setup) WHERE type <> 'object') = 0;
+  `,
 ];

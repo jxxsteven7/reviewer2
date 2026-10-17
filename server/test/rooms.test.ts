@@ -485,10 +485,10 @@ describe('quick reactions', () => {
     const outsider = (await room()).chair;
     const before = { rev: chair.state?.rev, states: chair.states.length };
 
-    expect(await bob.send('room:emote', { emote: 'reviewer2' })).toEqual({ ok: true });
+    expect(await bob.send('room:emote', { emote: 'coauthor' })).toEqual({ ok: true });
     const everyone = [chair, bob, tab, screen];
     await until(() => everyone.every((client) => client.emotes.length === 1), 'everyone hears');
-    for (const client of everyone) expect(client.emotes).toEqual([{ roomId, playerId: bob.me, emote: 'reviewer2' }]);
+    for (const client of everyone) expect(client.emotes).toEqual([{ roomId, playerId: bob.me, emote: 'coauthor' }]);
     expect(outsider.emotes).toEqual([]);
     // No snapshot, and no new rev.
     await chair.send('sys:ping');
@@ -503,7 +503,7 @@ describe('quick reactions', () => {
     await tab.send('room:join', { code });
     // Refused as too soon, with how long is left.
     const tooSoon = async (client: TestClient, atMost = 10_000) => {
-      const reply = await client.send('room:emote', { emote: 'deadline' });
+      const reply = await client.send('room:emote', { emote: 'waiting' });
       expect(reply).toMatchObject({ ok: false, error: 'emote_cooldown' });
       const { waitMs } = reply as { waitMs?: number };
       expect(waitMs).toBeGreaterThan(0);
@@ -513,20 +513,20 @@ describe('quick reactions', () => {
     await tooSoon(bob);
     await tooSoon(tab);
     // Everyone has a wait of their own.
-    expect(await chair.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
+    expect(await chair.send('room:emote', { emote: 'waiting' })).toEqual({ ok: true });
 
     // The test's clock runs on as well, so it moves less than the whole wait at first.
     server.advance(9_000);
     await tooSoon(bob, 1_000);
     server.advance(1_000);
-    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
+    expect(await bob.send('room:emote', { emote: 'waiting' })).toEqual({ ok: true });
 
     expect(await bob.send('room:leave')).toEqual({ ok: true });
     expect(await bob.send('room:join', { code, play: false })).toMatchObject({ ok: true });
     await tooSoon(bob);
     // A clock that was set back doesn't keep anyone waiting until it has caught up.
     server.advance(-60_000);
-    expect(await bob.send('room:emote', { emote: 'deadline' })).toEqual({ ok: true });
+    expect(await bob.send('room:emote', { emote: 'waiting' })).toEqual({ ok: true });
     await until(() => chair.emotes.length === 4, 'the chair hears all four');
   });
 

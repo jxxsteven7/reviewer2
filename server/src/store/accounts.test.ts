@@ -8,7 +8,8 @@ import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { addAccounts } from '../../test/statistics';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
-import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord } from './records';
+import { keepGame } from '../../test/keptGame';
+import { RecordStore, TitleStore, type NewMatchRecord, type NewRecord, type NewReplay } from './records';
 import { DEFAULT_SESSION_LIMITS, MailTokenStore, SessionStore } from './sessions';
 
 const DAY = 24 * 60 * 60_000;
@@ -338,29 +339,25 @@ describe('the record of games', () => {
     gameId: 'g1',
     side: 'red',
     role: 'captain',
-    winner: 'red',
     won: true,
     verdict: 'oral',
     points: 11,
     ...changes,
   });
+  // The record of the game, kept first, as the server keeps it (migration 24): red won.
+  const kept = (gameId: string, changes: Partial<NewReplay> = {}) => keepGame(db, gameId, changes, () => now);
 
   test('keeps each game once, and counts the games and the wins, those that an AI played in marked', () => {
     const records = new RecordStore(db, () => now);
     const ann = account('Ann');
     const bob = account('Bob');
+    kept('g1');
     expect(records.add(ann.id, record())).toEqual({ kind: 'wins', length: 1, record: true });
     expect(records.add(ann.id, record())).toBeNull();
     now += 60_000;
-    const lost = {
-      gameId: 'g2',
-      side: 'blue',
-      role: 'guesser',
-      won: false,
-      verdict: 'deskReject',
-      points: 0,
-      agents: true,
-    };
+    // A game that an AI played in, which Ann lost as a blue student: it brings her no streak.
+    kept('g2', { counts: { accounts: 1, guests: 0, agents: 1 } });
+    const lost = { gameId: 'g2', side: 'blue', role: 'guesser', won: false, verdict: 'deskReject', points: 0 };
     expect(records.add(ann.id, record(lost))).toBeNull();
     records.add(bob.id, record());
     expect(records.view(ann.id)).toEqual({
@@ -377,7 +374,6 @@ describe('the record of games', () => {
           winner: 'red',
           won: false,
           verdict: 'deskReject',
-          replay: false,
           match: null,
           agents: true,
         },
@@ -390,7 +386,6 @@ describe('the record of games', () => {
           winner: 'red',
           won: true,
           verdict: 'oral',
-          replay: false,
           match: null,
           agents: false,
         },
@@ -404,16 +399,25 @@ describe('the record of games', () => {
       recent: [],
       matches: NO_MATCHES,
     });
+    // A record of a game that isn't kept, or of another game than the record of the game says, is
+    // refused by the database.
+    expect(() => records.add(ann.id, record({ gameId: 'g9' }))).toThrow(/FOREIGN KEY/);
+    expect(() => records.add(bob.id, record({ gameId: 'g2', game: 'test' }))).toThrow(/FOREIGN KEY/);
   });
 
   test('counts the games and the wins in each role, every game as the totals do', () => {
     const records = new RecordStore(db, () => now);
     const ann = account();
+    kept('g1');
+    kept('g2', { match: { id: 'm1', game: 1, games: 1 } });
+    kept('g3', { counts: { accounts: 1, guests: 0, agents: 1 } });
+    kept('g4');
+    kept('g5');
     records.add(ann.id, record({ gameId: 'g1', role: 'captain', won: true }));
-    records.add(ann.id, record({ gameId: 'g2', role: 'captain', won: false, match: { id: 'm1', game: 1, games: 1 } }));
-    records.add(ann.id, record({ gameId: 'g3', role: 'guesser', won: true, points: 0, agents: true }));
+    records.add(ann.id, record({ gameId: 'g2', role: 'captain', won: false, side: 'blue' }));
+    records.add(ann.id, record({ gameId: 'g3', role: 'guesser', won: true, points: 0 }));
     records.add(ann.id, record({ gameId: 'g4', role: 'guesser', won: true }));
-    records.add(ann.id, record({ gameId: 'g5', role: 'guesser', won: false }));
+    records.add(ann.id, record({ gameId: 'g5', role: 'guesser', won: false, side: 'blue' }));
     expect(records.counts(ann.id)).toMatchObject({
       ordinary: { games: 4, wins: 3 },
       inMatches: { games: 1, wins: 0 },
@@ -421,15 +425,19 @@ describe('the record of games', () => {
     });
     // A role never played counts nothing, and a role the first game has not is counted nowhere.
     const bob = account('Bob');
-    records.add(bob.id, record({ gameId: 'g1', role: 'guesser', won: false }));
-    records.add(bob.id, record({ gameId: 'g2', role: 'painter', won: true, game: 'test' }));
+    kept('t1', { game: 'test' });
+    records.add(bob.id, record({ gameId: 'g1', role: 'guesser', won: false, side: 'blue' }));
+    records.add(bob.id, record({ gameId: 't1', role: 'painter', won: true, game: 'test' }));
     expect(records.counts(bob.id).roles).toEqual({ captain: NONE, guesser: { games: 1, wins: 0 } });
   });
 
   test('lists the latest 20 games and counts them all', () => {
     const records = new RecordStore(db, () => now);
     const ann = account();
-    for (let i = 1; i <= 25; i += 1) records.add(ann.id, record({ gameId: `g${i}`, won: i % 5 === 0 }));
+    for (let i = 1; i <= 25; i += 1) {
+      kept(`g${i}`);
+      records.add(ann.id, record({ gameId: `g${i}`, won: i % 5 === 0, side: i % 5 === 0 ? 'red' : 'blue' }));
+    }
     const view = records.view(ann.id);
     expect(view).toMatchObject({ ordinary: { games: 25, wins: 5 }, inMatches: NONE });
     expect(view.recent).toHaveLength(20);
@@ -438,10 +446,14 @@ describe('the record of games', () => {
   test('counts the games of matches apart, and says which game of its match each was', () => {
     const records = new RecordStore(db, () => now);
     const ann = account();
+    kept('g1');
+    kept('g2', { match: { id: 'm1', game: 1, games: 3 } });
+    kept('g3', { match: { id: 'm1', game: 2, games: 3 } });
+    kept('g4');
     records.add(ann.id, record({ gameId: 'g1' }));
-    records.add(ann.id, record({ gameId: 'g2', match: { id: 'm1', game: 1, games: 3 } }));
-    records.add(ann.id, record({ gameId: 'g3', won: false, match: { id: 'm1', game: 2, games: 3 } }));
-    records.add(ann.id, record({ gameId: 'g4', won: false }));
+    records.add(ann.id, record({ gameId: 'g2' }));
+    records.add(ann.id, record({ gameId: 'g3', won: false, side: 'blue' }));
+    records.add(ann.id, record({ gameId: 'g4', won: false, side: 'blue' }));
     const view = records.view(ann.id);
     expect(view).toMatchObject({ ordinary: { games: 2, wins: 1 }, inMatches: { games: 2, wins: 1 } });
     expect(view.recent.map(({ gameId, match }) => [gameId, match])).toEqual([
@@ -456,28 +468,30 @@ describe('the record of games', () => {
       roles: { captain: { games: 4, wins: 2 }, guesser: NONE },
       matches: { played: 0, won: 0 },
     });
-    // A game of a match is one of its games, and a game that an AI played in is never one: a record
-    // that can't be is refused, and never kept.
-    expect(() => records.add(ann.id, record({ gameId: 'g5', match: { id: 'm1', game: 4, games: 3 } }))).toThrow(
-      /constraint/,
-    );
-    const withAgents = record({ gameId: 'g6', points: 0, agents: true, match: { id: 'm1', game: 3, games: 3 } });
-    expect(() => records.add(ann.id, withAgents)).toThrow(/constraint/);
+    // A game of a match is one of its games, and a game that an AI played in is never one: a game
+    // that can't be is refused by the database, and never kept.
+    expect(() => kept('g5', { match: { id: 'm1', game: 4, games: 3 } })).toThrow(/constraint/);
+    expect(() =>
+      kept('g6', { match: { id: 'm1', game: 3, games: 3 }, counts: { accounts: 1, guests: 0, agents: 1 } }),
+    ).toThrow(/constraint/);
     expect(records.view(ann.id).recent).toHaveLength(4);
   });
 });
 
 describe('streaks', () => {
-  const record = (gameId: string, won: boolean, game = 'keywords'): NewRecord => ({
-    game,
-    gameId,
-    side: won ? 'red' : 'blue',
-    role: 'guesser',
-    winner: 'red',
-    won,
-    verdict: won ? 'oral' : 'reject',
-    points: won ? 3 : -1,
-  });
+  // A game kept and won, or lost, by the account.
+  const record = (gameId: string, won: boolean, game = 'keywords'): NewRecord => {
+    keepGame(db, gameId, { game }, () => now);
+    return {
+      game,
+      gameId,
+      side: won ? 'red' : 'blue',
+      role: 'guesser',
+      won,
+      verdict: won ? 'oral' : 'reject',
+      points: won ? 3 : -1,
+    };
+  };
 
   test('grow with each game that goes the way of the last, and start over when one does not', () => {
     const records = new RecordStore(db, () => now);
@@ -536,10 +550,34 @@ describe('streaks', () => {
 });
 
 describe('titles', () => {
+  // A title goes with a match, or a game, on the account's record (migration 24).
+  const matchOf = (accountId: number, matchId: string) =>
+    new RecordStore(db, () => now).addMatch(accountId, {
+      game: 'keywords',
+      matchId,
+      games: 3,
+      rank: 1,
+      players: 4,
+      score: 12,
+    });
+  const gameOf = (accountId: number, gameId: string) => {
+    keepGame(db, gameId, {}, () => now);
+    new RecordStore(db, () => now).add(accountId, {
+      game: 'keywords',
+      gameId,
+      side: 'red',
+      role: 'captain',
+      won: true,
+      verdict: 'oral',
+      points: 1,
+    });
+  };
+
   test('are counted, and can be awarded again and again', () => {
-    const titles = new TitleStore(db, () => now);
+    const titles = new TitleStore(db);
     const ann = account();
     expect(titles.counts(ann.id)).toEqual([]);
+    for (const matchId of ['m1', 'm2', 'm3']) matchOf(ann.id, matchId);
     expect(titles.award(ann.id, 'keywords', 'best_paper', 'm1')).toBe(true);
     expect(titles.award(ann.id, 'keywords', 'best_paper', 'm2')).toBe(true);
     expect(titles.award(ann.id, 'keywords', 'black_hole', 'm3')).toBe(true);
@@ -548,37 +586,62 @@ describe('titles', () => {
       { title: 'black_hole', count: 1 },
     ]);
     // A title that isn't one is refused by the code, which holds the titles (migration 14).
-    expect(() => titles.award(ann.id, 'keywords', 'worst_paper' as 'best_paper', 'm4')).toThrow(/Unknown title/);
+    expect(() => titles.award(ann.id, 'keywords', 'worst_paper' as 'best_paper', 'm1')).toThrow(/Unknown title/);
     expect(() => titles.awardForGame(ann.id, 'keywords', 'worst_paper' as 'best_paper', 'g1', 1)).toThrow(
       /Unknown title/,
     );
     expect(titles.counts(ann.id)).toHaveLength(2);
   });
 
-  test('are awarded once for each match, however often its end is reported', () => {
-    const titles = new TitleStore(db, () => now);
+  test('are awarded once for each match, however often its end is reported, and one for each match', () => {
+    const titles = new TitleStore(db);
     const ann = account();
+    matchOf(ann.id, 'm1');
     expect(titles.award(ann.id, 'keywords', 'best_paper', 'm1')).toBe(true);
     expect(titles.award(ann.id, 'keywords', 'best_paper', 'm1')).toBe(false);
-    expect(titles.award(account('Bob').id, 'keywords', 'best_paper', 'm1')).toBe(true);
+    expect(titles.award(ann.id, 'keywords', 'black_hole', 'm1')).toBe(false);
+    const bob = account('Bob');
+    matchOf(bob.id, 'm1');
+    expect(titles.award(bob.id, 'keywords', 'best_paper', 'm1')).toBe(true);
     expect(titles.counts(ann.id)).toEqual([{ title: 'best_paper', count: 1 }]);
   });
 
   test('that games bring are awarded once for each turn of a game, and add up', () => {
-    const titles = new TitleStore(db, () => now);
+    const titles = new TitleStore(db);
     const ann = account();
+    const bob = account('Bob');
+    gameOf(ann.id, 'g1');
+    gameOf(ann.id, 'g2');
+    gameOf(bob.id, 'g2');
     expect(titles.awardForGame(ann.id, 'keywords', 'missed_deadline', 'g1', 1)).toBe(true);
     expect(titles.awardForGame(ann.id, 'keywords', 'missed_deadline', 'g1', 1)).toBe(false);
     expect(titles.awardForGame(ann.id, 'keywords', 'missed_deadline', 'g1', 3)).toBe(true);
     expect(titles.awardForGame(ann.id, 'keywords', 'missed_deadline', 'g2', 1)).toBe(true);
     expect(titles.awardForGame(ann.id, 'keywords', 'heavenly_hand', 'g2', 1)).toBe(true);
-    expect(titles.awardForGame(account('Bob').id, 'keywords', 'heavenly_hand', 'g2', 1)).toBe(true);
+    expect(titles.awardForGame(bob.id, 'keywords', 'heavenly_hand', 'g2', 1)).toBe(true);
     expect(titles.count(ann.id, 'missed_deadline')).toBe(3);
     expect(titles.count(ann.id, 'opening_record')).toBe(0);
     expect(titles.counts(ann.id)).toEqual([
       { title: 'heavenly_hand', count: 1 },
       { title: 'missed_deadline', count: 3 },
     ]);
+  });
+
+  test("go with the record of the match or the game they are of, and can't be awarded without it", () => {
+    const titles = new TitleStore(db);
+    const ann = account();
+    expect(() => titles.award(ann.id, 'keywords', 'best_paper', 'm9')).toThrow(/FOREIGN KEY/);
+    expect(() => titles.awardForGame(ann.id, 'keywords', 'deadline_hero', 'g9', 1)).toThrow(/FOREIGN KEY/);
+    matchOf(ann.id, 'm1');
+    gameOf(ann.id, 'g1');
+    titles.award(ann.id, 'keywords', 'best_paper', 'm1');
+    titles.awardForGame(ann.id, 'keywords', 'deadline_hero', 'g1', 2);
+    expect(titles.counts(ann.id)).toHaveLength(2);
+    // Deleting the record of the game, as deleting the account does, takes the title with it.
+    db.exec("DELETE FROM game_records WHERE game_id = 'g1'");
+    expect(titles.counts(ann.id)).toEqual([{ title: 'best_paper', count: 1 }]);
+    db.exec("DELETE FROM match_records WHERE match_id = 'm1'");
+    expect(titles.counts(ann.id)).toEqual([]);
   });
 });
 
@@ -590,22 +653,25 @@ describe('the record of matches', () => {
     rank: 1,
     players: 4,
     score: 12,
-    title: 'best_paper',
     ...overrides,
   });
 
-  test('keeps each match once, the latest first, and counts them all', () => {
+  test('keeps each match once, the latest first, with the title it awarded, and counts them all', () => {
     const records = new RecordStore(db, () => now);
+    const titles = new TitleStore(db);
     const ann = account();
     expect(records.addMatch(ann.id, match())).toBe(true);
+    titles.award(ann.id, 'keywords', 'best_paper', 'm1');
     expect(records.addMatch(ann.id, match({ rank: 2 }))).toBe(false);
     now += 60_000;
-    records.addMatch(ann.id, match({ matchId: 'm2', rank: 4, score: -2, title: 'black_hole' }));
+    records.addMatch(ann.id, match({ matchId: 'm2', rank: 4, score: -2 }));
+    titles.award(ann.id, 'keywords', 'black_hole', 'm2');
     records.addMatch(account('Bob').id, match());
-    // A match is won by finishing first, level with others too.
-    records.addMatch(ann.id, match({ matchId: 'm3', rank: 1, title: null }));
+    // A match is won by finishing first, level with others too, and may award no title.
+    records.addMatch(ann.id, match({ matchId: 'm3', rank: 1 }));
     expect(records.view(ann.id).matches).toMatchObject({ played: 3, won: 2 });
-    expect(records.view(ann.id).matches.recent.slice(1)).toEqual([
+    expect(records.view(ann.id).matches.recent).toEqual([
+      { game: 'keywords', endedAt: '2026-10-09T12:01:00.000Z', games: 3, rank: 1, players: 4, score: 12, title: null },
       {
         game: 'keywords',
         endedAt: '2026-10-09T12:01:00.000Z',
@@ -625,10 +691,5 @@ describe('the record of matches', () => {
         title: 'best_paper',
       },
     ]);
-  });
-
-  test("refuses a title that isn't one", () => {
-    const records = new RecordStore(db, () => now);
-    expect(() => records.addMatch(account().id, match({ title: 'worst_paper' as 'best_paper' }))).toThrow(/CHECK/);
   });
 });

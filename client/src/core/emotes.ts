@@ -1,14 +1,16 @@
-import { EMOTE_COOLDOWN_MS, EMOTES, type Emote, type EmoteEvent } from '@reviewer2/shared';
+import { EMOTE_COOLDOWN_MS, EMOTES, type Emote, type EmoteEvent, type Team } from '@reviewer2/shared';
 import { reactive, ref, watch } from 'vue';
 import { room } from './room';
 import { act, socket } from './socket';
-import { playSound } from './sound';
+import { playSound, type Sound } from './sound';
 
 // The quick reactions of the room this page shows (docs/architecture.md): the bubbles that say who
 // sent which, with their sounds, and the wait before this player may send another one. The room's
-// calls about a player, such as a PI's missed deadline, come as bubbles too, louder ones.
+// calls about a player, such as a PI's missed deadline, or about a group, such as its heavenly
+// hand, come as bubbles too, louder ones.
 
-// A bubble is a reaction that a player sent, or a call about a player, as the page wrote it.
+// A bubble is a reaction that a player sent, or a call about a player or a group, as the page
+// wrote it: a call about a group names the group and has its color (`team`) in place of an avatar.
 export type Bubble = {
   id: number;
   name: string;
@@ -18,7 +20,7 @@ export type Bubble = {
   avatar?: string | undefined;
   // A guest's number, for the color of their avatar (PlayerAvatar.vue).
   guest?: number | undefined;
-} & ({ emote: Emote } | { call: string });
+} & ({ emote: Emote } | { call: string; team?: Team });
 
 // Whom a bubble shows: a player, as the room has them.
 type Shown = { name: string; username?: string | undefined; avatar?: string | undefined; guest?: number | undefined };
@@ -49,14 +51,23 @@ function show(bubble: Bubble, ms: number): void {
 }
 
 // The room calls out something about a player, for everyone on the page to see and hear: the
-// line, with the player's avatar, and the sound of a reaction.
-export function callOut(player: Shown, line: string, sound: Emote): void {
+// line, with the player's avatar, and a sound.
+export function callOut(player: Shown, line: string, sound: Sound): void {
   const id = nextId;
   nextId += 1;
   show(
     { id, name: player.name, username: player.username, avatar: player.avatar, guest: player.guest, call: line },
     CALL_MS,
   );
+  playSound(sound);
+}
+
+// The room calls out something about a group, named `name` in the page's language, with the
+// group's color in place of an avatar.
+export function callOutGroup(team: Team, name: string, line: string, sound: Sound): void {
+  const id = nextId;
+  nextId += 1;
+  show({ id, name, call: line, team }, CALL_MS);
   playSound(sound);
 }
 

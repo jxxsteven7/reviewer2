@@ -30,10 +30,10 @@ test('a reaction reaches every page, and the sender waits before the next', asyn
     const box = await phrase.boundingBox();
     expect(Math.round(box?.height ?? 0)).toBeGreaterThanOrEqual(44);
   }
-  await dialog.getByRole('button', { name: text.emotes.phrases.reviewer2 }).click();
+  await dialog.getByRole('button', { name: text.emotes.phrases.coauthor }).click();
   await expect(dialog).toHaveCount(0);
   for (const page of everyone) {
-    await expect(page.locator('.bubble')).toHaveText(bubble(table.names.spectator, text.emotes.phrases.reviewer2));
+    await expect(page.locator('.bubble')).toHaveText(bubble(table.names.spectator, text.emotes.phrases.coauthor));
   }
 
   // Eve's button counts down; Bob has a wait of his own, and sends one of the newer phrases.

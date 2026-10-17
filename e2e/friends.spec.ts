@@ -373,8 +373,8 @@ test("a friend goes by the player's name for them in a game, to the player alone
   await bobsScreen.goto(`${table.url}/screen`);
   await expect(bobsScreen.locator('.screen-game .board .card')).toHaveCount(25);
   await ann.locator('.sticky-clock').getByRole('button', { name: text.emotes.open }).click();
-  await ann.locator('[role=dialog]').getByRole('button', { name: text.emotes.phrases.reviewer2 }).click();
-  const said = (name: string) => interpolate(text.emotes.bubble, { name, phrase: text.emotes.phrases.reviewer2 });
+  await ann.locator('[role=dialog]').getByRole('button', { name: text.emotes.phrases.coauthor }).click();
+  const said = (name: string) => interpolate(text.emotes.bubble, { name, phrase: text.emotes.phrases.coauthor });
   await expect(bob.locator('.bubble')).toHaveText(said('\u5b89\u59ae\u8001\u5e08'));
   for (const page of [cat, table.screen, bobsScreen]) await expect(page.locator('.bubble')).toHaveText(said(annName));
 

@@ -53,9 +53,11 @@ describe('the log of the team word guessing game', () => {
     expect(logged('keywords:reveal', { gameId, turn: 3, card: 7 })).toEqual({ data: { turn: 3, card: 7 } });
     expect(logged('keywords:pass', { gameId, turn: 3 })).toEqual({ data: { turn: 3 } });
     expect(logged('keywords:extend', { gameId, turn: 3 })).toEqual({ data: { turn: 3 } });
-    // A seat change says where a player is from then on, and a pause is the chair's alone.
+    // A seat change says where a player is from then on, and that it moves the player rather
+    // than the game; a pause is the chair's alone.
     expect(logged('keywords:seat', { team: 'red', role: 'captain' })).toEqual({
       data: { team: 'red', role: 'captain' },
+      seat: true,
     });
     expect(logged('keywords:pause', { gameId })).toEqual({});
     expect(logged('keywords:resume', { gameId })).toEqual({});
@@ -127,10 +129,9 @@ describe('the log of the team word guessing game', () => {
     const game = data.game;
     if (!game) throw new Error('no game');
     expect(keywordsGame.setup?.(data)).toEqual({
-      language: 'en',
       settings: game.settings,
       startingTeam: game.startingTeam,
-      cards: game.cards.map(({ word, color }) => ({ word, color })),
+      cards: game.cards.map(({ word, color }) => ({ word, color, custom: false })),
     });
     // The PI of the group on turn while the clue is due, then its students.
     const pi = game.team === 'red' ? 'ann' : 'cat';
@@ -144,7 +145,7 @@ describe('the log of the team word guessing game', () => {
     });
     if (!clued.ok) throw new Error(clued.error);
     expect(keywordsGame.due?.(clued.data)).toEqual([student]);
-    expect(keywordsGame.rulesVersion).toBe(4);
+    expect(keywordsGame.rulesVersion).toBe(5);
   });
 
   test('counts what an AI player did, and says how the game came out once it is over', () => {

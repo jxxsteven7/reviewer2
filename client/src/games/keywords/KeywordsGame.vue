@@ -26,6 +26,7 @@ import { act, reconnecting } from '../../core/socket';
 import { toast } from '../../core/toast';
 import { useBusy } from '../../core/useBusy';
 import { useMediaQuery } from '../../core/useMediaQuery';
+import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import { useTitleFolds } from '../../core/useTitleFolds';
 import ClockBar from './ClockBar.vue';
@@ -45,6 +46,7 @@ import TurnStrip from './TurnStrip.vue';
 import { useChatLine } from './useChatLine';
 import { useKeywords, type Chooser } from './useKeywords';
 import { useDeadlineHeroes } from './useDeadlineHeroes';
+import { useGroupCalls } from './useGroupCalls';
 import { useMissedDeadlines } from './useMissedDeadlines';
 import { useScoreFloats } from './useScoreFloats';
 
@@ -54,17 +56,19 @@ import { useScoreFloats } from './useScoreFloats';
 // with the tools on its right; on a phone the groups and the clue log open as sheets from the two
 // buttons in the bar under the board, so that the board comes first, and the chat from a third.
 //
-// The clock stays at the top of the screen, with the chair's button to pause the game and resume
-// it after it and the reaction button at the end, where everyone has it, in reach wherever the page
-// is scrolled and away from the cards and the clue; in a game without a time limit, and once the
-// game is over, the buttons are there alone. While the chair has paused the game, a notice stands
+// The clock stays at the top of the screen, with a soft shadow under it while the page passes under
+// it, as under a page's masthead, with the chair's button to pause the game and resume it after it and
+// the reaction button at the end, where everyone has it, in reach wherever the page is scrolled and
+// away from the cards and the clue; in a game without a time limit, and once the game is over, the
+// buttons are there alone. While the chair has paused the game, a notice stands
 // in place of the board, with the way to resume for the chair too, and the clock stands still. A
 // group whose turn it is may ask for an extension, where the room allows one. Once the game has
 // ended, the review opens the replay.
 //
-// As cards are revealed, what each did to the viewer's points rises from it, and on a wide screen
-// what it did to each player's from their avatar beside the board; at the end, what the game added
-// to the viewer's points rises big in the middle of the screen (useScoreFloats.ts).
+// As cards are revealed, what each did to the viewer's points rises from it, the bonus it brought
+// included, and on a wide screen what it did to each player's from their avatar beside the board;
+// at the end, what the game added to the viewer's points rises big in the middle of the screen
+// (useScoreFloats.ts).
 //
 // In a match, its table opens in a sheet while the game is on, from a button beside the chat, the
 // groups and the clue log on a phone and among the tools on a wide screen, since it is seldom
@@ -147,6 +151,7 @@ watch(wide, () => {
 // page's scroll padding, so that a card reached with the keyboard comes into view below it.
 const clockBar = ref<HTMLElement | null>(null);
 useStickyHeight(clockBar);
+const stuck = useStuck(clockBar);
 
 const game = computed(() => data.value.game as KeywordsView);
 // The line a student is writing to their group, and its sending, kept by the page: the chat's
@@ -359,8 +364,8 @@ const resume = () => run(() => act('keywords:resume', { gameId: game.value.gameI
 const again = () => run(() => act('room:again', { gameId: game.value.gameId }));
 
 // Everyone hears of an extension as it comes: the newest event, when it is one. A PI who misses the
-// deadline for a clue is called out to the whole room (useMissedDeadlines.ts), and so is a deadline
-// hero (useDeadlineHeroes.ts).
+// deadline for a clue is called out to the whole room (useMissedDeadlines.ts), and so are a deadline
+// hero (useDeadlineHeroes.ts) and a group whose card brings it a title (useGroupCalls.ts).
 watch(
   () => game.value.events.length,
   (count, before) => {
@@ -378,6 +383,7 @@ useDeadlineHeroes(
   game,
   computed(() => room.value.players),
 );
+useGroupCalls(game);
 const floats = useScoreFloats(room);
 
 // The review of the game that has ended, step by step, for everyone who sees the result, with what
@@ -445,7 +451,7 @@ const status = computed(() => {
       :me="room.me"
       clock-apart
     />
-    <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting }">
+    <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting, stuck }">
       <ClockBar v-if="game.clock && !game.result" :clock="game.clock" :frozen="paused" />
       <UiButton
         v-if="isChair && !game.result"
@@ -628,9 +634,12 @@ const status = computed(() => {
 
 /* The bar with the clock stays at the top of the screen while the page scrolls, and under the
    banner while the page reconnects, with the reaction button at its end, and the chair's button to
-   pause after it. It is kept thin, and its background reaches the edges of the screen, so that no
-   card shows through it beside the column. Without a clock, as in a game without time limits and
-   once the game is over, the buttons stand there alone, on the right. */
+   pause after it. It is kept thin, and its background reaches the edges of the screen, as a
+   masthead's does (PageMasthead.vue), so that no card shows through it beside the column, and
+   nothing below it, where the shade falls on what passes under the bar. The buttons have as much
+   room below their hard shadow as above them, as in the waiting room's start bar
+   (KeywordsLobby.vue). Without a clock, as in a game without time limits and once the game is
+   over, the buttons stand there alone, on the right. */
 .sticky-clock {
   position: sticky;
   top: 0;
@@ -639,11 +648,29 @@ const status = computed(() => {
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-2);
-  padding: var(--space-1) 0;
+  margin-top: var(--space-1);
+  padding: var(--space-2) 0 var(--space-3);
   background: var(--bg);
-  box-shadow: 0 0 0 100vmax var(--bg);
-  clip-path: inset(0 -100vmax);
+  border-image: linear-gradient(var(--bg), var(--bg)) 0 fill / 0 / 0 100vmax;
+}
+
+/* The soft shadow under the bar while it is stuck at the top with the page passing under it, from
+   one edge of the screen to the other, as under a page's masthead (PageMasthead.vue). */
+.sticky-clock::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 12px;
+  border-image: linear-gradient(var(--shade), transparent) 0 fill / 0 / 0 100vmax;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion);
+}
+
+.sticky-clock.stuck::after {
+  opacity: 1;
 }
 
 .sticky-clock > .clock {

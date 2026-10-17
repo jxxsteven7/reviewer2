@@ -361,6 +361,8 @@
     "formWarning": "This clue repeats a form that the word lists give of a word still on the board: {words}. This room's clue check leaves it to you.",
     "characterWarning": "This clue has a character in common with a word still on the board, as a Chinese character, a number however it is written, or the English or the pinyin of a character: {words}. It's your call.",
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
+    "prefixOnBoard": "{word} on the board starts with this clue. This room's clue check doesn't allow it.",
+    "prefixWarning": "A word still on the board starts with this clue: {words}. It may give that word away, so it's your call.",
     "gestures": {
       "choose": "Tap: choose · hold: mark · or keys 1, 2, 3",
       "mark": "Hold a card to mark it · or keys 1, 2, 3",
@@ -433,6 +435,32 @@
         "5": "{name}: “Submitted!” The portal closed right behind them."
       },
       "count": "{line} (×{count})"
+    },
+    "calls": {
+      "heavenly_hand": {
+        "1": "Heavenly hand for the {group}: one clue, every card, accepted outright!",
+        "2": "The {group}'s first paper went straight in, without a single comment. Heavenly hand!",
+        "3": "Note from the editors: the {group} settled it with one clue. Heavenly hand!",
+        "4": "The {group}: the opening was the ending. Heavenly hand!"
+      },
+      "opening_record": {
+        "1": "The {group} opened the scoring: first clue, every card found, not one wrong!",
+        "2": "The {group}'s first paper, accepted without a single revision. Scoring opened!",
+        "3": "Note from the editors: a flying start for the {group}. They opened the scoring!",
+        "4": "The {group}'s students read every word of their PI's clue. Scoring opened!"
+      },
+      "instant_reject": {
+        "1": "The {group}'s very first card was Reviewer 2: an instant desk reject!",
+        "2": "The {group}'s paper came back before it had left the building. Desk rejected.",
+        "3": "Note from the editors: the {group}'s manuscript was rejected without review.",
+        "4": "The {group}: Reviewer 2 didn't even need to read it. Desk rejected!"
+      },
+      "first_turn_reject": {
+        "1": "The {group} fell at the first hurdle: Reviewer 2 in the turn of their first clue.",
+        "2": "The {group}'s first paper was rejected before it ever reached review.",
+        "3": "Note from the editors: the {group} were stopped by Reviewer 2 in round one.",
+        "4": "The {group} stumbled right out of the gate. Fell at the first hurdle."
+      }
     },
     "events": {
       "paused": "The chair paused the game",
@@ -542,7 +570,7 @@
       "you": "You",
       "someone": "A player who left"
     },
-    "scoring": "Scores in a match: every own card that your group's students find, +1 for everyone in the group; winning, +3 for each student and +4 for the PI. Every irrelevant paper, card of the other group and Reviewer 2 that your students reveal, whoever of them it was, costs each student 1, 2 and 3, and the PI 2, 3 and 5. Every turn in which the PI gives no clue in time costs the PI 5. A big clue, with which the students find 4 of the group's cards or more: +1 for its PI for each from the fourth on. Opening the scoring, when the students find as many cards as the group's first clue names, 3 or more, before anything else: +1 for everyone. A heavenly hand, winning in the turn of the first clue: +1 for each student, +3 for the PI.",
+    "scoring": "Scores in a match: every own card that your group's students find, +1 for everyone in the group; winning, +3 for each student and +4 for the PI. Every irrelevant paper, card of the other group and Reviewer 2 that your students reveal, whoever of them it was, costs each student 1, 2 and 3, and the PI 2, 3 and 5. Every turn in which the PI gives no clue in time costs the PI 5. A big clue, with which the students find 4 of the group's cards or more: +1 for its PI for each from the fourth on. Opening the scoring, when the students find as many cards as the group's first clue names, 4 or more, before anything else: +1 for each student. A heavenly hand, winning in the turn of the first clue: +1 for each student, +3 for the PI, and no opening of the scoring besides.",
     "scoreDetail": {
       "captain": "PI",
       "found": "found {count}",
@@ -648,7 +676,7 @@
       "over": "The game is over.",
       "paused": "The game is paused.",
       "yourClue": "Your turn to give a clue!",
-      "studentsGuessing": "Your students are guessing. All you can do is watch…",
+      "studentsGuessing": "Your students are guessing…",
       "piThinking": "Your PI is thinking of a clue…",
       "yourGuess": "Your turn to guess!",
       "otherClue": "The other group's PI is thinking of a clue…",
@@ -665,16 +693,11 @@
     "hint": "Everyone in the room sees and hears it, big screens included. You can send one every {seconds} seconds.",
     "phrases": {
       "waiting": "I could have finished a PhD by now.",
-      "deadline": "The deadline is 23:59 AoE. Hurry up!",
-      "reviewer2": "Reviewer 2 is on the way.",
-      "accept": "Accept as is!",
       "great_clue": "That clue reads better than my thesis.",
       "p_hacking": "You got that one? Smells like p-hacking.",
-      "major_revision": "Major revision. Back to the drawing board.",
       "resubmit": "Rejected again. Fine, we'll try another venue.",
       "first_author": "Carry me and I'll make you first author.",
       "coauthor": "Same coauthors on the next one?",
-      "all_nighter": "Don't leave, we're pulling an all-nighter.",
       "mine_mine": "mine mine"
     },
     "bubble": "{name}: {phrase}",
@@ -694,6 +717,7 @@
     "too_many_rooms": "The server is full. Please try again later.",
     "room_not_found": "No room has that number.",
     "room_full": "This room is full.",
+    "room_crowded": "This game has seen so many comings and goings that nobody can join or change seats until it ends.",
     "screens_full": "This room already has the most screens it can have.",
     "play_required": "Choose whether you play or watch.",
     "account_required": "Public rooms take an account: log in or register.",
@@ -1003,7 +1027,9 @@
         "missed_deadline": "Forgot to Submit",
         "deadline_hero": "Deadline Hero",
         "opening_record": "Opened the Scoring",
-        "heavenly_hand": "Heavenly Hand"
+        "heavenly_hand": "Heavenly Hand",
+        "instant_reject": "Instant Desk Reject",
+        "first_turn_reject": "Fell at the First Hurdle"
       },
       "titleCount": "{title} ×{count}",
       "contributed": "Contributions: {kind}",
@@ -1256,9 +1282,11 @@
       "best_paper": "Awarded at the end of a match to the player with the highest total. Players level at the top all get it; when everyone is level, nobody does.",
       "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it.",
       "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
-      "deadline_hero": "For a PI who gives a clue in the last 3 seconds of their time, when it finds at least one of the group's cards, and for a student who reveals one of the group's cards in the last 3 seconds of the guesses: submitted at 23:59:57, and accepted. Earned again in every turn that makes you one, in each game with time limits that ends by itself while you are logged in and in your seat.",
-      "opening_record": "For everyone in a group whose very first clue of a game names 3 cards or more, and whose students then find that many of the group's cards before revealing anything else. The lab's first paper, accepted without a single revision.",
-      "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all."
+      "deadline_hero": "For a PI who gives a clue in the last 3 seconds of their time, when the students then find as many of the group's cards as it names before revealing anything else, or every card the group has left when fewer are left than the number; and for a student who reveals one of the group's cards in the last 3 seconds of the guesses: submitted at 23:59:57, and accepted. Earned again in every turn that makes you one, in each game with time limits that ends by itself while you are logged in and in your seat.",
+      "opening_record": "For everyone in a group whose very first clue of a game names 4 cards or more, and whose students then find that many of the group's cards before revealing anything else; a group that wins in that turn has the heavenly hand instead. The lab's first paper, accepted without a single revision.",
+      "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all.",
+      "instant_reject": "For everyone in a group whose very first card was Reviewer 2, out on the spot. The paper came back before it had left the building.",
+      "first_turn_reject": "For everyone in a group whose students revealed Reviewer 2 in the turn of its very first clue, out on the spot; as the very first card, that is an instant desk reject instead. The lab's first paper, rejected before it ever reached review."
     },
     "streak": {
       "wins": "The longest run of games won in a row on the record: {n}.",

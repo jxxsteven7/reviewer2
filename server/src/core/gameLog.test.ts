@@ -20,7 +20,7 @@ describe('the log of a game', () => {
         { t: 3500, by: 'c', type: 'test:press', data: 'soft', agent: 'reviewer1' },
       ],
     });
-    expect(log.overflowed).toBe(false);
+    expect(log.full).toBe(false);
   });
 
   test('leaves out what is said once the chat has taken up its share, says so once, and keeps the rest', () => {
@@ -44,49 +44,38 @@ describe('the log of a game', () => {
     expect(Buffer.byteLength(JSON.stringify(said))).toBeLessThanOrEqual(MAX_SAID_BYTES);
   });
 
-  test('is never larger than its limit as JSON, the note that it left the chat out included', () => {
-    // A log whose chat has taken up its share, with the note, and within a few kilobytes of its
-    // limit, built the same way each time.
-    const grown = () => {
-      const log = new GameLog('test', 'g1', 0, null);
-      let at = 0;
-      while (!log.data()?.truncated) log.add((at += 1), 'a', 'say', { said: 'x'.repeat(4000) });
-      while (JSON.stringify(log.data()).length < MAX_GAME_LOG_BYTES - 4500)
-        log.add((at += 1), 'a', 'reveal', { data: 'x'.repeat(4000) });
-      return { log, at };
-    };
-    const room = MAX_GAME_LOG_BYTES - Buffer.byteLength(JSON.stringify(grown().log.data()));
-    // One more entry, of every size from well under what is left to well over it: whatever is
-    // kept fits, and the rest is dropped.
-    const outcomes = { kept: 0, dropped: 0 };
-    for (let size = room - 120; size <= room; size += 1) {
-      const { log, at } = grown();
-      log.add(at + 1, 'a', 'reveal', { data: 'z'.repeat(size) });
-      const kept = log.data();
-      if (kept === null) {
-        outcomes.dropped += 1;
-        continue;
-      }
-      outcomes.kept += 1;
-      expect(Buffer.byteLength(JSON.stringify(kept))).toBeLessThanOrEqual(MAX_GAME_LOG_BYTES);
-    }
-    expect(outcomes.kept).toBeGreaterThan(0);
-    expect(outcomes.dropped).toBeGreaterThan(0);
-  });
-
-  test('is not kept at all once it has grown past its limit', () => {
+  test('is full once what was done has grown past its limit, the chat apart, and keeps everything all the same', () => {
     const log = new GameLog('test', 'g1', 0, null);
     const text = 'x'.repeat(10_000);
     let at = 0;
-    while (!log.overflowed) {
+    while (!log.full) {
       expect(Buffer.byteLength(JSON.stringify(log.data()))).toBeLessThanOrEqual(MAX_GAME_LOG_BYTES);
       log.add((at += 1), 'a', 'press', { data: text });
     }
-    // The entry that went past the limit was the one after as many as fit.
+    // The entry that went past the limit was the one after as many as fit, and is kept with them,
+    // as is whatever comes after, such as the end that cuts the game short.
     expect(at).toBe(Math.floor(MAX_GAME_LOG_BYTES / 10_000) + 1);
-    expect(log.data()).toBeNull();
-    log.add(at + 1, 'a', 'press', { data: 'small' });
-    expect(log.data()).toBeNull();
+    expect(log.size).toBe(at);
+    log.add(at + 1, null, 'end', { data: { ending: 'abandoned', why: 'flood' } });
+    expect(log.data().entries.at(-1)).toEqual({
+      t: at + 1,
+      by: null,
+      type: 'end',
+      data: { ending: 'abandoned', why: 'flood' },
+    });
+    expect(log.full).toBe(true);
+  });
+
+  test('is not full for what was said, which has its own share', () => {
+    const log = new GameLog('test', 'g1', 0, null);
+    let at = 0;
+    while (!log.data().truncated) log.add((at += 1), 'a', 'say', { said: 'x'.repeat(4000) });
+    while (JSON.stringify(log.data()).length < MAX_GAME_LOG_BYTES + 4000) {
+      log.add((at += 1), 'a', 'reveal', { data: 'x'.repeat(4000) });
+    }
+    // Past the limit as JSON, with the chat, but not without it.
+    expect(Buffer.byteLength(JSON.stringify(log.data()))).toBeGreaterThan(MAX_GAME_LOG_BYTES);
+    expect(log.full).toBe(false);
   });
 });
 

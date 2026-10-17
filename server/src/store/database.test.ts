@@ -13,9 +13,10 @@ import {
   truncateWal,
   type Database,
 } from './database';
+import type { GameLogData } from '../core/gameLog';
 import { MIGRATIONS } from './migrations';
 import { AccountStore } from './accounts';
-import { RecordStore } from './records';
+import { streaksOf } from './records';
 
 const NOW = Date.UTC(2026, 9, 9, 13, 30, 5);
 
@@ -1111,10 +1112,15 @@ describe('a database in DATA_DIR', () => {
     // The streaks, counted again over the records that are left, without the game an AI played in:
     // Ann won, lost, and won with words of her own; Bob has no record left.
     expect(all('SELECT * FROM streaks')).toEqual([{ account_id: 1, best_wins: 1, best_losses: 1, run: 1, run_won: 1 }]);
-    // The ranks and what friends played together are worked out from the records that are left.
-    const records = new RecordStore(db);
-    expect([records.points(1), records.points(2)]).toEqual([17, 0]);
-    expect(records.duos(1)).toEqual(new Map());
+    // The ranks and what friends played together are worked out from the records that are left,
+    // as the store of that release read them.
+    const points = (account: number) =>
+      (
+        db.prepare('SELECT coalesce(sum(points), 0) AS points FROM game_records WHERE account_id = ?').get(account) as {
+          points: number;
+        }
+      ).points;
+    expect([points(1), points(2)]).toEqual([17, 0]);
     // Nothing in the old formats can come back.
     const refused = (sql: string) => expect(() => db.exec(sql), sql).toThrow(/constraint/i);
     refused("INSERT INTO titles (account_id, title, awarded_at) VALUES (1, 'black_hole', 'now')");
@@ -1224,11 +1230,18 @@ describe('a database in DATA_DIR', () => {
       { player: 'p2', game: 'keywords', feats: null },
     ]);
     expect(all("SELECT account_id AS account FROM agent_plays WHERE player_id = 'p2'")).toEqual([{ account: 2 }]);
-    // The streaks are counted from the records: the game with an AI counts for none.
+    // The streaks are counted from the records, as the store of that release read them: the game
+    // with an AI counts for none.
     expect(tables(db)).not.toContain('streaks');
-    const records = new RecordStore(db);
-    expect(records.streaks(1)).toEqual({ wins: 2, losses: 1 });
-    expect(records.streaks(2)).toEqual({ wins: 0, losses: 0 });
+    const streaks = (account: number) => {
+      const won = db
+        .prepare('SELECT won FROM game_records WHERE account_id = ? AND agents = 0 ORDER BY id')
+        .all(account);
+      const { wins, losses } = streaksOf((won as { won: number }[]).map((row) => row.won === 1));
+      return { wins, losses };
+    };
+    expect(streaks(1)).toEqual({ wins: 2, losses: 1 });
+    expect(streaks(2)).toEqual({ wins: 0, losses: 0 });
     // The ids of accounts go on from where they were, and everything of an account still goes with
     // it, the AI's row for it unlinked.
     const store = new AccountStore(db);
@@ -1267,6 +1280,355 @@ describe('a database in DATA_DIR', () => {
     expect(tables(after)).toContain('streaks');
     after.close();
   });
+
+  test('of the twenty-third release ties every row of a game to its game, keeps once what the record of the game says, and numbers the players of matches', async () => {
+    await twentyThird();
+    const migrated = await open(dir, MIGRATIONS.slice(0, 24));
+    expect(migrated).toMatchObject({ schema: 24, migratedFrom: 23 });
+    const { db } = migrated;
+    const all = (sql: string) => db.prepare(sql).all();
+    // The schema is that of a new database, to the letter.
+    const fresh = await open(null);
+    const schema = (database: DatabaseSync) =>
+      database
+        .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+        .all();
+    expect(schema(db)).toEqual(schema(fresh.db));
+    // The record of each game says which game of its match it was, as the records of the game said,
+    // and nothing else of it has changed; how the first game began names no language and marks every
+    // card as a word of the lists.
+    expect(
+      all(
+        'SELECT game_id AS id, match_id AS match, match_game AS game, match_games AS games, in_match AS inMatch, setup FROM replays ORDER BY game_id',
+      ),
+    ).toEqual([
+      {
+        id: 'g1',
+        match: 'm1',
+        game: 1,
+        games: 1,
+        inMatch: 1,
+        setup:
+          '{"settings":{"guessRule":"standard"},"startingTeam":"red","cards":[{"word":"A","color":"red","custom":false},{"word":"B","color":"blue","custom":false}]}',
+      },
+      {
+        id: 'g2',
+        match: null,
+        game: null,
+        games: null,
+        inMatch: 0,
+        setup: '{"settings":{},"startingTeam":"blue","cards":[]}',
+      },
+      { id: 'g3', match: null, game: null, games: null, inMatch: 0, setup: null },
+      { id: 'g4', match: null, game: null, games: null, inMatch: 0, setup: null },
+    ]);
+    // The log of the game of the match numbers its players, by account in the order of their ids,
+    // and the other logs are as they were.
+    const logs = all('SELECT game_id AS id, log FROM replays ORDER BY game_id') as { id: string; log: string }[];
+    expect(JSON.parse(logs[0]?.log ?? '')).toEqual({
+      v: 2,
+      game: 'keywords',
+      gameId: 'g1',
+      start: { p1: { team: 'red', role: 'captain' }, p2: { team: 'blue', role: 'captain' } },
+      entries: [{ t: 1, by: null, type: 'end' }],
+      match: { numbers: { p1: 1, p2: 2 } },
+    });
+    expect(logs.slice(1).map(({ log }) => JSON.parse(log))).toEqual([
+      { v: 2, game: 'keywords', gameId: 'g2', start: null, entries: [] },
+      { v: 2, game: 'keywords', gameId: 'g3', start: null, entries: [] },
+      { v: 2, game: 'keywords', gameId: 'g4', start: null, entries: [] },
+    ]);
+    // The records keep what is the player's alone, with their ids; the records of matches lose the
+    // title, which the titles keep, and the titles lose the time; the players of games name the
+    // game.
+    expect(all('SELECT * FROM game_records ORDER BY id')).toEqual([
+      {
+        id: 1,
+        account_id: 1,
+        game: 'keywords',
+        game_id: 'g1',
+        side: 'red',
+        role: 'captain',
+        won: 1,
+        verdict: 'oral',
+        points: 10,
+      },
+      {
+        id: 2,
+        account_id: 2,
+        game: 'keywords',
+        game_id: 'g1',
+        side: 'blue',
+        role: 'captain',
+        won: 0,
+        verdict: 'reject',
+        points: -3,
+      },
+      {
+        id: 3,
+        account_id: 1,
+        game: 'keywords',
+        game_id: 'g2',
+        side: 'red',
+        role: 'guesser',
+        won: 1,
+        verdict: 'poster',
+        points: 4,
+      },
+      {
+        id: 5,
+        account_id: 1,
+        game: 'keywords',
+        game_id: 'g4',
+        side: 'red',
+        role: 'guesser',
+        won: 1,
+        verdict: 'oral',
+        points: 0,
+      },
+    ]);
+    expect(all('SELECT * FROM match_records ORDER BY id')).toEqual([
+      {
+        id: 1,
+        account_id: 1,
+        game: 'keywords',
+        match_id: 'm1',
+        ended_at: '2026-10-01T00:01:00.000Z',
+        games: 1,
+        rank: 1,
+        players: 2,
+        score: 10,
+      },
+      {
+        id: 2,
+        account_id: 2,
+        game: 'keywords',
+        match_id: 'm1',
+        ended_at: '2026-10-01T00:01:00.000Z',
+        games: 1,
+        rank: 2,
+        players: 2,
+        score: -3,
+      },
+    ]);
+    expect(all('SELECT * FROM titles ORDER BY id')).toEqual([
+      { id: 5, account_id: 1, game: 'keywords', title: 'best_paper', match_id: 'm1', game_id: null, turn: null },
+      { id: 6, account_id: 1, game: 'keywords', title: 'opening_record', match_id: null, game_id: 'g2', turn: 1 },
+    ]);
+    expect(all('SELECT * FROM game_players ORDER BY game_id, player_id')).toEqual([
+      { game_id: 'g1', player_id: 'p1', game: 'keywords', account_id: 1 },
+      { game_id: 'g1', player_id: 'p2', game: 'keywords', account_id: 2 },
+      { game_id: 'g2', player_id: 'p1', game: 'keywords', account_id: 1 },
+      { game_id: 'g4', player_id: 'p1', game: 'keywords', account_id: 1 },
+    ]);
+    // The last room setups are kept by game, the room's without the game; one whose room has no
+    // language, which nothing has, keeps the practice room alone, and one with neither is none.
+    expect(all('SELECT id, room_setup AS setup FROM accounts ORDER BY id')).toEqual([
+      {
+        id: 1,
+        setup:
+          '{"keywords":{"room":{"language":"en","fields":["general"],"randomFields":false,"match":null,"public":false,"play":true},"practice":{"role":"captain","fields":["general"]}}}',
+      },
+      { id: 2, setup: null },
+      { id: 3, setup: '{"keywords":{"practice":{"role":"guesser","fields":["ml"]}}}' },
+    ]);
+    // The ids go on from where they were.
+    db.exec(
+      "INSERT INTO game_records (account_id, game, game_id, side, role, won, verdict, points) VALUES (2, 'keywords', 'g2', 'blue', 'guesser', 0, 'reject', -1)",
+    );
+    db.exec(
+      "INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score) VALUES (3, 'keywords', 'm2', 'now', 1, 1, 1, 0)",
+    );
+    db.exec("INSERT INTO titles (account_id, game, title, match_id) VALUES (3, 'keywords', 'best_paper', 'm2')");
+    expect(all('SELECT max(id) AS id FROM game_records')).toEqual([{ id: 6 }]);
+    expect(all('SELECT max(id) AS id FROM match_records')).toEqual([{ id: 3 }]);
+    expect(all('SELECT max(id) AS id FROM titles')).toEqual([{ id: 7 }]);
+    // Every row of a game's data goes with the record of its game, and every title with the record
+    // of its game or its match.
+    db.exec("DELETE FROM game_records WHERE game_id = 'g2' AND account_id = 1");
+    expect(all("SELECT count(*) AS n FROM titles WHERE game_id = 'g2'")).toEqual([{ n: 0 }]);
+    db.exec("DELETE FROM replays WHERE game_id = 'g1'");
+    for (const table of ['game_records', 'game_players']) {
+      expect(all(`SELECT count(*) AS n FROM ${table} WHERE game_id = 'g1'`), table).toEqual([{ n: 0 }]);
+    }
+    db.exec("DELETE FROM replays WHERE game_id = 'g4'");
+    expect(all('SELECT count(*) AS n FROM agent_plays')).toEqual([{ n: 0 }]);
+    db.exec("DELETE FROM match_records WHERE match_id = 'm1'");
+    expect(all("SELECT count(*) AS n FROM titles WHERE match_id = 'm1'")).toEqual([{ n: 0 }]);
+    // Nothing in the old formats can come back.
+    const refused = (sql: string) =>
+      expect(() => db.exec(sql), sql).toThrow(/constraint|no such column|no column named|has 4 columns/i);
+    refused(
+      "INSERT INTO game_records (account_id, game, game_id, side, role, won, verdict, points) VALUES (1, 'keywords', 'g9', 'red', 'captain', 1, 'oral', 5)",
+    );
+    refused(
+      "INSERT INTO game_records (account_id, game, game_id, side, role, won, verdict, points) VALUES (1, 'test', 'g2', 'red', 'captain', 1, 'oral', 5)",
+    );
+    refused("INSERT INTO game_players VALUES ('g9', 'p', 'keywords', 1)");
+    refused("INSERT INTO titles (account_id, game, title, match_id) VALUES (1, 'keywords', 'best_paper', 'm9')");
+    refused(
+      "INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (3, 'keywords', 'deadline_hero', 'g2', 1)",
+    );
+    refused(
+      "INSERT INTO titles (account_id, game, title, match_id, awarded_at) VALUES (3, 'keywords', 'best_paper', 'm2', 'now')",
+    );
+    refused(
+      "INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES (3, 'keywords', 'm3', 'now', 1, 1, 1, 0, 'best_paper')",
+    );
+    refused(
+      'INSERT INTO replays (game_id, game, ended_at, log, ending, started_at, accounts, guests, agents, takeover, in_match, practice, language, fields, version, words, match_id, match_game, match_games) ' +
+        "VALUES ('x', 'keywords', 'now', '{}', 'finished', 'now', 1, 0, 0, 0, 0, 0, 'en', '[]', 'v', 'w', 'm9', 1, 1)",
+    );
+    refused(
+      'INSERT INTO replays (game_id, game, ended_at, log, ending, started_at, accounts, guests, agents, takeover, in_match, practice, language, fields, version, words, match_id, match_game, match_games) ' +
+        "VALUES ('x', 'keywords', 'now', '{}', 'finished', 'now', 1, 0, 1, 0, 1, 0, 'en', '[]', 'v', 'w', 'm9', 1, 1)",
+    );
+    refused(
+      'INSERT INTO replays (game_id, game, ended_at, ending, started_at, accounts, guests, agents, takeover, in_match, practice, language, fields, version, words) ' +
+        "VALUES ('x', 'keywords', 'now', 'finished', 'now', 1, 0, 0, 0, 0, 0, 'en', '[]', 'v', 'w')",
+    );
+    expect(pragma(db, 'foreign_key_check')).toBeUndefined();
+  });
+
+  test.each([
+    [
+      'the title of a match differs between the records and the titles',
+      "UPDATE match_records SET title = 'black_hole' WHERE id = 1",
+      'match_titles_differ_between_the_records_and_the_titles',
+    ],
+    [
+      'a record of a game disagrees with the record of the game',
+      "UPDATE game_records SET winner = 'blue' WHERE id = 3",
+      'records_differ_from_the_record_of_the_game',
+    ],
+    [
+      'the records of a game disagree with each other on the match',
+      'UPDATE game_records SET match_game = 2, match_games = 2 WHERE id = 2',
+      'records_differ_from_the_record_of_the_game',
+    ],
+    [
+      'how a game began names another language than the record of the game',
+      `UPDATE replays SET setup = json_set(setup, '$.language', 'zh') WHERE game_id = 'g1'`,
+      'setup_language_differs_from_the_record_of_the_game',
+    ],
+    ['a kept game has no log', "UPDATE replays SET log = NULL WHERE game_id = 'g3'", 'games_kept_without_their_log'],
+    [
+      'a game of a match has a guest, whom nothing numbers',
+      "UPDATE replays SET guests = 1 WHERE game_id = 'g1'",
+      'match_games_whose_players_cannot_be_numbered',
+    ],
+    [
+      'an account on the record of a match played in none of its games',
+      "DELETE FROM game_players WHERE game_id = 'g1' AND player_id = 'p2'",
+      'match_games_whose_players_cannot_be_numbered',
+    ],
+  ])('of the twenty-third release is left as it was when %s', async (_what, sql, constraint) => {
+    await twentyThird(sql);
+    await expect(open(dir, MIGRATIONS.slice(0, 24))).rejects.toThrow(constraint);
+    const after = new DatabaseSync(join(dir, DATABASE_FILE));
+    expect(schemaVersion(after)).toBe(23);
+    expect(
+      after.prepare("SELECT count(*) AS n FROM pragma_table_info('match_records') WHERE name = 'title'").get(),
+    ).toEqual({ n: 1 });
+    after.close();
+  });
+
+  test('of the twenty-third release numbers everyone who played in a game of a match, also one who left before its end', async () => {
+    // Dan sat in the game of the match and left before the end: the match scored him, and he has
+    // no record of the game.
+    await twentyThird(`
+      INSERT INTO accounts (id, handle, username, username_key, password, consent_version, consented_at, created_at) VALUES
+        (4, 'dddddddddddd', 'Dan', 'dan', 'h', 1, 'now', '2026-10-04T00:00:00.000Z');
+      INSERT INTO game_players (game_id, player_id, account_id) VALUES ('g1', 'p4', 4);
+    `);
+    const { db } = await open(dir, MIGRATIONS.slice(0, 24));
+    const row = db.prepare("SELECT log FROM replays WHERE game_id = 'g1'").get() as { log: string };
+    expect((JSON.parse(row.log) as GameLogData).match).toEqual({ numbers: { p1: 1, p2: 2, p4: 3 } });
+  });
+
+  test('of the twenty-third release lets go of the AI log of a game that no AI made a move in', async () => {
+    // An AI was asked for Ann while she was offline in g5, and she was back before it answered.
+    await twentyThird(`
+      INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, rules, words) VALUES
+        ('g5', 'keywords', '2026-10-05T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g5","start":null,"entries":[]}',
+          '{"v":1,"gameId":"g5","steps":[]}', 'abandoned', NULL, NULL, '2026-10-05T00:00:00.000Z', NULL,
+          1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v', 4, 'w');
+    `);
+    const { db } = await open(dir, MIGRATIONS.slice(0, 24));
+    expect(
+      db.prepare("SELECT game_id AS id, agent_log AS log FROM replays WHERE game_id IN ('g4', 'g5')").all(),
+    ).toEqual([
+      { id: 'g4', log: '{"v":1,"gameId":"g4","steps":[]}' },
+      { id: 'g5', log: null },
+    ]);
+  });
+
+  test('of the twenty-third release lets go of the records that have no record of the game, and the matches left with no game', async () => {
+    await twentyThird(`
+      INSERT INTO game_records (account_id, game, game_id, ended_at, side, role, winner, won, verdict, points, match_id, match_game, match_games, agents) VALUES
+        (2, 'keywords', 'gone', '2026-09-01T00:00:00.000Z', 'red', 'guesser', 'red', 1, 'oral', 7, 'm0', 1, 1, 0);
+      INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (2, 'keywords', 'm0', '2026-09-01T00:00:00.000Z', 1, 1, 1, 7, 'best_paper');
+      INSERT INTO titles (account_id, game, title, match_id, game_id, turn, awarded_at) VALUES
+        (2, 'keywords', 'best_paper', 'm0', NULL, NULL, 'now'),
+        (2, 'keywords', 'heavenly_hand', NULL, 'gone', 1, 'now');
+    `);
+    const { db } = await open(dir, MIGRATIONS.slice(0, 24));
+    const all = (sql: string) => db.prepare(sql).all();
+    expect(all("SELECT count(*) AS n FROM game_records WHERE game_id = 'gone'")).toEqual([{ n: 0 }]);
+    expect(all("SELECT count(*) AS n FROM match_records WHERE match_id = 'm0'")).toEqual([{ n: 0 }]);
+    expect(all('SELECT id FROM titles ORDER BY id')).toEqual([{ id: 5 }, { id: 6 }]);
+    expect(pragma(db, 'foreign_key_check')).toBeUndefined();
+  });
+
+  // A database of the twenty-third release: three accounts, with their games, a match, titles and
+  // what an AI did, as the release kept them, and then `changes`.
+  async function twentyThird(changes = '') {
+    const database = await open(dir, MIGRATIONS.slice(0, 23));
+    database.db.exec(`
+      INSERT INTO accounts (id, handle, username, username_key, password, consent_version, consented_at, created_at, room_setup) VALUES
+        (1, 'aaaaaaaaaaaa', 'Ann', 'ann', 'h', 1, 'now', '2026-10-01T00:00:00.000Z',
+          '{"room":{"game":"keywords","language":"en","fields":["general"],"randomFields":false,"match":null,"public":false,"play":true},"practice":{"role":"captain","fields":["general"]}}'),
+        (2, 'bbbbbbbbbbbb', 'Bob', 'bob', 'h', 1, 'now', '2026-10-02T00:00:00.000Z', '{"room":{"game":"keywords","fields":[]}}'),
+        (3, 'cccccccccccc', 'Cat', 'cat', 'h', 1, 'now', '2026-10-03T00:00:00.000Z', '{"practice":{"role":"guesser","fields":["ml"]}}');
+      -- The one game of a match, won by Ann over Bob; a game Ann won; a game nobody finished; a
+      -- game that an AI played in for Bob, which Ann won.
+      INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, rules, words) VALUES
+        ('g1', 'keywords', '2026-10-01T00:01:00.000Z',
+          '{"v":2,"game":"keywords","gameId":"g1","start":{"p1":{"team":"red","role":"captain"},"p2":{"team":"blue","role":"captain"}},"entries":[{"t":1,"by":null,"type":"end"}]}',
+          NULL, 'finished', 'red', 'found', '2026-10-01T00:00:00.000Z',
+          '{"language":"en","settings":{"guessRule":"standard"},"startingTeam":"red","cards":[{"word":"A","color":"red"},{"word":"B","color":"blue"}]}',
+          2, 0, 0, 0, 1, 0, 'en', '["general"]', 'v', 4, 'w'),
+        ('g2', 'keywords', '2026-10-02T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g2","start":null,"entries":[]}',
+          NULL, 'finished', 'red', 'found', '2026-10-02T00:00:00.000Z', '{"language":"en","settings":{},"startingTeam":"blue","cards":[]}',
+          1, 1, 0, 0, 0, 0, 'en', '["general"]', 'v', 4, 'w'),
+        ('g3', 'keywords', '2026-10-03T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g3","start":null,"entries":[]}',
+          NULL, 'abandoned', NULL, NULL, '2026-10-03T00:00:00.000Z', NULL, 1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v', 4, 'w'),
+        ('g4', 'keywords', '2026-10-04T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g4","start":null,"entries":[]}',
+          '{"v":1,"gameId":"g4","steps":[]}', 'finished', 'red', 'found', '2026-10-04T00:00:00.000Z', NULL,
+          1, 0, 1, 1, 0, 1, 'en', '["general"]', 'v', 4, 'w');
+      INSERT INTO game_records (id, account_id, game, game_id, ended_at, side, role, winner, won, verdict, points,
+        match_id, match_game, match_games, agents) VALUES
+        (1, 1, 'keywords', 'g1', '2026-10-01T00:00:59.990Z', 'red', 'captain', 'red', 1, 'oral', 10, 'm1', 1, 1, 0),
+        (2, 2, 'keywords', 'g1', '2026-10-01T00:00:59.991Z', 'blue', 'captain', 'red', 0, 'reject', -3, 'm1', 1, 1, 0),
+        (3, 1, 'keywords', 'g2', '2026-10-02T00:00:59.990Z', 'red', 'guesser', 'red', 1, 'poster', 4, NULL, NULL, NULL, 0),
+        (5, 1, 'keywords', 'g4', '2026-10-04T00:00:59.990Z', 'red', 'guesser', 'red', 1, 'oral', 0, NULL, NULL, NULL, 1);
+      INSERT INTO match_records (id, account_id, game, match_id, ended_at, games, rank, players, score, title) VALUES
+        (1, 1, 'keywords', 'm1', '2026-10-01T00:01:00.000Z', 1, 1, 2, 10, 'best_paper'),
+        (2, 2, 'keywords', 'm1', '2026-10-01T00:01:00.000Z', 1, 2, 2, -3, NULL);
+      INSERT INTO titles (id, account_id, game, title, match_id, game_id, turn, awarded_at) VALUES
+        (5, 1, 'keywords', 'best_paper', 'm1', NULL, NULL, 'now'),
+        (6, 1, 'keywords', 'opening_record', NULL, 'g2', 1, 'now');
+      INSERT INTO game_players (game_id, player_id, account_id) VALUES ('g1', 'p1', 1), ('g1', 'p2', 2), ('g2', 'p1', 1), ('g4', 'p1', 1);
+      INSERT INTO agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, won, feats) VALUES
+        ('g4', 'a', 'keywords', 'reviewer1', 0, NULL, 'blue', 'captain', 0, '{"clues":1,"found":0,"reviewer2":0,"best":null}'),
+        ('g4', 'p2', 'keywords', 'reviewer1', 1, 2, 'blue', 'guesser', 0, NULL);
+      ${changes}
+    `);
+    database.db.close();
+  }
 
   test('of the first release keeps its feedback when it gets the tables of accounts', async () => {
     const first = await open(dir, MIGRATIONS.slice(0, 1));

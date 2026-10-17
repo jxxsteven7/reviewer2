@@ -6,13 +6,22 @@
 // out where it matters; the player IDs of accounts deleted since are marked (markDeleted), so that
 // what they said can be told apart from a guest's.
 
-// The largest log that is kept, as JSON, in bytes. A whole game makes a few kilobytes; a player who
-// sends message after message could make it grow without end, and every room holds its log in
-// memory while its game is on. What the players say may take up to MAX_SAID_BYTES of it, past
-// which the log keeps no more of it, and notes once that it has left it out. Everything else, which
-// says who sat where and what they did, is kept until a log that grows past all of it is dropped:
-// it is not kept at all, and holds nothing from then on.
+// How large a log may grow, as JSON, in bytes. A whole game makes a few kilobytes, and nothing of
+// what happened in a game is ever dropped from its log: the records are counted again from it when
+// the rules change (store/recount.ts). What the players say may take up to MAX_SAID_BYTES of it,
+// past which the log keeps no more of it, and notes once that it has left it out. The rest, which
+// says who sat where and what they did, each member may add a few hundred entries to
+// (MAX_LOGGED_PER_MEMBER in room.ts), past which the room refuses what they send. Past
+// CROWDED_GAME_LOG_BYTES of it, many times what a game takes, the log is crowded (`crowded`) with
+// comings and goings, as of guests who come and go under one browser key after another, and the
+// room takes nobody in and lets nobody change seats until the game ends, while the game's own
+// moves go on, which are few: the cards on the board, a clue a turn, and the timers. The whole of
+// it has MAX_GAME_LOG_BYTES, which only a game left to its timers for hours reaches: the log is
+// then full (`full`), and the room closes with its game cut short there (socket.ts), so that no
+// room can grow without end in the server's memory. The log is kept whole, with the end that says
+// why.
 export const MAX_GAME_LOG_BYTES = 128 * 1024;
+export const CROWDED_GAME_LOG_BYTES = 64 * 1024;
 export const MAX_SAID_BYTES = 48 * 1024;
 
 // One thing that happened: when, in milliseconds from the start of the game on the room's clock;
@@ -58,8 +67,11 @@ export type GameLogEvent = (typeof GAME_LOG_EVENTS)[number];
 // none. `guests` has the number in the room of each guest who played in the game, by player ID: a
 // guest who left and came back has had two IDs with the one number, and one who logged in during
 // the game keeps it for the IDs they had as a guest. A game without any has none.
-// `deleted` has the player IDs of the accounts deleted since, in the order they went, once each; a
-// log without any has none.
+// `match` is there for a game of a match (docs/architecture.md#matches): the number in the match of
+// everyone in the room who has one, by player ID, and, where a guest's line in the match has gone
+// into an account's (`merged`), each number that went into another, by the number it went into, as
+// they stood when the game ended. `deleted` has the player IDs of the accounts deleted since, in the
+// order they went, once each; a log without any has none.
 export interface GameLogData {
   v: 2;
   game: string;
@@ -67,9 +79,15 @@ export interface GameLogData {
   start: Record<string, unknown> | null;
   agents?: Record<string, string>;
   guests?: Record<string, number>;
+  match?: MatchNumbers;
   entries: GameLogEntry[];
   truncated?: true;
   deleted?: string[];
+}
+
+export interface MatchNumbers {
+  numbers: Record<string, number>;
+  merged?: Record<string, number>;
 }
 
 // How a game came to an end, for its record (docs/architecture.md#game-records): by itself;
@@ -96,7 +114,6 @@ export class GameLog {
   #bytes: number;
   #saidBytes = 0;
   #truncated = false;
-  #overflowed = false;
 
   constructor(
     readonly game: string,
@@ -106,13 +123,12 @@ export class GameLog {
     readonly start: Record<string, unknown> | null,
     readonly agents: Record<string, string> = {},
   ) {
-    this.#bytes = Buffer.byteLength(JSON.stringify(this.#data()));
+    this.#bytes = Buffer.byteLength(JSON.stringify(this.data()));
   }
 
   // Notes one thing that happened at `at`, on the room's clock. A line of chat is left out once
-  // the chat has taken up its share, and nothing is noted once the log has grown too long to keep.
+  // the chat has taken up its share.
   add(at: number, by: string | null, type: string, { data, said, agent }: GameLogExtra = {}): void {
-    if (this.#overflowed) return;
     const entry: GameLogEntry = {
       t: at - this.startedAt,
       by,
@@ -138,21 +154,28 @@ export class GameLog {
   #push(entry: GameLogEntry): void {
     // One byte more for the comma before every entry but the first.
     this.#bytes += Buffer.byteLength(JSON.stringify(entry)) + (this.#entries.length > 0 ? 1 : 0);
-    if (this.#bytes > MAX_GAME_LOG_BYTES) {
-      this.#overflowed = true;
-      this.#entries.length = 0;
-      return;
-    }
     this.#entries.push(entry);
   }
 
-  // Whether the log grew too long to keep.
-  get overflowed(): boolean {
-    return this.#overflowed;
+  // Whether the log has grown as large as a log may, apart from what the players said, which has
+  // its own share: a flood of messages, on which the room closes.
+  get full(): boolean {
+    return this.#doneBytes > MAX_GAME_LOG_BYTES;
+  }
+
+  // Whether the log is crowded with comings and goings, on which the room takes nobody in and lets
+  // nobody change seats until the game ends.
+  get crowded(): boolean {
+    return this.#doneBytes > CROWDED_GAME_LOG_BYTES;
+  }
+
+  // The size of what was done, apart from what was said.
+  get #doneBytes(): number {
+    return this.#bytes - this.#saidBytes;
   }
 
   // How many entries the log holds, and the entries from the one at `index` on: what has been added
-  // to the log since it had `index` entries. A log that grew too long holds none.
+  // to the log since it had `index` entries.
   get size(): number {
     return this.#entries.length;
   }
@@ -161,12 +184,8 @@ export class GameLog {
     return this.#entries.slice(index);
   }
 
-  // The log to keep, or null when it grew too long.
-  data(): GameLogData | null {
-    return this.#overflowed ? null : this.#data();
-  }
-
-  #data(): GameLogData {
+  // The log to keep.
+  data(): GameLogData {
     return {
       v: 2,
       game: this.game,

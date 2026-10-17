@@ -854,8 +854,13 @@ describe('a game that an AI played in', () => {
     await ann.waitFor((state) => state.phase === 'ended', 'the end');
     const account = server.accounts.byName('Ann');
     expect(
-      server.db.prepare('SELECT points, won, agents FROM game_records WHERE account_id = ?').all(account?.id ?? 0),
-    ).toEqual([{ points: 0, won: 1, agents: 1 }]);
+      server.db
+        .prepare(
+          'SELECT r.points, r.won, g.takeover FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
+            'WHERE r.account_id = ?',
+        )
+        .all(account?.id ?? 0),
+    ).toEqual([{ points: 0, won: 1, takeover: 1 }]);
     expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
     const [row] = kept();
     const log = JSON.parse(row?.log ?? '{}') as GameLogData;
@@ -879,6 +884,33 @@ describe('a game that an AI played in', () => {
     ).toEqual([{ id: catId, takeover: 1, account: null, side: 'red', role: 'captain', won: 0 }]);
     const page = await new Browser(server.url).request('/api/agent/reviewer1');
     expect(page.body).toMatchObject({ ok: true, profile: { games: 0, takeovers: 1, best: null } });
+  });
+
+  test('brings nobody a title, not the instant desk reject of a group whose first card was Reviewer 2', async () => {
+    const { ann, bob, cat, reds, code } = await people(1);
+    const [dan] = reds as [TestClient];
+    const catId = await goes(cat, ann);
+    server.advance(TAKEOVER_MS);
+    await ann.waitFor((state) => playerIn(state, catId)?.takenOver === true, 'the takeover');
+    server.advance(CLUE_PACE_MS);
+    await until(() => truth(code).phase === 'guess', 'the clue');
+    // Dan ends red's turn on a paper; then Ann, with an account, gives blue's first clue, and Bob
+    // reveals Reviewer 2 as blue's very first card.
+    const red = truth(code);
+    const paper = red.cards.findIndex((card) => card.color === 'neutral' && !card.revealed);
+    await expectOk(dan.send('keywords:reveal', { gameId: red.gameId, turn: red.turn, card: paper }));
+    await ann.waitFor((state) => roomData(state).game?.team === 'blue', 'the blue turn');
+    const blue = truth(code);
+    await expectOk(ann.send('keywords:clue', { gameId: blue.gameId, turn: blue.turn, word: 'zebra', count: 1 }));
+    const reviewer2 = blue.cards.findIndex((card) => card.color === 'reviewer2');
+    await expectOk(bob.send('keywords:reveal', { gameId: blue.gameId, turn: blue.turn, card: reviewer2 }));
+    await ann.waitFor((state) => state.phase === 'ended', 'the end');
+    const account = server.accounts.byName('Ann');
+    expect(server.db.prepare('SELECT won FROM game_records WHERE account_id = ?').all(account?.id ?? 0)).toEqual([
+      { won: 0 },
+    ]);
+    expect(server.db.prepare('SELECT count(*) AS n FROM titles').get()).toEqual({ n: 0 });
+    expect((ann.state?.data as KeywordsRoomData).titles).toEqual({});
   });
 
   test('is counted on its page with the clue that found the most, and the game it won against an account', async () => {

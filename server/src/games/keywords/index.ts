@@ -9,7 +9,6 @@ import {
   settingsProblems,
   SPECTATOR,
   TEAMS,
-  verdictFor,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
@@ -21,7 +20,8 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import { shownReplay, type KeywordsSetup } from './replay';
+import { recountOf, shownReplay, type KeywordsSetup } from './replay';
+import { resultsOf, titlesOf } from './results';
 import {
   agentLimitReached,
   agentMove,
@@ -31,7 +31,15 @@ import {
   personSeated,
   practiceSeats,
 } from './agents';
-import type { AgentFeats, GameContext, GameLogNote, GameModule, GameTitle, GameUpdate, LogNote } from '../../core/game';
+import type {
+  AgentFeats,
+  GameContext,
+  GameLogNote,
+  GameModule,
+  GameShapes,
+  GameUpdate,
+  LogNote,
+} from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -57,12 +65,9 @@ import {
   counts,
   drawGroups,
   drawProblems,
-  firstClue,
-  heavenlyHand,
   lineupOf,
   missedDeadline,
   newMatchSeating,
-  openingRecord,
   rekeyMatch,
   rekeySeating,
   scoreGame,
@@ -84,7 +89,7 @@ import {
   type Seating,
   type SeatRequest,
 } from './seats';
-import { remaining, type KeywordsState } from './state';
+import type { KeywordsState } from './state';
 import { viewFor } from './view';
 
 // The team word guessing game as a GameModule: the rules in rules.ts and seats.ts, connected to
@@ -226,7 +231,8 @@ type Action<M extends KeywordsMessage> = (
 // as the chat shows it (checkChat), which the log keeps apart. Nothing is kept of a card chosen:
 // students choose and choose again before they reveal one, for the fun of it as much as anything.
 // Nor of each mark, which a group sets and changes as it talks: the log keeps how a group's marks
-// stood when it acted instead (markNotes).
+// stood when it acted instead (markNotes). Taking a seat moves the player rather than the game,
+// which the room refuses once the log is crowded (LogNote.seat).
 function logNote(type: string, payload: unknown): LogNote | null {
   if (!Object.hasOwn(KEYWORDS_MESSAGES, type) || type === 'keywords:select' || type === 'keywords:mark') return null;
   const parsed = KEYWORDS_MESSAGES[type as KeywordsMessage].safeParse(payload ?? {});
@@ -235,6 +241,7 @@ function logNote(type: string, payload: unknown): LogNote | null {
   delete data.gameId;
   if (type === 'keywords:say') return { said: checkChat(data.text as string).text };
   if (type === 'keywords:clue') data.word = cleanClue(data.word as string);
+  if (type === 'keywords:seat') return { data, seat: true };
   return Object.keys(data).length > 0 ? { data } : {};
 }
 
@@ -268,12 +275,16 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
   (seatOf(data.seating, playerId).role !== 'captain' && !data.seating.keyViewers.has(ctx.keyOf(playerId)));
 
 // The version of the rules and the scoring (GameModule.rulesVersion). Raise it by one with every
-// change to either. Version 2 brought the students' marks, the homophone rule of a Chinese room and
-// the hold on the quick reactions of whoever has seen the key while the students guess; version 3
-// the numbers, the English and the pinyin of a character as the same character in the clue check,
+// change to either; the records of every kept game are then counted again under the new version
+// (store/recount.ts). Version 2 brought the students' marks, the homophone rule of a Chinese room
+// and the hold on the quick reactions of whoever has seen the key while the students guess; version
+// 3 the numbers, the English and the pinyin of a character as the same character in the clue check,
 // and the groups' talk after the game, the PI's included; version 4 the 5 points that a PI loses
-// for each missed deadline, and boards on which no row or column is all one group's cards.
-export const RULES_VERSION = 4;
+// for each missed deadline, and boards on which no row or column is all one group's cards; version
+// 5 the opening record from a first clue of 4 or more, which brings the PI no point and which the
+// heavenly hand outdoes, the instant desk reject and the fall at the first hurdle, the PI's deadline
+// hero for a clue followed to the letter, and no clue that a Latin word on the board starts with.
+export const RULES_VERSION = 5;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),
@@ -326,26 +337,6 @@ function heroBefore(game: KeywordsState, ctx: GameContext, playerId: string): nu
   return held + game.history.filter((record) => [...heroesOf(record)].some((hero) => ctx.keyOf(hero) === key)).length;
 }
 
-// The titles that a game which ended by itself brought a player who played for `team` in it, by
-// their member key (docs/games/keywords.md#titles), each with the turn it came in: Forgot to
-// Submit for each turn in which their time for the clue ran out, Deadline Hero for each turn that
-// made them one (heroesOf), and for everyone in the group, the opening record and the heavenly hand
-// of its first clue.
-function titlesOf(game: KeywordsState, team: Team, key: string, keyOf: (playerId: string) => string): GameTitle[] {
-  const titles: GameTitle[] = game.history.flatMap((record) => [
-    ...(missedDeadline(record) && keyOf(record.captain ?? '') === key
-      ? [{ title: 'missed_deadline' as const, turn: record.turn }]
-      : []),
-    ...([...heroesOf(record)].some((hero) => keyOf(hero) === key)
-      ? [{ title: 'deadline_hero' as const, turn: record.turn }]
-      : []),
-  ]);
-  const first = firstClue(game, team);
-  if (first && openingRecord(game, team)) titles.push({ title: 'opening_record', turn: first.turn });
-  if (first && heavenlyHand(game, team)) titles.push({ title: 'heavenly_hand', turn: first.turn });
-  return titles;
-}
-
 // The titles that the game so far has brought each player whom its titles go to, by player ID,
 // each with how many times it came, for the view (KeywordsRoomData.titles): once the game is over,
 // those that results() awards, so none for a game that the chair withdrew, which awards none.
@@ -363,6 +354,40 @@ function titlesSoFar(data: KeywordsData, ctx: GameContext): Record<string, Title
   }
   return earned;
 }
+
+// The shapes of the game's own in its data, for the check of the data (GameModule.shapes): how a
+// game began (setup), the settings as a room setup keeps them, the roles that its records name,
+// and what it counts of an AI player in a seat (agentFeats).
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+const COLORS: readonly string[] = [...TEAMS, 'neutral', 'reviewer2'];
+const shapes: GameShapes = {
+  setup: (value) =>
+    isObject(value) &&
+    KEYWORDS_SETTINGS.strict().safeParse(value.settings).success &&
+    TEAMS.includes(value.startingTeam as Team) &&
+    Array.isArray(value.cards) &&
+    value.cards.length === BOARD_SIZE &&
+    value.cards.every(
+      (card) =>
+        isObject(card) &&
+        typeof card.word === 'string' &&
+        COLORS.includes(card.color as string) &&
+        typeof card.custom === 'boolean' &&
+        Object.keys(card).length === 3,
+    ) &&
+    Object.keys(value).length === 3,
+  settings: (value) => KEYWORDS_SETTINGS.strict().safeParse(value).success,
+  role: (role) => role === 'captain' || role === 'guesser',
+  feats: (value) =>
+    isObject(value) &&
+    Number.isInteger(value.clues) &&
+    Number.isInteger(value.found) &&
+    Number.isInteger(value.reviewer2) &&
+    (value.best === null ||
+      (isObject(value.best) && typeof value.best.word === 'string' && Number.isInteger(value.best.found))) &&
+    Object.keys(value).length === 4,
+};
 
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
@@ -517,18 +542,20 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return { team, role };
   },
 
-  // How the game began: the language and the settings, the group that starts, and the board, every
-  // card's color included. It goes into the record of the game alone, which stays on the server.
+  // How the game began: the settings, the group that starts, and the board, every card's color
+  // included and each card marked as a word of the chair's own or of the lists. It goes into the
+  // record of the game alone, which stays on the server, with the room's language beside it.
   setup(data): KeywordsSetup | null {
     const game = data.game;
     if (!game) return null;
     return {
-      language: game.language,
       settings: { ...game.settings },
       startingTeam: game.startingTeam,
-      cards: game.cards.map(({ word, color }) => ({ word, color })),
+      cards: game.cards.map(({ word, color, custom }) => ({ word, color, custom: custom === true })),
     };
   },
+
+  shapes,
 
   logged: logNote,
   logChanges: markNotes,
@@ -591,34 +618,17 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return (actions[message] as Action<KeywordsMessage>)(data, ctx, playerId, parsed.data);
   },
 
-  // A game that was withdrawn counts for no record. Everyone in a seat when it ended took part: the
-  // captain as the group's PI and the guessers as its students. The verdict is the decision letter
-  // that their group got, and the titles are those that the game brought them (titlesOf).
+  // A game that was withdrawn counts for no record (results.ts).
   results(data, ctx) {
     const game = data.game;
-    const result = game?.result;
-    if (!game || !result || result.winner === null) return null;
-    const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(game.cards, team)])) as Record<Team, number>;
-    const { winner } = result;
-    return [...data.seating.seats].flatMap(([playerId, seat]) =>
-      seat.team === null
-        ? []
-        : [
-            {
-              playerId,
-              side: seat.team,
-              role: seat.role,
-              winner,
-              won: seat.team === winner,
-              verdict: verdictFor(result, left, seat.team),
-              titles: titlesOf(game, seat.team, ctx.keyOf(playerId), ctx.keyOf),
-            },
-          ],
-    );
+    if (!game?.result || game.result.winner === null) return null;
+    return resultsOf(game, data.seating, ctx.keyOf);
   },
 
-  // A kept game as an account watches it again (replay.ts).
+  // A kept game as an account watches it again, and counted again under the rules of today
+  // (replay.ts).
   showReplay: shownReplay,
+  recount: recountOf,
 
   views(data, ctx) {
     const members = ctx.playerIds();

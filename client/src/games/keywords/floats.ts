@@ -1,5 +1,8 @@
 import {
-  bonusPoints,
+  endPoints,
+  openingRecord,
+  POINTS,
+  revealBonus,
   revealPoints,
   type CardColor,
   type GamePoints,
@@ -11,10 +14,11 @@ import {
 import type { Float } from '../../core/components/ScoreFloat.vue';
 
 // The points that rise from the board as a game goes (docs/games/keywords.md#points-as-they-come):
-// what a revealed card does to each player's points, and what the end of the game adds to them. The
-// numbers come from what everyone sees, the card's color, the group whose students revealed it and
-// each player's role, priced as the server prices them (revealPoints() in the shared rules), and
-// from the points that the server sends with the end of the game.
+// what a revealed card does to each player's points, the bonus it brings included, and what the end
+// of the game adds to them. The numbers come from what everyone sees, the card's color, the group
+// whose students revealed it, each player's role and the record of the clues, priced as the server
+// prices them (revealPoints() and revealBonus() in the shared rules), and from the points that the
+// server sends with the end of the game.
 
 // A card that has just been revealed, between two snapshots of a game in a row: the one card that
 // the later has face up and the earlier didn't, its color, and the group whose students revealed it.
@@ -52,43 +56,62 @@ function placeOf(data: KeywordsRoomData, playerId: string): { team: Team; role: 
 }
 
 // What a revealed card does to the viewer's points, by the group they play for in this game and
-// their role, and to the points of each player in a group's seat, by player ID: only what changes
-// something, and nothing for anyone in a game that brings no points.
+// their role, and to the points of each player in a group's seat, by player ID, the card's price and
+// the bonus it brings as one number: only what changes something, and nothing for anyone in a game
+// that brings no points. `before` and `after` are the game as it stood on either side of the card.
 export function revealFloats(
   data: KeywordsRoomData,
   me: string | null,
   reveal: { color: CardColor; by: Team },
+  before: KeywordsView,
+  after: KeywordsView,
 ): { mine: Float | null; players: Map<string, Float> } {
+  const pointsFor = (id: string, team: Team, role: 'captain' | 'guesser') =>
+    revealPoints(reveal.color, reveal.by, team, role) + revealBonus(before, after, reveal.by, team, role, id);
   const players = new Map<string, Float>();
   for (const id of Object.keys(data.seats)) {
     const place = placeOf(data, id);
-    const points = place ? revealPoints(reveal.color, reveal.by, place.team, place.role) : 0;
+    const points = place ? pointsFor(id, place.team, place.role) : 0;
     if (place && points !== 0) players.set(id, { text: signed(points), team: place.team });
   }
   let mine: Float | null = null;
   if (me !== null && data.side !== null) {
-    const role = data.keyViewers.includes(me) ? 'captain' : 'guesser';
-    const points = revealPoints(reveal.color, reveal.by, data.side, role);
+    const points = pointsFor(me, data.side, data.keyViewers.includes(me) ? 'captain' : 'guesser');
     if (points !== 0) mine = { text: signed(points), team: data.side };
   }
   return { mine, players };
 }
 
 // What the end of the game adds to the points of the viewer and of each player in a group's seat:
-// the win and the bonuses (bonusPoints()), as the server scored them, for those who have any.
+// the win and the heavenly hand (endPoints()), as the server scored them, for those who have any;
+// the big clues and the opening record rose with their cards. `risen` names the groups whose
+// opening record rose with its card in front of the viewer: for a student of such a group that has
+// the heavenly hand instead by the end, which outdoes it, the end's number is that point less, so
+// that what rose adds up to the record, which has no point for the opening record.
 export function endFloats(
   data: KeywordsRoomData,
   me: string | null,
   points: readonly GamePoints[],
+  risen: ReadonlySet<Team> = new Set(),
 ): { mine: Float | null; players: Map<string, Float> } {
   const players = new Map<string, Float>();
   let mine: Float | null = null;
   for (const { playerId, detail } of points) {
-    const bonus = detail === undefined ? 0 : bonusPoints(detail as KeywordsScoreDetail);
-    if (bonus <= 0) continue;
+    if (detail === undefined) continue;
+    const scored = detail as KeywordsScoreDetail;
     const team = data.seats[playerId]?.team ?? null;
+    const side = playerId === me && data.side !== null ? data.side : team;
+    const outdone = side !== null && risen.has(side) && scored.role === 'guesser' && scored.heavenlyHand;
+    const bonus = endPoints(scored) - (outdone ? POINTS.guesser.openingRecord : 0);
+    if (bonus <= 0) continue;
     if (team !== null) players.set(playerId, { text: signed(bonus), team });
     if (playerId === me && data.side !== null) mine = { text: signed(bonus), team: data.side };
   }
   return { mine, players };
 }
+
+// Whether the card revealed last made a group's opening record, between two snapshots of a game in
+// a row: the one card that brings the point of it (revealBonus()), which the heavenly hand may
+// outdo by the end (endFloats()).
+export const openingRose = (before: KeywordsView, after: KeywordsView, by: Team): boolean =>
+  openingRecord(after, by) && !openingRecord(before, by);

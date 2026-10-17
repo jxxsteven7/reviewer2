@@ -124,6 +124,13 @@ button {
     background-color var(--motion);
 }
 
+/* A button that holds a round sticker, such as an avatar, is square itself, and WebKit on a phone
+   would flash its square over the sticker while it is pressed: the press of the sticker is all the
+   feedback it gives. */
+.press-host {
+  -webkit-tap-highlight-color: transparent;
+}
+
 .press-large {
   --press-shift: var(--shift-2);
 }

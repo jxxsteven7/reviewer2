@@ -40,12 +40,14 @@ function view(overrides: Partial<KeywordsView> = {}): KeywordsView {
   };
 }
 
+// Ann gives red's clues, Cat blue's.
 const record = (team: 'red' | 'blue', guesses: ClueRecord['guesses']): ClueRecord => ({
   turn: 1,
   team,
   at: 0,
   word: 'Hint',
   count: 2,
+  captain: team === 'red' ? 'ann' : 'cat',
   guesses,
 });
 
@@ -100,20 +102,61 @@ describe('a card revealed between two snapshots', () => {
 
   test('changes the points of the group that revealed it, by role, and nobody else', () => {
     const reveal = { color: 'neutral' as const, by: 'red' as const };
-    const forBob = revealFloats(data('red'), 'bob', reveal);
+    const neutral = view({ history: [record('red', [{ card: 0, color: 'neutral', player: 'bob', at: 0 }])] });
+    const forBob = revealFloats(data('red'), 'bob', reveal, before, neutral);
     expect(forBob.mine).toEqual({ text: '-1', team: 'red' });
     expect(Object.fromEntries(forBob.players)).toEqual({
       ann: { text: '-2', team: 'red' },
       bob: { text: '-1', team: 'red' },
     });
-    expect(revealFloats(data('red'), 'ann', reveal).mine).toEqual({ text: '-2', team: 'red' });
+    expect(revealFloats(data('red'), 'ann', reveal, before, neutral).mine).toEqual({ text: '-2', team: 'red' });
     // The other group, and a spectator, see nothing on the card.
-    expect(revealFloats(data('blue'), 'dan', reveal).mine).toBeNull();
-    expect(revealFloats(data(null), 'eve', reveal).mine).toBeNull();
+    expect(revealFloats(data('blue'), 'dan', reveal, before, neutral).mine).toBeNull();
+    expect(revealFloats(data(null), 'eve', reveal, before, neutral).mine).toBeNull();
     // A card of the group's own is +1 for everyone in it, the PI too.
-    const found = revealFloats(data('blue'), 'cat', { color: 'blue', by: 'blue' });
+    const own = view({ history: [record('blue', [{ card: 0, color: 'blue', player: 'dan', at: 0 }])] });
+    const found = revealFloats(data('blue'), 'cat', { color: 'blue', by: 'blue' }, before, own);
     expect(found.mine).toEqual({ text: '+1', team: 'blue' });
     expect([...found.players.keys()]).toEqual(['cat', 'dan']);
+  });
+
+  test('brings the bonus of the card with it: the big clue for the PI, the opening record for the students', () => {
+    // Blue's first clue names 4; its students find the four cards one by one.
+    const guesses = (found: number) =>
+      Array.from({ length: found }, (_, card) => ({ card, color: 'blue' as const, player: 'dan', at: 0 }));
+    const step = (found: number) => view({ history: [{ ...record('blue', guesses(found)), count: 4 }] });
+    const reveal = { color: 'blue' as const, by: 'blue' as const };
+    // The third card: a point each. The fourth: the PI's big clue and the students' opening record,
+    // a point more each, as one number.
+    const third = revealFloats(data('blue'), 'dan', reveal, step(2), step(3));
+    expect(Object.fromEntries(third.players)).toEqual({
+      cat: { text: '+1', team: 'blue' },
+      dan: { text: '+1', team: 'blue' },
+    });
+    const fourth = revealFloats(data('blue'), 'dan', reveal, step(3), step(4));
+    expect(fourth.mine).toEqual({ text: '+2', team: 'blue' });
+    expect(Object.fromEntries(fourth.players)).toEqual({
+      cat: { text: '+2', team: 'blue' },
+      dan: { text: '+2', team: 'blue' },
+    });
+    // The fifth, with a clue of 5: the PI's big clue again, and nothing more for the students.
+    const five = (found: number) => view({ history: [{ ...record('blue', guesses(found)), count: 5 }] });
+    const fifth = revealFloats(data('blue'), 'cat', reveal, five(4), five(5));
+    expect(fifth.mine).toEqual({ text: '+2', team: 'blue' });
+    expect(Object.fromEntries(fifth.players)).toEqual({
+      cat: { text: '+2', team: 'blue' },
+      dan: { text: '+2', team: 'blue' },
+    });
+    // The big clue is the clue-giver's: a PI who took the seat over from one who left has only the
+    // card's point.
+    const left = (found: number) =>
+      view({ history: [{ ...record('blue', guesses(found)), count: 5, captain: 'gone' }] });
+    const taken = revealFloats(data('blue'), 'cat', reveal, left(4), left(5));
+    expect(taken.mine).toEqual({ text: '+1', team: 'blue' });
+    expect(Object.fromEntries(taken.players)).toEqual({
+      cat: { text: '+1', team: 'blue' },
+      dan: { text: '+2', team: 'blue' },
+    });
   });
 });
 
@@ -126,7 +169,7 @@ describe('the end of a game', () => {
     expect(endsBetween(view(), { ...over, gameId: 'g2' })).toBe(false);
   });
 
-  test('adds the win and the bonuses as the server scored them, for those who have any', () => {
+  test('adds the win and the heavenly hand as the server scored them, for those who have any, the big clues having risen already', () => {
     const detail = (role: 'captain' | 'guesser', won: boolean, more: Partial<KeywordsScoreDetail> = {}) => ({
       role,
       found: 5,
@@ -134,19 +177,43 @@ describe('the end of a game', () => {
       irrelevant: 1,
       wrong: 0,
       reviewer2: 0,
+      bigClues: 0,
+      missed: 0,
+      openingRecord: false,
+      heavenlyHand: false,
       ...more,
     });
     const points: GamePoints[] = [
       { playerId: 'ann', points: 0, detail: detail('captain', true, { bigClues: 1 }) },
-      { playerId: 'bob', points: 0, detail: detail('guesser', true) },
+      { playerId: 'bob', points: 0, detail: detail('guesser', true, { openingRecord: true }) },
       { playerId: 'cat', points: 0, detail: detail('captain', false) },
       { playerId: 'dan', points: 0, detail: detail('guesser', false) },
     ];
     const forAnn = endFloats(data('red'), 'ann', points);
-    expect(forAnn.mine).toEqual({ text: '+5', team: 'red' });
+    expect(forAnn.mine).toEqual({ text: '+4', team: 'red' });
     expect(Object.fromEntries(forAnn.players)).toEqual({
-      ann: { text: '+5', team: 'red' },
+      ann: { text: '+4', team: 'red' },
       bob: { text: '+3', team: 'red' },
+    });
+    const heavenly: GamePoints[] = [
+      { playerId: 'ann', points: 0, detail: detail('captain', true, { bigClues: 6, heavenlyHand: true }) },
+      { playerId: 'bob', points: 0, detail: detail('guesser', true, { heavenlyHand: true }) },
+    ];
+    expect(Object.fromEntries(endFloats(data('red'), 'ann', heavenly).players)).toEqual({
+      ann: { text: '+7', team: 'red' },
+      bob: { text: '+4', team: 'red' },
+    });
+    // Red's opening record rose with its card, and the heavenly hand outdid it by the end: Bob's
+    // number is that point less, and the PI's, who had none for it, as it was.
+    const outdone = endFloats(data('red'), 'bob', heavenly, new Set(['red']));
+    expect(outdone.mine).toEqual({ text: '+3', team: 'red' });
+    expect(Object.fromEntries(outdone.players)).toEqual({
+      ann: { text: '+7', team: 'red' },
+      bob: { text: '+3', team: 'red' },
+    });
+    expect(Object.fromEntries(endFloats(data('red'), 'bob', heavenly, new Set(['blue'])).players)).toEqual({
+      ann: { text: '+7', team: 'red' },
+      bob: { text: '+4', team: 'red' },
     });
     expect(endFloats(data('blue'), 'dan', points).mine).toBeNull();
     expect(endFloats(data(null), 'eve', points).mine).toBeNull();

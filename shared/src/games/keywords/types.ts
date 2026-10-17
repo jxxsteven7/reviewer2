@@ -58,6 +58,9 @@ export interface BoardWord {
   forms?: readonly string[];
   pinyin?: string;
   glosses?: readonly string[];
+  // A word of the chair's own (docs/games/keywords.md#custom-words), which the record of the game
+  // marks on its card; a word of the lists has none.
+  custom?: true;
 }
 
 // What a player sees of a card. `color` is there only when the player may know it: the card has

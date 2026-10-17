@@ -2,6 +2,7 @@ import { defaultSettings, type KeywordsRoomData, type KeywordsView } from '@revi
 import { afterEach, describe, expect, test } from 'vitest';
 import { keywordsGame } from '../src/games/keywords';
 import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
+import { keepGame } from './keptGame';
 
 // The titles that a game brings, over real sockets (docs/games/keywords.md#titles): a PI who gives
 // no clue in time is called out to the room at once, with how many times their account has missed
@@ -38,6 +39,16 @@ describe('Forgot to Submit', () => {
     const bobs = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
     expect((await bobs.register('Bob')).body).toEqual({ ok: true });
+    keepGame(server.db, 'earlier');
+    server.accounts.records.add(1, {
+      game: 'keywords',
+      gameId: 'earlier',
+      side: 'red',
+      role: 'captain',
+      won: true,
+      verdict: 'oral',
+      points: 0,
+    });
     server.accounts.titles.awardForGame(1, 'keywords', 'missed_deadline', 'earlier', 3);
     const ann = await anns.connect();
     clients.push(ann);
@@ -93,7 +104,7 @@ describe('Forgot to Submit', () => {
     const reviewer2 = board(cat).cards.findIndex((card) => card.color === 'reviewer2');
     await expectOk(dan.send('keywords:reveal', { ...moment(board(dan)), card: reviewer2 }));
     for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
-    await until(() => server.accounts.records.view(1).ordinary.games === 1, "Ann's record");
+    await until(() => server.accounts.records.view(1).ordinary.games === 2, "Ann's record");
     expect((await anns.account())?.titles).toEqual([{ title: 'missed_deadline', count: 3 }]);
     expect((await bobs.account())?.titles).toEqual([]);
 
@@ -127,6 +138,16 @@ describe('Deadline Hero', () => {
     const bobs = new Browser(server.url);
     expect((await anns.register('Ann')).body).toEqual({ ok: true });
     expect((await bobs.register('Bob')).body).toEqual({ ok: true });
+    keepGame(server.db, 'earlier');
+    server.accounts.records.add(1, {
+      game: 'keywords',
+      gameId: 'earlier',
+      side: 'red',
+      role: 'captain',
+      won: true,
+      verdict: 'oral',
+      points: 0,
+    });
     server.accounts.titles.awardForGame(1, 'keywords', 'deadline_hero', 'earlier', 2);
     const ann = await anns.connect();
     clients.push(ann);
@@ -163,8 +184,9 @@ describe('Deadline Hero', () => {
       );
     }
 
-    // Ann gives her clue with 2 seconds left, and Bob reveals one of red's cards with 2 seconds left
-    // of the guesses: both are heroes at once, Ann for the second time.
+    // Ann gives her clue of 2 with 2 seconds left, and Bob reveals one of red's cards with 2 seconds
+    // left of the guesses: Bob is a hero at once; Ann once the students have followed her clue to
+    // the letter, with the second card, for the second time.
     server.advance(28_000);
     await expectOk(ann.send('keywords:clue', { ...moment(board(ann)), word: 'Hint', count: 2 }));
     await settle(everyone);
@@ -174,16 +196,15 @@ describe('Deadline Hero', () => {
     await settle(everyone);
     const hailed = (client: TestClient) =>
       board(client).events.flatMap(({ kind, player, count }) => (kind === 'hero' ? [{ player, count }] : []));
+    for (const client of everyone) expect(hailed(client)).toEqual([{ player: bob.me, count: 1 }]);
+    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('red') }));
+    await settle(everyone);
     for (const client of everyone) {
       expect(hailed(client)).toEqual([
         { player: bob.me, count: 1 },
         { player: ann.me, count: 2 },
       ]);
     }
-    // Another card of red's in the same turn makes nobody a hero again.
-    await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('red') }));
-    await settle(everyone);
-    expect(hailed(dan)).toHaveLength(2);
 
     // Red's turn ends; blue reveals Reviewer 2, and the game goes on the record.
     await expectOk(bob.send('keywords:reveal', { ...moment(board(bob)), card: own('blue') }));
@@ -193,7 +214,7 @@ describe('Deadline Hero', () => {
     const reviewer2 = board(cat).cards.findIndex((card) => card.color === 'reviewer2');
     await expectOk(dan.send('keywords:reveal', { ...moment(board(dan)), card: reviewer2 }));
     for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
-    await until(() => server.accounts.records.view(1).ordinary.games === 1, "Ann's record");
+    await until(() => server.accounts.records.view(1).ordinary.games === 2, "Ann's record");
     expect((await anns.account())?.titles).toEqual([{ title: 'deadline_hero', count: 2 }]);
     expect((await bobs.account())?.titles).toEqual([{ title: 'deadline_hero', count: 1 }]);
   });
