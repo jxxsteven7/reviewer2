@@ -25,10 +25,12 @@ const empty = ({ sections }: Sponsors) => sections.length === 0;
     <template #none>
       <i18n-t keypath="sponsors.none" scope="global">
         <template #github>
-          <a :href="SPONSORS_PAGE" target="_blank" rel="noopener noreferrer">{{ t('sponsors.github') }}</a>
+          <a :href="SPONSORS_PAGE" class="text-link" target="_blank" rel="noopener noreferrer">{{
+            t('sponsors.github')
+          }}</a>
         </template>
         <template #wechat>
-          <button type="button" class="tip" @click="emit('tip')">{{ t('sponsors.wechat') }}</button>
+          <button type="button" class="tip text-link" @click="emit('tip')">{{ t('sponsors.wechat') }}</button>
         </template>
       </i18n-t>
     </template>
@@ -42,7 +44,7 @@ const empty = ({ sections }: Sponsors) => sections.length === 0;
       >
         <a
           v-if="entry.link?.startsWith('https://')"
-          class="name"
+          class="name text-link"
           :href="entry.link"
           target="_blank"
           rel="nofollow ugc noopener"
@@ -56,8 +58,8 @@ const empty = ({ sections }: Sponsors) => sections.length === 0;
 </template>
 
 <style scoped>
+/* A sponsor's name, a text link where they left one (base.css), in bold either way. */
 .name {
-  color: var(--ink);
   font-weight: var(--weight-bold);
 }
 
@@ -68,18 +70,13 @@ const empty = ({ sections }: Sponsors) => sections.length === 0;
   font-size: var(--text-sm);
 }
 
-/* The way to the WeChat tip reads as a link in the sentence, like the one to GitHub Sponsors
+/* The way to the WeChat tip reads as a text link in the sentence, like the one to GitHub Sponsors
    (styles/base.css). */
 .tip {
   padding: 0;
   border: 0;
-  background: none;
-  color: inherit;
   font: inherit;
   font-weight: var(--weight-bold);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.2em;
   cursor: pointer;
 }
 </style>

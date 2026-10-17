@@ -15,7 +15,7 @@ import {
 } from '@reviewer2/shared';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { computed, defineComponent, h } from 'vue';
+import { computed, defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
 import { bubbles } from '../../core/emotes';
 import { knowAliases } from '../../core/names';
@@ -42,6 +42,7 @@ import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
 import { HOLD_MS } from './useCardGestures';
 import { useChatLine } from './useChatLine';
+import { TURN_MS } from './useTurnedCard';
 
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
@@ -608,6 +609,40 @@ describe('KeywordsCard', () => {
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, Irrelevant');
   });
 
+  test('turns over when it has just been revealed, with the yellow face of a card that was the choice', () => {
+    const revealed = { ...card, color: 'red' as const, revealed: true };
+    const turning = mount(KeywordsCard, {
+      props: {
+        card: revealed,
+        index: 3,
+        selectable: false,
+        selected: false,
+        choosers: [],
+        turning: { fromChoice: false },
+      },
+      global: global(),
+    });
+    expect(turning.get('button').classes()).toContain('turning');
+    expect(turning.get('button').classes()).not.toContain('from-choice');
+    const fromChoice = mount(KeywordsCard, {
+      props: {
+        card: revealed,
+        index: 3,
+        selectable: false,
+        selected: false,
+        choosers: [],
+        turning: { fromChoice: true },
+      },
+      global: global(),
+    });
+    expect(fromChoice.get('button').classes()).toEqual(expect.arrayContaining(['turning', 'from-choice']));
+    const lying = mount(KeywordsCard, {
+      props: { card: revealed, index: 3, selectable: false, selected: false, choosers: [] },
+      global: global(),
+    });
+    expect(lying.get('button').classes()).not.toContain('turning');
+  });
+
   test("stays readable, but out of the Tab order and inert, when it can't be chosen", async () => {
     const wrapper = mount(KeywordsCard, {
       props: { card: { ...card, color: 'red' }, index: 3, selectable: false, selected: false, choosers: [] },
@@ -1033,6 +1068,25 @@ describe('ReplayViewer', () => {
     expect(wrapper.get('.talk .line .name').text()).toBe('Ann');
     expect(wrapper.get('.talk .line').text()).toContain('Well played');
     expect(mount(ReplayViewer, { props: { replay }, global: global() }).find('.talk').exists()).toBe(false);
+  });
+
+  test('turns the card that a step reveals over, as the game did, and none going back', async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = mount(ReplayViewer, { props: { replay }, global: global() });
+      const turning = () => wrapper.findAll('.board button').map((button) => button.classes('turning'));
+      await wrapper.get('input[type="range"]').setValue('1');
+      expect(turning()).toEqual([false, false, false]);
+      await wrapper.get('input[type="range"]').setValue('2');
+      expect(turning()).toEqual([true, false, false]);
+      vi.advanceTimersByTime(TURN_MS);
+      await nextTick();
+      expect(turning()).toEqual([false, false, false]);
+      await wrapper.get('input[type="range"]').setValue('0');
+      expect(turning()).toEqual([false, false, false]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("shows the cards the PI meant through the clue's turn, and names them at the clue", async () => {

@@ -7,6 +7,7 @@ import KeywordsCard from './KeywordsCard.vue';
 import MarkMenu from './MarkMenu.vue';
 import { useCardGestures } from './useCardGestures';
 import type { Chooser } from './useKeywords';
+import type { Turned } from './useTurnedCard';
 
 // The 5 by 5 board. Cards can be chosen only when the viewer may reveal one, or, while a PI
 // marks the cards a clue is meant for, only the group's own that are still to be found
@@ -19,8 +20,10 @@ import type { Chooser } from './useKeywords';
 // menu of marks for it (MarkMenu.vue), whose choice the board says with `mark`, as do the keys 1, 2
 // and 3 on a card that has the focus, which each such card tells assistive technology of. For a
 // screen reader on a phone, which can press no key, three buttons that only screen readers find
-// follow the cards, and mark the card that had the focus last. `float` is what the card that has just been revealed did to
-// the viewer's points, which rises from it (ScoreFloat.vue).
+// follow the cards, and mark the card that had the focus last. `turned` is the card that has just
+// been turned face up in front of the viewer, which turns over (useTurnedCard.ts), and `float` what
+// the card that has just been revealed did to the viewer's points, which rises from it
+// (ScoreFloat.vue).
 const props = withDefaults(
   defineProps<{
     cards: CardView[];
@@ -36,6 +39,7 @@ const props = withDefaults(
     team?: Team | null;
     quietNotes?: boolean;
     gestures?: boolean;
+    turned?: Turned | null;
     float?: (Shown & { card: number }) | null;
   }>(),
   {
@@ -48,6 +52,7 @@ const props = withDefaults(
     team: null,
     quietNotes: false,
     gestures: false,
+    turned: null,
     float: null,
   },
 );
@@ -133,6 +138,7 @@ const named = computed(() => {
       :target="order(index)"
       :note="card.revealed ? null : noteOf(index)"
       :note-quiet="quietNotes"
+      :turning="turned?.card === index ? turned : null"
       :float="float?.card === index ? float : null"
       :class="{ pressing: pressing === index, lifting: holding?.index === index }"
       :aria-keyshortcuts="markable(card) ? '1 2 3' : undefined"

@@ -25,7 +25,10 @@ import type { Chooser } from './useKeywords';
 // avatars on the top right, faded for a chooser who is offline, too small for the dots that mark
 // someone the room waits for elsewhere (PlayerAvatar.vue), the PI's number on the bottom left and
 // the mark on the bottom right.
-// A `float` is what the card did to the viewer's points as it was revealed, which rises from it.
+// A card that has just been revealed in front of the viewer is `turning` (useTurnedCard.ts): it
+// turns over, its face as it was until it stands edge on, the table's yellow if it was the viewer's
+// choice (`fromChoice`), its color on the way back, and lands pressed into the table. A `float` is
+// what the card did to the viewer's points as it was revealed, which rises from it.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -38,9 +41,10 @@ const props = withDefaults(
     target?: number | null;
     note?: { mark: Mark; color: Team | 'r2' } | null;
     noteQuiet?: boolean;
+    turning?: { fromChoice: boolean } | null;
     float?: Shown | null;
   }>(),
-  { large: false, marked: false, target: null, note: null, noteQuiet: false, float: null },
+  { large: false, marked: false, target: null, note: null, noteQuiet: false, turning: null, float: null },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -94,6 +98,7 @@ const ariaLabel = computed(() =>
       size,
       note && !noteQuiet ? `noted note-${note.color}` : '',
       { large, selected, selectable, marked, targeted: target !== null, chosen: choosers.length > 0 },
+      { turning: turning !== null, 'from-choice': turning?.fromChoice ?? false },
     ]"
     :aria-disabled="selectable ? undefined : 'true'"
     :tabindex="selectable ? undefined : -1"
@@ -418,7 +423,7 @@ const ariaLabel = computed(() =>
 
 /* A mark that comes pops onto the corner, and one that goes shrinks away. */
 .pop-enter-active {
-  animation: pop 420ms cubic-bezier(0.2, 1.35, 0.4, 1) both;
+  animation: pop 420ms var(--ease-spring) both;
 }
 
 .pop-leave-active {
@@ -459,8 +464,8 @@ const ariaLabel = computed(() =>
   box-shadow: 1px 1px 0 var(--ink);
   transform: translate(2px, 2px) scale(0.96);
   transition:
-    transform 400ms cubic-bezier(0.3, 0, 0.2, 1),
-    box-shadow 400ms cubic-bezier(0.3, 0, 0.2, 1);
+    transform 400ms var(--ease-out),
+    box-shadow 400ms var(--ease-out);
 }
 
 /* The card whose menu of marks is open, which a copy of lifts out of the page meanwhile: it is
@@ -490,5 +495,133 @@ const ariaLabel = computed(() =>
   letter-spacing: 0.08em;
   text-transform: uppercase;
   transform: rotate(-6deg);
+}
+
+/* The card that has just been revealed in front of the viewer turns over: on its vertical axis,
+   edge on halfway, where its color comes, and it lands pressed into the table, as a revealed card
+   lies. Its face stays as it was until then: the paper, or the table's yellow if the card was the
+   viewer's choice. The color comes on a layer under the word and the corners, held off until the
+   half-turn, as the ink of the word and the label is held, so that the face turns away with what
+   it had on it and the back comes with the color. Under it the card's own background is held at the
+   face until the turn ends, when it is the color already. Reviewer 2's stamp slams down once the
+   card has landed. The turn is over after TURN_MS (useTurnedCard.ts), when the layer goes, which
+   shows nothing, since the card has its color by then. */
+.turning {
+  --face: var(--paper);
+
+  isolation: isolate;
+  animation:
+    flip 460ms var(--ease-out),
+    face 460ms step-end;
+}
+
+.turning.from-choice {
+  --face: var(--bg);
+}
+
+.turning::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -1px;
+  border-radius: calc(var(--radius-card) - 1px);
+  animation: appear 230ms step-end;
+  pointer-events: none;
+}
+
+.turning.red::after {
+  background: var(--red);
+}
+
+.turning.blue::after {
+  background: var(--blue);
+}
+
+.turning.neutral::after {
+  background: var(--neutral);
+}
+
+.turning.reviewer2::after {
+  background: var(--r2);
+}
+
+.turning .word,
+.turning .tag {
+  animation: ink 230ms step-end;
+}
+
+/* The stamp's curve settles more than the spring does, so that the stamp lands rather than
+   bounces: it is pressed down, not dropped. */
+.turning .stamp {
+  animation: slam 380ms cubic-bezier(0.2, 1.2, 0.4, 1) 430ms both;
+}
+
+@keyframes flip {
+  from {
+    box-shadow: var(--shadow-1);
+    transform: perspective(520px) rotateY(0deg);
+  }
+
+  49.9% {
+    box-shadow: none;
+    transform: perspective(520px) rotateY(90deg);
+  }
+
+  50% {
+    box-shadow: none;
+    transform: perspective(520px) rotateY(-90deg);
+  }
+
+  to {
+    box-shadow: none;
+    transform: translate(var(--shift-1), var(--shift-1)) perspective(520px) rotateY(0deg);
+  }
+}
+
+@keyframes face {
+  from {
+    background-color: var(--face);
+  }
+}
+
+@keyframes ink {
+  from {
+    color: var(--ink);
+    text-decoration-color: transparent;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slam {
+  from {
+    opacity: 0;
+    transform: rotate(-20deg) scale(2.4);
+  }
+
+  55% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(0.92);
+  }
+
+  to {
+    transform: rotate(-6deg) scale(1);
+  }
+}
+
+/* Where the device asks for less motion, the card is revealed at once, the stamp in place, rather
+   than held at the start of a turn that the page cuts short (base.css). */
+@media (prefers-reduced-motion: reduce) {
+  .turning,
+  .turning::after,
+  .turning .word,
+  .turning .tag,
+  .turning .stamp {
+    animation: none;
+  }
 }
 </style>

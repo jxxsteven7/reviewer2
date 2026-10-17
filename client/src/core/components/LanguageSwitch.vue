@@ -13,7 +13,13 @@ const other = computed<Language>(() => LANGUAGES.find((language) => language !==
 
 <template>
   <div class="language-switch" role="group" :aria-label="t('language.label')">
-    <button type="button" :lang="HTML_LANG[other]" :aria-label="t(`language.${other}`)" @click="setLanguage(other)">
+    <button
+      type="button"
+      class="press"
+      :lang="HTML_LANG[other]"
+      :aria-label="t(`language.${other}`)"
+      @click="setLanguage(other)"
+    >
       {{ t(`language.short.${other}`) }}
     </button>
   </div>
@@ -24,20 +30,18 @@ const other = computed<Language>(() => LANGUAGES.find((language) => language !==
   display: inline-flex;
 }
 
+/* A white pill with the hard shadow, which moves as every sticker that can be pressed does. */
 button {
   min-height: 44px;
   padding: 0 var(--space-4);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
-  background: transparent;
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
   color: var(--ink);
   font-family: var(--font-number);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   cursor: pointer;
-}
-
-button:active {
-  background: var(--paper);
 }
 </style>

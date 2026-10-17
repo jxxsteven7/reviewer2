@@ -132,10 +132,11 @@ export class AccountStore {
     private readonly now: () => number = () => Date.now(),
   ) {
     // With the version of the notice on how games are recorded that the player agreed to, and when
-    // (migration 23).
+    // (migration 23). A new account shows its record and its feedback contributions on its public
+    // page until the owner turns either off (docs/architecture.md#public-profiles).
     this.#insert = db.prepare(
-      'INSERT INTO accounts (username, username_key, password, handle, consent_version, consented_at, created_at) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO accounts (username, username_key, password, handle, consent_version, consented_at, created_at, ' +
+        'show_record, show_thanks) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)',
     );
     this.#byHandle = db.prepare(`SELECT ${COLUMNS} FROM accounts WHERE handle = ?`);
     this.#profile = db.prepare('UPDATE accounts SET link = ?, bio = ?, show_record = ?, show_thanks = ? WHERE id = ?');

@@ -139,6 +139,25 @@ const letters = computed(() => {
   color: var(--ink-2);
 }
 
+/* The decision darkens under a pointer or a press, as every title in text does (TitleInfo.vue). */
+@media (hover: hover) {
+  .red .verdict .title-info:hover {
+    color: var(--red-deeper);
+  }
+
+  .blue .verdict .title-info:hover {
+    color: var(--blue-deeper);
+  }
+}
+
+.red .verdict .title-info:active {
+  color: var(--red-deeper);
+}
+
+.blue .verdict .title-info:active {
+  color: var(--blue-deeper);
+}
+
 .body {
   max-width: 34rem;
   font-size: var(--text-lg);

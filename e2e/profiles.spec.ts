@@ -47,7 +47,7 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await expect(link).toHaveAttribute('rel', 'nofollow ugc noopener');
   // The record that Ann shows, as numbers: no games, no rate and no matches yet.
   await expect(card.locator('.record-stats .block .value')).toHaveText(['0', '\u2014', '\u2014', '\u2014', '0', '0']);
-  await expect(card).toContainText(interpolate(text.playerPage.likes, { count: '0' }));
+  await expect(card).toContainText(interpolate(text.playerPage.likes, { heart: text.playerPage.heart, count: '0' }));
   // The rank opens the ladder of every rank, Ann's marked and her points nowhere on it.
   await card.locator('.rank-button').click();
   const ladder = bob.locator('[role=dialog]', { has: bob.locator('.ladder') });
@@ -61,7 +61,7 @@ test('a public page is set up, opened by its address and from a room, liked and 
   // room's panel has too; the page then says that the request went.
   await card.getByRole('button', { name: text.playerPage.like, exact: true }).click();
   await expect(card.getByRole('button', { name: text.playerPage.liked })).toBeVisible();
-  await expect(card).toContainText(interpolate(text.playerPage.likes, { count: '1' }));
+  await expect(card).toContainText(interpolate(text.playerPage.likes, { heart: text.playerPage.heart, count: '1' }));
   await card.getByRole('button', { name: text.friends.addFromRoom }).click();
   const asking = bob.getByRole('dialog', { name: interpolate(text.friends.addTitle, { name: annName }) });
   await asking.getByRole('button', { name: text.friends.addSubmit }).click();
@@ -128,7 +128,9 @@ test('a public page is set up, opened by its address and from a room, liked and 
   // A guest sees the count and the line, and nothing to do; an address that is no page says so.
   const guest = await newPlayer(browser, 'en');
   await guest.goto(address as string);
-  await expect(guest.locator('.profile-card')).toContainText(interpolate(text.playerPage.likes, { count: '1' }));
+  await expect(guest.locator('.profile-card')).toContainText(
+    interpolate(text.playerPage.likes, { heart: text.playerPage.heart, count: '1' }),
+  );
   // Opened on its own, the page has no way back: the wordmark leads home.
   await expect(guest.getByRole('button', { name: text.account.back })).toHaveCount(0);
   await expect(guest.locator('.profile-card')).toContainText(text.playerPage.logInToLike);

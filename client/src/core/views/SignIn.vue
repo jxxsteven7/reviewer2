@@ -153,9 +153,10 @@ async function submit() {
   cursor: pointer;
 }
 
+/* The tabs are a choice, not buttons: no shadow, and the chosen one turns yellow, as a chosen row
+   does (docs/design.md). */
 .tab[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--bg);
 }
 
 .form {

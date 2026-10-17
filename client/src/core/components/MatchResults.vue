@@ -211,6 +211,25 @@ button.title::before {
   color: var(--red-deep);
 }
 
+/* The title darkens under a pointer or a press, as every title in text does (TitleInfo.vue). */
+@media (hover: hover) {
+  .best_paper button.title:hover {
+    color: var(--blue-deeper);
+  }
+
+  .black_hole button.title:hover {
+    color: var(--red-deeper);
+  }
+}
+
+.best_paper button.title:active {
+  color: var(--blue-deeper);
+}
+
+.black_hole button.title:active {
+  color: var(--red-deeper);
+}
+
 .line {
   color: var(--ink-2);
   font-size: var(--text-sm);

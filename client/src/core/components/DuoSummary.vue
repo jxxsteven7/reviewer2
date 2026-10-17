@@ -18,7 +18,12 @@ const line = computed(() => duoLine(t, props.duo));
   <span class="duo-summary">
     <span v-if="line" class="games">{{ line }}</span>
     <span v-if="duo.titles.length" class="badges">
-      <TitleInfo v-for="title in duo.titles" :key="title" :title="{ kind: 'duo', duo: title }" class="badge" />
+      <TitleInfo
+        v-for="title in duo.titles"
+        :key="title"
+        :title="{ kind: 'duo', duo: title }"
+        class="badge press press-small"
+      />
     </span>
   </span>
 </template>
@@ -46,15 +51,16 @@ const line = computed(() => duoLine(t, props.duo));
   gap: var(--space-3) var(--space-2);
 }
 
-/* A badge is a small pill whose box reaches above and below it, out of sight, to 44px tall,
-   centered on it; the rows are 12px apart, more than the box reaches on either side, so that no
-   badge's box lies over another's. */
+/* A badge is a small pill with the small hard shadow and the press of a button, whose box reaches
+   above and below it, out of sight, to 44px tall, centered on it; the rows are 12px apart, more
+   than the box reaches on either side, so that no badge's box lies over another's. */
 .badge {
   position: relative;
   padding: var(--space-1) var(--space-2);
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
+  box-shadow: var(--shadow-0);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
 }

@@ -13,6 +13,13 @@
   --ink-2: #4b4b60;
   --on-ink: #ffd23f;
   --focus: #2d5bff;
+  /* A link in text: a light blue, 4.6:1 on white and apart from the blue group's, deeper when
+     hovered or pressed. On the yellow table a link takes the blue group's deep shade instead. */
+  --link: #0077d4;
+  --link-deep: #005fa8;
+  /* The main action of a screen: a mint green sticker, on which the ink reads at 9:1
+     (UiButton.vue). */
+  --go: #5fd3a0;
   /* The table's yellow, faded: the titles of a friend who is offline. */
   --bg-tint: #fbefc4;
   /* The dot of someone who is online; someone offline has a grey one (--neutral). */
@@ -29,6 +36,9 @@
   --on-blue: #ffffff;
   --blue-tint: #d5dfff;
   --blue-deep: #1f44d6;
+  /* The deep shades darker still: a title in a deep shade, hovered or pressed (TitleInfo.vue). */
+  --red-deeper: #7b1d12;
+  --blue-deeper: #163096;
   --neutral: #bdb6a8;
   --on-neutral: #1a1a2e;
   --neutral-tint: #f4efe6;
@@ -87,7 +97,8 @@
 
   /* Outlines, corners and the hard shadows. The thin outline is for the small things: avatars,
      dots, swatches, the clock's track and the stamp. A pressed sticker moves by its shadow's
-     offset and loses the shadow, so each shadow has a shift to match. */
+     offset and loses the shadow, so each shadow has a shift to match. The small shadow is for the
+     small stickers that can be pressed: a title's pill, a replay's button, the fold of titles. */
   --line-thin: 2px;
   --line: 2.5px;
   --line-strong: 3px;
@@ -97,9 +108,11 @@
   --radius-panel: 20px;
   --radius-hero: 22px;
   --radius-pill: 999px;
+  --shadow-0: 2px 2px 0 var(--ink);
   --shadow-1: 3px 3px 0 var(--ink);
   --shadow-2: 5px 5px 0 var(--ink);
   --shadow-3: 6px 6px 0 var(--ink);
+  --shift-0: 2px;
   --shift-1: 3px;
   --shift-2: 5px;
   --shift-3: 6px;
@@ -126,7 +139,14 @@
   --masthead-height: 64px;
 
   --motion: 160ms;
+  /* A sheet closing, and a page's content coming in: a little quicker than the rest. */
+  --motion-quick: 140ms;
   /* A sheet with a way back slides in and, going back, out (UiSheet.vue). */
   --motion-sheet-in: 260ms;
   --motion-sheet-out: 220ms;
+  /* How motion eases: out for what comes and settles, in for what leaves, and the spring for what
+     pops, as a mark on a card or a heart that was just liked. */
+  --ease-out: cubic-bezier(0.3, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.2, 1.35, 0.4, 1);
 }

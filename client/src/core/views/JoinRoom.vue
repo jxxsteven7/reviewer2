@@ -35,7 +35,7 @@ function join() {
       :error="error"
     >
       <template #beside>
-        <UiButton variant="blue" type="submit">{{ t('home.join.submit') }}</UiButton>
+        <UiButton variant="primary" type="submit">{{ t('home.join.submit') }}</UiButton>
       </template>
     </UiField>
   </form>

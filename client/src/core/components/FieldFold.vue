@@ -2,6 +2,7 @@
 import { drawFields, type FieldInfo, type Language } from '@reviewer2/shared';
 import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useFold } from '../useFold';
 import FieldPicker from './FieldPicker.vue';
 
 // The word lists of a room, folded into one line that names the chosen ones (docs/architecture.md
@@ -9,7 +10,8 @@ import FieldPicker from './FieldPicker.vue';
 // to choose them all and a way to choose them at random, each list in or out on the toss of a coin
 // (drawFields). Where `eachGame` is offered, the room may instead draw its lists anew for every
 // game: the line says so, and the lists chosen by hand are greyed out, kept for when it stops.
-// Nothing chosen, the fold opens as soon as the lists are here, so that the choice is seen.
+// Nothing chosen, the fold opens as soon as the lists are here, so that the choice is seen. The
+// lists unfold and fold with their height eased (useFold.ts), as the marker turns.
 const props = withDefaults(
   defineProps<{ fields: FieldInfo[] | null; language: Language; needed: number; eachGame?: boolean }>(),
   { eachGame: false },
@@ -19,6 +21,7 @@ const random = defineModel<boolean>('random', { default: false });
 const { t } = useI18n();
 const id = useId();
 const open = ref(false);
+const fold = useFold();
 
 const usable = computed(() => (props.fields ?? []).filter((field) => field.counts[props.language] >= props.needed));
 
@@ -62,39 +65,41 @@ const chooseAtRandom = () => {
         <span class="summary">{{ summary }}</span>
       </span>
     </button>
-    <div v-show="open" :id="`${id}-lists`" class="lists">
-      <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
-      <template v-else-if="usable.length">
-        <label v-if="eachGame" class="each">
-          <input v-model="random" type="checkbox" />
-          <span class="option">{{ t('create.fieldsEach') }}</span>
-          <span class="hint">{{ t('create.fieldsEachHint') }}</span>
-        </label>
-        <div class="head">
-          <span class="hint">{{
-            random ? t('create.fieldsDrawn') : t('create.fieldsChosen', { count: chosen.length })
-          }}</span>
-          <span class="tools">
-            <button type="button" class="tool" :disabled="random" @click="chooseAtRandom">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
-                <circle cx="8.5" cy="8.5" r="1.4" />
-                <circle cx="15.5" cy="8.5" r="1.4" />
-                <circle cx="12" cy="12" r="1.4" />
-                <circle cx="8.5" cy="15.5" r="1.4" />
-                <circle cx="15.5" cy="15.5" r="1.4" />
-              </svg>
-              {{ t('create.fieldsRandom') }}
-            </button>
-            <button type="button" class="tool" :disabled="random" @click="chooseAll">
-              {{ t('create.fieldsAll') }}
-            </button>
-          </span>
-        </div>
-        <FieldPicker v-model="chosen" :fields="fields" :language="language" :needed="needed" :disabled="random" />
-      </template>
-      <p v-else class="hint">{{ t('create.noFields') }}</p>
-    </div>
+    <Transition :css="false" v-bind="fold">
+      <div v-show="open" :id="`${id}-lists`" class="lists">
+        <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
+        <template v-else-if="usable.length">
+          <label v-if="eachGame" class="each">
+            <input v-model="random" type="checkbox" />
+            <span class="option">{{ t('create.fieldsEach') }}</span>
+            <span class="hint">{{ t('create.fieldsEachHint') }}</span>
+          </label>
+          <div class="head">
+            <span class="hint">{{
+              random ? t('create.fieldsDrawn') : t('create.fieldsChosen', { count: chosen.length })
+            }}</span>
+            <span class="tools">
+              <button type="button" class="tool" :disabled="random" @click="chooseAtRandom">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+                  <circle cx="8.5" cy="8.5" r="1.4" />
+                  <circle cx="15.5" cy="8.5" r="1.4" />
+                  <circle cx="12" cy="12" r="1.4" />
+                  <circle cx="8.5" cy="15.5" r="1.4" />
+                  <circle cx="15.5" cy="15.5" r="1.4" />
+                </svg>
+                {{ t('create.fieldsRandom') }}
+              </button>
+              <button type="button" class="tool" :disabled="random" @click="chooseAll">
+                {{ t('create.fieldsAll') }}
+              </button>
+            </span>
+          </div>
+          <FieldPicker v-model="chosen" :fields="fields" :language="language" :needed="needed" :disabled="random" />
+        </template>
+        <p v-else class="hint">{{ t('create.noFields') }}</p>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -125,13 +130,16 @@ const chooseAtRandom = () => {
   touch-action: manipulation;
 }
 
+/* The marker turns to point down as the lists unfold. */
 .toggle::before {
   content: '\25B8';
+  display: inline-block;
   font-size: var(--text-xs);
+  transition: transform 220ms var(--ease-out);
 }
 
 .toggle[aria-expanded='true']::before {
-  content: '\25BE';
+  transform: rotate(90deg);
 }
 
 @media (hover: hover) {

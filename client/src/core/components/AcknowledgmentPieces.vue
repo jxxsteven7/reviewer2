@@ -10,6 +10,7 @@ defineProps<{ pieces: readonly AcknowledgmentPiece[] }>();
   <template v-for="(piece, at) in pieces" :key="at">
     <a
       v-if="piece.kind === 'link' && piece.href.startsWith('https://')"
+      class="text-link"
       :href="piece.href"
       target="_blank"
       rel="nofollow ugc noopener"
@@ -22,8 +23,7 @@ defineProps<{ pieces: readonly AcknowledgmentPiece[] }>();
 </template>
 
 <style scoped>
-/* Links and bold text stand out from the quieter text around them. */
-a,
+/* Bold text stands out from the quieter text around it, as a link does in the link blue (base.css). */
 strong {
   color: var(--ink);
 }

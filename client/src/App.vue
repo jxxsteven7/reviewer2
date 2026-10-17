@@ -23,3 +23,21 @@ watch(() => route.path, closeProfile);
   <ProfilePanel />
   <UiToasts><InvitationNotices /><JoinAskNotices /></UiToasts>
 </template>
+
+<style>
+/* As a page comes, what is under its masthead fades in, rising a little, while the masthead, in
+   the same place on every page, stands still, and nothing waits for the page before to go. The
+   move is the content's own, from the moment it is on the page, so that the bars that stay at the
+   top and the place the page is scrolled to are as they would be without it. */
+.page > main,
+.screen-page > main {
+  animation: page-in var(--motion-quick) var(--ease-out) both;
+}
+
+@keyframes page-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+</style>

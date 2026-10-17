@@ -62,12 +62,12 @@ watch([() => props.titles.join(), locale], () => {
 <template>
   <ul ref="row" class="folded-titles">
     <li v-for="(title, index) in titles" v-show="unfolded || index < shown" :key="title" class="title">
-      <TitleInfo :title="{ kind: 'duo', duo: title }" class="pill" />
+      <TitleInfo :title="{ kind: 'duo', duo: title }" class="pill press press-small" />
     </li>
     <li v-if="!unfolded" class="fold" :class="{ idle: folded === 0 }">
       <button
         type="button"
-        class="pill more"
+        class="pill more press press-small"
         :aria-label="t('friends.moreTitles', { count: folded }, folded)"
         :aria-expanded="false"
         @click="unfolded = true"
@@ -89,14 +89,16 @@ watch([() => props.titles.join(), locale], () => {
   list-style: none;
 }
 
-/* A pill's box reaches above and below it, out of sight, to 44 px tall, centered on it; the rows are
-   12 px apart, more than the box reaches on either side, so that no pill's box lies over another's. */
+/* A pill has the small hard shadow and the press of a button, which it is. Its box reaches above
+   and below it, out of sight, to 44 px tall, centered on it; the rows are 12 px apart, more than the
+   box reaches on either side, so that no pill's box lies over another's. */
 .pill {
   position: relative;
   padding: 2px var(--space-2);
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
+  box-shadow: var(--shadow-0);
   color: var(--ink);
   font: inherit;
   font-size: var(--text-xs);

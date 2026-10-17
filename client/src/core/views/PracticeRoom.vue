@@ -186,7 +186,7 @@ async function start() {
         <p class="note">{{ t('home.practice.note') }}</p>
         <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
         <p v-else-if="offline" class="problem" role="alert">{{ t('home.practice.offline') }}</p>
-        <UiButton variant="red" size="large" type="submit" class="start" :disabled="busy || !ready">
+        <UiButton variant="primary" size="large" type="submit" class="start" :disabled="busy || !ready">
           {{ t('home.practice.start') }}
         </UiButton>
       </form>

@@ -110,9 +110,10 @@ button {
    both ease. `press` is on a sticker that is its own button. Where the button is larger than the
    stickers that move in it, as an avatar's or a stack of avatars, the button is the `press-host`
    and each sticker a `press-part`. A large sticker, with the large shadow, presses as far
-   (`press-large`), and an ink one, which has no shadow, only moves when pressed (`press-flat`). A
-   sticker whose shadow isn't ink, as a faded one's, sets `--press-ink` to its color, which the
-   lift keeps. Nothing moves while the button is disabled. */
+   (`press-large`), a small one, with the small shadow, less far (`press-small`), and an ink one,
+   which has no shadow, only moves when pressed (`press-flat`). A sticker whose shadow isn't ink,
+   as a faded one's, sets `--press-ink` to its color, which the lift keeps. Nothing moves while the
+   button is disabled. */
 .press,
 .press-part {
   --press-shift: var(--shift-1);
@@ -135,6 +136,10 @@ button {
   --press-shift: var(--shift-2);
 }
 
+.press-small {
+  --press-shift: var(--shift-0);
+}
+
 @media (hover: hover) {
   .press:not(:disabled, .press-flat):hover,
   .press-host:not(:disabled):hover .press-part {
@@ -147,6 +152,51 @@ button {
 .press-host:not(:disabled):active .press-part {
   transform: translate(var(--press-shift), var(--press-shift));
   box-shadow: none;
+}
+
+/* A link in text (docs/design.md): the link blue with no underline, deeper when hovered, with an
+   underline that sweeps in from the left, under every line of a link that wraps; a press shows it
+   whole at once, and it eases away after. The focus ring is the page's. On the yellow table the
+   link takes the blue group's deep shade, which reads there (`on-table`). */
+.text-link {
+  background: linear-gradient(currentcolor, currentcolor) 0 100% / 0 2px no-repeat;
+  color: var(--link);
+  text-decoration: none;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--motion),
+    background-size 220ms var(--ease-out);
+}
+
+.text-link.on-table {
+  color: var(--blue-deep);
+}
+
+@media (hover: hover) {
+  .text-link:hover {
+    background-size: 100% 2px;
+    color: var(--link-deep);
+  }
+
+  .text-link.on-table:hover {
+    color: var(--blue-deeper);
+  }
+}
+
+.text-link:focus-visible {
+  background-size: 100% 2px;
+}
+
+.text-link:active {
+  background-size: 100% 2px;
+  color: var(--link-deep);
+  transition-duration: 0s;
+}
+
+.text-link.on-table:active {
+  color: var(--blue-deeper);
 }
 
 /* The username after the name that the viewer gives a friend, in small grey type, as a sheet's

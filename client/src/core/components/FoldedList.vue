@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, shallowRef, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { request } from '../account';
+import { useFold } from '../useFold';
 import UiButton from './UiButton.vue';
 
 // A list of thanks on the home page (docs/architecture.md#lists-of-thanks): a card folded until its
@@ -12,7 +13,7 @@ import UiButton from './UiButton.vue';
 // build. The card says what the list is for, while it loads, when it couldn't be loaded and while
 // nobody is listed; the component that uses this one shows what the server sent, as plain text.
 // Its title counts the people with `people`, and is the list's name alone without it, or until the
-// list has come.
+// list has come. The list unfolds and folds with its height eased (useFold.ts), as its marker turns.
 const props = defineProps<{
   // The list's key in the locale files, which names its card too.
   name: 'contributions' | 'acknowledgments' | 'sponsors';
@@ -27,6 +28,7 @@ defineSlots<{ default(props: { data: Data }): unknown; none(): unknown }>();
 const { t } = useI18n();
 const panel = useId();
 const open = ref(false);
+const fold = useFold();
 
 // The list once the server has sent it, and whether it is being asked or failed to answer.
 const data = shallowRef<Data | null>(null);
@@ -63,16 +65,18 @@ const title = computed(() => {
         {{ title }}
       </button>
     </h2>
-    <div v-show="open" :id="panel" class="list">
-      <p v-if="intro" class="intro">{{ t(`${name}.intro`) }}</p>
-      <p v-if="failed" class="note failed">
-        {{ t('thanks.failed') }}
-        <UiButton variant="quiet" size="small" @click="load">{{ t('thanks.retry') }}</UiButton>
-      </p>
-      <p v-else-if="data === null" class="note">{{ t('thanks.loading') }}</p>
-      <p v-else-if="empty(data)" class="note"><slot name="none" /></p>
-      <slot v-else :data="data" />
-    </div>
+    <Transition :css="false" v-bind="fold">
+      <div v-show="open" :id="panel" class="list">
+        <p v-if="intro" class="intro">{{ t(`${name}.intro`) }}</p>
+        <p v-if="failed" class="note failed">
+          {{ t('thanks.failed') }}
+          <UiButton variant="quiet" size="small" @click="load">{{ t('thanks.retry') }}</UiButton>
+        </p>
+        <p v-else-if="data === null" class="note">{{ t('thanks.loading') }}</p>
+        <p v-else-if="empty(data)" class="note"><slot name="none" /></p>
+        <slot v-else :data="data" />
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -109,13 +113,16 @@ h2 {
   touch-action: manipulation;
 }
 
+/* The marker turns to point down as the list unfolds. */
 .toggle::before {
   content: '\25B8';
+  display: inline-block;
   font-size: var(--text-xs);
+  transition: transform 220ms var(--ease-out);
 }
 
 .toggle[aria-expanded='true']::before {
-  content: '\25BE';
+  transform: rotate(90deg);
 }
 
 @media (hover: hover) {

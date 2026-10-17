@@ -49,6 +49,7 @@ import { useDeadlineHeroes } from './useDeadlineHeroes';
 import { useGroupCalls } from './useGroupCalls';
 import { useMissedDeadlines } from './useMissedDeadlines';
 import { useScoreFloats } from './useScoreFloats';
+import { useTurnedCard } from './useTurnedCard';
 
 // A game in progress, and its result. The turn strip, which says who the viewer is and what is
 // going on for them, the clock, the board and what the viewer can do now come first. On a wide screen the
@@ -385,6 +386,11 @@ useDeadlineHeroes(
 );
 useGroupCalls(game);
 const floats = useScoreFloats(room);
+// The card that has just been revealed in front of the viewer turns over on the board.
+const turned = useTurnedCard(
+  game,
+  computed(() => room.value.me),
+);
 
 // The review of the game that has ended, step by step, for everyone who sees the result, with what
 // the viewer's group has said since the end, as it talks the game over.
@@ -518,6 +524,7 @@ const status = computed(() => {
           :quiet-notes="isCaptain"
           :gestures="student"
           :team="mySeat?.team ?? null"
+          :turned="turned"
           :float="floats.card.value"
           @select="tap"
           @mark="note"

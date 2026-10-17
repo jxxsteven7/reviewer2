@@ -102,7 +102,8 @@ const streakTitles = computed(() => (profile.value ? titlesOf(t, profile.value.s
 
 // Likes the profile, or takes the like back. The count and the viewer's like then come from the
 // server, which keeps them, and the button waits for them: a second tap meanwhile would send the
-// same thing again.
+// same thing again. The heart pops once the like is there.
+const popping = ref(false);
 async function toggleLike(): Promise<void> {
   const current = profile.value;
   if (!current) return;
@@ -113,6 +114,7 @@ async function toggleLike(): Promise<void> {
       return;
     }
     await load();
+    popping.value = profile.value?.liked === true;
   });
 }
 
@@ -169,15 +171,25 @@ watch(
           <DuoSummary :duo="profile.duo" />
         </section>
 
-        <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">{{
-          profile.link
-        }}</a>
+        <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">
+          <span class="text">{{ profile.link }}</span>
+          <svg class="arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+            <path d="M3.5 8.5 8.5 3.5M4.5 3.5h4v4" />
+          </svg>
+        </a>
         <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
 
         <RecordStats v-if="profile.record" :counts="profile.record" />
 
         <div class="actions">
-          <span class="likes num">{{ t('playerPage.likes', { count: profile.likes }) }}</span>
+          <i18n-t keypath="playerPage.likes" tag="span" class="likes num" scope="global">
+            <template #heart>
+              <span class="heart" :class="{ pop: popping }" @animationend="popping = false">{{
+                t('playerPage.heart')
+              }}</span>
+            </template>
+            <template #count>{{ profile.likes }}</template>
+          </i18n-t>
           <UiButton
             v-if="canAct"
             size="small"
@@ -312,19 +324,111 @@ watch(
   white-space: pre-wrap;
 }
 
-/* The link is one line of small text. Padding that the margins take back makes it 44px tall to
-   tap, as the buttons are, without moving anything. */
+/* The link is one line of small text in the link blue, with an arrow after it, which says that it
+   leads off the site (docs/design.md): under a pointer an underline sweeps in under the address
+   alone and the arrow moves out; pressed, the underline is there at once, the arrow further out
+   and the link a pixel lower, and both ease back after. Padding that the margins take back makes
+   it 44px tall to tap, as the buttons are, without moving anything; the focus ring is drawn around
+   the text alone. */
 .link {
   position: relative;
+  display: inline-flex;
+  align-items: center;
   align-self: flex-start;
+  gap: 3px;
   max-width: 100%;
   margin: -11px 0;
   padding: 11px 0;
-  overflow: hidden;
-  color: var(--ink);
+  color: var(--link);
   font-size: var(--text-sm);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--motion),
+    transform var(--motion);
+}
+
+.link .text {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.link .text::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  left: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: currentcolor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms var(--ease-out);
+}
+
+.link .arrow {
+  position: relative;
+  top: -1px;
+  flex: none;
+  width: 0.8em;
+  height: 0.8em;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--motion);
+}
+
+.link:focus-visible {
+  outline: none;
+}
+
+.link:focus-visible::before {
+  content: '';
+  position: absolute;
+  inset: 7px -4px;
+  border-radius: var(--radius-small);
+  outline: var(--line-strong) solid var(--focus);
+  outline-offset: 1px;
+}
+
+.link:focus-visible .text::after {
+  transform: none;
+}
+
+@media (hover: hover) {
+  .link:hover {
+    color: var(--link-deep);
+  }
+
+  .link:hover .text::after {
+    transform: none;
+  }
+
+  .link:hover .arrow {
+    transform: translate(2px, -2px);
+  }
+}
+
+.link:active {
+  color: var(--link-deep);
+  transform: translateY(1px);
+  transition-duration: 0s;
+}
+
+.link:active .text::after {
+  transform: none;
+  transition-duration: 0s;
+}
+
+.link:active .arrow {
+  transform: translate(4px, -4px);
+  transition-duration: 0s;
 }
 
 /* The likes and the buttons beside them, close enough that a phone's row holds them all. */
@@ -337,6 +441,21 @@ watch(
 
 .likes {
   font-weight: var(--weight-bold);
+}
+
+/* The heart pops when the viewer likes the page; the count beside it just changes. */
+.heart {
+  display: inline-block;
+}
+
+.heart.pop {
+  animation: pop 300ms var(--ease-spring);
+}
+
+@keyframes pop {
+  50% {
+    transform: scale(1.3);
+  }
 }
 
 .edit {

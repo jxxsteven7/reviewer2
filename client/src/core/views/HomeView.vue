@@ -58,9 +58,13 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <h1>{{ t('app.tagline') }}</h1>
         <i18n-t keypath="footer.byline" tag="span" class="byline after-tagline" scope="global">
           <template #name>
-            <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
-              t('footer.author')
-            }}</a>
+            <a
+              class="author text-link on-table"
+              href="https://jxxsteven7.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ t('footer.author') }}</a
+            >
           </template>
         </i18n-t>
       </div>
@@ -68,9 +72,13 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <span>{{ t('home.intro') }}</span>
         <i18n-t keypath="footer.byline" tag="span" class="byline" scope="global">
           <template #name>
-            <a class="author" href="https://jxxsteven7.github.io/" target="_blank" rel="noopener noreferrer">{{
-              t('footer.author')
-            }}</a>
+            <a
+              class="author text-link on-table"
+              href="https://jxxsteven7.github.io/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ t('footer.author') }}</a
+            >
           </template>
         </i18n-t>
       </p>
@@ -95,7 +103,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
                   :settings="keywords.defaultSettings(language)"
                   :language="language"
               /></span>
-              <UiButton v-if="!creating" variant="red" size="large" @click="creating = true">
+              <UiButton v-if="!creating" variant="primary" size="large" @click="creating = true">
                 {{ t('home.newRoom') }}
               </UiButton>
             </div>
@@ -158,7 +166,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         {{ t('footer.listHow') }}
       </p>
       <p class="sponsor">
-        <a href="https://github.com/sponsors/jxxsteven7" target="_blank" rel="noopener noreferrer">{{
+        <a class="text-link" href="https://github.com/sponsors/jxxsteven7" target="_blank" rel="noopener noreferrer">{{
           t('footer.sponsor')
         }}</a>
       </p>
@@ -413,23 +421,14 @@ ol {
   fill: var(--paper);
 }
 
-/* The author's name: blue, and underlined under a pointer or the keyboard. Its focus ring sits
-   close, clear of "By" before it; a tap on a touch screen leaves no underline. */
+/* The author's name is a text link on the table (base.css). Its focus ring sits close, clear of
+   "By" before it. */
 .author {
   display: inline-block;
-  color: var(--blue-deep);
-  text-decoration: none;
 }
 
 .author:focus-visible {
   outline-offset: 0;
-  text-decoration: underline;
-}
-
-@media (hover: hover) {
-  .author:hover {
-    text-decoration: underline;
-  }
 }
 
 .tip {

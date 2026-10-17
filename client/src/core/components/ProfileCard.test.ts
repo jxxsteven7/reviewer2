@@ -257,12 +257,15 @@ describe('ProfileCard', () => {
     expect(wrapper.text()).toContain('♥ 5');
     const liked = wrapper.findAll('button').find((button) => button.text() === 'Liked');
     expect(liked?.attributes('aria-pressed')).toBe('true');
+    // The heart pops once the like is counted, and not when the like is taken back.
+    expect(wrapper.get('.heart').classes()).toContain('pop');
     signedIn.request.mockResolvedValueOnce({ ok: true });
     signedIn.request.mockResolvedValueOnce({ ok: true, profile: profile() });
     await liked?.trigger('click');
     await flushPromises();
     expect(signedIn.request).toHaveBeenNthCalledWith(4, '/api/profile/unlike', { handle: 'a1b2c3d4e5f6' });
     expect(wrapper.text()).toContain('♥ 4');
+    expect(wrapper.get('.heart').classes()).not.toContain('pop');
 
     // The request goes from the sheet that a room's panel has too, with a line for her if any.
     expect(friends.shown).toEqual([false, true]);

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // Buttons, which look like stickers: an ink outline, a hard shadow, and the press of every sticker
-// (`press` in base.css), a lift on hover and a push into its shadow. "primary" is the one main
-// action on a screen, "secondary" the others, "quiet" a link-like action without the outline, and
-// "danger" an action that can't be undone. "red" and "blue" are the bright buttons of the home
-// page. With an `href`, the button is a link that looks like one, such as one that opens another
-// page.
+// (`press` in base.css), a lift on hover and a push into its shadow. The color says what a button
+// does (docs/design.md): "primary", the one main action on a screen, is green; "secondary", the
+// others, white; "danger", an action that can't be undone, white with red; and "quiet" is a
+// link-like action without the outline. With an `href`, the button is a link that looks like one,
+// such as one that opens another page.
 withDefaults(
   defineProps<{
-    variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'red' | 'blue';
+    variant?: 'primary' | 'secondary' | 'quiet' | 'danger';
     size?: 'normal' | 'small' | 'large';
     type?: 'button' | 'submit';
     disabled?: boolean;
@@ -16,9 +16,8 @@ withDefaults(
   { variant: 'secondary', size: 'normal', type: 'button', disabled: false, href: undefined },
 );
 
-// A quiet button doesn't move, and an ink one, which has no shadow, moves only when pressed.
-const pressed = (variant: string) =>
-  variant === 'quiet' ? null : { press: true, 'press-flat': variant === 'primary' };
+// A quiet button doesn't move.
+const pressed = (variant: string) => (variant === 'quiet' ? null : 'press');
 </script>
 
 <template>
@@ -66,21 +65,8 @@ const pressed = (variant: string) =>
   letter-spacing: 0.04em;
 }
 
-/* Ink is flat, as the tags and badges are: an ink shadow would merge with the button. */
 .primary {
-  background: var(--ink);
-  box-shadow: none;
-  color: var(--on-ink);
-}
-
-.red {
-  background: var(--red);
-  color: var(--on-red);
-}
-
-.blue {
-  background: var(--blue);
-  color: var(--on-blue);
+  background: var(--go);
 }
 
 .quiet {

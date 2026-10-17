@@ -18,6 +18,7 @@ import { useKeywords } from './useKeywords';
 import { useDeadlineHeroes } from './useDeadlineHeroes';
 import { useGroupCalls } from './useGroupCalls';
 import { useMissedDeadlines } from './useMissedDeadlines';
+import { useTurnedCard } from './useTurnedCard';
 
 // The room on a big screen. In the waiting room: how to join, and who sits where. During the
 // game: the board as spectators see it, with the turn and the clue log. A screen never gets the
@@ -41,6 +42,11 @@ useDeadlineHeroes(
   computed(() => props.room.players),
 );
 useGroupCalls(game);
+// A card revealed in front of the screen turns over on it, as on the players' boards.
+const turned = useTurnedCard(
+  game,
+  computed(() => props.room.me),
+);
 </script>
 
 <template>
@@ -91,6 +97,7 @@ useGroupCalls(game);
         :cards="game.cards"
         :selectable="false"
         :selected="null"
+        :turned="turned"
         :lang="HTML_LANG[room.language]"
         large
       />

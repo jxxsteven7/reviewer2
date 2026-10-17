@@ -85,11 +85,16 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
     <template v-else>
       <h3>{{ t('account.profile.recent') }}</h3>
       <ol class="list games">
-        <li v-for="(record, index) in records.recent" :key="index" class="record" :class="{ won: record.won }">
+        <li
+          v-for="(record, index) in records.recent"
+          :key="index"
+          class="record"
+          :class="[record.side, { won: record.won }]"
+        >
           <span class="when num"
             ><span>{{ stamp(record.endedAt).day }}</span> <span>{{ stamp(record.endedAt).time }}</span></span
           >
-          <TitleInfo v-if="record.agents" :title="{ kind: 'agents' }" class="tag agents"
+          <TitleInfo v-if="record.agents" :title="{ kind: 'agents' }" class="tag agents press press-small"
             ><AgentIcon /><span aria-hidden="true">{{ t('room.agent') }}</span
             ><span class="sr-only">{{ t('account.profile.agentsTag') }}</span></TitleInfo
           >
@@ -117,7 +122,7 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
           <button
             v-if="games[record.game]"
             type="button"
-            class="watch"
+            class="watch press press-small"
             :disabled="busy"
             :aria-label="t('account.profile.watchAgainOf', { when: moment(record.endedAt) })"
             @click="watchAgain(record)"
@@ -147,7 +152,7 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
               Math.abs(match.score),
             )
           }}</span>
-          <TitleInfo v-if="match.title" :title="{ kind: 'award', title: match.title }" class="verdict award">{{
+          <TitleInfo v-if="match.title" :title="{ kind: 'award', title: match.title }" class="verdict award word">{{
             t(`match.titleNames.${match.title}`)
           }}</TitleInfo>
         </li>
@@ -286,13 +291,15 @@ h3 {
   font-weight: var(--weight-bold);
 }
 
-/* A game that an AI played in has the robot's head and "AI" in its tag, the word underlined as a
-   button that a tap explains is (TitleInfo.vue), which reaches 44px high to tap, out of sight. */
+/* A game that an AI played in has the robot's head and "AI" in its tag, which a tap explains
+   (TitleInfo.vue): it has the small hard shadow and the press of a button, and reaches 44px high
+   to tap, out of sight. */
 .tag.agents {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  box-shadow: var(--shadow-0);
 }
 
 .tag.agents::before {
@@ -363,8 +370,37 @@ button.verdict::before {
   font-weight: var(--weight-black);
 }
 
-/* Watching the game again: a round button on the right, as large as a finger where it can't be
-   seen. */
+/* A game's decision takes the deep shade of the player's group, as the decision letter's heading
+   does, darker under a pointer or a press, as every title in text (TitleInfo.vue). A match's title
+   takes the color of its news there. */
+.red .verdict {
+  color: var(--red-deep);
+}
+
+.blue .verdict {
+  color: var(--blue-deep);
+}
+
+@media (hover: hover) {
+  .red button.verdict:hover {
+    color: var(--red-deeper);
+  }
+
+  .blue button.verdict:hover {
+    color: var(--blue-deeper);
+  }
+}
+
+.red button.verdict:active {
+  color: var(--red-deeper);
+}
+
+.blue button.verdict:active {
+  color: var(--blue-deeper);
+}
+
+/* Watching the game again: a round button on the right, with the small hard shadow and the press
+   of a button, as large as a finger where it can't be seen. */
 .watch {
   position: relative;
   display: inline-flex;
@@ -377,6 +413,7 @@ button.verdict::before {
   border: var(--line-thin) solid var(--ink);
   border-radius: 50%;
   background: var(--paper);
+  box-shadow: var(--shadow-0);
   color: var(--ink);
   cursor: pointer;
 }
@@ -388,6 +425,7 @@ button.verdict::before {
 }
 
 .watch:disabled {
+  box-shadow: none;
   cursor: default;
   opacity: 0.5;
 }
