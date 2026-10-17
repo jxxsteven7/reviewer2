@@ -69,9 +69,7 @@ test('are listed for anyone, and counted for the account they came from', async 
       { kind: 'bug', count: 1 },
     ],
   });
-  // The public profile shows the counts only if the owner shows them.
-  expect((await guest.request(`/api/profile/${handle}`)).body).toMatchObject({ profile: { contributions: null } });
-  await ann.request('/api/account/profile', { link: '', bio: '', showRecord: false, showThanks: true });
+  // The public profile shows the counts until the owner turns them off.
   expect((await guest.request(`/api/profile/${handle}`)).body).toMatchObject({
     profile: {
       contributions: [
@@ -80,6 +78,8 @@ test('are listed for anyone, and counted for the account they came from', async 
       ],
     },
   });
+  await ann.request('/api/account/profile', { link: '', bio: '', showRecord: false, showThanks: false });
+  expect((await guest.request(`/api/profile/${handle}`)).body).toMatchObject({ profile: { contributions: null } });
   expect(await guest.account()).toBeNull();
 
   // The acknowledgments are the file's, beside them.

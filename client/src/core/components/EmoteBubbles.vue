@@ -46,13 +46,13 @@ defineProps<{ large?: boolean }>();
   pointer-events: none;
 }
 
+/* A bubble has no shadow: it can't be pressed, and a finger goes through it. */
 .bubble {
   max-width: 100%;
   padding: var(--space-2) var(--space-4);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-control);
   background: var(--paper);
-  box-shadow: var(--shadow-1);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
   overflow-wrap: anywhere;
@@ -73,7 +73,6 @@ defineProps<{ large?: boolean }>();
   padding: var(--space-2) var(--space-3);
   border-width: var(--line-strong);
   background: var(--ink);
-  box-shadow: none;
   color: var(--on-ink);
   font-family: var(--font-display);
   font-size: var(--text-md);
@@ -120,7 +119,6 @@ defineProps<{ large?: boolean }>();
   padding: var(--space-3) var(--space-5);
   border-width: var(--line-strong);
   border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-2);
   font-size: var(--text-xl);
 }
 
@@ -128,7 +126,6 @@ defineProps<{ large?: boolean }>();
    reaches no further than the top of the turn's title under it. */
 .large .call {
   padding: var(--space-3) var(--space-4);
-  box-shadow: none;
   font-size: var(--text-xl);
 }
 

@@ -178,9 +178,9 @@ onBeforeUnmount(() => {
   -webkit-backdrop-filter: blur(0);
   backdrop-filter: blur(0);
   transition:
-    background-color 260ms cubic-bezier(0.3, 0, 0.2, 1),
-    backdrop-filter 260ms cubic-bezier(0.3, 0, 0.2, 1),
-    -webkit-backdrop-filter 260ms cubic-bezier(0.3, 0, 0.2, 1);
+    background-color 260ms var(--ease-out),
+    backdrop-filter 260ms var(--ease-out),
+    -webkit-backdrop-filter 260ms var(--ease-out);
 }
 
 .open .scrim {
@@ -193,12 +193,12 @@ onBeforeUnmount(() => {
 .lifted {
   position: absolute;
   transform: translate(2px, 2px) scale(0.96);
-  transition: transform 340ms cubic-bezier(0.2, 1.35, 0.4, 1);
+  transition: transform 340ms var(--ease-spring);
 }
 
 .lifted > :deep(.card) {
   box-shadow: 1px 1px 0 var(--ink);
-  transition: box-shadow 340ms cubic-bezier(0.2, 1.35, 0.4, 1);
+  transition: box-shadow 340ms var(--ease-spring);
 }
 
 .open .lifted {
@@ -213,14 +213,14 @@ onBeforeUnmount(() => {
 .closing .lifted {
   transform: none;
   transition:
-    transform 220ms cubic-bezier(0.3, 0, 0.2, 1),
-    left 220ms cubic-bezier(0.3, 0, 0.2, 1),
-    top 220ms cubic-bezier(0.3, 0, 0.2, 1);
+    transform 220ms var(--ease-out),
+    left 220ms var(--ease-out),
+    top 220ms var(--ease-out);
 }
 
 .closing .lifted > :deep(.card) {
   box-shadow: var(--shadow-1);
-  transition: box-shadow 220ms cubic-bezier(0.3, 0, 0.2, 1);
+  transition: box-shadow 220ms var(--ease-out);
 }
 
 /* The menu grows from the card. */
@@ -235,8 +235,8 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: scale(0.35);
   transition:
-    transform 300ms cubic-bezier(0.2, 1.35, 0.4, 1),
-    opacity 180ms cubic-bezier(0.3, 0, 0.2, 1);
+    transform 300ms var(--ease-spring),
+    opacity 180ms var(--ease-out);
 }
 
 .open .menu {
@@ -248,8 +248,8 @@ onBeforeUnmount(() => {
   opacity: 0;
   transform: scale(0.3);
   transition:
-    transform 220ms cubic-bezier(0.3, 0, 0.2, 1),
-    opacity 180ms cubic-bezier(0.3, 0, 0.2, 1);
+    transform 220ms var(--ease-out),
+    opacity 180ms var(--ease-out);
 }
 
 .menu button {

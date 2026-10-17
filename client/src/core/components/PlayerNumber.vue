@@ -13,7 +13,7 @@ const { t } = useI18n();
 <template>
   <span class="number">
     <span class="num">{{ t('playerPage.number', { id }) }}</span>
-    <TitleInfo v-if="id === AUTHOR_ACCOUNT" :title="{ kind: 'author' }" class="author">{{
+    <TitleInfo v-if="id === AUTHOR_ACCOUNT" :title="{ kind: 'author' }" class="author press press-small">{{
       t('playerPage.author')
     }}</TitleInfo>
   </span>
@@ -37,10 +37,11 @@ const { t } = useI18n();
   display: inline-flex;
   align-items: center;
   padding: 1px var(--space-3);
-  border: var(--line) solid var(--ink);
+  border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--bg);
+  box-shadow: var(--shadow-0);
+  color: var(--ink);
   font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: var(--weight-display);

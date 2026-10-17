@@ -90,7 +90,7 @@ async function ask(room: FriendRoomView) {
             {{ t(room.playing ? 'home.publicRooms.playing' : 'home.publicRooms.waiting') }}
           </span>
         </div>
-        <RouterLink v-if="room.code" :to="`/room/${room.code}`" class="join">{{
+        <RouterLink v-if="room.code" :to="`/room/${room.code}`" class="join press">{{
           t('home.publicRooms.join')
         }}</RouterLink>
         <UiButton v-else-if="pending(room)" size="small" disabled>{{ t('friends.asked') }}</UiButton>
@@ -172,6 +172,7 @@ h2 {
   color: var(--on-neutral);
 }
 
+/* A white pill with the hard shadow and the press of a button, which is what it is. */
 .join {
   display: inline-flex;
   flex: none;
@@ -181,6 +182,7 @@ h2 {
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
+  box-shadow: var(--shadow-1);
   font-weight: var(--weight-bold);
   text-decoration: none;
 }

@@ -17,12 +17,13 @@ const back = () => window.history.back();
 </script>
 
 <template>
-  <button v-if="previous" type="button" class="back-button" :aria-label="t('account.back')" @click="back">
+  <button v-if="previous" type="button" class="back-button press" :aria-label="t('account.back')" @click="back">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
   </button>
 </template>
 
 <style scoped>
+/* A round white sticker with the hard shadow, which moves as every button does. */
 .back-button {
   display: inline-flex;
   flex: none;
@@ -34,12 +35,9 @@ const back = () => window.history.back();
   border: var(--line) solid var(--ink);
   border-radius: 50%;
   background: var(--paper);
+  box-shadow: var(--shadow-1);
   color: var(--ink);
   cursor: pointer;
-}
-
-.back-button:active {
-  background: var(--bg);
 }
 
 svg {

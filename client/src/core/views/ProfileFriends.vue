@@ -224,7 +224,7 @@ function closeAll() {
           <h4 id="friends-board">{{ t('duos.board') }}</h4>
           <ul class="holders">
             <li v-for="{ title, holders } in board" :key="title">
-              <TitleInfo :title="{ kind: 'duo', duo: title }" class="pill" />
+              <TitleInfo :title="{ kind: 'duo', duo: title }" class="pill press press-small" />
               <span v-for="friend in holders" :key="friend.username" class="holder">
                 <AvatarButton :handle="friend.handle" :name="friend.username" :avatar="friend.avatar" />
                 <span class="holder-name">{{ friend.alias ?? friend.username }}</span>
@@ -250,13 +250,13 @@ function closeAll() {
                 <span v-if="friend.alias" class="username">{{ friend.username }}</span>
               </span>
               <span class="sr-only">{{ t(friend.online ? 'friends.online' : 'friends.offline') }}</span>
-              <RouterLink v-if="friend.room?.code" :to="`/room/${friend.room.code}`" class="join">{{
+              <RouterLink v-if="friend.room?.code" :to="`/room/${friend.room.code}`" class="join press press-small">{{
                 t('friends.join')
               }}</RouterLink>
               <button
                 v-else-if="friend.room"
                 type="button"
-                class="join"
+                class="join press press-small"
                 :disabled="busy || friend.asked"
                 @click="ask(friend)"
               >
@@ -489,8 +489,9 @@ h3 {
   margin: 0;
 }
 
-/* Joining, or asking to, is an ink pill whose box reaches 44 px high, out of sight; once asked, it
-   is grey. */
+/* Joining, or asking to, is the card's main action: a green pill with the outline of a main button
+   (UiButton.vue) and, small as the title pills beside it, their small shadow and press
+   (press-small), whose box reaches 44 px high, out of sight; once asked, it is grey and flat. */
 .join {
   position: relative;
   display: inline-flex;
@@ -498,10 +499,11 @@ h3 {
   align-items: center;
   min-height: 30px;
   padding: 0 var(--space-2);
-  border: 0;
+  border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--go);
+  box-shadow: var(--shadow-0);
+  color: var(--ink);
   font: inherit;
   font-size: var(--text-xs);
   font-weight: var(--weight-black);
@@ -511,7 +513,9 @@ h3 {
 }
 
 .join:disabled {
+  border-color: var(--neutral);
   background: var(--paper-2);
+  box-shadow: none;
   color: var(--ink-2);
   cursor: default;
 }
@@ -586,7 +590,11 @@ h3 {
   color: var(--ink-2);
 }
 
+/* The pills of a friend who is offline are faded, their outline and the ink of their press and
+   shadow grey (FoldedTitles.vue), which the press keeps as it lifts and drops them. */
 .offline :deep(.folded-titles .pill) {
+  --press-ink: var(--neutral);
+
   border-color: var(--neutral);
   background: var(--bg-tint);
   color: var(--ink-2);
@@ -638,6 +646,7 @@ h4 {
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
+  box-shadow: var(--shadow-0);
   font-size: var(--text-xs);
   font-weight: var(--weight-bold);
   line-height: 1.5;

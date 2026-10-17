@@ -30,6 +30,33 @@ export type TitleRef =
 // A component's translator, as far as the titles need it.
 type Translate = (key: string, named?: Record<string, string | number>) => string;
 
+// The news a title brings, which colors it where it stands in text, blue for good and red for bad
+// (TitleInfo.vue, docs/design.md). A decision takes its group's color instead; the author's badge
+// and the AI tag are pills, which have no news; and the titles of two friends, which stand only on
+// pills and in headings, have none yet: some are good news and some, as being rejected together,
+// are not.
+const BAD_AWARDS: ReadonlySet<Title> = new Set([
+  'black_hole',
+  'missed_deadline',
+  'instant_reject',
+  'first_turn_reject',
+]);
+export function titleTone(title: TitleRef): 'good' | 'bad' | null {
+  switch (title.kind) {
+    case 'award':
+      return BAD_AWARDS.has(title.title) ? 'bad' : 'good';
+    case 'streak':
+      return title.streak === 'wins' ? 'good' : 'bad';
+    case 'contribution':
+      return 'good';
+    case 'author':
+    case 'verdict':
+    case 'agents':
+    case 'duo':
+      return null;
+  }
+}
+
 // The title's name, as its pill or its line shows it.
 export function titleName(t: Translate, title: TitleRef, language: Language): string {
   switch (title.kind) {

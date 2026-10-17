@@ -44,6 +44,32 @@ describe('TitleInfo', () => {
     wrapper.unmount();
   });
 
+  test('says what news a title brings, for its color in text', () => {
+    const tone = (title: InstanceType<typeof TitleInfo>['$props']['title']) =>
+      mount(TitleInfo, { props: { title }, global: global() })
+        .get('button')
+        .classes()
+        .filter((name) => name === 'good' || name === 'bad');
+    expect(tone({ kind: 'award', title: 'best_paper' })).toEqual(['good']);
+    expect(tone({ kind: 'award', title: 'black_hole' })).toEqual(['bad']);
+    expect(tone({ kind: 'award', title: 'missed_deadline' })).toEqual(['bad']);
+    expect(tone({ kind: 'streak', streak: 'wins', length: 3, best: false })).toEqual(['good']);
+    expect(tone({ kind: 'streak', streak: 'losses', length: 3, best: true })).toEqual(['bad']);
+    expect(tone({ kind: 'contribution', contribution: 'bug' })).toEqual(['good']);
+    // A decision takes its group's color where it stands, the pills have no news, and the titles
+    // of two friends, good and bad among them, none yet.
+    expect(tone({ kind: 'verdict', verdict: 'oral' })).toEqual([]);
+    expect(tone({ kind: 'author' })).toEqual([]);
+    expect(tone({ kind: 'agents' })).toEqual([]);
+    expect(tone({ kind: 'duo', duo: 'corejected' })).toEqual([]);
+    // Shown as plain text, as on a screen across a room, a title keeps the color of its news.
+    const still = mount(TitleInfo, {
+      props: { title: { kind: 'streak', streak: 'losses', length: 3, best: false }, still: true },
+      global: global(),
+    });
+    expect(still.get('span').classes()).toContain('bad');
+  });
+
   test('shows a title as plain text where nobody taps, as on a screen', () => {
     const wrapper = mount(TitleInfo, {
       props: { title: { kind: 'verdict', verdict: 'oral' }, still: true },

@@ -59,7 +59,9 @@ const letters = computed(() => {
         <p class="kicker">
           {{ letter.team ? t('game.letter.titleFor', { group: group(letter.team) }) : t('game.letter.title') }}
         </p>
-        <h2 class="verdict"><TitleInfo :title="{ kind: 'verdict', verdict: letter.verdict }" :still="compact" /></h2>
+        <h2 class="verdict">
+          <TitleInfo :title="{ kind: 'verdict', verdict: letter.verdict }" :still="compact" :class="letter.team" />
+        </h2>
         <p class="body">{{ letter.body }}</p>
         <p class="signature">{{ t('game.letter.signature') }}</p>
       </article>

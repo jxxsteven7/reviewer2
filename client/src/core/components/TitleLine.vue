@@ -70,13 +70,13 @@ watch([() => props.titles.map(({ title, count }) => `${title}${count}`).join(), 
       v-for="item in open ? titles : titles.slice(0, shown)"
       :key="item.title"
       :title="{ kind: 'award', title: item.title }"
-      class="pill"
+      class="pill press press-small"
       >{{ labelOf(item) }}</TitleInfo
     >
     <button
       v-if="!open && shown < titles.length"
       type="button"
-      class="pill more"
+      class="pill more press press-small"
       :aria-label="t('match.allTitles')"
       @click.stop="open = true"
     >
@@ -118,6 +118,7 @@ watch([() => props.titles.map(({ title, count }) => `${title}${count}`).join(), 
   pointer-events: none;
 }
 
+/* A pill has the small hard shadow and the press of a button, which it is. */
 .pill {
   position: relative;
   flex: none;
@@ -125,6 +126,7 @@ watch([() => props.titles.map(({ title, count }) => `${title}${count}`).join(), 
   border: 1.5px solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
+  box-shadow: var(--shadow-0);
   color: var(--ink);
   font: inherit;
   font-size: 11px;
@@ -132,11 +134,6 @@ watch([() => props.titles.map(({ title, count }) => `${title}${count}`).join(), 
   line-height: 1.5;
   white-space: nowrap;
   cursor: pointer;
-}
-
-/* The pill says that it can be tapped; no underline besides. */
-.title-line > .pill {
-  text-decoration: none;
 }
 
 .pill.more {

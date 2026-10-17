@@ -107,6 +107,7 @@ async function submit() {
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('account.signIn.noEmail') }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('privacy.records') }}</p>
+      <p v-if="mode === 'register'" class="note">{{ t('account.signIn.publicPage') }}</p>
       <label v-if="mode === 'register'" class="agree">
         <input v-model="agreed" type="checkbox" />
         <span>{{ t('account.signIn.agree') }}</span>
@@ -153,9 +154,10 @@ async function submit() {
   cursor: pointer;
 }
 
+/* The tabs are a choice, not buttons: no shadow, and the chosen one turns yellow, as a chosen row
+   does (docs/design.md). */
 .tab[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--bg);
 }
 
 .form {

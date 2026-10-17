@@ -44,7 +44,7 @@ onBeforeUnmount(() => {
   <ul v-if="seats.length > 0" class="seats">
     <li v-for="seat in seats" :key="seat.code" class="seat">
       <p>{{ t(seat.playing ? 'home.seats.playing' : 'home.seats.waiting', { code: formatCode(seat.code) }) }}</p>
-      <RouterLink :to="`/room/${seat.code}`" class="back">{{ t('home.seats.back') }}</RouterLink>
+      <RouterLink :to="`/room/${seat.code}`" class="back press">{{ t('home.seats.back') }}</RouterLink>
     </li>
   </ul>
 </template>
@@ -73,15 +73,19 @@ onBeforeUnmount(() => {
   font-weight: var(--weight-bold);
 }
 
+/* The way back is the main action here: a green pill, with the outline, the shadow and the press
+   of a main button (UiButton.vue). */
 .back {
   display: inline-flex;
   flex: none;
   align-items: center;
   min-height: 44px;
   padding: 0 var(--space-4);
+  border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--go);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
   font-weight: var(--weight-black);
   text-decoration: none;
 }

@@ -36,7 +36,7 @@ const { t } = useI18n();
         account.summary.requests
       }}</span>
     </RouterLink>
-    <RouterLink v-else to="/account" class="entry pill">{{ t('account.entry') }}</RouterLink>
+    <RouterLink v-else to="/account" class="entry pill press">{{ t('account.entry') }}</RouterLink>
   </template>
 </template>
 
@@ -51,11 +51,13 @@ const { t } = useI18n();
   white-space: nowrap;
 }
 
+/* The pill leads to the account page too, so it wears the hard shadow and moves as a sticker. */
 .pill {
   padding: 0 var(--space-4);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
+  box-shadow: var(--shadow-1);
 }
 
 .avatar-link {

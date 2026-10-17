@@ -160,7 +160,7 @@ function submit() {
     <form class="feedback" @submit.prevent="submit">
       <div v-if="guest" class="guest">
         <p>{{ t('feedback.guest') }}</p>
-        <RouterLink :to="signIn" class="sign-in">{{ t('feedback.signIn') }}</RouterLink>
+        <RouterLink :to="signIn" class="sign-in press">{{ t('feedback.signIn') }}</RouterLink>
       </div>
       <p class="note">{{ t('feedback.privacy') }}</p>
 
@@ -300,7 +300,7 @@ legend {
 }
 
 /* The way to the account page, a small sticker of its own like the account's entry on a page, as
-   tall as a finger. */
+   tall as a finger, with the hard shadow and the press of what opens something. */
 .sign-in {
   display: inline-flex;
   flex: none;
@@ -310,6 +310,7 @@ legend {
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
+  box-shadow: var(--shadow-1);
   color: var(--ink);
   font-weight: var(--weight-bold);
   text-decoration: none;

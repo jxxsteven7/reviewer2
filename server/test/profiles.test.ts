@@ -34,7 +34,8 @@ describe('a public profile', () => {
       id: 1,
       handle: ann.handle,
       createdAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/),
-      profile: { link: null, bio: null, showRecord: false, showThanks: false, banned: false },
+      // A new account shows its record and its contributions until the owner turns either off.
+      profile: { link: null, bio: null, showRecord: true, showThanks: true, banned: false },
       likes: 0,
       requests: 0,
     });
@@ -55,8 +56,13 @@ describe('a public profile', () => {
           streaks: { wins: 0, losses: 0 },
           link: null,
           bio: null,
-          record: null,
-          contributions: null,
+          record: {
+            ordinary: { games: 0, wins: 0 },
+            inMatches: { games: 0, wins: 0 },
+            roles: { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } },
+            matches: { played: 0, won: 0 },
+          },
+          contributions: [],
           likes: 0,
           liked: false,
           mine: false,
@@ -79,7 +85,7 @@ describe('a public profile', () => {
     }
     expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
       streaks: { wins: 3, losses: 0 },
-      record: null,
+      record: { ordinary: { games: 3, wins: 3 }, roles: { guesser: { games: 3, wins: 3 } } },
     });
     // Nothing of the owner's own page is in it.
     const shown = JSON.stringify((await profileOf(guest, ann.handle)).profile);

@@ -988,6 +988,7 @@
       "registerSubmit": "Create the account",
       "forgot": "Forgot your password?",
       "noEmail": "No email address is needed. You can add one later on your account page, so that a forgotten password can be reset.",
+      "publicPage": "Anyone can open your public page, which shows your record as numbers and how many of your feedback contributions were adopted, until you turn either off on your account page.",
       "agree": "I have read and agree to how games are recorded, as above"
     },
     "profile": {
@@ -1222,7 +1223,8 @@
     "author": "Author",
     "since": "Registered {date}",
     "duo": "You and {name}",
-    "likes": "♥ {count}",
+    "likes": "{heart} {count}",
+    "heart": "♥",
     "like": "Like",
     "liked": "Liked",
     "logInToLike": "Log in to like this page or to add this player as a friend.",

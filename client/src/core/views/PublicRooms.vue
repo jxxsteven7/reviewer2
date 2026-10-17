@@ -64,7 +64,7 @@ const listsOf = (room: PublicRoom) =>
 
 <template>
   <section class="public-rooms">
-    <UiButton v-if="!open" variant="blue" @click="show">{{ t('home.publicRooms.open') }}</UiButton>
+    <UiButton v-if="!open" @click="show">{{ t('home.publicRooms.open') }}</UiButton>
     <template v-else>
       <div class="head">
         <h2>{{ t('home.publicRooms.title') }}</h2>
@@ -89,7 +89,7 @@ const listsOf = (room: PublicRoom) =>
             <span class="detail">{{ t(`language.${room.language}`) }} · {{ listsOf(room) }}</span>
             <span class="detail">{{ t('home.publicRooms.players', { count: room.players }) }}</span>
           </div>
-          <RouterLink :to="`/room/${room.code}`" class="join">{{ t('home.publicRooms.join') }}</RouterLink>
+          <RouterLink :to="`/room/${room.code}`" class="join press">{{ t('home.publicRooms.join') }}</RouterLink>
         </li>
       </ul>
       <UiButton size="small" variant="quiet" @click="load">{{ t('home.publicRooms.refresh') }}</UiButton>
@@ -177,6 +177,7 @@ h2 {
   font-size: var(--text-sm);
 }
 
+/* A white pill with the hard shadow and the press of a button, which is what it is. */
 .join {
   display: inline-flex;
   flex: none;
@@ -186,6 +187,7 @@ h2 {
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--paper);
+  box-shadow: var(--shadow-1);
   font-weight: var(--weight-bold);
   text-decoration: none;
 }

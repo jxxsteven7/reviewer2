@@ -5,6 +5,7 @@ import {
   revealBonus,
   revealPoints,
   type CardColor,
+  type CardView,
   type GamePoints,
   type KeywordsRoomData,
   type KeywordsScoreDetail,
@@ -20,19 +21,27 @@ import type { Float } from '../../core/components/ScoreFloat.vue';
 // prices them (revealPoints() and revealBonus() in the shared rules), and from the points that the
 // server sends with the end of the game.
 
+// The one card that a board has face up and the board before it didn't: null when there is none,
+// when there are several, as on the board that catches a page up, and when the boards aren't the
+// same. The card that turns over (useTurnedCard.ts) and the points that rise from it are found by
+// the same rule.
+export function turnedBetween(before: readonly CardView[], after: readonly CardView[]): number | null {
+  if (before.length !== after.length) return null;
+  const turned = after.flatMap((card, index) => (card.revealed && !before[index]?.revealed ? [index] : []));
+  return turned.length === 1 ? (turned[0] as number) : null;
+}
+
 // A card that has just been revealed, between two snapshots of a game in a row: the one card that
 // the later has face up and the earlier didn't, its color, and the group whose students revealed it.
-// Null when there is none, when there are several, as in the snapshot that catches a page up, and
-// across a pause, which hides the board, or another game.
+// Null when there is none, when there are several, and across a pause, which hides the board, or
+// another game.
 export function revealedBetween(
   before: KeywordsView,
   after: KeywordsView,
 ): { card: number; color: CardColor; by: Team } | null {
   if (before.gameId !== after.gameId || before.paused || after.paused) return null;
-  if (before.cards.length !== after.cards.length) return null;
-  const turned = after.cards.flatMap((card, index) => (card.revealed && !before.cards[index]?.revealed ? [index] : []));
-  if (turned.length !== 1) return null;
-  const card = turned[0] as number;
+  const card = turnedBetween(before.cards, after.cards);
+  if (card === null) return null;
   const color = after.cards[card]?.color;
   const by = after.history.find((record) => record.guesses.some((guess) => guess.card === card))?.team;
   return color && by ? { card, color, by } : null;

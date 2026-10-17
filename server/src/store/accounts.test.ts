@@ -39,7 +39,7 @@ const account = (name = 'Ann') => {
 };
 
 describe('an account', () => {
-  test('is created with its username, key and password, and found by id and by key', () => {
+  test('is created with its username, key and password, showing its record and contributions, and found by id and by key', () => {
     const ann = account();
     expect(ann).toEqual({
       id: 1,
@@ -52,7 +52,7 @@ describe('an account', () => {
       avatarBanned: false,
       publicBarred: false,
       agents: false,
-      profile: { link: null, bio: null, showRecord: false, showThanks: false },
+      profile: { link: null, bio: null, showRecord: true, showThanks: true },
       profileBanned: false,
       createdAt: '2026-10-09T12:00:00.000Z',
     });

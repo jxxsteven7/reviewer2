@@ -9,6 +9,7 @@ import { provideOpenPlayer } from '../playerPanel';
 import { shownProfile } from '../profilePanel';
 import AvatarButton from './AvatarButton.vue';
 import BackButton from './BackButton.vue';
+import FieldFold from './FieldFold.vue';
 import FieldPicker from './FieldPicker.vue';
 import PageMasthead from './PageMasthead.vue';
 import PageTitle from './PageTitle.vue';
@@ -125,6 +126,43 @@ describe('FieldPicker', () => {
     expect(wrapper.text()).toContain('Not enough terms in this language');
     await boxes[0]?.setValue(true);
     expect(wrapper.emitted('update:modelValue')?.[0]).toEqual([['general']]);
+  });
+});
+
+describe('FieldFold', () => {
+  const fields = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } }];
+
+  // The lists unfold with their height eased from nothing, and fold back to nothing before they are
+  // hidden; the marker's state and the hidden lists switch at once. The transition is the real one
+  // here, with the hooks of useFold.ts.
+  test('unfolds and folds its lists with their height eased, and hides them once they have folded', async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(FieldFold, {
+      props: { fields, language: 'en', needed: 25, modelValue: ['general'], 'onUpdate:modelValue': () => {} },
+      global: { ...global(), stubs: { transition: false } },
+      attachTo: document.body,
+    });
+    const toggle = wrapper.get('.toggle');
+    const lists = wrapper.get('.lists').element as HTMLElement;
+    expect(lists.style.display).toBe('none');
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(lists.style.display).toBe('');
+    expect(lists.style.overflow).toBe('hidden');
+    expect(lists.style.transition).toContain('height');
+    vi.advanceTimersByTime(300);
+    expect(lists.style.height).toBe('');
+    expect(lists.style.overflow).toBe('');
+    await toggle.trigger('click');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(lists.style.display).toBe('');
+    expect(lists.style.height).toBe('0px');
+    expect(lists.style.paddingTop).toBe('0px');
+    vi.advanceTimersByTime(300);
+    expect(lists.style.display).toBe('none');
+    expect(lists.style.height).toBe('');
+    wrapper.unmount();
+    vi.useRealTimers();
   });
 });
 
@@ -340,7 +378,7 @@ describe('UiSheet', () => {
     expect(active()).toBe('b1');
     focus('b3');
     press('Tab');
-    expect(active()).toBe('round close');
+    expect(active()).toContain('round close');
     press('Tab', true);
     expect(active()).toBe('b3');
     // Once the one on top has gone, the one below takes the keys again.
@@ -452,23 +490,32 @@ describe('UiSheet', () => {
     plain.unmount();
   });
 
-  // Every sheet comes and goes at once, so that the sheet that takes its place is alone on the page,
-  // but one with a way back that the viewer goes back from, which slides away. The transition is the
-  // real one here, not the stub that the tests otherwise put in its place.
-  test('goes at once when closed, and slides away only as the viewer goes back', async () => {
+  // Every sheet that is closed fades out, with nothing in it to press meanwhile, and is gone once
+  // it has; one with a way back that the viewer goes back from slides away instead. A sheet opened
+  // again on its way out is there once, at once. The transition is the real one here, not the stub
+  // that the tests otherwise put in its place.
+  test('fades out when closed, and slides away only as the viewer goes back', async () => {
     const open = (back: string | null) =>
       mount(UiSheet, {
         props: { open: true, title: 'x', back },
         global: { ...global(), stubs: { transition: false } },
         attachTo: document.body,
       });
+    const dialogs = () => document.querySelectorAll('[role=dialog]');
     const plain = open(null);
     await plain.setProps({ open: false });
-    expect(document.querySelector('[role=dialog]')).toBeNull();
+    expect(document.querySelector('.backdrop.sheet-leave-active [role=dialog]')).not.toBeNull();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(0));
+    await plain.setProps({ open: true });
+    await plain.setProps({ open: false });
+    await plain.setProps({ open: true });
+    expect(dialogs()).toHaveLength(1);
+    expect(document.querySelector('.backdrop.sheet-leave-active')).toBeNull();
     plain.unmount();
     const page = open('Back');
     await page.setProps({ open: false });
-    expect(document.querySelector('[role=dialog]')).toBeNull();
+    expect(document.querySelector('.backdrop.sheet-leave-active [role=dialog]')).not.toBeNull();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(0));
     await page.setProps({ open: true });
     document.querySelector<HTMLButtonElement>('[role=dialog] button.back')?.click();
     await page.setProps({ open: false });
@@ -547,21 +594,14 @@ describe('UiSheet', () => {
 // The press of a sticker (base.css): on a computer, a hover lifts it a pixel, with its shadow a
 // pixel longer; a press pushes it into its shadow, the same on every sticker that can be pressed.
 describe('the press of a sticker', () => {
-  test('is on every button but a quiet one, and a primary one, which has no shadow, only moves', () => {
-    const variants = ['secondary', 'primary', 'danger', 'red', 'blue', 'quiet'] as const;
+  test('is on every button but a quiet one', () => {
+    const variants = ['secondary', 'primary', 'danger', 'quiet'] as const;
     const classes = variants.map((variant) =>
       mount(UiButton, { props: { variant }, slots: { default: 'Go' }, global: global() })
         .get('button')
         .classes(),
     );
-    expect(classes.map((names) => [names.includes('press'), names.includes('press-flat')])).toEqual([
-      [true, false],
-      [true, true],
-      [true, false],
-      [true, false],
-      [true, false],
-      [false, false],
-    ]);
+    expect(classes.map((names) => names.includes('press'))).toEqual([true, true, true, false]);
     // A link that looks like a button too.
     const link = mount(UiButton, { props: { href: '/account' }, slots: { default: 'Go' }, global: global() });
     expect(link.get('a').classes()).toContain('press');

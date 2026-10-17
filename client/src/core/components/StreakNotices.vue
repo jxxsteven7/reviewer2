@@ -94,6 +94,7 @@ const announcement = computed(() =>
         <TitleInfo
           :title="{ kind: 'streak', streak: notice.kind, length: notice.length, best: false }"
           :still="large"
+          class="word"
           >{{ title(notice) }}</TitleInfo
         >
       </template>
@@ -165,22 +166,27 @@ const announcement = computed(() =>
   font-weight: var(--weight-black);
 }
 
+/* The cheer has no shadow: the strip itself can't be pressed, only the avatar and the title in it. */
 .cheer {
   padding: var(--space-2) var(--space-4);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-control);
   background: var(--bg);
-  box-shadow: var(--shadow-1);
   font-weight: var(--weight-bold);
   overflow-wrap: anywhere;
 }
 
-/* The avatar and the name, on one line and level with each other and with the words around them. */
+/* The avatar and the name, on one line: the name sits on the baseline of the words around it, and
+   the avatar is centered on the name. */
 .who {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  vertical-align: middle;
+  vertical-align: baseline;
+}
+
+.who strong {
+  align-self: baseline;
 }
 
 .large .mine {
@@ -191,7 +197,6 @@ const announcement = computed(() =>
   padding: var(--space-3) var(--space-5);
   border-width: var(--line-strong);
   border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-2);
   font-size: var(--text-xl);
 }
 </style>

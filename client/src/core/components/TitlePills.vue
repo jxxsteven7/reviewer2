@@ -23,17 +23,21 @@ const counted = (label: string, count: number) =>
 <template>
   <ul class="titles">
     <li v-for="{ title, count } in titles" :key="title">
-      <TitleInfo :title="{ kind: 'award', title }" class="pill">
+      <TitleInfo :title="{ kind: 'award', title }" class="pill press press-small">
         {{ counted(t(`account.profile.titleNames.${title}`), count) }}
       </TitleInfo>
     </li>
     <li v-for="{ kind, length, title } in streaks" :key="kind">
-      <TitleInfo :title="{ kind: 'streak', streak: kind, length, best: true }" class="pill streak" :class="kind">
+      <TitleInfo
+        :title="{ kind: 'streak', streak: kind, length, best: true }"
+        class="pill streak press press-small"
+        :class="kind"
+      >
         {{ title }}
       </TitleInfo>
     </li>
     <li v-for="{ kind, count } in contributions ?? []" :key="kind">
-      <TitleInfo :title="{ kind: 'contribution', contribution: kind }" class="pill">
+      <TitleInfo :title="{ kind: 'contribution', contribution: kind }" class="pill press press-small">
         {{ counted(t('account.profile.contributed', { kind: t(`contributions.kinds.${kind}`) }), count) }}
       </TitleInfo>
     </li>
@@ -50,15 +54,16 @@ const counted = (label: string, count: number) =>
   list-style: none;
 }
 
-/* A pill is a button that a tap opens. Its box reaches above and below it, out of sight, to 44px
-   tall, centered on it; the rows are 12px apart, more than the box reaches on either side, so that
-   no pill's box lies over another's. */
+/* A pill is a button that a tap opens, with the small hard shadow and the press of one. Its box
+   reaches above and below it, out of sight, to 44px tall, centered on it; the rows are 12px apart,
+   more than the box reaches on either side, so that no pill's box lies over another's. */
 .titles .pill {
   position: relative;
   padding: var(--space-1) var(--space-3);
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
+  box-shadow: var(--shadow-0);
   font-weight: var(--weight-bold);
 }
 

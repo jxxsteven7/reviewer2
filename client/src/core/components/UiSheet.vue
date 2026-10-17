@@ -30,8 +30,13 @@ import { useVisualViewport } from '../useVisualViewport';
 // out of reach of the keys and of assistive technology, and comes back as it was, where it was
 // scrolled to, once the viewer goes back (docs/design.md). The sheet with the way back slides up
 // from the bottom on a phone, and rises a little into place as a dialog, while the one under it
-// fades out; going back, it slides down again while the one under it fades in. Closed, it goes at
-// once with the rest, as every sheet does.
+// fades out; going back, it slides down again while the one under it fades in.
+//
+// Every sheet comes with its panel rising as the scrim fades in, and, closed, sinks a little and
+// fades out while the scrim fades, quicker than it came (--motion-quick); nothing in it can be
+// pressed meanwhile, and the focus has already gone back. A sheet opened again while it is on its
+// way out is there at once, as Vue cuts the leave short. Where the device asks for less motion,
+// base.css makes every one of these moves instant.
 //
 // A `subtitle` follows the title in small grey type (.username-after in base.css), as a friend's
 // username follows the name the account gives them.
@@ -172,9 +177,13 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <!-- Only a sheet with a way back moves, in and, going back, out: every other sheet, and one that
-         is closed, comes and goes at once, without even the frames that a transition waits. -->
-    <Transition :css="!!back && (open || wentBack)" enter-active-class="slide-in" leave-active-class="slide-out">
+    <!-- A sheet with a way back slides in and, going back, out, with the scrim as it is; every other
+         sheet comes with its scrim fading in, and every sheet that is closed sinks and fades out. -->
+    <Transition
+      name="sheet"
+      :enter-active-class="back ? 'slide-in' : undefined"
+      :leave-active-class="wentBack ? 'slide-out' : undefined"
+    >
       <div
         v-if="open"
         class="backdrop"
@@ -194,13 +203,13 @@ onBeforeUnmount(() => {
           @scroll.capture.passive="onScroll"
         >
           <header class="head" :class="{ scrolled }">
-            <button v-if="back" type="button" class="round back" :aria-label="back" @click="goBack">
+            <button v-if="back" type="button" class="round back press" :aria-label="back" @click="goBack">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 4.5 7.5 12l7.5 7.5" /></svg>
             </button>
             <h2 :id="id">
               {{ title }}<small v-if="subtitle" class="subtitle username-after">{{ spacedSubtitle }}</small>
             </h2>
-            <button type="button" class="round close" :aria-label="t('room.close')" @click="emit('close')">
+            <button type="button" class="round close press" :aria-label="t('room.close')" @click="emit('close')">
               &times;
             </button>
           </header>
@@ -323,6 +332,37 @@ h2 {
     visibility 0s linear var(--motion-sheet-in);
 }
 
+/* The scrim fades in as the panel rises. Closed, the panel sinks and fades out while the scrim
+   fades, quicker, and nothing in it can be pressed meanwhile. The scrim's own transition is what
+   the sheet times itself by; the panel's takes as long. */
+.backdrop.sheet-enter-active {
+  transition: background-color var(--motion) var(--ease-out);
+}
+
+.backdrop.sheet-enter-active.sheet-enter-from {
+  background-color: transparent;
+}
+
+.backdrop.sheet-leave-active {
+  pointer-events: none;
+  transition: background-color var(--motion-quick) var(--ease-in);
+}
+
+.backdrop.sheet-leave-active.sheet-leave-to {
+  background-color: transparent;
+}
+
+.sheet-leave-active > .panel {
+  transition:
+    transform var(--motion-quick) var(--ease-in),
+    opacity var(--motion-quick) var(--ease-in);
+}
+
+.sheet-leave-active.sheet-leave-to > .panel {
+  transform: translateY(24px);
+  opacity: 0;
+}
+
 /* The sheet with the way back slides up from the bottom instead of rising, and down again as the
    viewer goes back, with the scrim as it is: the one under it goes and comes at the same moment. The
    backdrop's own animation, which changes nothing, is what the transition times itself by. */
@@ -345,7 +385,7 @@ h2 {
 }
 
 .with-back.slide-out > .panel {
-  animation: slide-out var(--motion-sheet-out) cubic-bezier(0.4, 0, 1, 1) both;
+  animation: slide-out var(--motion-sheet-out) var(--ease-in) both;
 }
 
 @keyframes hold {
@@ -366,7 +406,8 @@ h2 {
   }
 }
 
-/* The round buttons at either end of the title: back, with its arrow, and close, with its cross. */
+/* The round buttons at either end of the title: back, with its arrow, and close, with its cross.
+   Stickers that can be pressed, with the hard shadow and the press of every one (base.css). */
 .round {
   display: inline-flex;
   flex: none;
@@ -378,14 +419,11 @@ h2 {
   border: var(--line) solid var(--ink);
   border-radius: 50%;
   background: var(--paper);
+  box-shadow: var(--shadow-1);
   color: var(--ink);
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-}
-
-.round:active {
-  background: var(--bg);
 }
 
 .back svg {
@@ -439,7 +477,8 @@ h2 {
     padding: var(--space-2) var(--space-5) var(--space-1);
   }
 
-  /* A dialog with a way back rises a little into place, and sinks back as the viewer goes back. */
+  /* A dialog with a way back rises a little into place, and sinks back as the viewer goes back;
+     closed, it sinks less far than a sheet does. */
   @keyframes slide-in {
     from {
       transform: translateY(40px);
@@ -452,6 +491,10 @@ h2 {
       transform: translateY(40px);
       opacity: 0;
     }
+  }
+
+  .sheet-leave-active.sheet-leave-to > .panel {
+    transform: translateY(12px);
   }
 }
 </style>

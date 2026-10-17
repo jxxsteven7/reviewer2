@@ -988,6 +988,7 @@
       "registerSubmit": "注册账号",
       "forgot": "忘记密码？",
       "noEmail": "注册不需要邮箱。以后可以在个人页绑定邮箱，忘记密码时才能找回。",
+      "publicPage": "任何人都能打开你的公开主页，上面会显示你的战绩数字和反馈被采纳的次数，可以在个人页关掉。",
       "agree": "我已阅读并同意上面的对局记录说明"
     },
     "profile": {
@@ -1222,7 +1223,8 @@
     "author": "作者",
     "since": "{date} 注册",
     "duo": "你和 {name}",
-    "likes": "♥ {count}",
+    "likes": "{heart} {count}",
+    "heart": "♥",
     "like": "赞",
     "liked": "已赞",
     "logInToLike": "登录后可以点赞，也可以加对方为好友。",

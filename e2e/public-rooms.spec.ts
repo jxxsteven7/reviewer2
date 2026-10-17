@@ -75,7 +75,7 @@ test('a public room is joined from the home page with an account, and a removed 
   // link, or on another device.
   await ann.locator('.lobby').getByRole('button', avatarOf(bobName)).click();
   await ann.getByRole('button', { name: text.lobby.manage.remove }).click();
-  const warning = ann.locator('[role=dialog]');
+  const warning = ann.getByRole('dialog', { name: text.lobby.manage.remove });
   await expect(warning).toContainText(interpolate(text.lobby.manage.removeConfirm, { name: bobName }));
   await warning.getByRole('button', { name: text.lobby.manage.remove }).click();
   await expect(bob.getByText(text.room.closed.removed)).toBeVisible();
@@ -113,7 +113,7 @@ test('a public room is joined from the home page with an account, and a removed 
   await expect(cat.locator('.lobby')).toContainText(bobName);
   await cat.locator('.lobby').getByRole('button', avatarOf(bobName)).click();
   await cat.getByRole('button', { name: text.lobby.manage.remove }).click();
-  const privateWarning = cat.locator('[role=dialog]');
+  const privateWarning = cat.getByRole('dialog', { name: text.lobby.manage.remove });
   await expect(privateWarning).toContainText(interpolate(text.lobby.manage.removeConfirmPrivate, { name: bobName }));
   await privateWarning.getByRole('button', { name: text.lobby.manage.remove }).click();
   await expect(bobsPhone.getByText(text.room.closed.removed_recently)).toBeVisible();

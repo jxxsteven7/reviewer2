@@ -90,12 +90,17 @@ const announcement = computed(() => notices.value.map((item) => `${headline(item
   overflow-wrap: anywhere;
 }
 
-/* The avatar and the name, on one line and level with each other and with the words around them. */
+/* The avatar and the name, on one line: the name sits on the baseline of the words around it, and
+   the avatar is centered on the name. */
 .who {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  vertical-align: middle;
+  vertical-align: baseline;
+}
+
+.who strong {
+  align-self: baseline;
 }
 
 .line {

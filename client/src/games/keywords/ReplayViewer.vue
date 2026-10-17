@@ -9,6 +9,7 @@ import { provideOpenPlayer } from '../../core/playerPanel';
 import GroupBars, { type Group, type Member } from './GroupBars.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
 import ReplayPanel from './ReplayPanel.vue';
+import { useTurnedSteps } from './useTurnedCard';
 
 // A finished game, step by step (shared/src/games/keywords/replay.ts): the board as it stood at
 // each step, with every color, the card the step is about outlined, and above it the turn, the
@@ -44,6 +45,8 @@ const last = computed(() => at.value === steps.value.length - 1);
 const cards = computed<CardView[]>(() =>
   props.replay.cards.map((card, index) => ({ ...card, revealed: step.value.revealed.includes(index) })),
 );
+// A step to the next reveal turns its card over, as the game did (useTurnedCard.ts).
+const turned = useTurnedSteps(cards);
 const group = (team: 'red' | 'blue') => t(`lobby.group.${team}`);
 // How many cards each group had still to find at the step.
 const remaining = computed(
@@ -148,6 +151,7 @@ const lines = computed(() => {
       :selected="null"
       :marked="step.guess?.card ?? null"
       :targets="targets"
+      :turned="turned"
       :lang="HTML_LANG[replay.language]"
     />
     <section v-if="talk.length > 0" class="talk">

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { hasHan, type CardView, type Language, type Mark, type Team } from '@reviewer2/shared';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
-import ScoreFloat, { type Shown } from '../../core/components/ScoreFloat.vue';
 import { formatList, HTML_LANG } from '../../core/i18n';
 import { hyphenate } from './hyphenate';
 import MarkSticker from './MarkSticker.vue';
@@ -25,7 +24,10 @@ import type { Chooser } from './useKeywords';
 // avatars on the top right, faded for a chooser who is offline, too small for the dots that mark
 // someone the room waits for elsewhere (PlayerAvatar.vue), the PI's number on the bottom left and
 // the mark on the bottom right.
-// A `float` is what the card did to the viewer's points as it was revealed, which rises from it.
+// A card that has just been revealed in front of the viewer is `turning` (useTurnedCard.ts): it
+// turns over, its face as it lay until it stands edge on, its color on the way back, and lands
+// pressed into the table. The points that the card did to the viewer's rise from it on the board
+// (KeywordsBoard.vue), outside the card, so that they don't turn with it.
 const props = withDefaults(
   defineProps<{
     card: CardView;
@@ -38,9 +40,9 @@ const props = withDefaults(
     target?: number | null;
     note?: { mark: Mark; color: Team | 'r2' } | null;
     noteQuiet?: boolean;
-    float?: Shown | null;
+    turning?: boolean;
   }>(),
-  { large: false, marked: false, target: null, note: null, noteQuiet: false, float: null },
+  { large: false, marked: false, target: null, note: null, noteQuiet: false, turning: false },
 );
 const emit = defineEmits<{ select: [index: number] }>();
 const { t, locale } = useI18n();
@@ -55,6 +57,23 @@ const size = computed(() => {
 const state = computed(() => {
   if (!props.card.color) return 'hidden';
   return props.card.revealed ? 'revealed' : 'known';
+});
+
+// The face of the card as it lies, which the turn keeps until the card stands edge on: the table's
+// yellow of the viewer's choice, the tint of the color that the viewer's group has marked it with
+// or that the viewer knows it to be, Reviewer 2's ink for a PI who knows it, or the paper. The turn
+// and the reveal come in one snapshot, so the face that turns away is the one the card had the
+// moment before.
+type Face = 'choice' | 'red' | 'blue' | 'neutral' | 'r2' | 'ink' | 'paper';
+const face = computed<Face>(() => {
+  if (props.selected) return 'choice';
+  if (props.note && !props.noteQuiet) return props.note.color;
+  if (props.card.color) return props.card.color === 'reviewer2' ? 'ink' : props.card.color;
+  return 'paper';
+});
+const turnedFace = ref<Face>('paper');
+watch([() => props.turning, face], ([turning], [wasTurning, faceBefore]) => {
+  if (turning && !wasTurning) turnedFace.value = faceBefore ?? 'paper';
 });
 
 const label = computed(() => (props.card.color ? t(`game.card.${props.card.color}`) : ''));
@@ -94,6 +113,7 @@ const ariaLabel = computed(() =>
       size,
       note && !noteQuiet ? `noted note-${note.color}` : '',
       { large, selected, selectable, marked, targeted: target !== null, chosen: choosers.length > 0 },
+      turning ? ['turning', `face-${turnedFace}`] : '',
     ]"
     :aria-disabled="selectable ? undefined : 'true'"
     :tabindex="selectable ? undefined : -1"
@@ -110,7 +130,6 @@ const ariaLabel = computed(() =>
     <Transition name="pop">
       <MarkSticker v-if="note" :key="note.mark" class="note" :mark="note.mark" :color="note.color" />
     </Transition>
-    <ScoreFloat v-if="float" :key="float.key" :float="float" />
     <span v-if="choosers.length" class="choosers" aria-hidden="true">
       <PlayerAvatar
         v-for="chooser in choosers"
@@ -418,7 +437,7 @@ const ariaLabel = computed(() =>
 
 /* A mark that comes pops onto the corner, and one that goes shrinks away. */
 .pop-enter-active {
-  animation: pop 420ms cubic-bezier(0.2, 1.35, 0.4, 1) both;
+  animation: pop 420ms var(--ease-spring) both;
 }
 
 .pop-leave-active {
@@ -459,8 +478,8 @@ const ariaLabel = computed(() =>
   box-shadow: 1px 1px 0 var(--ink);
   transform: translate(2px, 2px) scale(0.96);
   transition:
-    transform 400ms cubic-bezier(0.3, 0, 0.2, 1),
-    box-shadow 400ms cubic-bezier(0.3, 0, 0.2, 1);
+    transform 400ms var(--ease-out),
+    box-shadow 400ms var(--ease-out);
 }
 
 /* The card whose menu of marks is open, which a copy of lifts out of the page meanwhile: it is
@@ -490,5 +509,157 @@ const ariaLabel = computed(() =>
   letter-spacing: 0.08em;
   text-transform: uppercase;
   transform: rotate(-6deg);
+}
+
+/* The card that has just been revealed in front of the viewer turns over: on its vertical axis,
+   edge on halfway, where its color comes, and it lands pressed into the table, as a revealed card
+   lies. Its face stays as it lay until then (`face-*`): the paper, the table's yellow of the
+   viewer's choice, the tint of a mark or of a known color, or Reviewer 2's ink for the PI who knew
+   it, with the type as it was. The color comes on a layer under the word and the corners, held off
+   until the half-turn, as the ink of the word and the label is held, so that the face turns away
+   with what it had on it and the back comes with the color. Under it the card's own background is
+   held at the face until the turn ends, when it is the color already. Reviewer 2's stamp slams
+   down once the card has landed. The turn is over after TURN_MS (useTurnedCard.ts), when the layer
+   goes, which shows nothing, since the card has its color by then. */
+.turning {
+  --face: var(--paper);
+  --face-ink: var(--ink);
+
+  isolation: isolate;
+  animation:
+    flip 460ms var(--ease-out),
+    face 460ms step-end;
+}
+
+.turning.face-choice {
+  --face: var(--bg);
+}
+
+.turning.face-red {
+  --face: var(--red-tint);
+}
+
+.turning.face-blue {
+  --face: var(--blue-tint);
+}
+
+.turning.face-neutral {
+  --face: var(--neutral-tint);
+}
+
+.turning.face-r2 {
+  --face: var(--r2-tint);
+}
+
+.turning.face-ink {
+  --face: var(--r2);
+  --face-ink: var(--on-r2);
+}
+
+/* The layer fills the card inside its outline, which stays whole over it. */
+.turning::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: calc(var(--radius-card) - var(--line));
+  animation: appear 230ms step-end;
+  pointer-events: none;
+}
+
+.turning.red::after {
+  background: var(--red);
+}
+
+.turning.blue::after {
+  background: var(--blue);
+}
+
+.turning.neutral::after {
+  background: var(--neutral);
+}
+
+.turning.reviewer2::after {
+  background: var(--r2);
+}
+
+.turning .word,
+.turning .tag {
+  animation: ink 230ms step-end;
+}
+
+/* The stamp's curve settles more than the spring does, so that the stamp lands rather than
+   bounces: it is pressed down, not dropped. */
+.turning .stamp {
+  animation: slam 380ms cubic-bezier(0.2, 1.2, 0.4, 1) 430ms both;
+}
+
+@keyframes flip {
+  from {
+    box-shadow: var(--shadow-1);
+    transform: perspective(520px) rotateY(0deg);
+  }
+
+  49.9% {
+    box-shadow: none;
+    transform: perspective(520px) rotateY(90deg);
+  }
+
+  50% {
+    box-shadow: none;
+    transform: perspective(520px) rotateY(-90deg);
+  }
+
+  to {
+    box-shadow: none;
+    transform: translate(var(--shift-1), var(--shift-1)) perspective(520px) rotateY(0deg);
+  }
+}
+
+@keyframes face {
+  from {
+    background-color: var(--face);
+  }
+}
+
+@keyframes ink {
+  from {
+    color: var(--face-ink);
+    text-decoration-color: transparent;
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slam {
+  from {
+    opacity: 0;
+    transform: rotate(-20deg) scale(2.4);
+  }
+
+  55% {
+    opacity: 1;
+    transform: rotate(-3deg) scale(0.92);
+  }
+
+  to {
+    transform: rotate(-6deg) scale(1);
+  }
+}
+
+/* Where the device asks for less motion, the card is revealed at once, the stamp in place, rather
+   than held at the start of a turn that the page cuts short (base.css). */
+@media (prefers-reduced-motion: reduce) {
+  .turning,
+  .turning::after,
+  .turning .word,
+  .turning .tag,
+  .turning .stamp {
+    animation: none;
+  }
 }
 </style>
