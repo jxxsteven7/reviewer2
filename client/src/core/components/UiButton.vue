@@ -1,8 +1,7 @@
 <script setup lang="ts">
 // Buttons, which look like stickers: an ink outline, a hard shadow, and the press of every sticker
 // (`press` in base.css), a lift on hover and a push into its shadow. The color says what a button
-// does (docs/design.md): "primary", the one main action on a screen, is green; "secondary", the
-// others, white; "danger", an action that can't be undone, white with red; and "quiet" is a
+// does (docs/design.md): "primary", a main action, is green; "secondary", the others, white; "danger", an action that can't be undone, white with red; and "quiet" is a
 // link-like action without the outline. With an `href`, the button is a link that looks like one,
 // such as one that opens another page.
 withDefaults(

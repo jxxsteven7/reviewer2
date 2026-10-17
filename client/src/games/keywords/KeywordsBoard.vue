@@ -2,8 +2,7 @@
 import { MARKS, otherTeam, type CardView, type Mark, type Team } from '@reviewer2/shared';
 import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { Shown } from '../../core/components/ScoreFloat.vue';
-import ScoreFloat from '../../core/components/ScoreFloat.vue';
+import ScoreFloat, { type Shown } from '../../core/components/ScoreFloat.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import MarkMenu from './MarkMenu.vue';
 import { useCardGestures } from './useCardGestures';

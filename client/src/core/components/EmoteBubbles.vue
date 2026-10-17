@@ -73,7 +73,6 @@ defineProps<{ large?: boolean }>();
   padding: var(--space-2) var(--space-3);
   border-width: var(--line-strong);
   background: var(--ink);
-  box-shadow: none;
   color: var(--on-ink);
   font-family: var(--font-display);
   font-size: var(--text-md);

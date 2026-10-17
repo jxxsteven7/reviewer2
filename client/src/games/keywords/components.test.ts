@@ -1121,6 +1121,14 @@ describe('ReplayViewer', () => {
       expect(turning()).toEqual([false, false, false]);
       await wrapper.get('input[type="range"]').setValue('0');
       expect(turning()).toEqual([false, false, false]);
+      // A step back while the card is still turning lays it face down, with no turn on it, and the
+      // step forward turns it again.
+      await wrapper.get('input[type="range"]').setValue('2');
+      expect(turning()).toEqual([true, false, false]);
+      await wrapper.get('input[type="range"]').setValue('1');
+      expect(turning()).toEqual([false, false, false]);
+      await wrapper.get('input[type="range"]').setValue('2');
+      expect(turning()).toEqual([true, false, false]);
     } finally {
       vi.useRealTimers();
     }

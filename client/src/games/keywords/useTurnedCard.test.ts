@@ -114,6 +114,34 @@ describe('the card that turns over in a game', () => {
     expect(turned.value).toBe(1);
   });
 
+  test('ends a turn still on when another game begins, or the game is paused', async () => {
+    const { current, turned } = turnedIn(game([]));
+    current.value = game([0]);
+    await nextTick();
+    expect(turned.value).toBe(0);
+    vi.advanceTimersByTime(TURN_MS / 2);
+    // The new game's cards all lie face down: none of them is turning.
+    current.value = game([], { gameId: 'g2' });
+    await nextTick();
+    expect(turned.value).toBeNull();
+    current.value = game([1], { gameId: 'g2' });
+    await nextTick();
+    expect(turned.value).toBe(1);
+    current.value = game([1], { gameId: 'g2', paused: true });
+    await nextTick();
+    expect(turned.value).toBeNull();
+    // The timer of the turn that ended early doesn't end the next turn.
+    current.value = game([1], { gameId: 'g2' });
+    await nextTick();
+    current.value = game([1, 2], { gameId: 'g2' });
+    await nextTick();
+    expect(turned.value).toBe(2);
+    vi.advanceTimersByTime(TURN_MS / 2);
+    expect(turned.value).toBe(2);
+    vi.advanceTimersByTime(TURN_MS / 2);
+    expect(turned.value).toBeNull();
+  });
+
   test('ends a turn still on when the page goes, and starts over for the next card', async () => {
     const { current, turned } = turnedIn(game([]));
     current.value = game([0]);
@@ -148,6 +176,34 @@ describe('the card that turns over in a replay', () => {
     await nextTick();
     expect(turned.value).toBeNull();
     board.value = cards([0, 2]);
+    await nextTick();
+    expect(turned.value).toBe(2);
+  });
+
+  test('ends the turn when the step goes back before it is over, and turns the card again on the step forward', async () => {
+    const board: Ref<CardView[]> = ref(cards([0]));
+    const turned: Ref<number | null> = mounted(() => useTurnedSteps(board));
+    board.value = cards([0, 1]);
+    await nextTick();
+    expect(turned.value).toBe(1);
+    vi.advanceTimersByTime(TURN_MS / 4);
+    // Back: the card lies face down again, and no turn lays its color over it.
+    board.value = cards([0]);
+    await nextTick();
+    expect(turned.value).toBeNull();
+    // Forward again: the card turns anew, for a whole turn.
+    board.value = cards([0, 1]);
+    await nextTick();
+    expect(turned.value).toBe(1);
+    vi.advanceTimersByTime(TURN_MS - 1);
+    expect(turned.value).toBe(1);
+    vi.advanceTimersByTime(1);
+    expect(turned.value).toBeNull();
+    // A step on to a clue, with the card still face up, leaves the turn to run out.
+    board.value = cards([0, 1, 2]);
+    await nextTick();
+    expect(turned.value).toBe(2);
+    board.value = [...cards([0, 1, 2])];
     await nextTick();
     expect(turned.value).toBe(2);
   });
