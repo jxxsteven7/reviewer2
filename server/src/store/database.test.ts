@@ -1768,12 +1768,15 @@ describe('a database in DATA_DIR', () => {
       "NULL, NULL, 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
       "0, NULL, 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
       "NULL, 'GHSA-1', 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "NULL, 'ghsa-24fc-5gmw-5x4j', 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "17, NULL, NULL, 'octocat', 583231, 1, 'now', 'z', 'e'",
       "17, NULL, 'bug', 'octocat', NULL, 1, 'now', 'z', 'e'",
       "17, NULL, 'bug', NULL, 583231, 0, 'now', 'z', 'e'",
       "17, NULL, 'bug', NULL, NULL, 1, 'now', 'z', 'e'",
       "17, NULL, 'bug', 'octocat', 0, 1, 'now', 'z', 'e'",
       "17, NULL, 'bug', 'octocat', 583231, 2, 'now', 'z', 'e'",
       "17, NULL, 'bug', 'octocat', 583231, 1, 'now', NULL, 'e'",
+      "17, NULL, 'bug', 'octocat', 583231, 1, 'now', 'z', NULL",
       "17, NULL, 'bug', 'octocat', 583231, 1, NULL, 'z', 'e'",
     ]) {
       expect(() => add(values), values).toThrow(/UNIQUE|CHECK|NOT NULL/);

@@ -1215,7 +1215,8 @@ export const MIGRATIONS: readonly string[] = [
   // what they contributed, in Chinese and in English, written as it is adopted. Nothing else of
   // the issue is kept: the issue itself is its record. The rows are an archive, as the feedback is
   // (archive.test.ts): no row is deleted, and only the two sentences, the naming and the username
-  // are ever changed. No other table changes.
+  // are ever changed. The rows need no id or index of their own: each is named by its issue or
+  // its advisory, and the home page reads them all at once. No other table changes.
   `
   CREATE TABLE github_contributions (
     issue INTEGER UNIQUE CHECK (issue > 0),
@@ -1231,6 +1232,5 @@ export const MIGRATIONS: readonly string[] = [
     CHECK ((login IS NULL) = (github_id IS NULL)),
     CHECK (login IS NOT NULL OR named = 0)
   ) STRICT;
-  CREATE INDEX github_contributions_adopted ON github_contributions (adopted_at);
   `,
 ];

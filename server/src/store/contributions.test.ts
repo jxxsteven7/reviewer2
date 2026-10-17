@@ -243,4 +243,23 @@ describe('the contributions', () => {
     expect(contributions.forget({ advisory: 'GHSA-24fc-5gmw-5x4j' })).toBe(false);
     expect(contributions.list()).toHaveLength(1);
   });
+
+  test('put what was adopted at the same moment from the site first, and then the latest row of each', () => {
+    const feedback = feedbackStore();
+    feedback.add(entry({ credit: 'Dan' }));
+    feedback.add(entry({ credit: 'Eve' }));
+    for (const id of [1, 2]) {
+      feedback.setIssue(id, 40 + id);
+      feedback.adopt(id, SAID);
+    }
+    const contributions = store();
+    contributions.adopt(fromGithub({ ref: { issue: 14 } }));
+    contributions.adopt(fromGithub({ ref: { issue: 15 } }));
+    expect(contributions.all().map(({ source, issue }) => [source, issue])).toEqual([
+      ['site', 42],
+      ['site', 41],
+      ['github', 15],
+      ['github', 14],
+    ]);
+  });
 });

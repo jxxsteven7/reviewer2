@@ -36,10 +36,9 @@ function sources(dir = SOURCE): string[] {
 // written once: a statement is allowed there, with the code around it, and nowhere else, so that
 // no other command can run the purge at a time of its own, or write a time of its own into the
 // trash. The feedback's are in store/feedback.ts, and those of the contributions from GitHub in
-// store/contributions.ts, whose BY_REF names a row by its issue or its advisory.
+// store/contributions.ts, which name a row by its issue or its advisory.
 const FEEDBACK_FILE = join(import.meta.dirname, 'feedback.ts');
 const CONTRIBUTIONS_FILE = join(import.meta.dirname, 'contributions.ts');
-const BY_REF = 'WHERE issue IS ? AND advisory IS ?';
 const ALLOWED: { statement: string; file: string }[] = [
   ...[
     'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
@@ -55,9 +54,10 @@ const ALLOWED: { statement: string; file: string }[] = [
     'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
   ].map((statement) => ({ statement, file: FEEDBACK_FILE })),
   ...[
-    `UPDATE github_contributions SET summary_zh = ?, summary_en = ? <expression>`,
-    `UPDATE github_contributions SET named = 0 <expression> AND named = 1`,
-    `UPDATE github_contributions SET login = NULL, github_id = NULL, named = 0 <expression> AND login IS NOT NULL`,
+    'UPDATE github_contributions SET summary_zh = ?, summary_en = ? WHERE issue IS ? AND advisory IS ?',
+    'UPDATE github_contributions SET named = 0 WHERE issue IS ? AND advisory IS ? AND named = 1',
+    'UPDATE github_contributions SET login = NULL, github_id = NULL, named = 0 ' +
+      'WHERE issue IS ? AND advisory IS ? AND login IS NOT NULL',
   ].map((statement) => ({ statement, file: CONTRIBUTIONS_FILE })),
 ];
 const ALLOWED_STATEMENTS = ALLOWED.map(({ statement }) => statement);
@@ -209,7 +209,6 @@ describe('the archive', () => {
     expect(seen.some((sql) => /^INSERT INTO github_contributions \(issue, .* VALUES \(\?(, \?)+\)$/.test(sql))).toBe(
       true,
     );
-    expect(seen).toContain(BY_REF);
     expect(sources()).toContain(MIGRATIONS_FILE);
     expect(sources()).toContain(FEEDBACK_FILE);
     expect(sources()).toContain(CONTRIBUTIONS_FILE);

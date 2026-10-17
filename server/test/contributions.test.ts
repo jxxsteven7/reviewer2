@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONTRIBUTIONS_API, LIST_API, parseAcknowledgments } from '@reviewer2/shared';
 import { afterEach, expect, test } from 'vitest';
+import { ContributionStore } from '../src/store/contributions';
 import { Browser, startServer, type TestServer } from './helpers';
 
 // The feedback contributions over HTTP: the home page's list, which is the adopted feedback, by the
@@ -63,6 +64,19 @@ test('are listed for anyone, and counted for the account they came from', async 
   // username, handle and avatar.
   expect(JSON.stringify(list.body)).not.toMatch(/timer, please|me@example|"accountId"/);
   expect(JSON.stringify(list.body).match(/"Ann"/g)).toHaveLength(1);
+
+  // An issue adopted from GitHub, by its author's username, and one by nobody, come in the same
+  // list, each with nothing of the author's GitHub account but the username they are listed by.
+  const github = new ContributionStore(server.db);
+  github.adopt({ ref: { issue: 14 }, kind: 'code', login: 'octocat', githubId: 583231, named: true, summary: SAID });
+  github.adopt({ ref: { issue: 16 }, kind: 'idea', login: 'hubot', githubId: 2, named: false, summary: SAID });
+  const both = await guest.request(CONTRIBUTIONS_API);
+  expect(both.body.contributions).toHaveLength(5);
+  expect(both.body.contributions.slice(0, 2)).toEqual([
+    { kind: 'idea', name: null, profile: null, summary: SAID, issue: 16, ...site, source: 'github' },
+    { kind: 'code', name: 'octocat', profile: null, summary: SAID, issue: 14, ...site, source: 'github' },
+  ]);
+  expect(JSON.stringify(both.body)).not.toMatch(/hubot|583231|"login"|"githubId"|"github_id"|"named"/);
 
   expect(await ann.account()).toMatchObject({
     contributions: [

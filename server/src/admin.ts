@@ -423,6 +423,7 @@ function githubRef(words: string[], { advisory }: Flags, print: Print): GithubRe
 
 // How a `github` command names what it is about, and the way to refer to it in the next command.
 const refName = (ref: GithubRef) => ('issue' in ref ? `Issue #${ref.issue}` : `Advisory ${ref.advisory}`);
+const refNamed = (ref: GithubRef) => ('issue' in ref ? `issue #${ref.issue}` : `advisory ${ref.advisory}`);
 const refWord = (ref: GithubRef) => ('issue' in ref ? String(ref.issue) : `--advisory ${ref.advisory}`);
 
 // A contribution from GitHub as `github list` shows it, on one line: the issue or the advisory, the
@@ -992,7 +993,9 @@ const COMMANDS: Record<string, Command> = {
     run(data, words, flags, print) {
       const ref = githubRef(words, flags, print);
       if (ref === null) return 1;
-      const { kind, login, id, anonymous } = flags;
+      const { login, id, anonymous } = flags;
+      // An advisory is a bug report, published once the problem was fixed.
+      const kind = flags.kind ?? ('advisory' in ref ? 'bug' : undefined);
       if (kind === undefined || login === undefined || id === undefined) {
         print(
           'Say what kind of contribution it is and who made it: --kind <kind> --login <GitHub username> ' +
@@ -1004,6 +1007,10 @@ const COMMANDS: Record<string, Command> = {
       if (typeof summary === 'number') return summary;
       if (!(CONTRIBUTION_KINDS as readonly string[]).includes(kind)) {
         print(`${kind} is not a kind of contribution: one of ${CONTRIBUTION_KINDS.join(', ')}.`);
+        return 1;
+      }
+      if ('advisory' in ref && kind !== 'bug') {
+        print('An advisory is adopted as a bug report: --kind bug.');
         return 1;
       }
       if (!GITHUB_LOGIN.test(login)) {
@@ -1040,7 +1047,7 @@ const COMMANDS: Record<string, Command> = {
       }
       const as = named ? `as ${login}, linked to ${GITHUB_URL}/${login}` : 'as an anonymous player';
       print(
-        `Adopted ${refName(ref).toLowerCase()} as ${ADOPTED_AS[kind as ContributionKind]}. The home page lists it ` +
+        `Adopted ${refNamed(ref)} as ${ADOPTED_AS[kind as ContributionKind]}. The home page lists it ` +
           `now, ${as}, saying that the player contributed:`,
       );
       printSummary(print, summary.zh, summary.en);
@@ -1057,7 +1064,9 @@ const COMMANDS: Record<string, Command> = {
       if (typeof summary === 'number') return summary;
       const found = data.contributions.byRef(ref);
       if (found === undefined || !data.contributions.describe(ref, summary)) {
-        print(`${refName(ref)} isn't adopted. Adopt it with github adopt ${refWord(ref)} --kind <kind> ...`);
+        print(
+          `${refName(ref)} isn't adopted. Adopt it with github adopt ${refWord(ref)} --kind <kind> --login <username> --id <number> --zh <sentence> --en <sentence>.`,
+        );
         return 1;
       }
       print(`${refName(ref)} now says that the player contributed:`);
@@ -1101,11 +1110,11 @@ const COMMANDS: Record<string, Command> = {
         return 1;
       }
       if (!data.contributions.forget(ref)) {
-        print(`The author of ${refName(ref).toLowerCase()} was forgotten already.`);
+        print(`The author of ${refNamed(ref)} was forgotten already.`);
         return 1;
       }
       print(
-        `Forgot that ${found.login} made ${refName(ref).toLowerCase()}: it is listed as an anonymous player, and ` +
+        `Forgot that ${found.login} made ${refNamed(ref)}: it is listed as an anonymous player, and ` +
           'nothing names its author any more.',
       );
       return 0;

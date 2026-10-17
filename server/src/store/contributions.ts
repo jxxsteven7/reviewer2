@@ -57,10 +57,8 @@ export type GithubRefusal = 'adopted_already' | 'feedback_issue';
 const COLUMNS =
   'issue, advisory, kind, login, github_id AS githubId, named, adopted_at AS adoptedAt, ' +
   'summary_zh AS summaryZh, summary_en AS summaryEn';
-// A row by its reference: the one of the two that the reference gives, with the other NULL.
-const BY_REF = 'WHERE issue IS ? AND advisory IS ?';
-
-// The parameters of BY_REF.
+// The parameters of a statement that names a row by its reference, `WHERE issue IS ? AND
+// advisory IS ?`: the one of the two that the reference gives, with the other NULL.
 const refParams = (ref: GithubRef): [number | null, string | null] =>
   'issue' in ref ? [ref.issue, null] : [null, ref.advisory];
 
@@ -82,15 +80,20 @@ export class ContributionStore {
       'INSERT INTO github_contributions (issue, advisory, kind, login, github_id, named, adopted_at, summary_zh, ' +
         'summary_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
-    this.#byRef = db.prepare(`SELECT ${COLUMNS} FROM github_contributions ${BY_REF}`);
+    this.#byRef = db.prepare(`SELECT ${COLUMNS} FROM github_contributions WHERE issue IS ? AND advisory IS ?`);
     this.#feedbackIssue = db.prepare('SELECT id FROM feedback WHERE issue = ?');
     // The operator's changes, each with its rule, so that none happens by mistake: the sentences
     // are written again for a row that is there; a row is made anonymous once; the author goes
     // once, with the naming.
-    this.#describe = db.prepare(`UPDATE github_contributions SET summary_zh = ?, summary_en = ? ${BY_REF}`);
-    this.#anonymize = db.prepare(`UPDATE github_contributions SET named = 0 ${BY_REF} AND named = 1`);
+    this.#describe = db.prepare(
+      'UPDATE github_contributions SET summary_zh = ?, summary_en = ? WHERE issue IS ? AND advisory IS ?',
+    );
+    this.#anonymize = db.prepare(
+      'UPDATE github_contributions SET named = 0 WHERE issue IS ? AND advisory IS ? AND named = 1',
+    );
     this.#forget = db.prepare(
-      `UPDATE github_contributions SET login = NULL, github_id = NULL, named = 0 ${BY_REF} AND login IS NOT NULL`,
+      'UPDATE github_contributions SET login = NULL, github_id = NULL, named = 0 ' +
+        'WHERE issue IS ? AND advisory IS ? AND login IS NOT NULL',
     );
     this.#list = db.prepare(`SELECT ${COLUMNS} FROM github_contributions ORDER BY adopted_at DESC, rowid DESC`);
     // The contributions as anyone sees them, from both tables, the latest adopted first. Feedback
@@ -99,7 +102,8 @@ export class ContributionStore {
     // a guest's by the name they left; an issue from GitHub by its author's username while they
     // are named; nothing else has a name, a handle or an avatar. Adopted feedback is a GitHub
     // issue, which FeedbackStore.adopt() and admin.ts see to, so a row without one, which only a
-    // hand on the database makes, is left out.
+    // hand on the database makes, is left out. Two adopted at the same moment come from the site
+    // first, and then the latest row of each.
     this.#all = db.prepare(
       "SELECT 'site' AS source, f.kind, CASE WHEN f.link_profile = 1 THEN a.username ELSE f.credit END AS name, " +
         'CASE WHEN f.link_profile = 1 THEN a.handle END AS profile, ' +
@@ -112,7 +116,7 @@ export class ContributionStore {
         'UNION ALL ' +
         "SELECT 'github', g.kind, CASE WHEN g.named = 1 THEN g.login END, NULL, NULL, 0, " +
         'g.summary_zh, g.summary_en, g.issue, g.advisory, g.adopted_at, g.rowid FROM github_contributions g ' +
-        'ORDER BY adoptedAt DESC, id DESC',
+        'ORDER BY adoptedAt DESC, source DESC, id DESC',
     );
   }
 
@@ -124,7 +128,13 @@ export class ContributionStore {
     if ('issue' in ref && this.#feedbackIssue.get(ref.issue) !== undefined) return 'feedback_issue';
     const [issue, advisory] = refParams(ref);
     const adoptedAt = new Date(this.now()).toISOString();
-    this.#insert.run(issue, advisory, kind, login, githubId, named ? 1 : 0, adoptedAt, summary.zh, summary.en);
+    try {
+      this.#insert.run(issue, advisory, kind, login, githubId, named ? 1 : 0, adoptedAt, summary.zh, summary.en);
+    } catch (error) {
+      // Adopted meanwhile by another command: the issue and the advisory are unique.
+      if (error instanceof Error && error.message.includes('UNIQUE')) return 'adopted_already';
+      throw error;
+    }
     return this.byRef(ref) as GithubContribution;
   }
 
