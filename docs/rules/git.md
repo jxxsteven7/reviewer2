@@ -71,6 +71,7 @@ every reconnect. Look them up by their player token instead.
 - Title `<type>: <summary>`; CI puts the version in front, except for [docs for people](versioning.md#docs-for-people) alone, and the title becomes the commit on `main`.
 - One thing per PR. A few small changes may share one branch, worktree and PR when a maintainer agrees; the description lists each.
 - Based on the latest `main` (in a stack, the branch below), with no conflicts, and the template filled in and kept current.
-- Tests pass; new game rules come with unit tests. UI changes are checked at phone width, in both languages, with screenshots.
+- Tests pass; new game rules come with unit tests.
+- A change to how anything players see looks or moves was shown to a maintainer before it was built, as screenshots and, for motion, short videos, at phone and computer width, in both languages, with invented data, and what the maintainer chose is what was built; the PR carries the final screenshots at phone width, in both languages, with invented data.
 - The template's "AI assistance" section says which parts an assistant generated; it is for reviewers, not attribution.
 - Draft PRs are welcome; see [review.md](review.md).

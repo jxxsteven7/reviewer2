@@ -8,7 +8,7 @@
 
 ## How tested
 
-<!-- Tests run and scenarios tried by hand. For UI changes, screenshots at phone width. -->
+<!-- Tests run and scenarios tried by hand. For a change to how anything players see looks or moves: that a maintainer chose it from screenshots and, for motion, short videos, at phone and computer width, in both languages, with invented data; and the final screenshots at phone width, in both languages, with invented data. -->
 
 ## AI assistance
 
