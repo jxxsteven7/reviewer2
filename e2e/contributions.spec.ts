@@ -158,10 +158,17 @@ test("adopted feedback is listed on the home page and counted on its author's pa
     other.getByRole('dialog', { name: username }).getByRole('button', { name: text.friends.addFromRoom }),
   ).toBeVisible();
 
-  // The public page shows the counts only once its owner shows them.
+  // The public page shows the counts until its owner turns them off, and again once turned on.
   await page.goto(address);
   const card = page.locator('.profile-card');
   const pill = card.getByText(`Contributions: ${text.contributions.kinds.game}`);
+  await expect(card).toContainText(username);
+  await expect(pill).toBeVisible();
+  await page.goto('/account');
+  await setup.getByLabel(text.account.profile.public.showThanks).uncheck();
+  await setup.getByRole('button', { name: text.account.profile.public.save }).click();
+  await expect(page.getByText(text.account.profile.public.saved)).toBeVisible();
+  await page.goto(address);
   await expect(card).toContainText(username);
   await expect(pill).toHaveCount(0);
   await page.goto('/account');

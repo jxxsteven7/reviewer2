@@ -10,8 +10,10 @@ import UiSheet from './UiSheet.vue';
 // title is and how it is won. Its place gives it its look (docs/design.md): a pill, a badge or a
 // tag has the small hard shadow and the press of a button, which its place adds with `press
 // press-small`; a title in text, which its place marks `word`, takes the color of its news, blue
-// for good and red for bad, and every title that isn't a pill darkens under a pointer or a press.
-// `still` shows the title as plain text, as on a screen across a room, which nobody taps.
+// for good and red for bad (`good`, `bad`); and every title that isn't a pill darkens under a
+// pointer or a press, to the deeper of the deep shade it stands in: its news', or its group's,
+// which its place names (`red`, `blue`) on a decision. `still` shows the title as plain text, as on
+// a screen across a room, which nobody taps, in the color of its news all the same.
 const props = defineProps<{ title: TitleRef; still?: boolean }>();
 const { t } = useI18n();
 const language = useLanguage();
@@ -22,7 +24,7 @@ const tone = computed(() => titleTone(props.title));
 </script>
 
 <template>
-  <span v-if="still"
+  <span v-if="still" :class="tone"
     ><slot>{{ name }}</slot></span
   >
   <button v-else type="button" class="title-info" :class="tone" aria-haspopup="dialog" @click="open = true">
@@ -51,16 +53,36 @@ const tone = computed(() => titleTone(props.title));
   cursor: pointer;
 }
 
-/* A title that isn't a pill, in a heading or a line of text, eases its color and, pressed, moves
-   down a pixel, as the pills move into their shadows; its place darkens it under a pointer or a
-   press, in the color it gave it. */
-.title-info:not(.pill, .badge, .tag, .author) {
+/* A title that isn't a pill, in a heading or a line of text, darkens under a pointer or a press,
+   which moves it down a pixel, as the pills move into their shadows, and eases back. It darkens to
+   the deeper of the deep shade it stands in: blue for good news or the blue group, red for bad
+   news or the red group; a title in no shade, as in a plain heading, keeps its color. */
+.title-info:not(.press) {
+  --title-deeper: currentcolor;
+
   transition:
     color var(--motion),
     transform var(--motion);
 }
 
-.title-info:not(.pill, .badge, .tag, .author):active {
+.title-info.good,
+.title-info.blue {
+  --title-deeper: var(--blue-deeper);
+}
+
+.title-info.bad,
+.title-info.red {
+  --title-deeper: var(--red-deeper);
+}
+
+@media (hover: hover) {
+  .title-info:not(.press):hover {
+    color: var(--title-deeper);
+  }
+}
+
+.title-info:not(.press):active {
+  color: var(--title-deeper);
   transform: translateY(1px);
 }
 
@@ -75,24 +97,6 @@ const tone = computed(() => titleTone(props.title));
 
 .word.bad {
   color: var(--red-deep);
-}
-
-@media (hover: hover) {
-  .word.good:hover {
-    color: var(--blue-deeper);
-  }
-
-  .word.bad:hover {
-    color: var(--red-deeper);
-  }
-}
-
-.word.good:active {
-  color: var(--blue-deeper);
-}
-
-.word.bad:active {
-  color: var(--red-deeper);
 }
 
 .explanation {

@@ -43,10 +43,7 @@ useDeadlineHeroes(
 );
 useGroupCalls(game);
 // A card revealed in front of the screen turns over on it, as on the players' boards.
-const turned = useTurnedCard(
-  game,
-  computed(() => props.room.me),
-);
+const turned = useTurnedCard(game);
 </script>
 
 <template>

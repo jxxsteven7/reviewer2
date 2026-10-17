@@ -324,12 +324,12 @@ watch(
   white-space: pre-wrap;
 }
 
-/* The link is one line of small text in the link blue, with an arrow after it, which says that it
-   leads off the site (docs/design.md): under a pointer an underline sweeps in under the address
-   alone and the arrow moves out; pressed, the underline is there at once, the arrow further out
-   and the link a pixel lower, and both ease back after. Padding that the margins take back makes
-   it 44px tall to tap, as the buttons are, without moving anything; the focus ring is drawn around
-   the text alone. */
+/* The link is one line of small text in the link blue, not bold, with an arrow after it, which
+   says that it leads off the site (docs/design.md): under a pointer an underline sweeps in under
+   the address alone and the arrow moves out; pressed, the underline is there at once, the arrow
+   further out and the link a pixel lower, and both ease back after. Padding that the margins take
+   back makes it 44px tall to tap, as the buttons are, without moving anything; the focus ring is
+   drawn around the text alone. */
 .link {
   position: relative;
   display: inline-flex;
@@ -341,6 +341,7 @@ watch(
   padding: 11px 0;
   color: var(--link);
   font-size: var(--text-sm);
+  font-weight: var(--weight-text);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   transition:

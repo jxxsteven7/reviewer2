@@ -250,13 +250,13 @@ function closeAll() {
                 <span v-if="friend.alias" class="username">{{ friend.username }}</span>
               </span>
               <span class="sr-only">{{ t(friend.online ? 'friends.online' : 'friends.offline') }}</span>
-              <RouterLink v-if="friend.room?.code" :to="`/room/${friend.room.code}`" class="join press">{{
+              <RouterLink v-if="friend.room?.code" :to="`/room/${friend.room.code}`" class="join press press-small">{{
                 t('friends.join')
               }}</RouterLink>
               <button
                 v-else-if="friend.room"
                 type="button"
-                class="join press"
+                class="join press press-small"
                 :disabled="busy || friend.asked"
                 @click="ask(friend)"
               >
@@ -489,9 +489,9 @@ h3 {
   margin: 0;
 }
 
-/* Joining, or asking to, is the card's main action: a green pill with the outline, the shadow and
-   the press of a main button (UiButton.vue), whose box reaches 44 px high, out of sight; once
-   asked, it is grey and flat. */
+/* Joining, or asking to, is the card's main action: a green pill with the outline of a main button
+   (UiButton.vue) and, small as the title pills beside it, their small shadow and press
+   (press-small), whose box reaches 44 px high, out of sight; once asked, it is grey and flat. */
 .join {
   position: relative;
   display: inline-flex;
@@ -502,7 +502,7 @@ h3 {
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--go);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-0);
   color: var(--ink);
   font: inherit;
   font-size: var(--text-xs);
@@ -590,12 +590,13 @@ h3 {
   color: var(--ink-2);
 }
 
+/* The pills of a friend who is offline are faded, their outline and the ink of their press and
+   shadow grey (FoldedTitles.vue), which the press keeps as it lifts and drops them. */
 .offline :deep(.folded-titles .pill) {
   --press-ink: var(--neutral);
 
   border-color: var(--neutral);
   background: var(--bg-tint);
-  box-shadow: var(--shift-0) var(--shift-0) 0 var(--neutral);
   color: var(--ink-2);
 }
 

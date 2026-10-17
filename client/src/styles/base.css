@@ -156,8 +156,9 @@ button {
 
 /* A link in text (docs/design.md): the link blue with no underline, deeper when hovered, with an
    underline that sweeps in from the left, under every line of a link that wraps; a press shows it
-   whole at once, and it eases away after. The focus ring is the page's. On the yellow table the
-   link takes the blue group's deep shade, which reads there (`on-table`). */
+   whole at once, and it eases away after. The focus ring is the page's. On a tinted ground, the
+   yellow table or the beige row of a list, where the link blue would fall under 4.5:1, the link
+   takes the blue group's deep shade, which reads there (`on-tint`). */
 .text-link {
   background: linear-gradient(currentcolor, currentcolor) 0 100% / 0 2px no-repeat;
   color: var(--link);
@@ -170,7 +171,7 @@ button {
     background-size 220ms var(--ease-out);
 }
 
-.text-link.on-table {
+.text-link.on-tint {
   color: var(--blue-deep);
 }
 
@@ -180,7 +181,7 @@ button {
     color: var(--link-deep);
   }
 
-  .text-link.on-table:hover {
+  .text-link.on-tint:hover {
     color: var(--blue-deeper);
   }
 }
@@ -195,7 +196,7 @@ button {
   transition-duration: 0s;
 }
 
-.text-link.on-table:active {
+.text-link.on-tint:active {
   color: var(--blue-deeper);
 }
 

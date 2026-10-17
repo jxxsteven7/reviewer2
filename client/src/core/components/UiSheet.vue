@@ -385,7 +385,7 @@ h2 {
 }
 
 .with-back.slide-out > .panel {
-  animation: slide-out var(--motion-sheet-out) cubic-bezier(0.4, 0, 1, 1) both;
+  animation: slide-out var(--motion-sheet-out) var(--ease-in) both;
 }
 
 @keyframes hold {

@@ -387,10 +387,7 @@ useDeadlineHeroes(
 useGroupCalls(game);
 const floats = useScoreFloats(room);
 // The card that has just been revealed in front of the viewer turns over on the board.
-const turned = useTurnedCard(
-  game,
-  computed(() => room.value.me),
-);
+const turned = useTurnedCard(game);
 
 // The review of the game that has ended, step by step, for everyone who sees the result, with what
 // the viewer's group has said since the end, as it talks the game over.

@@ -3,11 +3,11 @@ import { MARKS, otherTeam, type CardView, type Mark, type Team } from '@reviewer
 import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Shown } from '../../core/components/ScoreFloat.vue';
+import ScoreFloat from '../../core/components/ScoreFloat.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import MarkMenu from './MarkMenu.vue';
 import { useCardGestures } from './useCardGestures';
 import type { Chooser } from './useKeywords';
-import type { Turned } from './useTurnedCard';
 
 // The 5 by 5 board. Cards can be chosen only when the viewer may reveal one, or, while a PI
 // marks the cards a clue is meant for, only the group's own that are still to be found
@@ -22,8 +22,9 @@ import type { Turned } from './useTurnedCard';
 // screen reader on a phone, which can press no key, three buttons that only screen readers find
 // follow the cards, and mark the card that had the focus last. `turned` is the card that has just
 // been turned face up in front of the viewer, which turns over (useTurnedCard.ts), and `float` what
-// the card that has just been revealed did to the viewer's points, which rises from it
-// (ScoreFloat.vue).
+// the card that has just been revealed did to the viewer's points, which rises from the card's
+// place on the board (ScoreFloat.vue), beside the card rather than in it, so that it doesn't turn
+// with the card.
 const props = withDefaults(
   defineProps<{
     cards: CardView[];
@@ -39,7 +40,7 @@ const props = withDefaults(
     team?: Team | null;
     quietNotes?: boolean;
     gestures?: boolean;
-    turned?: Turned | null;
+    turned?: number | null;
     float?: (Shown & { card: number }) | null;
   }>(),
   {
@@ -56,6 +57,15 @@ const props = withDefaults(
     float: null,
   },
 );
+// The cell of a card in the grid, as the lines on either side of it, for what is positioned against
+// the cell: a line left open would reach the board's edge. The columns across are as the grid's
+// are set below.
+const COLUMNS = 5;
+function cellOf(card: number): { gridRow: string; gridColumn: string } {
+  const row = Math.floor(card / COLUMNS) + 1;
+  const column = (card % COLUMNS) + 1;
+  return { gridRow: `${row} / ${row + 1}`, gridColumn: `${column} / ${column + 1}` };
+}
 const open = (card: CardView) =>
   props.selectable && !card.revealed && (props.targeting === null || card.color === props.targeting);
 const order = (index: number) => (props.targets.includes(index) ? props.targets.indexOf(index) + 1 : null);
@@ -138,8 +148,7 @@ const named = computed(() => {
       :target="order(index)"
       :note="card.revealed ? null : noteOf(index)"
       :note-quiet="quietNotes"
-      :turning="turned?.card === index ? turned : null"
-      :float="float?.card === index ? float : null"
+      :turning="turned === index"
       :class="{ pressing: pressing === index, lifting: holding?.index === index }"
       :aria-keyshortcuts="markable(card) ? '1 2 3' : undefined"
       :aria-describedby="markable(card) ? keysId : undefined"
@@ -153,6 +162,7 @@ const named = computed(() => {
       @keydown="key(index, $event)"
       @contextmenu="contextMenu(index, $event)"
     />
+    <ScoreFloat v-if="float" :key="float.key" :float="float" :style="cellOf(float.card)" />
     <MarkMenu
       v-if="gestures && holding && team"
       ref="menu"
@@ -176,8 +186,11 @@ const named = computed(() => {
 
 <style scoped>
 /* The gap leaves room for the shadows and for what hangs on the cards' corners (KeywordsCard), and
-   the padding for what hangs over the board's edges. */
+   the padding for what hangs over the board's edges. The board is the containing block of the
+   points that rise from a card, placed in the card's cell of the grid (COLUMNS across), where they
+   are positioned against the cell. */
 .board {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 9px 8px;

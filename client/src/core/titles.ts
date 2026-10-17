@@ -31,8 +31,10 @@ export type TitleRef =
 type Translate = (key: string, named?: Record<string, string | number>) => string;
 
 // The news a title brings, which colors it where it stands in text, blue for good and red for bad
-// (TitleInfo.vue, docs/design.md). A decision takes its group's color instead, and the author's
-// badge and the AI tag are pills, which have no news.
+// (TitleInfo.vue, docs/design.md). A decision takes its group's color instead; the author's badge
+// and the AI tag are pills, which have no news; and the titles of two friends, which stand only on
+// pills and in headings, have none yet: some are good news and some, as being rejected together,
+// are not.
 const BAD_AWARDS: ReadonlySet<Title> = new Set([
   'black_hole',
   'missed_deadline',
@@ -46,11 +48,11 @@ export function titleTone(title: TitleRef): 'good' | 'bad' | null {
     case 'streak':
       return title.streak === 'wins' ? 'good' : 'bad';
     case 'contribution':
-    case 'duo':
       return 'good';
     case 'author':
     case 'verdict':
     case 'agents':
+    case 'duo':
       return null;
   }
 }

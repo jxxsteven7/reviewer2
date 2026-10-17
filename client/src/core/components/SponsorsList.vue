@@ -44,7 +44,7 @@ const empty = ({ sections }: Sponsors) => sections.length === 0;
       >
         <a
           v-if="entry.link?.startsWith('https://')"
-          class="name text-link"
+          class="name text-link on-tint"
           :href="entry.link"
           target="_blank"
           rel="nofollow ugc noopener"
@@ -58,7 +58,8 @@ const empty = ({ sections }: Sponsors) => sections.length === 0;
 </template>
 
 <style scoped>
-/* A sponsor's name, a text link where they left one (base.css), in bold either way. */
+/* A sponsor's name, a text link where they left one, in the deep blue that reads on the beige row
+   (`on-tint` in base.css), in bold either way. */
 .name {
   font-weight: var(--weight-bold);
 }

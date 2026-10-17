@@ -89,7 +89,8 @@ watch([() => props.titles.join(), locale], () => {
   list-style: none;
 }
 
-/* A pill has the small hard shadow and the press of a button, which it is. Its box reaches above
+/* A pill has the small hard shadow and the press of a button, which it is, in the ink of its press
+   (--press-ink in base.css), grey on the pills of a friend who is offline. Its box reaches above
    and below it, out of sight, to 44 px tall, centered on it; the rows are 12 px apart, more than the
    box reaches on either side, so that no pill's box lies over another's. */
 .pill {
@@ -98,7 +99,7 @@ watch([() => props.titles.join(), locale], () => {
   border: var(--line-thin) solid var(--ink);
   border-radius: var(--radius-pill);
   background: var(--bg);
-  box-shadow: var(--shadow-0);
+  box-shadow: var(--shift-0) var(--shift-0) 0 var(--press-ink);
   color: var(--ink);
   font: inherit;
   font-size: var(--text-xs);

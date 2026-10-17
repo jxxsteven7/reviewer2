@@ -2,6 +2,7 @@
 import {
   clueCounts,
   defaultSettings,
+  type CardView,
   type ChatMessage,
   type ClueRecord,
   type KeywordsRoomData,
@@ -32,6 +33,7 @@ import DecisionLetter from './DecisionLetter.vue';
 import GameRosters from './GameRosters.vue';
 import GroupChat from './GroupChat.vue';
 import GuessBar from './GuessBar.vue';
+import KeywordsBoard from './KeywordsBoard.vue';
 import KeywordsCard from './KeywordsCard.vue';
 import KeywordsGame from './KeywordsGame.vue';
 import { missedLine } from './missed';
@@ -609,38 +611,48 @@ describe('KeywordsCard', () => {
     expect(wrapper.get('button').attributes('aria-label')).toBe('Baseline, Irrelevant');
   });
 
-  test('turns over when it has just been revealed, with the yellow face of a card that was the choice', () => {
-    const revealed = { ...card, color: 'red' as const, revealed: true };
-    const turning = mount(KeywordsCard, {
+  // A card that has just been revealed turns over with the face it lay with: the paper, the yellow
+  // of the viewer's choice, the tint of the group's mark or of the color a PI knew, or Reviewer 2's
+  // ink for the PI who knew it; a card revealed and lying still doesn't turn.
+  test('turns over when it has just been revealed, with the face it had until then', async () => {
+    const lying = async (
+      before: Partial<InstanceType<typeof KeywordsCard>['$props']>,
+      revealed: NonNullable<CardView['color']> = 'red',
+    ) => {
+      const wrapper = mount(KeywordsCard, {
+        props: { card, index: 3, selectable: false, selected: false, choosers: [], ...before },
+        global: global(),
+      });
+      expect(wrapper.get('button').classes()).not.toContain('turning');
+      await wrapper.setProps({
+        card: { ...card, color: revealed, revealed: true },
+        selected: false,
+        note: null,
+        turning: true,
+      });
+      return wrapper.get('button').classes();
+    };
+    expect(await lying({})).toEqual(expect.arrayContaining(['turning', 'face-paper']));
+    expect(await lying({ selectable: true, selected: true })).toContain('face-choice');
+    expect(await lying({ note: { mark: 'theirs', color: 'blue' } })).toContain('face-blue');
+    expect(await lying({ note: { mark: 'r2', color: 'r2' } })).toContain('face-r2');
+    // The PI only reads the marks: the card keeps the tint of its own color, which the PI knows.
+    expect(
+      await lying({ note: { mark: 'ours', color: 'blue' }, noteQuiet: true, card: { ...card, color: 'red' } }),
+    ).toContain('face-red');
+    expect(await lying({ card: { ...card, color: 'neutral' } }, 'neutral')).toContain('face-neutral');
+    expect(await lying({ card: { ...card, color: 'reviewer2' } }, 'reviewer2')).toContain('face-ink');
+    const still = mount(KeywordsCard, {
       props: {
-        card: revealed,
+        card: { ...card, color: 'red', revealed: true },
         index: 3,
         selectable: false,
         selected: false,
         choosers: [],
-        turning: { fromChoice: false },
       },
       global: global(),
     });
-    expect(turning.get('button').classes()).toContain('turning');
-    expect(turning.get('button').classes()).not.toContain('from-choice');
-    const fromChoice = mount(KeywordsCard, {
-      props: {
-        card: revealed,
-        index: 3,
-        selectable: false,
-        selected: false,
-        choosers: [],
-        turning: { fromChoice: true },
-      },
-      global: global(),
-    });
-    expect(fromChoice.get('button').classes()).toEqual(expect.arrayContaining(['turning', 'from-choice']));
-    const lying = mount(KeywordsCard, {
-      props: { card: revealed, index: 3, selectable: false, selected: false, choosers: [] },
-      global: global(),
-    });
-    expect(lying.get('button').classes()).not.toContain('turning');
+    expect(still.get('button').classes()).not.toContain('turning');
   });
 
   test("stays readable, but out of the Tab order and inert, when it can't be chosen", async () => {
@@ -1026,6 +1038,29 @@ describe('TurnStrip', () => {
   });
 });
 
+describe('KeywordsBoard', () => {
+  // The points rise from the card's cell of the grid, beside the card rather than in it, so that
+  // they don't turn over with a card that has just been revealed.
+  test('raises the points of a revealed card from its place on the board, outside the card', () => {
+    const cards: CardView[] = Array.from({ length: 25 }, (_, index) => ({ word: `Word${index}`, revealed: false }));
+    const wrapper = mount(KeywordsBoard, {
+      props: {
+        cards,
+        selectable: false,
+        selected: null,
+        lang: 'en',
+        float: { key: 1, text: '+1', team: 'red', card: 7 },
+      },
+      global: global(),
+    });
+    const float = wrapper.get('.score-float').element as HTMLElement;
+    expect(float.parentElement).toBe(wrapper.get('.board').element);
+    expect(float.style.gridRow).toBe('2 / 3');
+    expect(float.style.gridColumn).toBe('3 / 4');
+    expect(wrapper.find('.card .score-float').exists()).toBe(false);
+  });
+});
+
 describe('ReplayViewer', () => {
   const replay: ShownReplay = {
     gameId: 'g1',
@@ -1079,6 +1114,8 @@ describe('ReplayViewer', () => {
       expect(turning()).toEqual([false, false, false]);
       await wrapper.get('input[type="range"]').setValue('2');
       expect(turning()).toEqual([true, false, false]);
+      // Every card of a replay shows its color: the card turns with the tint it lay with.
+      expect(wrapper.findAll('.board button')[0]?.classes()).toContain('face-red');
       vi.advanceTimersByTime(TURN_MS);
       await nextTick();
       expect(turning()).toEqual([false, false, false]);

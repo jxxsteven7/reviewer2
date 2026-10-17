@@ -59,7 +59,9 @@ const letters = computed(() => {
         <p class="kicker">
           {{ letter.team ? t('game.letter.titleFor', { group: group(letter.team) }) : t('game.letter.title') }}
         </p>
-        <h2 class="verdict"><TitleInfo :title="{ kind: 'verdict', verdict: letter.verdict }" :still="compact" /></h2>
+        <h2 class="verdict">
+          <TitleInfo :title="{ kind: 'verdict', verdict: letter.verdict }" :still="compact" :class="letter.team" />
+        </h2>
         <p class="body">{{ letter.body }}</p>
         <p class="signature">{{ t('game.letter.signature') }}</p>
       </article>
@@ -137,25 +139,6 @@ const letters = computed(() => {
 
 .withdrawn .verdict {
   color: var(--ink-2);
-}
-
-/* The decision darkens under a pointer or a press, as every title in text does (TitleInfo.vue). */
-@media (hover: hover) {
-  .red .verdict .title-info:hover {
-    color: var(--red-deeper);
-  }
-
-  .blue .verdict .title-info:hover {
-    color: var(--blue-deeper);
-  }
-}
-
-.red .verdict .title-info:active {
-  color: var(--red-deeper);
-}
-
-.blue .verdict .title-info:active {
-  color: var(--blue-deeper);
 }
 
 .body {

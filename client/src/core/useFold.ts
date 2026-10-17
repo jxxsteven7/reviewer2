@@ -5,7 +5,9 @@ import type { BaseTransitionProps } from 'vue';
 // as it closes. These are the hooks of a <Transition> with no CSS of its own, around the part that
 // `v-show` folds: the height is measured, since CSS can't ease to `auto` everywhere yet, and set in
 // the element's own style for the move alone. A fold toggled while it moves goes on from where it
-// is. Where the device asks for less motion, the part is simply there, or gone.
+// is, and one whose content grew or shrank as it opened, as a list that came while its note said
+// it was loading, goes on to its new height rather than jumping to it. Where the device asks for
+// less motion, the part is simply there, or gone.
 
 const DURATION = 220;
 const MOVING = ['height', 'padding-top', 'padding-bottom', 'opacity'];
@@ -18,6 +20,15 @@ function clear(el: HTMLElement) {
   stops.get(el)?.();
   stops.delete(el);
   for (const property of [...MOVING, 'overflow', 'transition']) el.style.removeProperty(property);
+}
+
+// Whether the height that an open part takes differs from the one it was eased to, measured with
+// the move's height out of the way and put back, so that the move goes on from it.
+function grown(el: HTMLElement, eased: string): boolean {
+  el.style.removeProperty('height');
+  const takes = `${el.getBoundingClientRect().height}px`;
+  el.style.height = eased;
+  return takes !== eased;
 }
 
 function ease(el: unknown, opening: boolean, done: () => void) {
@@ -69,7 +80,13 @@ function ease(el: unknown, opening: boolean, done: () => void) {
     el.style.opacity = '0';
   }
   // The end of the move: the transition's end, or a timer a little after it, whichever is first.
+  // A part opened to a height its content has outgrown or fallen short of meanwhile moves on to
+  // the height it takes now.
   const end = () => {
+    if (opening && grown(el, full)) {
+      ease(el, true, done);
+      return;
+    }
     clear(el);
     done();
   };

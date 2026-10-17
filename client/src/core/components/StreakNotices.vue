@@ -153,25 +153,6 @@ const announcement = computed(() =>
   color: var(--red-deep);
 }
 
-/* The title darkens under a pointer or a press, as every title in text does (TitleInfo.vue). */
-@media (hover: hover) {
-  .wins .title .title-info:hover {
-    color: var(--blue-deeper);
-  }
-
-  .losses .title .title-info:hover {
-    color: var(--red-deeper);
-  }
-}
-
-.wins .title .title-info:active {
-  color: var(--blue-deeper);
-}
-
-.losses .title .title-info:active {
-  color: var(--red-deeper);
-}
-
 .line {
   max-width: 34rem;
   line-height: 1.5;

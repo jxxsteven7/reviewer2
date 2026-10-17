@@ -107,6 +107,7 @@ async function submit() {
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('account.signIn.noEmail') }}</p>
       <p v-if="mode === 'register'" class="note">{{ t('privacy.records') }}</p>
+      <p v-if="mode === 'register'" class="note">{{ t('account.signIn.publicPage') }}</p>
       <label v-if="mode === 'register'" class="agree">
         <input v-model="agreed" type="checkbox" />
         <span>{{ t('account.signIn.agree') }}</span>

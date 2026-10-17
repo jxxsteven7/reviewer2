@@ -7,7 +7,7 @@ import {
   type KeywordsView,
 } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { endFloats, endsBetween, revealedBetween, revealFloats, signed } from './floats';
+import { endFloats, endsBetween, revealedBetween, revealFloats, signed, turnedBetween } from './floats';
 
 // The points that rise as a game goes (docs/games/keywords.md#points-as-they-come): what a card
 // revealed in front of the viewer does to each player's points, and what the end adds.
@@ -72,6 +72,19 @@ function data(side: KeywordsRoomData['side']): KeywordsRoomData {
     game: null,
   };
 }
+
+describe('the card turned between two boards', () => {
+  const board = (revealed: number[]) => [0, 1, 2].map((index) => card(revealed.includes(index), 'red'));
+
+  test('is the one card that has come face up, and none for none, several, one turned back or another board', () => {
+    expect(turnedBetween(board([]), board([1]))).toBe(1);
+    expect(turnedBetween(board([0]), board([0, 2]))).toBe(2);
+    expect(turnedBetween(board([1]), board([1]))).toBeNull();
+    expect(turnedBetween(board([]), board([0, 1]))).toBeNull();
+    expect(turnedBetween(board([1]), board([]))).toBeNull();
+    expect(turnedBetween(board([]).slice(0, 2), board([1]))).toBeNull();
+  });
+});
 
 describe('a card revealed between two snapshots', () => {
   const before = view();

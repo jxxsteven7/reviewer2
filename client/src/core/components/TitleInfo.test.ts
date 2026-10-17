@@ -56,10 +56,18 @@ describe('TitleInfo', () => {
     expect(tone({ kind: 'streak', streak: 'wins', length: 3, best: false })).toEqual(['good']);
     expect(tone({ kind: 'streak', streak: 'losses', length: 3, best: true })).toEqual(['bad']);
     expect(tone({ kind: 'contribution', contribution: 'bug' })).toEqual(['good']);
-    // A decision takes its group's color where it stands, and the pills have no news.
+    // A decision takes its group's color where it stands, the pills have no news, and the titles
+    // of two friends, good and bad among them, none yet.
     expect(tone({ kind: 'verdict', verdict: 'oral' })).toEqual([]);
     expect(tone({ kind: 'author' })).toEqual([]);
     expect(tone({ kind: 'agents' })).toEqual([]);
+    expect(tone({ kind: 'duo', duo: 'corejected' })).toEqual([]);
+    // Shown as plain text, as on a screen across a room, a title keeps the color of its news.
+    const still = mount(TitleInfo, {
+      props: { title: { kind: 'streak', streak: 'losses', length: 3, best: false }, still: true },
+      global: global(),
+    });
+    expect(still.get('span').classes()).toContain('bad');
   });
 
   test('shows a title as plain text where nobody taps, as on a screen', () => {

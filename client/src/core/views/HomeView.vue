@@ -59,7 +59,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <i18n-t keypath="footer.byline" tag="span" class="byline after-tagline" scope="global">
           <template #name>
             <a
-              class="author text-link on-table"
+              class="author text-link on-tint"
               href="https://jxxsteven7.github.io/"
               target="_blank"
               rel="noopener noreferrer"
@@ -73,7 +73,7 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
         <i18n-t keypath="footer.byline" tag="span" class="byline" scope="global">
           <template #name>
             <a
-              class="author text-link on-table"
+              class="author text-link on-tint"
               href="https://jxxsteven7.github.io/"
               target="_blank"
               rel="noopener noreferrer"

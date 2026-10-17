@@ -115,6 +115,7 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
               v-if="explained(record.verdict)"
               :title="{ kind: 'verdict', verdict: record.verdict }"
               class="verdict"
+              :class="record.side"
               >{{ short(record.verdict) }}</TitleInfo
             >
             <span v-else class="verdict">{{ short(record.verdict) }}</span>
@@ -371,32 +372,14 @@ button.verdict::before {
 }
 
 /* A game's decision takes the deep shade of the player's group, as the decision letter's heading
-   does, darker under a pointer or a press, as every title in text (TitleInfo.vue). A match's title
-   takes the color of its news there. */
+   does, and darkens under a pointer or a press as every title in text does (TitleInfo.vue, which
+   the group's name on the decision tells the shade). A match's title takes the color of its news. */
 .red .verdict {
   color: var(--red-deep);
 }
 
 .blue .verdict {
   color: var(--blue-deep);
-}
-
-@media (hover: hover) {
-  .red button.verdict:hover {
-    color: var(--red-deeper);
-  }
-
-  .blue button.verdict:hover {
-    color: var(--blue-deeper);
-  }
-}
-
-.red button.verdict:active {
-  color: var(--red-deeper);
-}
-
-.blue button.verdict:active {
-  color: var(--blue-deeper);
 }
 
 /* Watching the game again: a round button on the right, with the small hard shadow and the press

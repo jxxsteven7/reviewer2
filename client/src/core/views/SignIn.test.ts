@@ -64,9 +64,12 @@ describe('signing in', () => {
   test('tells whoever registers what becomes of the record of their games, and registers nobody who has not agreed', async () => {
     const wrapper = mount(SignIn, { global: { plugins: [i18n], stubs: { RouterLink: true } } });
     expect(wrapper.text()).not.toContain('Games are recorded.');
+    expect(wrapper.text()).not.toContain('your public page');
     expect(wrapper.find('.agree').exists()).toBe(false);
     await wrapper.findAll('.tab')[1]?.trigger('click');
     expect(wrapper.text()).toContain("used to train and test the game's AI players");
+    // What the public page shows of the record until the owner turns it off.
+    expect(wrapper.text()).toContain('until you turn either off on your account page');
     expect(wrapper.get('.agree').text()).toBe('I have read and agree to how games are recorded, as above');
     await wrapper.get('input[autocomplete="username"]').setValue('Ann');
     await wrapper.get('input[autocomplete="new-password"]').setValue('correct horse');

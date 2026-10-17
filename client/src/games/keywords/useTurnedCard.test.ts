@@ -3,7 +3,7 @@ import type { CardView, KeywordsView } from '@reviewer2/shared';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref, type Ref } from 'vue';
-import { TURN_MS, turnedBetween, useTurnedCard, useTurnedSteps, type Turned } from './useTurnedCard';
+import { TURN_MS, useTurnedCard, useTurnedSteps } from './useTurnedCard';
 
 // Which card turns over, and when (useTurnedCard.ts): only one revealed in front of the viewer.
 
@@ -51,17 +51,6 @@ function mounted<T>(use: () => T): T {
   return used;
 }
 
-describe('turnedBetween', () => {
-  test('is the one card that has come face up, and nothing for none, several or another board', () => {
-    expect(turnedBetween(cards([]), cards([1]))).toBe(1);
-    expect(turnedBetween(cards([0]), cards([0, 2]))).toBe(2);
-    expect(turnedBetween(cards([1]), cards([1]))).toBeNull();
-    expect(turnedBetween(cards([]), cards([0, 1]))).toBeNull();
-    expect(turnedBetween(cards([1]), cards([]))).toBeNull();
-    expect(turnedBetween(cards([]).slice(0, 2), cards([1]))).toBeNull();
-  });
-});
-
 describe('the card that turns over in a game', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -71,9 +60,8 @@ describe('the card that turns over in a game', () => {
 
   function turnedIn(first: KeywordsView) {
     const current = ref<KeywordsView | null>(first);
-    const me = ref<string | null>('bob');
-    const turned = mounted(() => useTurnedCard(current, me));
-    return { current, me, turned };
+    const turned = mounted(() => useTurnedCard(current));
+    return { current, turned };
   }
 
   test('is the card revealed in front of the viewer, for a while', async () => {
@@ -81,24 +69,11 @@ describe('the card that turns over in a game', () => {
     expect(turned.value).toBeNull();
     current.value = game([1]);
     await nextTick();
-    expect(turned.value).toEqual({ card: 1, fromChoice: false });
+    expect(turned.value).toBe(1);
     vi.advanceTimersByTime(TURN_MS - 1);
-    expect(turned.value).toEqual({ card: 1, fromChoice: false });
+    expect(turned.value).toBe(1);
     vi.advanceTimersByTime(1);
     expect(turned.value).toBeNull();
-  });
-
-  test("was the viewer's choice when they had chosen it, and not when someone else had", async () => {
-    const { current, turned } = turnedIn(game([], { selections: [{ player: 'bob', card: 1 }] }));
-    current.value = game([1]);
-    await nextTick();
-    expect(turned.value).toEqual({ card: 1, fromChoice: true });
-
-    current.value = game([1], { selections: [{ player: 'cat', card: 2 }] });
-    await nextTick();
-    current.value = game([1, 2]);
-    await nextTick();
-    expect(turned.value).toEqual({ card: 2, fromChoice: false });
   });
 
   test('turns nothing for the view the page opens with, several cards at once, or a new connection', async () => {
@@ -116,7 +91,7 @@ describe('the card that turns over in a game', () => {
     expect(again.turned.value).toBeNull();
     again.current.value = game([0, 1, 2]);
     await nextTick();
-    expect(again.turned.value).toEqual({ card: 2, fromChoice: false });
+    expect(again.turned.value).toBe(2);
   });
 
   test('turns nothing across a pause, which hides the board, or into another game', async () => {
@@ -128,7 +103,7 @@ describe('the card that turns over in a game', () => {
     expect(turned.value).toBeNull();
     current.value = game([1, 2]);
     await nextTick();
-    expect(turned.value).toEqual({ card: 2, fromChoice: false });
+    expect(turned.value).toBe(2);
     vi.advanceTimersByTime(TURN_MS);
 
     current.value = game([0], { gameId: 'g2' });
@@ -136,7 +111,7 @@ describe('the card that turns over in a game', () => {
     expect(turned.value).toBeNull();
     current.value = game([0, 1], { gameId: 'g2' });
     await nextTick();
-    expect(turned.value).toEqual({ card: 1, fromChoice: false });
+    expect(turned.value).toBe(1);
   });
 
   test('ends a turn still on when the page goes, and starts over for the next card', async () => {
@@ -146,9 +121,9 @@ describe('the card that turns over in a game', () => {
     vi.advanceTimersByTime(TURN_MS / 2);
     current.value = game([0, 1]);
     await nextTick();
-    expect(turned.value).toEqual({ card: 1, fromChoice: false });
+    expect(turned.value).toBe(1);
     vi.advanceTimersByTime(TURN_MS / 2);
-    expect(turned.value).toEqual({ card: 1, fromChoice: false });
+    expect(turned.value).toBe(1);
     vi.advanceTimersByTime(TURN_MS / 2);
     expect(turned.value).toBeNull();
   });
@@ -160,13 +135,13 @@ describe('the card that turns over in a replay', () => {
 
   test('is the one that the step reveals; a jump over several, or back, turns none', async () => {
     const board: Ref<CardView[]> = ref(cards([]));
-    const turned: Ref<Turned | null> = mounted(() => useTurnedSteps(board));
+    const turned: Ref<number | null> = mounted(() => useTurnedSteps(board));
     board.value = cards([0]);
     await nextTick();
-    expect(turned.value).toEqual({ card: 0, fromChoice: false });
+    expect(turned.value).toBe(0);
     board.value = cards([0, 1, 2]);
     await nextTick();
-    expect(turned.value).toEqual({ card: 0, fromChoice: false });
+    expect(turned.value).toBe(0);
     vi.advanceTimersByTime(TURN_MS);
     expect(turned.value).toBeNull();
     board.value = cards([0]);
@@ -174,6 +149,6 @@ describe('the card that turns over in a replay', () => {
     expect(turned.value).toBeNull();
     board.value = cards([0, 2]);
     await nextTick();
-    expect(turned.value).toEqual({ card: 2, fromChoice: false });
+    expect(turned.value).toBe(2);
   });
 });
