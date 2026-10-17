@@ -8,6 +8,7 @@ import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { admin } from './admin';
+import { ContributionStore } from './store/contributions';
 import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 import { FeedbackStore, type NewFeedback } from './store/feedback';
 
@@ -33,6 +34,8 @@ afterEach(() => {
 });
 
 const run = (...args: string[]) => admin(args, { DATA_DIR: dir }, (line) => printed.push(line));
+// The contributions as the home page lists them.
+const contributions = () => new ContributionStore(database.db).all();
 
 function annWithAvatar(): string {
   const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash', RECORDS_NOTICE_VERSION);
@@ -371,37 +374,18 @@ describe('feedback adopt', () => {
       summaryZh: ZH,
       summaryEn: EN,
     });
-    expect(store.contributions()).toEqual([
-      {
-        kind: 'bug',
-        name: null,
-        profile: null,
-        avatar: null,
-        deleted: false,
-        summary: { zh: ZH, en: EN },
-        issue: 43,
-        month: '2026-10',
-      },
+    const site = { source: 'site', avatar: null, deleted: false, advisory: null, month: '2026-10' };
+    expect(contributions()).toEqual([
+      { kind: 'bug', name: null, profile: null, summary: { zh: ZH, en: EN }, issue: 43, ...site },
       {
         kind: 'words',
         name: 'octocat',
         profile: null,
-        avatar: null,
-        deleted: false,
         summary: { zh: '加了词', en: 'Added words' },
         issue: 42,
-        month: '2026-10',
+        ...site,
       },
-      {
-        kind: 'idea',
-        name: 'Ann',
-        profile: ann.handle,
-        avatar: null,
-        deleted: false,
-        summary: { zh: ZH, en: EN },
-        issue: 41,
-        month: '2026-10',
-      },
+      { kind: 'idea', name: 'Ann', profile: ann.handle, summary: { zh: ZH, en: EN }, issue: 41, ...site },
     ]);
     expect(accounts.summary(ann).contributions).toEqual([
       { kind: 'idea', count: 1 },
@@ -418,7 +402,7 @@ describe('feedback adopt', () => {
     expect(printed.at(-1)).toBe('There is no feedback #4.');
     expect(adopt('x')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #x.');
-    expect(store.contributions()).toHaveLength(3);
+    expect(contributions()).toHaveLength(3);
   });
 
   test('lists feedback signed with an account that is gone as a deleted player, counted for no account', () => {
@@ -433,7 +417,7 @@ describe('feedback adopt', () => {
       'Adopted feedback #1, issue #41. The home page lists it now, as a deleted player, counted for no account, ' +
         'saying that the player contributed:',
     );
-    expect(store.contributions()).toMatchObject([{ name: null, profile: null, deleted: true, issue: 41 }]);
+    expect(contributions()).toMatchObject([{ name: null, profile: null, deleted: true, issue: 41 }]);
   });
 
   test('takes only feedback that is a GitHub issue, which it keeps', () => {
@@ -454,7 +438,7 @@ describe('feedback adopt', () => {
         'place if #43 is wrong: feedback issue 1 <number>.',
     );
     expect(run('feedback', 'issue', '1', '44')).toBe(0);
-    expect(store.contributions()[0]?.issue).toBe(44);
+    expect(contributions()[0]?.issue).toBe(44);
   });
 
   test('takes what the player contributed in both languages, by the rules of a contribution', () => {
@@ -486,10 +470,10 @@ describe('feedback adopt', () => {
     expect(store.setIssue(1, 41)).toBe(true);
     expect(adopt('1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 is in the trash. Restore it first: feedback restore 1.');
-    expect(store.contributions()).toEqual([]);
+    expect(contributions()).toEqual([]);
     expect(run('feedback', 'restore', '1')).toBe(0);
     expect(adopt('1')).toBe(0);
-    expect(store.contributions()).toHaveLength(1);
+    expect(contributions()).toHaveLength(1);
   });
 
   test('refuses closed feedback, which was set aside, until it is reopened', () => {
@@ -558,7 +542,7 @@ describe('feedback describe', () => {
       `  zh: ${ZH}`,
       `  en: ${EN}`,
     ]);
-    expect(store.contributions()[0]).toMatchObject({
+    expect(contributions()[0]).toMatchObject({
       name: 'Ann',
       summary: { zh: '提出了倒计时', en: 'Suggested a countdown' },
     });
@@ -622,7 +606,7 @@ describe('feedback draft', () => {
         id: 1,
         kind: 'bug',
         title: 'Bug: Line one',
-        body: `A bug report ${SENT}\n\n> Line one\n> Line two\n\nReported by Ann.`,
+        body: `A bug report ${SENT}\n\n> Line one\n> Line two\n\nReported by Ann.\n\nVersion: v1`,
       }),
     ]);
     expect(Object.keys(JSON.parse(printed[0] as string) as object)).toEqual(['id', 'kind', 'title', 'body']);
@@ -633,7 +617,6 @@ describe('feedback draft', () => {
     const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
     store.add(
       feedback({
-        kind: 'bug',
         text: 'The board is gone.',
         contact: 'wechat: r2',
         credit: 'Ann L',
@@ -645,12 +628,36 @@ describe('feedback draft', () => {
       }),
     );
     const { title, body } = drafted('1');
-    expect(title).toBe('Bug: The board is gone.');
-    expect(body).toBe(`A bug report ${SENT}\n\n> The board is gone\\.\n\nReported by Ann.`);
+    expect(title).toBe('Idea: The board is gone.');
+    expect(body).toBe(`An idea ${SENT}\n\n> The board is gone\\.\n\nSuggested by Ann.`);
     // No contact, link, account, version, language, page, browser, time or id.
     expect(`${title}\n${body}`).not.toMatch(
       /wechat|r2|ann\.example|account|v0\.1\.10|Chinese|zh|room|Mozilla|20\d\d|#1/,
     );
+  });
+
+  test('says which version and browser a bug report came from, by their names and versions alone', () => {
+    const store = new FeedbackStore(database.db);
+    const wechat =
+      'Mozilla/5.0 (Linux; Android 15; 2211133C Build/AQ3A.240912.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) ' +
+      'Version/4.0 Chrome/130.0.6723.107 Mobile Safari/537.36 MicroMessenger/8.0.56.2800(0x28003855)';
+    store.add(feedback({ kind: 'bug', text: 'The board is gone.', version: 'v0.1.42', userAgent: wechat }));
+    // A build named by its commit, which GitHub would link, and a browser it says nothing of.
+    store.add(feedback({ kind: 'bug', text: 'The board is gone.', version: 'abc1234def', userAgent: 'curl/8.5.0' }));
+    // A bug report from before the browser was kept.
+    store.add(feedback({ kind: 'bug', text: 'The board is gone.', version: 'v0.1.5' }));
+    // Only a bug report says them.
+    store.add(feedback({ text: 'The board is gone.', version: 'v0.1.42', userAgent: wechat }));
+    const bug = drafted('1').body;
+    expect(bug).toBe(
+      `A bug report ${SENT}\n\n> The board is gone\\.\n\nSent by an anonymous player.\n\n` +
+        'Version: v0\\.1\\.42\nBrowser: WeChat 8.0.56 on Android 15',
+    );
+    // Never the model or the user agent itself.
+    expect(bug).not.toMatch(/2211133C|Build|AppleWebKit|Mozilla|0x28003855/);
+    expect(drafted('2').body.split('\n').slice(-1)).toEqual([`Version: a${ZWSP}bc1234def`]);
+    expect(drafted('3').body.split('\n').slice(-2)).toEqual(['', 'Version: v0\\.1\\.5']);
+    expect(drafted('4').body).not.toMatch(/Version|Browser|v0\.1\.42|WeChat/);
   });
 
   test('names feedback signed with an account by the account as it is now, or a deleted player', () => {
@@ -663,7 +670,9 @@ describe('feedback draft', () => {
     expect(drafted('1').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Annie.`);
     accounts.store.delete(ann.id);
     expect(drafted('1').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by a deleted player.`);
-    expect(drafted('2').body).toBe(`A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by a deleted player.`);
+    expect(drafted('2').body).toBe(
+      `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by a deleted player.\n\nVersion: v1`,
+    );
   });
 
   test('opens by the kind, as the status page calls it, and names who sent it, or an anonymous player', () => {
@@ -682,14 +691,16 @@ describe('feedback draft', () => {
     });
     expect(drafted('3')).toMatchObject({
       title: 'Bug: A timer, please.',
-      body: `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by Ann.`,
+      body: `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by Ann.\n\nVersion: v1`,
     });
     expect(drafted('4')).toMatchObject({
       title: 'Word lists: A timer, please.',
       body: `A suggestion for the word lists ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
     });
     expect(drafted('5').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
-    expect(drafted('6').body).toBe(`A bug report ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
+    expect(drafted('6').body).toBe(
+      `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.\n\nVersion: v1`,
+    );
   });
 
   test('takes the first line for the title, on one line, cut after 60 characters that a reader sees', () => {
@@ -727,7 +738,8 @@ describe('feedback draft', () => {
     const store = new FeedbackStore(database.db);
     store.add(feedback({ kind: 'bug', text: 'Steps:\n1. Lock the phone\n\n2. Come back' }));
     expect(drafted('1').body).toBe(
-      `A bug report ${SENT}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.`,
+      `A bug report ${SENT}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.\n\n` +
+        'Version: v1',
     );
   });
 
@@ -773,6 +785,8 @@ describe('feedback draft', () => {
         `> ${ZWSP}\\$${ZWSP}\\$`,
         '',
         `Reported by \\[\\@${ZWSP}bob\\]\\(\\#${ZWSP}1\\).`,
+        '',
+        'Version: v1',
       ].join('\n'),
     );
     // Nothing that GitHub links or replaces is left as it was.

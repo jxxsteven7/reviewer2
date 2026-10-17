@@ -861,7 +861,7 @@
     "privacy": "What you write may be published as a GitHub issue; your contact details never are. They are used only to reply to you, and are deleted after 90 days. The feedback itself is kept as the project's archive of suggestions; only what the author discards, such as spam, is deleted 30 days after it is discarded.",
     "kind": "About",
     "kinds": {
-      "idea": "A suggestion",
+      "idea": "An idea",
       "game": "A new game",
       "bug": "A bug",
       "words": "The word lists"
@@ -879,20 +879,28 @@
     "accountHint": "The feedback contributions on the home page show your account's avatar and username as they are now, and a tap on either opens your panel; once you delete the account, they show a deleted player. The GitHub issue shows your username as it was when the issue was published, and keeps it.",
     "credit": "Your name",
     "creditHint": "Signing needs a name; to leave none, choose Anonymously. The name is listed among the feedback contributions on the home page, and on the GitHub issue. Any name will do, such as your GitHub username.",
-    "gameNote": "Which game should we make next? Say how a round goes and what makes it fun.",
-    "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model.",
+    "notes": {
+      "idea": "Say what is missing or in the way, then your idea.",
+      "game": "Which game should we make next? Say how a round goes and what makes it fun.",
+      "bug": "Say what happened, what you expected, and how to make it happen again.",
+      "words": "Say which field, and give the terms in English and Chinese if you can. Never copy the word list of a commercial game."
+    },
+    "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model. A GitHub issue made of it shows the site's version and the names and versions of the browser and the system, never the model.",
     "submit": "Send",
     "sent": "Thank you! Your feedback has been sent."
   },
   "contributions": {
     "title": "Feedback contributions",
     "counted": "Feedback contributions | Feedback contributions · {count} person | Feedback contributions · {count} people",
-    "intro": "We thank the players whose suggestions, ideas for games, bug reports and words were adopted. What is adopted is the idea, and what was built may differ: the number opens the discussion and the changes. Sign your feedback to be listed by your account, or by a name if you have no account; otherwise, you are listed anonymously.",
+    "intro": "We thank the players whose ideas, ideas for games, bug reports and words were adopted, sent from here or opened as issues on GitHub. What is adopted is the idea, and what was built may differ: the number opens the discussion and the changes. Sign your feedback here to be listed by your account, or by a name if you have no account; otherwise, you are listed anonymously. An issue on GitHub is listed by its author's GitHub username, or anonymously. Those who wrote the code are listed on {github}.",
+    "github": "GitHub",
+    "advisory": "advisory",
     "kinds": {
-      "idea": "Suggestions",
+      "idea": "Ideas",
       "game": "New games",
       "bug": "Bugs",
-      "words": "Word lists"
+      "words": "Word lists",
+      "code": "Code"
     },
     "anonymous": "An anonymous player",
     "deleted": "A deleted player",
@@ -1300,7 +1308,7 @@
     },
     "streakCounts": "Every game finished in a seat while logged in counts, in the order the games ended, whichever game it was and in a match or not. A withdrawn game counts for nothing. The title comes at {min} in a row.",
     "contribution": {
-      "idea": "A suggestion of theirs was adopted, whether they left a name or not. The feedback contributions on the home page list everyone's.",
+      "idea": "An idea of theirs was adopted, whether they left a name or not. The feedback contributions on the home page list everyone's.",
       "game": "An idea of theirs for a new game was adopted, whether they left a name or not. The feedback contributions on the home page list everyone's.",
       "bug": "A bug they reported was adopted, whether they left a name or not. The feedback contributions on the home page list everyone's.",
       "words": "Words of theirs for the word lists were adopted, whether they left a name or not. The feedback contributions on the home page list everyone's."

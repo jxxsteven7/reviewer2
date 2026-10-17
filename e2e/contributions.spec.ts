@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { Page } from '@playwright/test';
-import { expect, newPlayer, pageAddress, register, TEXT, test } from './helpers';
+import { expect, interpolate, newPlayer, pageAddress, register, TEXT, test } from './helpers';
 
 // The feedback contributions end to end: a player with an account suggests a new game, signed with
 // the account, the operator adopts it with the command once it is a GitHub issue, and the home
@@ -118,7 +118,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   await page.goto('/');
   const fold = page.locator('.fold.contributions');
   await fold.locator('h2 button').click();
-  await expect(fold).toContainText(text.contributions.intro);
+  await expect(fold).toContainText(interpolate(text.contributions.intro, { github: text.contributions.github }));
   const entry = fold.locator('li', { hasText: username });
   await expect(entry).toContainText('Suggested a game of bidding on papers');
   await expect(entry.getByRole('link', { name: `#${issue}` })).toHaveAttribute(
@@ -254,4 +254,68 @@ test('a login in another tab counts for the feedback sent from this one', async 
   const sent = feedbackWith(idea);
   expect(sent.account_id).not.toBeNull();
   expect(sent).toMatchObject({ credit: null, link_profile: 1 });
+});
+
+test("an issue adopted from GitHub is listed by its author's GitHub username, or anonymously, with the code last", async ({
+  browser,
+}) => {
+  // Issue numbers and usernames of this test's own, since every project shares one server.
+  const stamp = Math.random().toString(36).slice(2, 7);
+  const issue = String(5000 + Math.floor(Math.random() * 90000));
+  const anonymous = String(Number(issue) + 1);
+  const login = `octo-${stamp}`;
+  const summary = ['--zh', '整理了测试', '--en', `Tidied the tests ${stamp}`];
+  expect(admin('github', 'adopt', issue, '--kind', 'code', '--login', login, '--id', '583231', ...summary)).toContain(
+    `as ${login}, linked to https://github.com/${login}`,
+  );
+  expect(
+    admin(
+      'github',
+      'adopt',
+      anonymous,
+      '--kind',
+      'idea',
+      '--login',
+      login,
+      '--id',
+      '583231',
+      '--anonymous',
+      ...summary,
+    ),
+  ).toContain('as an anonymous player');
+  // Once each, and never a player's feedback.
+  expect(admin('github', 'adopt', issue, '--kind', 'code', '--login', login, '--id', '583231', ...summary)).toContain(
+    'was adopted already',
+  );
+
+  const page = await newPlayer(browser, 'en');
+  await page.goto('/');
+  await page.getByRole('button', { name: /^English/ }).click();
+  const fold = page.locator('.fold.contributions');
+  await fold.locator('h2 button').click();
+  // The code, which only GitHub is about, has a section of its own, after the kinds of feedback.
+  const headings = fold.locator('h3');
+  await expect(headings.last()).toHaveText(text.contributions.kinds.code);
+  const entry = fold.locator('li', { hasText: `Tidied the tests ${stamp}` }).filter({ hasText: login });
+  const author = entry.getByRole('link', { name: login });
+  await expect(author).toHaveAttribute('href', `https://github.com/${login}`);
+  await expect(author).toHaveAttribute('target', '_blank');
+  await expect(author).toHaveAttribute('rel', 'nofollow ugc noopener');
+  // GitHub's mark hangs where an avatar does, with the hard shadow of what a tap opens.
+  await expect(author.locator('.avatar svg')).toBeVisible();
+  await expect(author.locator('.avatar')).toHaveCSS('box-shadow', /3px 3px 0px/);
+  await expect(entry.getByRole('link', { name: `#${issue}` })).toHaveAttribute(
+    'href',
+    `https://github.com/jxxsteven7/reviewer2/issues/${issue}`,
+  );
+  // The anonymous one names nobody, and links nothing but its issue.
+  const hidden = fold.locator('li', { hasText: `#${anonymous}` });
+  await expect(hidden).toContainText(text.contributions.anonymous);
+  await expect(hidden).not.toContainText(login);
+  await expect(hidden.getByRole('link')).toHaveCount(1);
+  // The intro says where those who wrote the code are listed.
+  await expect(fold.getByRole('link', { name: text.contributions.github })).toHaveAttribute(
+    'href',
+    'https://github.com/jxxsteven7/reviewer2/graphs/contributors',
+  );
 });

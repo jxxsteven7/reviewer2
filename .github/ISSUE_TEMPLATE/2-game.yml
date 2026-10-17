@@ -1,0 +1,81 @@
+name: New game
+description: An idea for the next game to make.
+title: 'New game: '
+labels: [new game]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Write in English or Chinese, whichever is easier for you.
+
+        **Playing, not coding?** Use **Send feedback**, at the foot of the home page and of every room: it needs no GitHub account, and an adopted idea counts for your account on the site.
+
+        The games share an academic theme: peer review, submissions, lab meetings, grants and defenses. A new game is a large change, so we agree on it here before anyone writes code.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [ideas for new games, open and closed](https://github.com/jxxsteven7/reviewer2/issues?q=is%3Aissue%20label%3A%22new%20game%22), and this one isn't there yet.
+          required: true
+        - label: This issue is about one game. I'll open another issue for each other game.
+          required: true
+        - label: It doesn't name the commercial board game that the first game is based on.
+          required: true
+  - type: textarea
+    id: round
+    attributes:
+      label: How a round goes
+      description: Who does what, from the start of a round to its end, and how it is won.
+      placeholder: Everyone gets a paper title, and one player gets a made-up one. In turn, each describes their paper in three words; then everyone votes for the paper they think was never written.
+    validations:
+      required: true
+  - type: textarea
+    id: fun
+    attributes:
+      label: What makes it fun
+      placeholder: Bluffing about a paper that doesn't exist, and catching a friend who bluffs.
+    validations:
+      required: true
+  - type: dropdown
+    id: sides
+    attributes:
+      label: How the players play
+      options:
+        - In teams, against each other
+        - Each for themselves
+        - All together, against the game
+        - Something else
+  - type: input
+    id: players
+    attributes:
+      label: Players and time
+      placeholder: 4 to 10 players, 10 minutes a round
+  - type: textarea
+    id: theme
+    attributes:
+      label: The academic theme
+      description: How the roles, the words and the story fit academic life.
+      placeholder: The players are reviewers, and the made-up paper is the one that slipped through review.
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Sketches, a round played out, or what could go wrong.
+  - type: dropdown
+    id: credit
+    attributes:
+      label: If it is adopted, list me on playreviewer2.com
+      description: The site's home page lists adopted issues among its feedback contributions, linked to your GitHub page. Anonymously, the site names nobody, though this issue stays under your GitHub account. Code is credited by GitHub, among the repository's contributors.
+      options:
+        - By my GitHub username
+        - As an anonymous player
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: build
+    attributes:
+      label: Building it
+      options:
+        - label: I'd like to build this myself and open a pull request.

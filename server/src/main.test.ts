@@ -143,9 +143,9 @@ describe('starting', () => {
       storage: 'file',
       file: join(data, DATABASE_FILE),
       journal: 'wal',
-      schema: 24,
+      schema: 25,
     });
-    expect(logged('database_migrated')).toEqual({ from: 0, to: 24, snapshot: null });
+    expect(logged('database_migrated')).toEqual({ from: 0, to: 25, snapshot: null });
     first.feedback.add({
       kind: 'idea',
       text: 'Kept',
@@ -205,9 +205,9 @@ describe('starting', () => {
     const cannot = /the record of game g1 cannot be counted again/;
     // The first start migrates, after a snapshot, which serves the recount too.
     await expect(start({ DATA_DIR: data })).rejects.toThrow(cannot);
-    expect(logged('database_migrated')).toMatchObject({ from: 23, to: 24 });
+    expect(logged('database_migrated')).toMatchObject({ from: 23, to: 25 });
     const snapshots = () => readdirSync(join(data, SNAPSHOT_DIR)).sort();
-    expect(snapshots()).toEqual([expect.stringMatching(/-before-v24\.db$/)]);
+    expect(snapshots()).toEqual([expect.stringMatching(/-before-v25\.db$/)]);
     // The service is started again every few seconds after a start that failed: each start takes
     // a snapshot of its own now, and keeps the latest alone.
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -215,7 +215,7 @@ describe('starting', () => {
       await expect(start({ DATA_DIR: data })).rejects.toThrow(cannot);
     }
     expect(snapshots()).toEqual([
-      expect.stringMatching(/-before-v24\.db$/),
+      expect.stringMatching(/-before-v25\.db$/),
       expect.stringMatching(/-before-recount\.db$/),
     ]);
   });

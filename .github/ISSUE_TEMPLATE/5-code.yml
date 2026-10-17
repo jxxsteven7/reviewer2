@@ -1,0 +1,74 @@
+name: Code and docs
+description: Refactoring, performance, tests, CI, dependencies or the docs, which players don't see.
+title: 'Code: '
+labels: [code]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for looking into the code. Write in English or Chinese, whichever is easier for you.
+
+        What players can see goes in a **Bug report** or an **Idea**. A small fix, such as a typo, is quickest as a pull request; a larger change starts here, so that we agree on the plan before you write the code.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: I searched the [issues about the code and the docs, open and closed](https://github.com/jxxsteven7/reviewer2/issues?q=is%3Aissue%20label%3Acode), and this one isn't there yet.
+          required: true
+        - label: This issue is about one thing. I'll open another issue for each other thing.
+          required: true
+        - label: It doesn't name the commercial board game that the first game is based on, or say how the project's own servers are run.
+          required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is it about?
+      options:
+        - Refactoring
+        - Performance
+        - Tests
+        - CI and tooling
+        - Dependencies
+        - The docs
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Files, folders, or a doc and its section.
+      placeholder: server/src/core/rooms.ts
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong, or could be better
+      description: Quote the code or the text if it helps, and say how you found it.
+      placeholder: Joining, seats and the sweep share one long file, so every change to seats touches the sweep's tests.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: What you suggest
+      placeholder: Move the seats into a module of their own, with their own tests.
+  - type: dropdown
+    id: credit
+    attributes:
+      label: If it is adopted, list me on playreviewer2.com
+      description: The site's home page lists adopted issues among its feedback contributions, linked to your GitHub page. Anonymously, the site names nobody, though this issue stays under your GitHub account. Code is credited by GitHub, among the repository's contributors.
+      options:
+        - By my GitHub username
+        - As an anonymous player
+      default: 0
+    validations:
+      required: true
+  - type: checkboxes
+    id: build
+    attributes:
+      label: Building it
+      options:
+        - label: I'd like to do this myself and open a pull request.

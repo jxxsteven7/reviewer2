@@ -30,7 +30,31 @@ A maintainer has the **Admin** or **Maintain** role; CI uses it to decide who ma
 - **Actions → General → Fork pull request workflows**: "Require approval for all external contributors". A PR from a fork runs CI once a collaborator approves the run, also while the repository is private.
 - **Code security → Private vulnerability reporting**: on, once the repository is public.
 - `.github/CODEOWNERS` names the default reviewers.
-- Default workflow permissions stay read-only; the Conventions workflow asks for its own.
+- Default workflow permissions stay read-only; the Conventions and Issues workflows ask for their own.
+
+## Issues
+
+Anyone opens an issue with one of the forms in `.github/ISSUE_TEMPLATE/`; `config.yml` turns blank issues off, so that is the only way for anyone below the Write role (those with Write and above still see **Blank issue**, marked "Maintainers only", and `gh issue create` and the API ignore the forms). Each form sets a label and a title prefix:
+
+| Form | Label | Title | For |
+|---|---|---|---|
+| Idea | `idea` | `Idea: ` | A new feature or a change: the site, a game's rules or the AI players |
+| New game | `new game` | `New game: ` | The next game to make |
+| Bug report | `bug` | `Bug: ` | Something that doesn't work as it should |
+| Word lists | `words` | `Word lists: ` | Terms, a field or a fix for the word lists |
+| Code and docs | `code` | `Code: ` | Refactoring, performance, tests, CI, dependencies or the docs: what players don't see |
+
+Each form ends with a dropdown on how to list the author on the site if the issue is adopted: by their GitHub username, or as an anonymous player. The labels' descriptions on GitHub are their definitions, for people and scripts alike. Two more labels say where an issue stands: `player feedback`, on every issue published from a player's feedback ([development.md](development.md#accounts-and-email)), which the maintainer opens on the player's behalf, so its reporter won't see replies on GitHub; and `adopted`, on every issue listed among the contributions on the site, from either place. The other labels are GitHub's defaults, as they are. The chooser also links to the site's feedback form, for players, to private vulnerability reporting, and to CONTRIBUTING.md.
+
+Issues and comments may be in English or Chinese ([rules/language.md](rules/language.md)), but never name the board game that the first game is based on ([rules/constraints.md](rules/constraints.md#intellectual-property)): `.github/workflows/issues.yml` runs `scripts/check-names.mjs` on every issue and comment as it is opened or edited, with the text passed through the environment, never into a script, and asks the author once, in a comment, to edit the name out; a maintainer edits what is left.
+
+### Adopting a contribution
+
+A contribution is adopted on the server's data, with `admin.cjs`, where the home page reads it at once ([architecture.md](architecture.md#feedback-contributions)); the issue is labeled `adopted` and closed.
+
+- **A player's feedback**, published as an issue with `player feedback`: `feedback adopt <id>` once the pull request that resolved it is in, which lists it by the account or the name the player left, or anonymously, and counts it for their account.
+- **A developer's issue**: `github adopt <issue> --kind <kind> --login <author> --id <account id> [--anonymous] --zh … --en …`, with the kind from the issue's label (`idea`, `new game` is `game`, `bug`, `words`, `code`), the author's username and account id from GitHub (`gh api repos/{owner}/{repo}/issues/<n> --jq '.user.login, .user.id'`), `--anonymous` when the author chose so in the form's last dropdown, and the two sentences on what they contributed. An issue that a maintainer opened is no contribution, unless it relays someone else's report, which is then adopted under the reporter's name. An author who also fixed their issue in a pull request is listed for the issue all the same; the pull request is GitHub's to credit. At the author's request, `github anonymous` lists them anonymously from then on, and `github forget` also drops their username and id; nothing is ever deleted.
+- **A security problem** reported through private vulnerability reporting is a draft advisory, `GHSA-xxxx-xxxx-xxxx`, that only the maintainers and the reporter see. Fix it and release the fix without a word in public, then publish the advisory, with the reporter credited on it if they agree, and adopt it as a bug: `github adopt --advisory GHSA-… --kind bug --login <reporter> --id <id> [--anonymous] --zh … --en …`; the home page links the advisory in place of an issue. A security problem that a player reports through the site's feedback is not published as an issue until it is fixed, and then goes the ordinary way.
 
 ## Lists of thanks
 

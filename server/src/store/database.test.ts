@@ -73,6 +73,7 @@ describe('a database in DATA_DIR', () => {
       'friendships',
       'game_players',
       'game_records',
+      'github_contributions',
       'likes',
       'match_records',
       'replays',
@@ -1287,8 +1288,8 @@ describe('a database in DATA_DIR', () => {
     expect(migrated).toMatchObject({ schema: 24, migratedFrom: 23 });
     const { db } = migrated;
     const all = (sql: string) => db.prepare(sql).all();
-    // The schema is that of a new database, to the letter.
-    const fresh = await open(null);
+    // The schema is that of a new database of that release, to the letter.
+    const fresh = await open(null, MIGRATIONS.slice(0, 24));
     const schema = (database: DatabaseSync) =>
       database
         .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
@@ -1711,6 +1712,75 @@ describe('a database in DATA_DIR', () => {
     ]);
   });
 
+  test('of the twenty-fourth release keeps every row as it was when it gets the contributions from GitHub', async () => {
+    const before = await open(dir, MIGRATIONS.slice(0, 24));
+    before.db.exec(`
+      INSERT INTO accounts (id, handle, username, username_key, password, consent_version, consented_at, created_at)
+        VALUES (1, 'a1b2c3d4e5f6', 'Ann', 'ann', 'h', ${RECORDS_NOTICE_VERSION}, 'now', 'now');
+      INSERT INTO feedback (id, created_at, kind, text, version, language, page, account_id, link_profile, issue,
+          adopted_at, summary_zh, summary_en)
+        VALUES (1, '2026-10-12T12:00:00.000Z', 'idea', 'AI players', 'v0.1.5', 'zh', 'home', 1, 1, 57,
+          '2026-10-13T08:00:00.000Z', 'z', 'e');
+      INSERT INTO feedback (id, created_at, kind, text, version, language, page, deleted_at)
+        VALUES (2, '2026-10-12T13:00:00.000Z', 'idea', 'Spam', 'v0.1.5', 'en', 'room', '2026-10-12T14:00:00.000Z');
+      INSERT INTO reports (created_at, reporter_id, reported_id, reported_name, room_code, text)
+        VALUES ('now', 1, NULL, 'Bob', 'K7QX', NULL);
+    `);
+    const rows = (db: DatabaseSync) =>
+      Object.fromEntries(
+        tables(db)
+          .filter((table) => table !== 'github_contributions')
+          .map((table) => [table, db.prepare(`SELECT * FROM ${table}`).all()]),
+      );
+    const kept = rows(before.db);
+    before.db.close();
+
+    const migrated = await open(dir, MIGRATIONS.slice(0, 25));
+    expect(migrated).toMatchObject({ schema: 25, migratedFrom: 24 });
+    const { db } = migrated;
+    // Every table but the new one holds what it held, row for row, and the new one is empty.
+    expect(rows(db)).toEqual(kept);
+    expect(db.prepare('SELECT count(*) AS n FROM github_contributions').get()).toEqual({ n: 0 });
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    // The schema is that of a new database, to the letter.
+    const fresh = await open(null);
+    const schema = (database: DatabaseSync) =>
+      database
+        .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+        .all();
+    expect(schema(db)).toEqual(schema(fresh.db));
+
+    // A contribution from GitHub is an issue or an advisory, once each, of some kind, by an author
+    // with a username and an id, both or neither, named only while the username is there, with
+    // both sentences.
+    const add = (values: string) =>
+      db.exec(
+        'INSERT INTO github_contributions (issue, advisory, kind, login, github_id, named, adopted_at, summary_zh, ' +
+          `summary_en) VALUES (${values})`,
+      );
+    add("14, NULL, 'code', 'octocat', 583231, 1, 'now', 'z', 'e'");
+    add("NULL, 'GHSA-xxxx-xxxx-xxxx', 'bug', 'octocat', 583231, 0, 'now', 'z', 'e'");
+    add("15, NULL, 'later', NULL, NULL, 0, 'now', 'z', 'e'");
+    for (const values of [
+      "14, NULL, 'idea', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "NULL, 'GHSA-xxxx-xxxx-xxxx', 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "16, 'GHSA-yyyy-yyyy-yyyy', 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "NULL, NULL, 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "0, NULL, 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "NULL, 'GHSA-1', 'bug', 'octocat', 583231, 1, 'now', 'z', 'e'",
+      "17, NULL, 'bug', 'octocat', NULL, 1, 'now', 'z', 'e'",
+      "17, NULL, 'bug', NULL, 583231, 0, 'now', 'z', 'e'",
+      "17, NULL, 'bug', NULL, NULL, 1, 'now', 'z', 'e'",
+      "17, NULL, 'bug', 'octocat', 0, 1, 'now', 'z', 'e'",
+      "17, NULL, 'bug', 'octocat', 583231, 2, 'now', 'z', 'e'",
+      "17, NULL, 'bug', 'octocat', 583231, 1, 'now', NULL, 'e'",
+      "17, NULL, 'bug', 'octocat', 583231, 1, NULL, 'z', 'e'",
+    ]) {
+      expect(() => add(values), values).toThrow(/UNIQUE|CHECK|NOT NULL/);
+    }
+    expect(db.prepare('SELECT count(*) AS n FROM github_contributions').get()).toEqual({ n: 3 });
+  });
+
   test('runs a migration with foreign keys off, so that it can rebuild a table that others point at', async () => {
     const two = [
       'CREATE TABLE a (id INTEGER PRIMARY KEY) STRICT',
@@ -1795,6 +1865,7 @@ describe('a database in memory', () => {
       'friendships',
       'game_players',
       'game_records',
+      'github_contributions',
       'likes',
       'match_records',
       'replays',

@@ -1,6 +1,4 @@
 import {
-  AVATAR_PATH,
-  type Contribution,
   type ContributionCount,
   type ContributionSummary,
   FEEDBACK_KINDS,
@@ -21,9 +19,9 @@ import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 // text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it was
 // published as, the pull request that resolved it, when it was adopted and what the player
 // contributed, whether it was closed, and whether it is in the trash. Feedback that was adopted is
-// a feedback contribution, which the home page lists by the account that signed it as the account
-// is now, by the name a guest left with it, or as anonymous, and which counts for the account the
-// player was logged in to, if they were (docs/architecture.md#feedback-contributions).
+// a feedback contribution, which the home page lists (contributions.ts) by the account that signed
+// it as the account is now, by the name a guest left with it, or as anonymous, and which counts for
+// the account the player was logged in to, if they were (docs/architecture.md#feedback-contributions).
 //
 // Reports of players are kept here too, in a table of their own (migration 6), and are an archive
 // as the feedback was: no row is deleted or changed. Unlike feedback, a report says who sent it,
@@ -191,7 +189,6 @@ export class FeedbackStore {
   readonly #purge: StatementSync;
   readonly #adopt: StatementSync;
   readonly #describe: StatementSync;
-  readonly #contributions: StatementSync;
   readonly #counts: StatementSync;
   readonly #report: StatementSync;
   readonly #reports: StatementSync;
@@ -253,20 +250,6 @@ export class FeedbackStore {
     );
     this.#describe = db.prepare(
       'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
-    );
-    // The contributions as anyone sees them. Feedback signed with an account is listed by the
-    // account as it is now, its username, the handle of its profile and its avatar, and once the
-    // account is gone as a deleted player's, by no name; a guest's by the name they left; nothing
-    // else has a name, a handle or an avatar. Adopted feedback is a GitHub issue, which adopt() and
-    // admin.ts see to, so a row without one, which only a hand on the database makes, is left out.
-    this.#contributions = db.prepare(
-      'SELECT f.kind, CASE WHEN f.link_profile = 1 THEN a.username ELSE f.credit END AS name, ' +
-        'CASE WHEN f.link_profile = 1 THEN a.handle END AS profile, ' +
-        'CASE WHEN f.link_profile = 1 THEN a.avatar END AS avatar, ' +
-        'f.link_profile = 1 AND a.id IS NULL AS deleted, ' +
-        'f.summary_zh AS summaryZh, f.summary_en AS summaryEn, f.issue, substr(f.adopted_at, 1, 7) AS month ' +
-        'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id ' +
-        'WHERE f.adopted_at IS NOT NULL AND f.issue IS NOT NULL ORDER BY f.adopted_at DESC, f.id DESC',
     );
     this.#counts = db.prepare(
       'SELECT kind, count(*) AS count FROM feedback WHERE account_id = ? AND adopted_at IS NOT NULL GROUP BY kind',
@@ -388,33 +371,9 @@ export class FeedbackStore {
     return Number(this.#describe.run(zh, en, id).changes) > 0;
   }
 
-  // The feedback contributions, the latest adopted first, of the kinds the server knows.
-  contributions(): Contribution[] {
-    const rows = this.#contributions.all() as unknown as (Omit<Contribution, 'summary' | 'deleted'> & {
-      deleted: number;
-      summaryZh: string | null;
-      summaryEn: string | null;
-    })[];
-    return rows.flatMap(({ kind, name, profile, avatar, deleted, summaryZh, summaryEn, issue, month }) =>
-      (FEEDBACK_KINDS as readonly string[]).includes(kind)
-        ? [
-            {
-              kind,
-              name,
-              profile,
-              avatar: avatar === null ? null : `${AVATAR_PATH}${avatar}`,
-              deleted: deleted === 1,
-              summary: summaryZh && summaryEn ? { zh: summaryZh, en: summaryEn } : null,
-              issue,
-              month,
-            },
-          ]
-        : [],
-    );
-  }
-
   // How many contributions of each kind count for the account, those without a name included, in
-  // the order of the kinds.
+  // the order of the kinds. The contributions themselves, from the site and from GitHub, are
+  // listed by ContributionStore (contributions.ts).
   counts(accountId: number): ContributionCount[] {
     const rows = this.#counts.all(accountId) as unknown as ContributionCount[];
     return FEEDBACK_KINDS.flatMap((kind) => rows.filter((row) => row.kind === kind));

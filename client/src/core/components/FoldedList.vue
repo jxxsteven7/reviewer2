@@ -21,10 +21,11 @@ const props = defineProps<{
   people?: (data: Data) => number;
   // Whether the list has nobody, or nothing, in it.
   empty: (data: Data) => boolean;
-  // Whether the card opens with the sentence that says what the list is for.
+  // Whether the card opens with the sentence that says what the list is for: the one in the locale
+  // files, or what the `intro` slot gives in its place.
   intro?: boolean;
 }>();
-defineSlots<{ default(props: { data: Data }): unknown; none(): unknown }>();
+defineSlots<{ default(props: { data: Data }): unknown; none(): unknown; intro?(): unknown }>();
 const { t } = useI18n();
 const panel = useId();
 const open = ref(false);
@@ -67,7 +68,9 @@ const title = computed(() => {
     </h2>
     <Transition :css="false" v-bind="fold">
       <div v-show="open" :id="panel" class="list">
-        <p v-if="intro" class="intro">{{ t(`${name}.intro`) }}</p>
+        <p v-if="intro" class="intro">
+          <slot name="intro">{{ t(`${name}.intro`) }}</slot>
+        </p>
         <p v-if="failed" class="note failed">
           {{ t('thanks.failed') }}
           <UiButton variant="quiet" size="small" @click="load">{{ t('thanks.retry') }}</UiButton>

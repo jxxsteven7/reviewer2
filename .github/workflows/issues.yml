@@ -1,0 +1,83 @@
+# Keeps the name of the board game the first game is based on out of issues and their comments
+# (docs/rules/constraints.md), as conventions.yml keeps it out of pull requests: the title and body
+# of an issue, and every comment on an issue or a pull request, through scripts/check-names.mjs.
+# Anyone may open an issue or comment, so this can't refuse one; it asks the author to edit the
+# name out, once for each issue or comment, and a maintainer edits what is left.
+#
+# Issue events run this file and the script as they are on main, never a pull request's, and the
+# job runs no code from anywhere else. The text reaches the script only through `env:` and a file:
+# never interpolate `github.event.*` into a `run:` script, which would allow script injection.
+
+name: Issues
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issues-${{ github.event.comment.id || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  names:
+    name: Forbidden name
+    # Comments that GitHub Actions posts start no run anyway; this also skips other bots.
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write # to ask the author to edit the name out
+      pull-requests: write # the same, on a comment on a pull request, which is an issue to the API
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      NUMBER: ${{ github.event.issue.number }}
+      COMMENT_ID: ${{ github.event.comment.id }}
+      AUTHOR: ${{ github.event.comment.user.login || github.event.issue.user.login }}
+      TITLE: ${{ github.event.issue.title }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Look for the name
+        run: |
+          if [ -n "$COMMENT_ID" ]; then
+            what="comment"
+            marker="<!-- forbidden-name comment $COMMENT_ID -->"
+            printf '%s\n' "$COMMENT_BODY" > "$RUNNER_TEMP/text.md"
+          else
+            what="issue"
+            marker="<!-- forbidden-name issue $NUMBER -->"
+            printf '%s\n\n%s\n' "$TITLE" "$ISSUE_BODY" > "$RUNNER_TEMP/text.md"
+          fi
+          status=0
+          node scripts/check-names.mjs text --label "this $what" --file "$RUNNER_TEMP/text.md" \
+            > "$RUNNER_TEMP/found.txt" 2>&1 || status=$?
+          cat "$RUNNER_TEMP/found.txt"
+          [ "$status" -eq 0 ] && exit 0
+          [ "$status" -eq 1 ] || exit "$status"
+
+          # Ask once: an edit that keeps the name finds the request already there.
+          if gh api "repos/$GH_REPO/issues/$NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .body' | grep -qF "$marker"; then
+            echo "The author has been asked already."
+            exit 0
+          fi
+          {
+            echo "$marker"
+            echo "@$AUTHOR, thanks for writing. This $what names the commercial board game that the first game is based on, which the project keeps out of everything it publishes, issues included ([constraints](https://github.com/$GH_REPO/blob/main/docs/rules/constraints.md#intellectual-property)). Please edit it to describe the game without its name; otherwise a maintainer will."
+          } > "$RUNNER_TEMP/request.md"
+          # The issues API comments on pull requests too.
+          gh api "repos/$GH_REPO/issues/$NUMBER/comments" -F "body=@$RUNNER_TEMP/request.md" > /dev/null

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { checkSummary, MAX_SUMMARY_INPUT, MAX_SUMMARY_LENGTH } from './contributions';
+import { checkSummary, GITHUB_ADVISORY, GITHUB_LOGIN, MAX_SUMMARY_INPUT, MAX_SUMMARY_LENGTH } from './contributions';
 
 // What the operator writes of a contribution, in either language.
 
@@ -28,5 +28,29 @@ describe('a summary of a contribution', () => {
       problem: 'summary_too_long',
     });
     expect(checkSummary(' '.repeat(MAX_SUMMARY_INPUT + 1))).toEqual({ summary: null, problem: 'summary_too_long' });
+  });
+});
+
+describe('a GitHub username and a security advisory', () => {
+  test('are known by their shapes', () => {
+    for (const login of ['octocat', 'a', 'Mona-Lisa', 'x'.repeat(39), 'a1-b2-c3']) {
+      expect(GITHUB_LOGIN.test(login), login).toBe(true);
+    }
+    for (const login of ['', '-octocat', 'octocat-', 'octo--cat', 'octo cat', 'octo_cat', 'x'.repeat(40), 'octo@cat']) {
+      expect(GITHUB_LOGIN.test(login), login).toBe(false);
+    }
+    for (const advisory of ['GHSA-24fc-5gmw-5x4j', 'GHSA-xxxx-xxxx-xxxx', 'GHSA-2345-6789-cfgh']) {
+      expect(GITHUB_ADVISORY.test(advisory), advisory).toBe(true);
+    }
+    for (const advisory of [
+      '',
+      'GHSA-24fc-5gmw',
+      'ghsa-24fc-5gmw-5x4j',
+      'GHSA-24fc-5gmw-5x4j-1',
+      'GHSA-aaaa-bbbb-cccc',
+      'CVE-2026-1234',
+    ]) {
+      expect(GITHUB_ADVISORY.test(advisory), advisory).toBe(false);
+    }
   });
 });

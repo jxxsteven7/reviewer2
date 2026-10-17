@@ -128,7 +128,7 @@ describe('TitlePills', () => {
       'Best Paper Award ×2',
       'Academic Trash',
       'Five Submissions, Five Acceptances',
-      'Contributions: Suggestions ×3',
+      'Contributions: Ideas ×3',
       'Contributions: Word lists',
     ]);
     expect(pills[2]?.classes()).toEqual(expect.arrayContaining(['streak', 'wins']));
@@ -143,7 +143,7 @@ describe('TitlePills', () => {
     expect(explained[1]).toContain('the lowest total');
     expect(explained[2]).toContain('The longest run of games won in a row on the record: 5.');
     expect(explained[2]).toContain('The title comes at 3 in a row.');
-    expect(explained[3]).toContain('A suggestion of theirs was adopted, whether they left a name or not.');
+    expect(explained[3]).toContain('An idea of theirs was adopted, whether they left a name or not.');
     expect(explained[4]).toContain('Words of theirs for the word lists were adopted');
     wrapper.unmount();
   });

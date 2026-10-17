@@ -423,91 +423,29 @@ describe('what became of the feedback', () => {
 describe('the feedback contributions', () => {
   const SAID = { zh: '提出了更多领域', en: 'Suggested more fields' };
 
-  test('are the adopted feedback, the latest first, by the account that signed it as it is now, a guest name or anonymous', () => {
-    const feedback = store();
-    const accounts = new AccountStore(db);
-    const ann = accounts.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
-    const bob = accounts.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
-    if (!ann || !bob) throw new Error('no account');
-    // Ann signed with her account; Bob stayed anonymous, though he shows his contributions on his
-    // profile; Cat was a guest who left her name; the fourth left none.
-    accounts.setProfile(bob.id, { link: null, bio: null, showRecord: false, showThanks: true });
-    feedback.add(entry({ accountId: ann.id, linkProfile: true }));
-    feedback.add(entry({ kind: 'bug', accountId: bob.id }));
-    feedback.add(entry({ kind: 'words', credit: 'Cat' }));
-    feedback.add(entry({ kind: 'game' }));
-    feedback.add(entry({ credit: 'Dan' }));
-    for (const id of [1, 2, 3, 4]) feedback.setIssue(id, 40 + id);
-    expect(feedback.contributions()).toEqual([]);
-    expect(feedback.adopt(1, SAID)).toBe(true);
-    now += 40 * DAY;
-    expect(feedback.adopt(2, SAID)).toBe(true);
-    expect(feedback.adopt(3, SAID)).toBe(true);
-    expect(feedback.adopt(4, SAID)).toBe(true);
-    // Only once.
-    expect(feedback.adopt(1, { zh: '又一次', en: 'Again' })).toBe(false);
-    const nobody = { profile: null, avatar: null, deleted: false, summary: SAID };
-    expect(feedback.contributions()).toEqual([
-      { kind: 'game', name: null, ...nobody, issue: 44, month: '2026-11' },
-      { kind: 'words', name: 'Cat', ...nobody, issue: 43, month: '2026-11' },
-      { kind: 'bug', name: null, ...nobody, issue: 42, month: '2026-11' },
-      { kind: 'idea', name: 'Ann', ...nobody, profile: ann.handle, issue: 41, month: '2026-10' },
-    ]);
-    // Signed with the account, the contribution shows it as it is now: its username and its avatar.
-    accounts.setAvatar(ann.id, 'a1b2.webp');
-    accounts.rename(ann.id, 'Annie', 'annie');
-    expect(feedback.contributions().at(-1)).toMatchObject({
-      name: 'Annie',
-      profile: ann.handle,
-      avatar: '/avatars/a1b2.webp',
-      deleted: false,
-    });
-    // Once Ann's account is gone, it is a deleted player's: no name, no profile, no avatar.
-    accounts.delete(ann.id);
-    expect(feedback.contributions().map(({ name, profile, deleted }) => [name, profile, deleted])).toEqual([
-      [null, null, false],
-      ['Cat', null, false],
-      [null, null, false],
-      [null, null, true],
-    ]);
-    expect(feedback.contributions().at(-1)?.avatar).toBeNull();
-  });
-
-  test('say what the player contributed once the operator has written it, which can be written again', () => {
+  // The contributions as the home page lists them are read by ContributionStore
+  // (contributions.test.ts); here, what adopting does to the feedback.
+  test('are adopted once, as an issue, and never in the trash, and say what the player contributed', () => {
     const feedback = store();
     feedback.add(entry({ credit: 'Ann' }));
     feedback.add(entry());
     expect(feedback.describe(1, SAID)).toBe(false);
+    expect(feedback.adopt(1, SAID)).toBe(false);
     feedback.setIssue(1, 41);
-    feedback.adopt(1, SAID);
-    expect(feedback.describe(1, { zh: '提出了计时器', en: 'Suggested a timer' })).toBe(true);
-    expect(feedback.contributions()[0]?.summary).toEqual({ zh: '提出了计时器', en: 'Suggested a timer' });
-    expect(feedback.byId(1)).toMatchObject({ credit: 'Ann', text: 'More fields, please.', status: 'resolved' });
-    expect(feedback.describe(3, SAID)).toBe(false);
-    // Adopted feedback is an issue (adopt() sees to it); a row adopted without one, which only a
-    // hand on the database makes, isn't listed, rather than listed without its issue.
-    db.exec("UPDATE feedback SET adopted_at = '2026-10-01T00:00:00.000Z' WHERE id = 2");
-    expect(feedback.contributions()).toHaveLength(1);
-    // Adopted before the sentences were written, it says nothing yet.
-    db.exec('UPDATE feedback SET issue = 42 WHERE id = 2');
-    expect(feedback.contributions()[1]).toEqual({
-      kind: 'idea',
-      name: null,
-      profile: null,
-      avatar: null,
-      deleted: false,
-      summary: null,
-      issue: 42,
-      month: '2026-10',
+    expect(feedback.adopt(1, SAID)).toBe(true);
+    // Only once.
+    expect(feedback.adopt(1, { zh: '又一次', en: 'Again' })).toBe(false);
+    expect(feedback.byId(1)).toMatchObject({
+      credit: 'Ann',
+      text: 'More fields, please.',
+      status: 'resolved',
+      adoptedAt: '2026-10-09T12:00:00.000Z',
+      summaryZh: SAID.zh,
+      summaryEn: SAID.en,
     });
-  });
-
-  test('leave out a kind that this server does not know, and are never adopted in the trash', () => {
-    const feedback = store();
-    feedback.add(entry({ kind: 'later' as NewFeedback['kind'] }));
-    feedback.add(entry());
-    feedback.adopt(1, SAID);
-    expect(feedback.contributions()).toEqual([]);
+    expect(feedback.describe(1, { zh: '提出了计时器', en: 'Suggested a timer' })).toBe(true);
+    expect(feedback.byId(1)).toMatchObject({ summaryZh: '提出了计时器', summaryEn: 'Suggested a timer' });
+    expect(feedback.describe(3, SAID)).toBe(false);
     feedback.delete(2);
     expect(feedback.adopt(2, SAID)).toBe(false);
     expect(feedback.byId(2)).toMatchObject({ adoptedAt: null, status: 'trash' });

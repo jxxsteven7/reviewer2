@@ -50,12 +50,13 @@ test('are listed for anyone, and counted for the account they came from', async 
   const list = await guest.request(CONTRIBUTIONS_API);
   expect(list.status).toBe(200);
   const month = new Date().toISOString().slice(0, 7);
+  const site = { source: 'site', avatar: null, deleted: false, advisory: null, month };
   expect(list.body).toEqual({
     ok: true,
     contributions: [
-      { kind: 'idea', name: 'Ann L', profile: null, avatar: null, deleted: false, summary: SAID, issue: 43, month },
-      { kind: 'bug', name: null, profile: null, avatar: null, deleted: false, summary: SAID, issue: 42, month },
-      { kind: 'idea', name: 'Ann', profile: handle, avatar: null, deleted: false, summary: SAID, issue: 41, month },
+      { kind: 'idea', name: 'Ann L', profile: null, summary: SAID, issue: 43, ...site },
+      { kind: 'bug', name: null, profile: null, summary: SAID, issue: 42, ...site },
+      { kind: 'idea', name: 'Ann', profile: handle, summary: SAID, issue: 41, ...site },
     ],
   });
   // Never the text, the contact, or the account but for feedback signed with it, which shows its

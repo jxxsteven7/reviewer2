@@ -9,6 +9,7 @@ import { io as connect } from 'socket.io-client';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { WordLibrary } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
+import { ContributionStore } from '../src/store/contributions';
 import { openDatabase } from '../src/store/database';
 import { FeedbackStore } from '../src/store/feedback';
 
@@ -24,6 +25,7 @@ async function start(publicDir: string): Promise<{ server: AppServer; base: stri
     words: new WordLibrary([]),
     games: [],
     feedback,
+    contributions: new ContributionStore(db),
   });
   server.http.once('close', () => db.close());
   await new Promise<void>((resolve) => server.http.listen(0, '127.0.0.1', resolve));

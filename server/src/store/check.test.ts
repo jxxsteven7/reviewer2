@@ -8,6 +8,7 @@ import { fakeGame } from '../../test/fakeGame';
 import { keywordsGame } from '../games/keywords';
 import { AccountStore } from './accounts';
 import { checkData, IDS_SHOWN, type DataProblem } from './check';
+import { ContributionStore } from './contributions';
 import { openDatabase } from './database';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore } from './feedback';
 import { RecordStore, ReplayStore, TitleStore } from './records';
@@ -198,7 +199,21 @@ beforeEach(async () => {
   piece({ accountId: cat.id, linkProfile: true });
   db.exec("UPDATE feedback SET issue = 9, adopted_at = 'now', summary_zh = 'z', summary_en = 'e' WHERE id = 5");
   accounts.delete(cat.id);
+  // The contributions from GitHub: an issue by a named author, and an advisory by one listed
+  // anonymously.
+  const contributions = new ContributionStore(db, () => NOW);
+  contributions.adopt({ ref: { issue: 14 }, kind: 'code', login: 'octocat', githubId: 583231, named: true, summary });
+  contributions.adopt({
+    ref: { advisory: 'GHSA-24fc-5gmw-5x4j' },
+    kind: 'bug',
+    login: 'hubot',
+    githubId: 2,
+    named: false,
+    summary,
+  });
 });
+
+const summary = { zh: 'z', en: 'e' };
 
 afterEach(() => db.close());
 
@@ -370,6 +385,27 @@ describe('the check of the data', () => {
       'feedback with a contact kept past its time',
       "UPDATE feedback SET created_at = '2026-01-01T00:00:00.000Z' WHERE id = 2",
       ['2'],
+    ],
+    // The contributions from GitHub are named by their issue or their advisory.
+    [
+      'GitHub contributions of a kind there is not',
+      "UPDATE github_contributions SET kind = 'rant' WHERE issue = 14",
+      ['#14'],
+    ],
+    [
+      'GitHub contributions whose username is not a GitHub username',
+      "UPDATE github_contributions SET login = '-octo-' WHERE advisory IS NOT NULL",
+      ['GHSA-24fc-5gmw-5x4j'],
+    ],
+    [
+      'GitHub contributions whose advisory is not numbered as one',
+      "UPDATE github_contributions SET advisory = 'GHSA-aaaa-bbbb-cccc' WHERE advisory IS NOT NULL",
+      ['GHSA-aaaa-bbbb-cccc'],
+    ],
+    [
+      "GitHub contributions of an issue that is a player's feedback",
+      'UPDATE github_contributions SET issue = 5 WHERE issue = 14',
+      ['#5'],
     ],
     [
       'friend requests answered while open, or open though answered',

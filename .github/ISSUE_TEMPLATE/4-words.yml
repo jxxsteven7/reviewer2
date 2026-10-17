@@ -1,0 +1,67 @@
+name: Word lists
+description: New terms or a new field for the word lists, or a term or translation to fix.
+title: 'Word lists: '
+labels: [words]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in English or Chinese, whichever is easier for you.
+
+        The word lists are in `words/`, one JSON file per field, and [words/README.md](https://github.com/jxxsteven7/reviewer2/blob/main/words/README.md) says what makes a good term. A pull request that edits the file is often quickest, and GitHub lists you among the repository's contributors. Use this form if you'd rather someone else made the change.
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Before you start
+      options:
+        - label: The terms are known to everyone in the field, and none is copied from the word list of a commercial game.
+          required: true
+        - label: I looked at the field's list, and the terms aren't in it yet.
+          required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What would you like?
+      options:
+        - New terms for a field
+        - A new field
+        - A term or a translation fixed
+        - Two terms kept apart, because one gives the other away
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: field
+    attributes:
+      label: Field
+      description: Its name, or its file in `words/`.
+      placeholder: Machine Learning & AI (words/ml.json)
+    validations:
+      required: true
+  - type: textarea
+    id: terms
+    attributes:
+      label: Terms
+      description: One per line, in English and in Chinese if you can. Leave out the language you don't know.
+      placeholder: |
+        Overfitting | 过拟合
+        Gradient descent | 梯度下降
+        Ablation study |
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Anything else
+      description: How the field uses the terms, or what is wrong with the ones there now.
+  - type: dropdown
+    id: credit
+    attributes:
+      label: If it is adopted, list me on playreviewer2.com
+      description: The site's home page lists adopted issues among its feedback contributions, linked to your GitHub page. Anonymously, the site names nobody, though this issue stays under your GitHub account. Code is credited by GitHub, among the repository's contributors.
+      options:
+        - By my GitHub username
+        - As an anonymous player
+      default: 0
+    validations:
+      required: true

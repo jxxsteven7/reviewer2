@@ -1204,4 +1204,33 @@ export const MIGRATIONS: readonly string[] = [
   UPDATE accounts SET room_setup = NULL
     WHERE room_setup IS NOT NULL AND (SELECT count(*) FROM json_tree(room_setup) WHERE type <> 'object') = 0;
   `,
+  // 25: the contributions from GitHub (docs/architecture.md#feedback-contributions): the issues
+  // that developers opened on GitHub and the operator adopted, listed on the home page beside the
+  // adopted feedback, which stays in the feedback table as it is. One row for each: the issue, or
+  // for a security problem reported privately the advisory that was published once it was fixed,
+  // one of the two and never both; the kind, checked by the code alone as the feedback's is, so
+  // that a new kind needs no migration; the author's GitHub username and account id as they were
+  // when it was adopted, both or, once the author has asked to be forgotten, neither; whether the
+  // home page names the author, which it can't without the username; when it was adopted; and
+  // what they contributed, in Chinese and in English, written as it is adopted. Nothing else of
+  // the issue is kept: the issue itself is its record. The rows are an archive, as the feedback is
+  // (archive.test.ts): no row is deleted, and only the two sentences, the naming and the username
+  // are ever changed. No other table changes.
+  `
+  CREATE TABLE github_contributions (
+    issue INTEGER UNIQUE CHECK (issue > 0),
+    advisory TEXT UNIQUE CHECK (advisory GLOB 'GHSA-????-????-????'),
+    kind TEXT NOT NULL,
+    login TEXT,
+    github_id INTEGER CHECK (github_id > 0),
+    named INTEGER NOT NULL CHECK (named IN (0, 1)),
+    adopted_at TEXT NOT NULL,
+    summary_zh TEXT NOT NULL,
+    summary_en TEXT NOT NULL,
+    CHECK ((issue IS NULL) <> (advisory IS NULL)),
+    CHECK ((login IS NULL) = (github_id IS NULL)),
+    CHECK (login IS NOT NULL OR named = 0)
+  ) STRICT;
+  CREATE INDEX github_contributions_adopted ON github_contributions (adopted_at);
+  `,
 ];
