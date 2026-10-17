@@ -636,8 +636,10 @@ const status = computed(() => {
    banner while the page reconnects, with the reaction button at its end, and the chair's button to
    pause after it. It is kept thin, and its background reaches the edges of the screen, as a
    masthead's does (PageMasthead.vue), so that no card shows through it beside the column, and
-   nothing below it, where the shade falls on what passes under the bar. Without a clock, as in a
-   game without time limits and once the game is over, the buttons stand there alone, on the right. */
+   nothing below it, where the shade falls on what passes under the bar. The buttons have as much
+   room below their hard shadow as above them, as in the waiting room's start bar
+   (KeywordsLobby.vue). Without a clock, as in a game without time limits and once the game is
+   over, the buttons stand there alone, on the right. */
 .sticky-clock {
   position: sticky;
   top: 0;
@@ -646,8 +648,8 @@ const status = computed(() => {
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  margin-top: var(--space-2);
-  padding: var(--space-1) 0;
+  margin-top: var(--space-1);
+  padding: var(--space-2) 0 var(--space-3);
   background: var(--bg);
   border-image: linear-gradient(var(--bg), var(--bg)) 0 fill / 0 / 0 100vmax;
 }
