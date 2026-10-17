@@ -32,7 +32,7 @@ These two sections are adapted from Google's [The Standard of Code Review](https
 3. **Changes to the checks.** CI runs the checks as the PR has them, so a PR that changes `.github/`, `.githooks/`, `scripts/`, `.claude/`, `AGENTS.md`, `CLAUDE.md`, `docs/rules/` or the lint, type, test and `package.json` configuration can loosen them. Read every line; the PR says why.
 4. **Readability:** clear names, consistent with its surroundings, no needless complexity.
 5. **Scope:** the PR does what it says and nothing else.
-6. **Visual changes:** a change to how anything players see looks or moves was shown to a maintainer first, as screenshots and, for motion, videos, and the PR carries the final screenshots at phone width, in both languages ([git.md](git.md#pull-requests)).
+6. **Visual changes:** a change to how anything players see looks or moves was shown to a maintainer first, as screenshots and, for motion, short videos, at phone and computer width, in both languages, with invented data; what was built is what the maintainer chose; and the PR carries the final screenshots at phone width, in both languages, with invented data ([git.md](git.md#pull-requests)).
 7. **Language:** clear, correct English everywhere; if one README changed, the other matches ([language.md](language.md)).
 8. **PR title:** `vX.Y.Z <type>: <summary>`, with CI's version or a maintainer's (none for [docs for people](versioning.md#docs-for-people) alone), and no AI attribution.
 
