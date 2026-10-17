@@ -13,8 +13,8 @@ import { cleanLine, showsSomething, textLength } from './text';
 // Where the home page asks for them, which the server answers with { ok: true, contributions }.
 export const CONTRIBUTIONS_API = '/api/contributions';
 
-// The repository, whose issues and advisories a contribution links to, and the site that lists
-// the contributions.
+// The repository, whose issues and advisories a contribution links to, and GitHub itself, where
+// the page of an issue's author is, at GITHUB_URL/<username>.
 export const REPOSITORY_URL = 'https://github.com/jxxsteven7/reviewer2';
 export const GITHUB_URL = 'https://github.com';
 

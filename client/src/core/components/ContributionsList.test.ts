@@ -111,7 +111,7 @@ describe('the feedback contributions', () => {
     const intro = wrapper.get('.intro');
     expect(intro.text()).toContain('What is adopted is the idea, and what was built may differ');
     // Those who wrote the code are on GitHub, with an arrow for the way off the site.
-    expect(intro.text()).toContain('Those who wrote the code are listed on GitHub.');
+    expect(intro.text()).toContain('Those who wrote the code are listed on GitHub. Sign your feedback');
     const coders = intro.get('a.coders');
     expect(coders.attributes()).toMatchObject({
       href: 'https://github.com/jxxsteven7/reviewer2/graphs/contributors',
@@ -237,7 +237,7 @@ describe('the feedback contributions', () => {
     expect(wrapper.findAll('.name')[1]?.text()).toBe('已注销玩家');
     expect(wrapper.findAll('.name')[2]?.text()).toBe('一位匿名玩家');
     expect(wrapper.findAll('.meta a')[4]?.text()).toBe('安全公告');
-    expect(wrapper.get('.intro').text()).toContain('写代码的贡献者列在 GitHub 上。');
+    expect(wrapper.get('.intro').text()).toContain('写代码的贡献者列在 GitHub 上。在网站上提时');
   });
 
   test('keep what follows the name in one piece, the dash with it, which wraps under itself, and hang the avatar', async () => {

@@ -398,13 +398,10 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   // no name without a username.
   const github = (where: string, column = '') =>
     `SELECT coalesce('#' || issue, advisory) AS id${column} FROM github_contributions ${where}`;
-  found(
+  sql(
     'GitHub contributions of a kind there is not',
-    (
-      db
-        .prepare(github('WHERE kind NOT IN (' + CONTRIBUTION_KINDS.map(() => '?').join(', ') + ')'))
-        .all(...CONTRIBUTION_KINDS) as Row[]
-    ).map((row) => String(row.id)),
+    github('WHERE kind NOT IN (' + CONTRIBUTION_KINDS.map(() => '?').join(', ') + ')'),
+    ...CONTRIBUTION_KINDS,
   );
   each(
     'GitHub contributions whose username is not a GitHub username',

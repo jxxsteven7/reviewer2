@@ -199,11 +199,11 @@ const CONTRIBUTORS_URL = `${REPOSITORY_URL}/graphs/contributors`;
    is a link that leads off the site, in the deep blue that reads on the beige row (docs/design.md),
    with the arrow after it (LinkArrow.vue): under a pointer an underline sweeps in under the
    username alone and the arrow moves out; pressed, the underline is there at once and the arrow
-   further out, and both ease back after. */
+   further out, and both ease back after. A username too long for the line wraps at its hyphens,
+   with the underline under every line, and the arrow stays at the end of the last one: the word
+   joiner that closes the username lets no line break before the arrow. */
 .github {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
+  display: inline-block;
   color: var(--blue-deep);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
@@ -212,7 +212,17 @@ const CONTRIBUTORS_URL = `${REPOSITORY_URL}/graphs/contributors`;
 
 .github .text {
   background: linear-gradient(currentcolor, currentcolor) 0 100% / 0 2px no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   transition: background-size 220ms var(--ease-out);
+}
+
+.github .text::after {
+  content: '\2060';
+}
+
+.github .arrow {
+  margin-inline-start: 3px;
 }
 
 @media (hover: hover) {

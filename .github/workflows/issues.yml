@@ -1,6 +1,8 @@
 # Keeps the name of the board game the first game is based on out of issues and their comments
 # (docs/rules/constraints.md), as conventions.yml keeps it out of pull requests: the title and body
-# of an issue, and every comment on an issue or a pull request, through scripts/check-names.mjs.
+# of an issue, and every comment in the conversation of an issue or a pull request, through
+# scripts/check-names.mjs. Review comments on a pull request's changes are not checked: those by
+# people without write access run with a read-only token, which couldn't answer them.
 # Anyone may open an issue or comment, so this can't refuse one; it asks the author to edit the
 # name out, once for each issue or comment, and a maintainer edits what is left.
 #
@@ -69,9 +71,11 @@ jobs:
           [ "$status" -eq 0 ] && exit 0
           [ "$status" -eq 1 ] || exit "$status"
 
-          # Ask once: an edit that keeps the name finds the request already there.
-          if gh api "repos/$GH_REPO/issues/$NUMBER/comments" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]") | .body' | grep -qF "$marker"; then
+          # Ask once: an edit that keeps the name finds the request already there. The comments are
+          # read into a variable first, so that an API error fails the step instead of asking again.
+          asked=$(gh api "repos/$GH_REPO/issues/$NUMBER/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | .body')
+          if grep -qF "$marker" <<<"$asked"; then
             echo "The author has been asked already."
             exit 0
           fi
