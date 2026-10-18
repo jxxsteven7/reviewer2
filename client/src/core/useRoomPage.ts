@@ -1,3 +1,4 @@
+import { parseCode } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, watch, type Ref } from 'vue';
 import { games } from '../games';
 import { browserLanguage, setLanguage, storedLanguage } from './i18n';
@@ -42,5 +43,10 @@ export function useRoomPage(
   // The screens of the room's game, once the room is known.
   const screens = computed(() => (room.value ? games[room.value.game] : undefined));
 
-  return { room, entry, screens };
+  // The code the tab's title names: the room's once the room is known, and until then the one in
+  // the address, read as a player would type it (codes.ts); none when the address can't be a code,
+  // or no room has it.
+  const roomCode = computed(() => (entry.status === 'not_found' ? null : (room.value?.code ?? parseCode(code.value))));
+
+  return { room, entry, screens, roomCode };
 }

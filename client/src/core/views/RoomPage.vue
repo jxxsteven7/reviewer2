@@ -28,12 +28,14 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const invitation = computed(() => (typeof route.query.invite === 'string' ? route.query.invite : undefined));
-const { room, entry, screens } = useRoomPage(toRef(props, 'code'), { invitation });
+const { room, entry, screens, roomCode } = useRoomPage(toRef(props, 'code'), { invitation });
 const me = computed(() => room.value?.players.find((player) => player.id === room.value?.me));
 const opened = ref<string | null>(null);
 provideOpenPlayer((playerId) => (opened.value = playerId));
-// The tab says which manuscript this is, by the room's code once the room is known.
-usePageHead(() => ({ title: pageTitle(t('site.room', { code: formatCode(room.value?.code ?? props.code) })) }));
+// The tab says which manuscript this is, or that there is no such room.
+usePageHead(() => ({
+  title: pageTitle(roomCode.value ? t('site.room', { code: formatCode(roomCode.value) }) : t('room.notFound.title')),
+}));
 
 // The invitation has done its work once the page is in the room, whether it brought the page in or
 // came while the page was in already. It leaves the address, so that a reload comes back as a

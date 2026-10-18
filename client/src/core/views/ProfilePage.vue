@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { HANDLE } from '@reviewer2/shared';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AccountEntry from '../components/AccountEntry.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
@@ -21,6 +21,14 @@ const props = defineProps<{ handle: string }>();
 const { t } = useI18n();
 const valid = computed(() => HANDLE.test(props.handle));
 const name = ref('');
+// The name goes with its handle: the page may move to another, whose card says its own, or to
+// an address that can't be a handle, which has no card to say any.
+watch(
+  () => props.handle,
+  () => {
+    name.value = '';
+  },
+);
 usePageHead(() => ({
   title: pageTitle(name.value ? t('site.profile', { name: name.value }) : t('playerPage.title')),
   noindex: true,

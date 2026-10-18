@@ -9,15 +9,20 @@ import SiteWordmark from '../components/SiteWordmark.vue';
 // words as well as the interface. Each option speaks its own language. Each is a link to the home
 // page in its language (site.ts), which a crawler follows: it keeps no choice, so it would never
 // get past the gate otherwise. A click chooses here, without loading the page again, unless it
-// asks for a new tab or window, as a link does.
+// asks for a new tab or window, as a link does; so does the space bar, as on the buttons the
+// choices look like, since a link alone answers Enter only.
 const emit = defineEmits<{ chosen: [language: Language] }>();
 const { t } = useI18n();
 
-function choose(event: MouseEvent, language: Language) {
-  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-  event.preventDefault();
+function choose(language: Language) {
   setLanguage(language);
   emit('chosen', language);
+}
+
+function click(event: MouseEvent, language: Language) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  choose(language);
 }
 </script>
 
@@ -36,7 +41,8 @@ function choose(event: MouseEvent, language: Language) {
         :href="homeIn(language)"
         class="choice press press-large"
         :lang="HTML_LANG[language]"
-        @click="choose($event, language)"
+        @click="click($event, language)"
+        @keydown.space.prevent="choose(language)"
       >
         <span class="name">{{ t(`language.${language}`) }}</span>
         <span class="description">{{ t('gate.description', {}, { locale: language }) }}</span>

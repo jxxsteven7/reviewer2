@@ -17,10 +17,12 @@ import { useRoomPage } from '../useRoomPage';
 // once someone has clicked it, which it asks for until then, and has a switch to keep them quiet.
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
-const { room, entry, screens } = useRoomPage(toRef(props, 'code'), { screen: true });
+const { room, entry, screens, roomCode } = useRoomPage(toRef(props, 'code'), { screen: true });
 const soundLocked = computed(() => !muted.value && !unlocked.value);
-// The tab says which room's screen this is.
-usePageHead(() => ({ title: pageTitle(t('site.screen', { code: formatCode(room.value?.code ?? props.code) })) }));
+// The tab says which room's screen this is, or that there is no such room.
+usePageHead(() => ({
+  title: pageTitle(roomCode.value ? t('site.screen', { code: formatCode(roomCode.value) }) : t('room.notFound.title')),
+}));
 </script>
 
 <template>

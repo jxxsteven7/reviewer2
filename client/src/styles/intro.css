@@ -1,14 +1,16 @@
 /* The introduction that the empty page shows until the app takes its place (src/core/site.ts):
    the wordmark, as on the language gate, the tagline in both languages and a paragraph in each.
-   It is all a crawler that runs no script reads, and what a slow connection shows first. */
-.intro {
+   It is all a crawler that runs no script reads, and what a slow connection shows first. The sheet
+   loads with the app and stays, so every selector here starts with `site-intro`, a name the pages
+   don't use: a bare `.intro` would reach the pages' own introductions (site.test.ts checks). */
+.site-intro {
   max-width: var(--page-narrow);
   margin: 0 auto;
   padding: calc(var(--space-7) + var(--space-5)) var(--space-4) var(--space-7);
   text-align: center;
 }
 
-.intro-name {
+.site-intro-name {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
@@ -18,7 +20,7 @@
   line-height: 1.15;
 }
 
-.intro-tile {
+.site-intro-tile {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -31,11 +33,11 @@
   line-height: 1;
 }
 
-.intro-tile::before {
+.site-intro-tile::before {
   content: 'R2';
 }
 
-.intro-tagline {
+.site-intro-tagline {
   display: flex;
   flex-direction: column;
   margin-top: var(--space-5);
@@ -43,7 +45,7 @@
   line-height: 1.35;
 }
 
-.intro p:not(.intro-name) {
+.site-intro p:not(.site-intro-name) {
   margin-top: var(--space-5);
   line-height: 1.65;
   text-align: left;

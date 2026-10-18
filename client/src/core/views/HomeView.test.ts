@@ -106,11 +106,13 @@ describe('the home page in a language', () => {
   afterEach(() => {
     router.route.query = {};
     router.replace.mockClear();
+    vi.unstubAllGlobals();
     document.body.innerHTML = '';
     setLanguage('en', { remember: true });
   });
 
   test('opens in that language, which becomes the choice, and leaves the address', async () => {
+    vi.stubGlobal('__SITE_URL__', 'https://example.com');
     router.route.query = { lang: 'zh', from: 'search' };
     const wrapper = mount(HomeView, { attachTo: document.body, global: { plugins: [i18n], stubs } });
     await nextTick();
@@ -119,7 +121,18 @@ describe('the home page in a language', () => {
     expect(router.replace).toHaveBeenCalledWith({ query: { from: 'search' } });
     expect(wrapper.find('.gate').exists()).toBe(false);
     expect(document.title).toBe('Reviewer 2 \u00b7 \u5b66\u672f\u5708\u7684\u805a\u4f1a\u6e38\u620f');
-    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(/\/\?lang=zh$/);
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(
+      'https://example.com/?lang=zh',
+    );
+    wrapper.unmount();
+  });
+
+  test('names no address of its own without SITE_URL', async () => {
+    router.route.query = { lang: 'zh' };
+    const wrapper = mount(HomeView, { attachTo: document.body, global: { plugins: [i18n], stubs } });
+    await nextTick();
+    expect(document.title).toBe('Reviewer 2 \u00b7 \u5b66\u672f\u5708\u7684\u805a\u4f1a\u6e38\u620f');
+    expect(document.head.querySelector('link[rel="canonical"]')).toBeNull();
     wrapper.unmount();
   });
 

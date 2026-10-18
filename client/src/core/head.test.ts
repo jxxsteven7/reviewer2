@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { mount } from '@vue/test-utils';
-import { beforeAll, describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref } from 'vue';
-import { pageTitle, usePageHead, useUrgentTitle, type Head } from './head';
+import { pageTitle, siteAddress, usePageHead, useUrgentTitle, type Head } from './head';
 import { i18n, setLanguage } from './i18n';
 
 // What index.html has, in both languages, before any page puts its own in place.
@@ -99,5 +99,14 @@ describe('an urgent title', () => {
     await nextTick();
     expect(document.title).toBe('Manuscript R2-K7QX \u00b7 Reviewer 2');
     page.unmount();
+  });
+});
+
+describe("the site's address", () => {
+  test('is a path at SITE_URL, and none without it', () => {
+    expect(siteAddress('/?lang=en')).toBeNull();
+    vi.stubGlobal('__SITE_URL__', 'https://example.com');
+    expect(siteAddress('/?lang=en')).toBe('https://example.com/?lang=en');
+    vi.unstubAllGlobals();
   });
 });

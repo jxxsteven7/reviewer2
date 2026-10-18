@@ -10,8 +10,9 @@ import { i18n } from './i18n';
 export interface Head {
   title?: string;
   description?: string;
-  // The page's address, from the site's own (SITE_URL, or where the page is) and a path.
-  canonical?: string;
+  // The page's address, from the site's own (SITE_URL) and a path, or null while the site's is
+  // unknown: the page then names none.
+  canonical?: string | null;
   // Asks search engines not to list the page. Google reads it from the rendered page.
   noindex?: boolean;
 }
@@ -25,8 +26,9 @@ let started = false;
 export const pageTitle = (page: string): string =>
   i18n.global.t('site.title', { page, site: i18n.global.t('app.name') });
 
-// The site's address and a path, for a canonical link.
-export const siteAddress = (path: string): string => `${__SITE_URL__ ?? window.location.origin}${path}`;
+// The site's address and a path, for a canonical link, or null without SITE_URL: where the page
+// is may be one of several addresses of the site, and only the build says which is its own.
+export const siteAddress = (path: string): string | null => (__SITE_URL__ === null ? null : `${__SITE_URL__}${path}`);
 
 // The element of the head that `selector` finds, made with `attributes` when there is none.
 function headElement(selector: string, tag: 'meta' | 'link', attributes: Record<string, string>): Element {

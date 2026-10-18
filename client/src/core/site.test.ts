@@ -119,6 +119,17 @@ describe('introHtml', () => {
     expect(html).toContain('<p lang="zh-CN">\u4ecb\u7ecd</p>');
     expect(html.match(/<h1/g)).toHaveLength(1);
   });
+
+  test('keeps to classes of its own, as its stylesheet does, which loads with the app and stays', () => {
+    const classes = [...introHtml(TEXT).matchAll(/class="([^"]+)"/g)].map((found) => found[1]);
+    expect(classes.length).toBeGreaterThan(0);
+    for (const name of classes) expect(name).toMatch(/^site-intro(-|$)/);
+    // The pages have introductions of their own, `.intro`, which a bare selector here would restyle.
+    const intro = readFileSync(join(import.meta.dirname, '..', 'styles', 'intro.css'), 'utf8');
+    const selectors = intro.replace(/\/\*[\s\S]*?\*\//g, '').match(/^[^\s{}][^{\n]*(?=\{)/gm) ?? [];
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) expect(selector.trim()).toMatch(/^\.site-intro(-|\b)/);
+  });
 });
 
 describe('robotsTxt', () => {

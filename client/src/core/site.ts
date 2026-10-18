@@ -99,13 +99,14 @@ export function headTags(text: SiteText, url: string | null): string {
 
 // What the empty page shows until the app takes its place, and all that a crawler that runs no
 // script reads: the site's name, its tagline and an introduction to the game, in both languages.
-// The tile beside the name is drawn by CSS, as the wordmark's is (styles/intro.css).
+// The tile beside the name is drawn by CSS, as the wordmark's is (styles/intro.css), whose
+// classes, `site-intro-`, are its own: the app's pages have introductions of their own.
 export function introHtml(text: SiteText): string {
   const { en, zh } = text;
   return [
-    `<main class="intro">`,
-    `<p class="intro-name"><span class="intro-tile" aria-hidden="true"></span>${escape(message(en, 'app.name'))}</p>`,
-    `<h1 class="intro-tagline"><span lang="${HTML_LANG.zh}">${escape(message(zh, 'app.tagline'))}</span>`,
+    `<main class="site-intro">`,
+    `<p class="site-intro-name"><span class="site-intro-tile" aria-hidden="true"></span>${escape(message(en, 'app.name'))}</p>`,
+    `<h1 class="site-intro-tagline"><span lang="${HTML_LANG.zh}">${escape(message(zh, 'app.tagline'))}</span>`,
     `<span lang="${HTML_LANG.en}">${escape(message(en, 'app.tagline'))}</span></h1>`,
     `<p lang="${HTML_LANG.en}">${escape(message(en, 'site.intro'))}</p>`,
     `<p lang="${HTML_LANG.zh}">${escape(message(zh, 'site.intro'))}</p>`,

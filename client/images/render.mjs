@@ -31,8 +31,9 @@ const CENTRE = [565.5, -306.5];
 // The tile as an SVG, 64 units square: with round corners, as tabs and pages show it, or square to
 // its edges for the home screens that cut their own shape out of it (Apple's, and Android's
 // maskable icons), with the letters a little smaller, inside the circle that every shape keeps.
+// The scale is rounded, so that no floating-point noise goes into the file.
 function tile({ rounded }) {
-  const scale = ((rounded ? 0.56 : 0.5) * 64) / 1000;
+  const scale = Number((((rounded ? 0.56 : 0.5) * 64) / 1000).toFixed(6));
   const corner = rounded ? ' rx="15.36"' : '';
   const letters = `translate(32 32) scale(${scale}) translate(${-CENTRE[0]} ${-CENTRE[1]})`;
   return [
