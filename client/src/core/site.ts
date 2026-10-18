@@ -75,8 +75,9 @@ const both = ({ en, zh }: SiteText, path: string) => `${message(en, path)} ${mes
 // previews of links show, a shorter description and the picture. Open Graph wants the picture's
 // full address, which only `url` gives; without it, the picture's path is the best there is. The
 // page names no address of its own, og:url or a canonical link: every page of the site is this one
-// file, and a room's link, say, would claim to be the home page's. Some apps, such as Lark, show the
-// picture only from twitter:image, so it is named there too.
+// file, and a room's link, say, would claim to be the home page's. Lark showed no picture with
+// og:image alone, so the picture and its description are named in twitter: tags too, as GitHub's
+// pages do.
 export function headTags(text: SiteText, url: string | null): string {
   const title = escape(bilingualTitle(text));
   const image = escape(`${url ?? ''}${SHARE_IMAGE.path}`);
@@ -96,6 +97,7 @@ export function headTags(text: SiteText, url: string | null): string {
     `<meta property="og:locale:alternate" content="${OG_LOCALE.zh}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:image" content="${image}" />`,
+    `<meta name="twitter:image:alt" content="${title}" />`,
   ];
   return tags.join('\n    ');
 }

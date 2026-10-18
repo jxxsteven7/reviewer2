@@ -84,6 +84,9 @@ describe('headTags', () => {
     expect(tags).toContain('<meta property="og:locale" content="en_US" />');
     expect(tags).toContain('<meta property="og:locale:alternate" content="zh_CN" />');
     expect(tags).toContain('<meta name="twitter:card" content="summary_large_image" />');
+    expect(tags).toContain(
+      '<meta name="twitter:image:alt" content="Reviewer 2 \u00b7 Games &amp; &lt;fun&gt; \u00b7 \u6e38\u620f" />',
+    );
   });
 
   test("name the picture by its full address when the site's is known, and by its path otherwise", () => {
