@@ -122,6 +122,26 @@ describe('KeywordsLobby', () => {
     const invites = chair.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1');
     // Both PIs' seats, and the blue students: the red group has its AI student.
     expect(invites).toHaveLength(3);
+    // Each invitation is one button, a chip with Reviewer 1's avatar as a sticker that presses, a
+    // plus on it, and the words, with the name in one piece (InviteAgent.vue).
+    const chip = invites[0];
+    expect(chip?.classes()).toEqual(expect.arrayContaining(['invite-agent', 'press-host']));
+    expect(chip?.get('.face').classes()).toContain('press-part');
+    expect(chip?.find('.face .avatar svg').exists()).toBe(true);
+    expect(chip?.find('.face .plus').exists()).toBe(true);
+    expect(chip?.get('.words .name').text()).toBe('Reviewer 1');
+    // Under a vacant PI's seat, the invitation follows the seat's line; among the students, it
+    // follows the names and comes before the button to join them. The names take two lines.
+    const red = chair.get('.group.red');
+    expect(red.get('dd.seat-line').element.children[0]?.className).toBe('vacant-line');
+    expect(red.get('dd.seat-line').element.children[1]?.className).toContain('invite-agent');
+    const blueStudents = chair.get('.group.blue').findAll('dd')[1];
+    expect([...(blueStudents?.element.children ?? [])].map((child) => child.className.split(' ')[0])).toEqual([
+      'names',
+      'invite-agent',
+      'button',
+    ]);
+    expect(chair.findAll('.group .player').every((player) => player.classes().includes('stacked'))).toBe(true);
     await invites[0]?.trigger('click');
     expect(send).toHaveBeenCalledWith('room:addAgent', {
       persona: 'reviewer1',
@@ -391,8 +411,8 @@ describe('KeywordsLobby', () => {
     expect(bar.get('.readiness').classes()).not.toContain('ready');
     expect(chair.get('.desk .problems').findAll('li')).toHaveLength(2);
     expect(bar.get('.primary').attributes('disabled')).toBeDefined();
-    expect(bar.findAll('button').map((button) => button.text())).toEqual(['Shuffle the groups', 'Start the game']);
-    const starts = chair.findAll('button').filter((button) => button.text() === 'Start the game');
+    expect(bar.findAll('button').map((button) => button.text())).toEqual(['Shuffle groups', 'Start']);
+    const starts = chair.findAll('button').filter((button) => button.text() === 'Start');
     expect(starts).toHaveLength(1);
     // Above the groups and the desk, in the page's order too.
     const html = chair.html();
@@ -406,7 +426,7 @@ describe('KeywordsLobby', () => {
 
     const player = mount(KeywordsLobby, { props: { room: view('bob', 0) }, global: global() });
     expect(player.find('.start-bar').exists()).toBe(false);
-    expect(player.findAll('button').filter((button) => button.text() === 'Start the game')).toHaveLength(0);
+    expect(player.findAll('button').filter((button) => button.text() === 'Start')).toHaveLength(0);
   });
 
   test('keeps the start bar under the banner while the page reconnects', async () => {
@@ -492,8 +512,8 @@ describe('KeywordsLobby, public or private', () => {
     expect(screen.attributes('target')).toBe('_blank');
     // A guest who chairs: the shuffle and the start, half the row each.
     expect(bar(mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() }))).toEqual([
-      'Shuffle the groups',
-      'Start the game',
+      'Shuffle groups',
+      'Start',
     ]);
 
     account.summary = { username: 'Bob', avatar: null } as unknown as typeof account.summary;
@@ -509,7 +529,7 @@ describe('KeywordsLobby, public or private', () => {
     // The chair with an account: the invitation between the shuffle and the start.
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(chair.get('.start-bar').classes()).not.toContain('member');
-    expect(bar(chair)).toEqual(['Shuffle the groups', 'Invite friends', 'Start the game']);
+    expect(bar(chair)).toEqual(['Shuffle groups', 'Invite friends', 'Start']);
     expect(chair.find('.invited-friends').exists()).toBe(false);
   });
 
@@ -668,6 +688,6 @@ describe('KeywordsLobby in a match', () => {
     expect(chair.find('.settings-form').exists()).toBe(false);
     expect(chair.find('.settings-summary').exists()).toBe(true);
     expect(chair.get('.desk').text()).toContain('stay as they are until the match is over');
-    expect(chair.text()).not.toContain('Shuffle the groups');
+    expect(chair.text()).not.toContain('Shuffle groups');
   });
 });

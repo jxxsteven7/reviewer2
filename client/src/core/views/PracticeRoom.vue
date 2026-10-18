@@ -26,17 +26,23 @@ import { keepRoomSetup, keptFields, lastPractice } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
-// "Practice with Reviewer 1", in the first game's card on the home page
-// (docs/architecture.md#practice-rooms): a button that opens a sheet, where an account picks its
-// role, the language and the word lists, and starts a game in a new private room, where Reviewer 1
-// takes the three other seats. The sheet shows who will sit where. The role and the lists are
-// those of the account's last practice room (RoomSetup), or of the browser's from before accounts
-// kept it, or the PI and the general list; the lists fold into one line, which names them, so that
-// the whole sheet fits on a phone's screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't answer, the button
-// says so and can't be pressed; on a server without an agent, there is no button at all.
+// "Play with Reviewer 1", in the first game's card on the home page
+// (docs/architecture.md#practice-rooms): a button that opens a sheet, where an account says who
+// plays. Just the player, which is the first choice: they pick their role, the language and the
+// word lists, and start a game in a new private room, where Reviewer 1 takes the three other seats,
+// which the sheet shows. Or the player with friends: they pick the language and the word lists
+// alone, and open the waiting room of such a room, to send friends its link, sit, and have Reviewer
+// 1 take the seats nobody takes. The role and the lists are those of the account's last practice
+// room (RoomSetup), or of the browser's from before accounts kept it, or the PI and the general
+// list; the lists fold into one line, which names them, so that the whole sheet fits on a phone's
+// screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't
+// answer, the button says so and can't be pressed; on a server without an agent, there is no
+// button at all.
 const { t, locale } = useI18n();
 // The first game, whose practice rooms these are.
 const GAME = 'keywords';
+// Who plays: the player alone, with Reviewer 1 in the other seats, or the player with friends.
+const WHO = ['me', 'friends'] as const;
 
 const router = useRouter();
 const id = useId();
@@ -47,6 +53,7 @@ const lastFields = (): string[] | null => {
   const kept = lastPractice(GAME)?.fields;
   return kept && kept.length > 0 ? kept : storedFields();
 };
+const who = ref<(typeof WHO)[number]>('me');
 const role = ref<PracticeRole>(lastRole());
 const chosen = ref<string[]>([]);
 const formError = ref<string | undefined>();
@@ -76,7 +83,8 @@ watch(
   { immediate: true },
 );
 
-// Who sits where: the player in the red group as the role chosen, Reviewer 1 everywhere else.
+// Who sits where when the player plays alone: the player in the red group as the role chosen,
+// Reviewer 1 everywhere else.
 const seats = computed(() => {
   const me = { name: account.summary?.username ?? '', avatar: account.summary?.avatar ?? null, you: true };
   const ai = { name: persona.value, avatar: null, you: false };
@@ -90,6 +98,7 @@ const ready = computed(() => account.summary !== null && !offline.value && chose
 
 function show() {
   formError.value = undefined;
+  who.value = 'me';
   role.value = lastRole();
   if (fields.value) chosen.value = keptFields(lastFields() ?? DEFAULT_FIELDS, usable.value);
   open.value = true;
@@ -105,7 +114,7 @@ async function start() {
       game: GAME,
       language: currentLanguage(),
       fields: chosen.value,
-      practice: { role: role.value },
+      practice: who.value === 'me' ? { who: 'me', role: role.value } : { who: 'friends' },
     }),
   );
   if (!reply) return;
@@ -114,8 +123,11 @@ async function start() {
     formError.value = t(errorKey(reply.error));
     return;
   }
-  storePractice(role.value, chosen.value);
-  keepRoomSetup(GAME, { practice: { role: role.value, fields: [...chosen.value] } });
+  // What the next sheet starts from, as the server keeps it: the lists, and the role when the
+  // player played alone; a room with friends leaves the role as it was.
+  const alone = who.value === 'me';
+  storePractice(alone ? role.value : null, chosen.value);
+  keepRoomSetup(GAME, { practice: { ...(alone ? { role: role.value } : {}), fields: [...chosen.value] } });
   await router.push(`/room/${reply.code}`);
 }
 </script>
@@ -150,28 +162,39 @@ async function start() {
       </div>
 
       <form v-else class="sheet" @submit.prevent="start">
-        <div class="seats">
-          <section v-for="group in seats" :key="group.team" :class="['group', group.team]">
-            <h3>{{ t(`lobby.group.${group.team}`) }}</h3>
-            <div v-for="seat in PRACTICE_ROLES" :key="seat" class="seat">
-              <span class="role">{{ t(`home.practice.roles.${seat}`) }}</span>
-              <span class="who">
-                <PlayerAvatar :name="group[seat].name" :avatar="group[seat].avatar" :agent="!group[seat].you" />
-                <span class="name">{{ group[seat].name }}</span>
-                <span v-if="group[seat].you" class="you">{{ t('home.practice.you') }}</span>
-              </span>
-            </div>
-          </section>
-        </div>
-
-        <fieldset class="roles" :aria-labelledby="`${id}-role`">
-          <legend :id="`${id}-role`">{{ t('home.practice.roleTitle') }}</legend>
-          <label v-for="option in PRACTICE_ROLES" :key="option">
-            <input v-model="role" type="radio" :name="`${id}-role`" :value="option" />
-            <span class="option">{{ t(`home.practice.roles.${option}`) }}</span>
-            <span class="hint">{{ t(`home.practice.roleHints.${option}`) }}</span>
+        <fieldset class="choices who-plays" :aria-labelledby="`${id}-who`">
+          <legend :id="`${id}-who`">{{ t('home.practice.who') }}</legend>
+          <label v-for="option in WHO" :key="option">
+            <input v-model="who" type="radio" :name="`${id}-who`" :value="option" />
+            <span class="option">{{ t(`home.practice.whoChoice.${option}`) }}</span>
+            <span class="hint">{{ t(`home.practice.whoHints.${option}`) }}</span>
           </label>
         </fieldset>
+
+        <template v-if="who === 'me'">
+          <div class="seats">
+            <section v-for="group in seats" :key="group.team" :class="['group', group.team]">
+              <h3>{{ t(`lobby.group.${group.team}`) }}</h3>
+              <div v-for="seat in PRACTICE_ROLES" :key="seat" class="seat">
+                <span class="role">{{ t(`home.practice.roles.${seat}`) }}</span>
+                <span class="who">
+                  <PlayerAvatar :name="group[seat].name" :avatar="group[seat].avatar" :agent="!group[seat].you" />
+                  <span class="name">{{ group[seat].name }}</span>
+                  <span v-if="group[seat].you" class="you">{{ t('home.practice.you') }}</span>
+                </span>
+              </div>
+            </section>
+          </div>
+
+          <fieldset class="choices roles" :aria-labelledby="`${id}-role`">
+            <legend :id="`${id}-role`">{{ t('home.practice.roleTitle') }}</legend>
+            <label v-for="option in PRACTICE_ROLES" :key="option">
+              <input v-model="role" type="radio" :name="`${id}-role`" :value="option" />
+              <span class="option">{{ t(`home.practice.roles.${option}`) }}</span>
+              <span class="hint">{{ t(`home.practice.roleHints.${option}`) }}</span>
+            </label>
+          </fieldset>
+        </template>
 
         <div class="language">
           <span
@@ -187,7 +210,7 @@ async function start() {
         <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
         <p v-else-if="offline" class="problem" role="alert">{{ t('home.practice.offline') }}</p>
         <UiButton variant="primary" size="large" type="submit" class="start" :disabled="busy || !ready">
-          {{ t('home.practice.start') }}
+          {{ t(who === 'me' ? 'home.practice.start' : 'home.practice.open') }}
         </UiButton>
       </form>
     </UiSheet>
@@ -380,8 +403,8 @@ async function start() {
   line-height: 1.6;
 }
 
-/* The role, as the room setup draws its choices. */
-.roles {
+/* Who plays, and the role, as the room setup draws its choices. */
+.choices {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -397,7 +420,7 @@ legend {
   font-weight: var(--weight-bold);
 }
 
-.roles label {
+.choices label {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
@@ -410,16 +433,16 @@ legend {
   cursor: pointer;
 }
 
-.roles label:has(input:checked) {
+.choices label:has(input:checked) {
   background: var(--bg);
 }
 
-.roles label:has(input:focus-visible) {
+.choices label:has(input:focus-visible) {
   outline: var(--line-strong) solid var(--focus);
   outline-offset: 2px;
 }
 
-.roles input {
+.choices input {
   width: 20px;
   height: 20px;
   margin: 0;
@@ -430,7 +453,7 @@ legend {
   font-weight: var(--weight-black);
 }
 
-.roles .hint {
+.choices .hint {
   grid-column: 2;
 }
 

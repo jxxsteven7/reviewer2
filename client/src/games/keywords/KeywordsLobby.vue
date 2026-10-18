@@ -32,6 +32,7 @@ import { act, reconnecting } from '../../core/socket';
 import { ROOM_ACTIONS } from '../../core/useRoomPage';
 import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
+import InviteAgent from './InviteAgent.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
 import { useKeywords } from './useKeywords';
@@ -47,6 +48,12 @@ import { useKeywords } from './useKeywords';
 // doesn't chair the room has a bar of their own there, on one row where it fits, with the same
 // line and the invitation alone; a guest, who can't invite anyone, has none. The tag beside the
 // heading says whether the room is public, and the chair switches it there, as in the room menu.
+//
+// In the groups and among the spectators, a name takes two lines, the rank and the marks under it
+// (PlayerName.vue), held to the width of its list. The roles' labels stand left of the seats on a
+// phone, where a group takes the row, and above them where the two groups stand side by side, as
+// in the game's rosters. The chair's invitation of Reviewer 1 to a seat is a chip on the seat's row
+// (InviteAgent.vue), under the PI's seat while it is vacant, and under the students.
 //
 // In a match, the match's table comes first, or its final ranking once it is over, and while the
 // match has locked the settings the chair sees the rules under their desk. When the server
@@ -294,42 +301,37 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
                   :player="group.captain"
                   :me="isMe(group.captain)"
                   :chair="isChairOf(group.captain)"
+                  stacked
                 />
-                <span v-else class="vacant">{{ t('lobby.vacant') }}</span>
-                <UiButton v-if="!group.captain && mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
-                  {{ t('lobby.takeCaptain') }}
-                </UiButton>
-                <UiButton
-                  v-if="!group.captain && canInvite"
-                  size="small"
-                  variant="quiet"
-                  @click="invite(group.team, 'captain')"
-                >
-                  {{ t('lobby.inviteAgent', { name: agentName }) }}
-                </UiButton>
+                <template v-else>
+                  <p class="vacant-line">
+                    <span class="vacant">{{ t('lobby.vacant') }}</span>
+                    <UiButton v-if="mayTake(group.team)" size="small" @click="sit(group.team, 'captain')">
+                      {{ t('lobby.takeCaptain') }}
+                    </UiButton>
+                  </p>
+                  <InviteAgent v-if="canInvite" :name="agentName" @click="invite(group.team, 'captain')" />
+                </template>
               </dd>
               <dt>{{ t('lobby.roles.guesser') }}</dt>
               <dd>
                 <ul v-if="group.guessers.length" class="names">
                   <li v-for="player in group.guessers" :key="player.id">
-                    <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
+                    <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" stacked />
                   </li>
                 </ul>
                 <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
+                <InviteAgent
+                  v-if="canInvite && !group.guessers.some((player) => player.agent)"
+                  :name="agentName"
+                  @click="invite(group.team, 'guesser')"
+                />
                 <UiButton
                   v-if="!(mySeat?.team === group.team && mySeat.role === 'guesser') && mayTake(group.team)"
                   size="small"
                   @click="sit(group.team, 'guesser')"
                 >
                   {{ t('lobby.joinAsGuesser') }}
-                </UiButton>
-                <UiButton
-                  v-if="canInvite && !group.guessers.some((player) => player.agent)"
-                  size="small"
-                  variant="quiet"
-                  @click="invite(group.team, 'guesser')"
-                >
-                  {{ t('lobby.inviteAgent', { name: agentName }) }}
                 </UiButton>
               </dd>
             </dl>
@@ -341,7 +343,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
           <h2 class="section-title">{{ t('lobby.roles.spectator') }}</h2>
           <ul v-if="spectators.length" class="names inline">
             <li v-for="player in spectators" :key="player.id">
-              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
+              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" stacked />
             </li>
           </ul>
           <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
@@ -644,8 +646,12 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   gap: var(--space-3);
 }
 
+/* The sections, one under another, each as wide as the page and no wider: what can't fit in one,
+   as the word lists' summary in the chair's desk, is cut short there rather than widening the
+   page. */
 .sections {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
@@ -682,7 +688,7 @@ dl {
   margin: var(--space-3) 0 0;
 }
 
-/* Lined up with the middle of the 44 px row that a name or a button makes. */
+/* Left of the seats, lined up with the middle of the 44 px row that a name or a button makes. */
 dt {
   padding-top: 11px;
   color: var(--ink-2);
@@ -701,15 +707,21 @@ dd {
   min-width: 0;
 }
 
-.seat-line {
-  flex-direction: row;
+/* A vacant PI's seat and the button to take it, on one row. */
+.vacant-line {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-2);
 }
 
+/* The lists of names are as wide as their seat, so that a long name is cut short rather than
+   widening the group; in a row of names, the spectators' or the pool's, a name takes at most the
+   row. */
 .names {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -720,6 +732,11 @@ dd {
   flex-wrap: wrap;
   gap: 0 var(--space-4);
   margin: var(--space-2) 0;
+}
+
+.names.inline li {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .vacant {
@@ -829,9 +846,25 @@ dd .vacant {
   font-weight: var(--weight-bold);
 }
 
+/* The two groups side by side, from a tablet up, each half as wide as their row at most. In cards
+   that narrow, the roles' labels go above their seats, as in the game's rosters, with the room
+   left of the seats given to the names. */
 @media (min-width: 40rem) {
   .groups {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  dl {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-2);
+  }
+
+  dt {
+    padding-top: 0;
+  }
+
+  dt:not(:first-child) {
+    margin-top: var(--space-2);
   }
 }
 

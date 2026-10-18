@@ -227,7 +227,9 @@ export interface GameRoomSetup {
     public: boolean;
     play: boolean;
   };
-  practice?: { role: string; fields: string[] };
+  // A practice room's word lists, and the role its creator last played alone in; a practice room
+  // with friends names no role, and leaves the role kept as it was.
+  practice?: { role?: string; fields: string[] };
 }
 
 // The most that the server keeps of one game's setup, as JSON: a setup that would take more isn't

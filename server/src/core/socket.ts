@@ -1086,8 +1086,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
 
     // A practice room (docs/architecture.md#practice-rooms) is for an account, and is private, plays
-    // no match and has the game's default settings. Its game starts as soon as its creator is in it,
-    // online; should it not, they are in its waiting room with the AI players, as in any room.
+    // no match and has the game's default settings. One for its creator alone starts its game as
+    // soon as its creator is in it, online; should it not, they are in its waiting room with the AI
+    // players, as in any room. One for the creator with friends opens its waiting room, where the
+    // creator sits and invites the AI players.
     on(handlers, 'room:create', (message) => {
       const { game, language, fields, randomFields, settings, play, match, public: listed, practice } = message;
       if (!creations.allowed(conn.ip)) return fail('rate_limited');
@@ -1117,7 +1119,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         as,
         ...(match ? { match } : {}),
         public: listed ?? false,
-        ...(practice ? { practice: practice.role } : {}),
+        ...(practice ? { practice } : {}),
       });
       if (!created.ok) return created;
       const { room, member } = created;
@@ -1129,11 +1131,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         randomFields: room.randomFields,
         match: match?.games ?? null,
         public: room.public,
-        practice: practice?.role ?? null,
+        practice: practice === undefined ? null : practice.who === 'me' ? practice.role : 'friends',
       });
       enter(socket, room, member);
       // The account's next room setup starts from this one (RoomSetup in shared/src/accounts.ts),
-      // with the game's settings as the game took them. The room is made whatever comes of
+      // with the game's settings as the game took them; a practice room with friends keeps its
+      // fields and leaves the role of the last one alone. The room is made whatever comes of
       // keeping it.
       if (account) {
         safely('room_setup', () =>
@@ -1141,7 +1144,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
             account.id,
             game,
             practice
-              ? { practice: { role: practice.role, fields: room.fields } }
+              ? { practice: { ...(practice.who === 'me' ? { role: practice.role } : {}), fields: room.fields } }
               : {
                   room: {
                     language,
@@ -1156,7 +1159,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
           ),
         );
       }
-      if (room.practice) {
+      if (practice?.who === 'me') {
         const started = room.start(room.round);
         if (started.ok) logStart(room, started.clashes);
         changed(room, started);

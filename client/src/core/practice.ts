@@ -36,8 +36,10 @@ export function storedFields(): string[] | null {
   }
 }
 
-export function storePractice(role: PracticeRole, fields: readonly string[]): void {
-  writeStored(ROLE_KEY, role);
+// Keeps the lists, and the role when the player chose one: a practice room with friends names no
+// role, and leaves the role stored as it was, as the server keeps the account's.
+export function storePractice(role: PracticeRole | null, fields: readonly string[]): void {
+  if (role !== null) writeStored(ROLE_KEY, role);
   writeStored(FIELDS_KEY, JSON.stringify(fields));
 }
 

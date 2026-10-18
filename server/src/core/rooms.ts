@@ -7,6 +7,7 @@ import {
   type PublicRoom,
   type Title,
 } from '@reviewer2/shared';
+import type { PracticeRequest } from '@reviewer2/shared/schemas';
 import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule, PracticeSeats } from './game';
@@ -77,10 +78,12 @@ export class Rooms {
   // full, or the fields, the game's settings or the name won't do. `key` is the creator's member
   // key, and `play` says whether they have come to play or only to watch. Without settings, the
   // room has the game's defaults. With `match`, the room plays a match by those rules; with
-  // `public`, it is listed on the home page. With `practice`, a role as the game names it, it is a
-  // practice room (docs/architecture.md#practice-rooms): the creator sits in that role and AI
-  // players take the other seats, for the game to start once the creator is online. It needs the
-  // agent to answer, since its AI players play at once.
+  // `public`, it is listed on the home page. With `practice`, it is a practice room
+  // (docs/architecture.md#practice-rooms): for its creator alone, who sits in the role it names, as
+  // the game names its roles, with AI players in the other seats, for the game to start once the
+  // creator is online; or for the creator with friends, a waiting room like any other, where the
+  // creator sits and invites the AI players. It needs the agent to answer, since its AI players
+  // play at once, or are there to be invited.
   //
   // The room is listed only once its creator has joined it. A game module that throws there
   // leaves no room behind: one without a member would belong to whoever found its code first.
@@ -96,14 +99,18 @@ export class Rooms {
     as?: { username: string; account: MemberAccount } | null;
     match?: MatchRules;
     public?: boolean;
-    practice?: string;
+    practice?: PracticeRequest;
   }): Ack<{ room: Room; member: Member }> {
     const { game, language, key, play = false, as = null, practice } = options;
     if (this.#rooms.size >= this.limits.maxRooms) return fail('too_many_rooms');
+    // Where a practice room's creator and its AI players sit, when the creator plays alone.
     let seats: PracticeSeats | null = null;
     if (practice !== undefined) {
-      seats = game.practice?.(practice) ?? null;
-      if (!seats) return fail('bad_request');
+      if (!game.practice) return fail('bad_request');
+      if (practice.who === 'me') {
+        seats = game.practice(practice.role);
+        if (!seats) return fail('bad_request');
+      }
       if (!this.agents?.up) return fail('agents_offline');
     }
     const chosen = chooseFields(
@@ -124,7 +131,7 @@ export class Rooms {
       fields: chosen.fields,
       randomFields: options.randomFields ?? false,
       public: options.public ?? false,
-      practice: seats !== null,
+      practice: practice !== undefined,
       words: this.words,
       rng: this.rng,
       now: this.now,
@@ -140,7 +147,8 @@ export class Rooms {
       const started = room.startMatch(options.match);
       if (!started.ok) return started;
     }
-    const joined = room.join(key, play || seats !== null, as);
+    // The creator of a practice room has come to play.
+    const joined = room.join(key, play || practice !== undefined, as);
     if (!joined.ok) return joined;
     const seated = seats ? seatPractice(room, joined.member, seats) : null;
     if (seated && !seated.ok) return seated;

@@ -87,7 +87,7 @@ describe('practicing with Reviewer 1', () => {
   test('opens as the PI with the general list, with Reviewer 1 in the other seats, and makes the room', async () => {
     const { sheet } = await opened();
     expect(socket.send).toHaveBeenCalledWith('meta:agents');
-    expect(sheet.querySelector('h2')?.textContent).toBe('Practice with Reviewer\u00a01');
+    expect(sheet.querySelector('h2')?.textContent).toBe('Play with Reviewer\u00a01');
     expect(checkedRole(sheet)).toBe('captain');
     expect(seats(sheet, 'red')).toEqual(['Ann You', 'Reviewer 1']);
     expect(seats(sheet, 'blue')).toEqual(['Reviewer 1', 'Reviewer 1']);
@@ -99,7 +99,7 @@ describe('practicing with Reviewer 1', () => {
       game: 'keywords',
       language: 'en',
       fields: ['general'],
-      practice: { role: 'captain' },
+      practice: { who: 'me', role: 'captain' },
     });
     expect(push).toHaveBeenCalledWith('/room/ABCD');
     expect(readStored('r2.practiceRole')).toBe('captain');
@@ -129,8 +129,68 @@ describe('practicing with Reviewer 1', () => {
     await submit(sheet);
     expect(socket.send).toHaveBeenLastCalledWith(
       'room:create',
-      expect.objectContaining({ fields: ['ml', 'general', 'physics'], practice: { role: 'captain' } }),
+      expect.objectContaining({ fields: ['ml', 'general', 'physics'], practice: { who: 'me', role: 'captain' } }),
     );
+  });
+
+  test('opens a waiting room for the player with friends, with the lists and no role', async () => {
+    // Ann last played alone as a student, with the physics list.
+    writeStored('r2.practiceRole', 'guesser');
+    signedIn.account.summary = {
+      username: 'Ann',
+      avatar: null,
+      roomSetup: { keywords: { practice: { role: 'guesser', fields: ['physics'] } } },
+    };
+    const { wrapper, sheet } = await opened();
+    // Just the player, first; the seats and the role show.
+    const choice = (who: string) => sheet.querySelector<HTMLInputElement>(`.who-plays input[value="${who}"]`);
+    expect(choice('me')?.checked).toBe(true);
+    expect(sheet.querySelector('.seats')).not.toBeNull();
+    expect(startButton(sheet)?.textContent?.trim()).toBe('Start');
+    // A role picked before the choice of friends is not what the room names, and isn't kept.
+    sheet.querySelector<HTMLInputElement>('.roles input[value="captain"]')?.click();
+    await flushPromises();
+    expect(checkedRole(sheet)).toBe('captain');
+    // The lists are: the general list in place of physics.
+    expect(summary(sheet)).toBe('Physics');
+    sheet.querySelector<HTMLButtonElement>('.field-fold .toggle')?.click();
+    await flushPromises();
+    const lists = [...sheet.querySelectorAll<HTMLInputElement>('.fields input')];
+    lists[0]?.click();
+    await flushPromises();
+    expect(summary(sheet)).toBe('General and Physics');
+    lists[2]?.click();
+    await flushPromises();
+    expect(summary(sheet)).toBe('General');
+    choice('friends')?.click();
+    await flushPromises();
+    expect(sheet.querySelector('.seats')).toBeNull();
+    expect(sheet.querySelector('.roles')).toBeNull();
+    expect(sheet.querySelector('.field-fold')).not.toBeNull();
+    expect(sheet.textContent).toContain('Games that Reviewer\u00a01 plays in bring no points, streaks or titles.');
+    expect(startButton(sheet)?.textContent?.trim()).toBe('Open the room');
+    await submit(sheet);
+    expect(socket.send).toHaveBeenLastCalledWith('room:create', {
+      game: 'keywords',
+      language: 'en',
+      fields: ['general'],
+      practice: { who: 'friends' },
+    });
+    expect(push).toHaveBeenCalledWith('/room/ABCD');
+    // The lists are kept for the next time, in the browser and in the summary as the server keeps
+    // it, and the role as it was.
+    expect(readStored('r2.practiceRole')).toBe('guesser');
+    expect(readStored('r2.practiceFields')).toBe('["general"]');
+    expect(signedIn.account.summary?.roomSetup).toEqual({
+      keywords: { practice: { role: 'guesser', fields: ['general'] } },
+    });
+    // The sheet opens on just the player again, as a student with the general list.
+    await wrapper.get('button.entry').trigger('click');
+    await flushPromises();
+    expect(choice('me')?.checked).toBe(true);
+    expect(sheet.querySelector('.seats')).not.toBeNull();
+    expect(checkedRole(sheet)).toBe('guesser');
+    expect(summary(sheet)).toBe('General');
   });
 
   test('works without storage, and starts nothing until a list is chosen', async () => {

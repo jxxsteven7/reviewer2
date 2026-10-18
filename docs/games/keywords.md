@@ -169,7 +169,7 @@ It knows what the seat it plays sees, no more: a student never the colors of the
 
 ## Practice rooms
 
-In a [practice room](../architecture.md#practice-rooms), the roles are `captain` and `guesser`: its creator takes that seat in the red group, and Reviewer 1 the red group's other role and both of the blue group's, invited in that order, so that a person sits first (`needs_human`). The default time limits are on, as a game with AI players needs (`needs_timers`).
+In a [practice room](../architecture.md#practice-rooms) for its creator alone, the roles are `captain` and `guesser`: the creator takes that seat in the red group, and Reviewer 1 the red group's other role and both of the blue group's, invited in that order, so that a person sits first (`needs_human`). In one with friends, the creator sits in the waiting room as in any room, and invites Reviewer 1 seat by seat ([AI players](#ai-players)). The default time limits are on, as a game with AI players needs (`needs_timers`).
 
 ## Messages
 
