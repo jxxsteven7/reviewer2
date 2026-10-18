@@ -29,7 +29,7 @@ import { useMediaQuery } from '../../core/useMediaQuery';
 import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import { useTitleFolds } from '../../core/useTitleFolds';
-import ClockBar from './ClockBar.vue';
+import ClockBar, { periodOf } from './ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
@@ -455,7 +455,7 @@ const status = computed(() => {
       clock-apart
     />
     <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting, stuck }">
-      <ClockBar v-if="game.clock && !game.result" :clock="game.clock" :frozen="paused" />
+      <ClockBar v-if="game.clock && !game.result" :clock="game.clock" :period="periodOf(game)" :frozen="paused" />
       <UiButton
         v-if="isChair && !game.result"
         class="pause"

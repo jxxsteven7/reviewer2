@@ -83,7 +83,7 @@ The traditional-simplified table, `shared/src/han-variants.ts`, is built by `scr
 
 ## Time limits
 
-The server keeps the time. A captain who gives no clue in time loses the turn and 5 points ([Matches](#matches)), recorded with `word` and `count` null, `timedOut` true and the `captain` who was in the seat, or who left it of their own accord during the game, if any, and the room hears of it at once ([Titles](#titles)); guessers out of time end their turn, the clue marked `timedOut`. Time runs whether or not players are online. A timer ends the phase and sends a snapshot; an action arriving after the deadline, even before the timer fired, is `stale`. Every view carries `clock`, the time left and given, in milliseconds; the client only counts down.
+The server keeps the time. A captain who gives no clue in time loses the turn and 5 points ([Matches](#matches)), recorded with `word` and `count` null, `timedOut` true and the `captain` who was in the seat, or who left it of their own accord during the game, if any, and the room hears of it at once ([Titles](#titles)); guessers out of time end their turn, the clue marked `timedOut`. Time runs whether or not players are online. A timer ends the phase and sends a snapshot; an action arriving after the deadline, even before the timer fired, is `stale`. Every view carries `clock`, the time left and given, in milliseconds; the client only counts down, from the earliest end that the phase's snapshots have given, since a snapshot that took longer on its way gives a later one.
 
 ## Pauses and extensions
 

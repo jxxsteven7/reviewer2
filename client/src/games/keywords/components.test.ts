@@ -613,7 +613,8 @@ describe('KeywordsCard', () => {
 
   // A card that has just been revealed turns over with the face it lay with: the paper, the yellow
   // of the viewer's choice, the tint of the group's mark or of the color a PI knew, or Reviewer 2's
-  // ink for the PI who knew it; a card revealed and lying still doesn't turn.
+  // ink for the PI who knew it; and, when the viewer didn't know its color, without the color's
+  // label until the half-turn. A card revealed and lying still doesn't turn.
   test('turns over when it has just been revealed, with the face it had until then', async () => {
     const lying = async (
       before: Partial<InstanceType<typeof KeywordsCard>['$props']>,
@@ -632,14 +633,18 @@ describe('KeywordsCard', () => {
       });
       return wrapper.get('button').classes();
     };
-    expect(await lying({})).toEqual(expect.arrayContaining(['turning', 'face-paper']));
+    expect(await lying({})).toEqual(expect.arrayContaining(['turning', 'face-paper', 'was-hidden']));
     expect(await lying({ selectable: true, selected: true })).toContain('face-choice');
     expect(await lying({ note: { mark: 'theirs', color: 'blue' } })).toContain('face-blue');
     expect(await lying({ note: { mark: 'r2', color: 'r2' } })).toContain('face-r2');
     // The PI only reads the marks: the card keeps the tint of its own color, which the PI knows.
-    expect(
-      await lying({ note: { mark: 'ours', color: 'blue' }, noteQuiet: true, card: { ...card, color: 'red' } }),
-    ).toContain('face-red');
+    const known = await lying({
+      note: { mark: 'ours', color: 'blue' },
+      noteQuiet: true,
+      card: { ...card, color: 'red' },
+    });
+    expect(known).toContain('face-red');
+    expect(known).not.toContain('was-hidden');
     expect(await lying({ card: { ...card, color: 'neutral' } }, 'neutral')).toContain('face-neutral');
     expect(await lying({ card: { ...card, color: 'reviewer2' } }, 'reviewer2')).toContain('face-ink');
     const still = mount(KeywordsCard, {
@@ -1280,11 +1285,14 @@ describe('ReplayViewer', () => {
 });
 
 describe('ClockBar', () => {
+  const PERIOD = '7:4:clue';
+  const clockBar = (left: number, total = 60_000) =>
+    mount(ClockBar, { props: { clock: { left, total }, period: PERIOD }, global: global() });
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
   test('counts down from what the server said, turns red for the last 10 seconds, and stops at zero', async () => {
-    const wrapper = mount(ClockBar, { props: { clock: { left: 12_000, total: 60_000 } }, global: global() });
+    const wrapper = clockBar(12_000);
     expect(wrapper.get('.seconds').text()).toBe('0:12');
     expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0.2)');
     expect(wrapper.classes()).not.toContain('urgent');
@@ -1298,14 +1306,48 @@ describe('ClockBar', () => {
     expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0)');
   });
 
-  test('sets itself right with every snapshot', async () => {
-    const wrapper = mount(ClockBar, { props: { clock: { left: 50_000, total: 60_000 } }, global: global() });
+  test('sets itself right with a snapshot that ends the period sooner', async () => {
+    const wrapper = clockBar(50_000);
     vi.advanceTimersByTime(5_000);
     await wrapper.setProps({ clock: { left: 30_000, total: 60_000 } });
     expect(wrapper.get('.seconds').text()).toBe('0:30');
     vi.advanceTimersByTime(1_000);
     await flushPromises();
     expect(wrapper.get('.seconds').text()).toBe('0:29');
+  });
+
+  // A snapshot that was longer on its way than the one before gives a later end: the seconds don't
+  // go back up for it.
+  test("doesn't count back up for a snapshot that arrived late", async () => {
+    const wrapper = clockBar(50_000);
+    vi.advanceTimersByTime(4_500);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:46');
+    // Sent 300 ms after the first one, and 4.2 seconds longer on its way.
+    await wrapper.setProps({ clock: { left: 49_700, total: 60_000 } });
+    expect(wrapper.get('.seconds').text()).toBe('0:46');
+    vi.advanceTimersByTime(500);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:45');
+  });
+
+  // A new phase or turn, more time for this one, and a game that goes on after a pause each give an
+  // end that the earlier snapshots knew nothing of.
+  test('starts afresh for a new period, for more time and after a pause', async () => {
+    const wrapper = clockBar(5_000);
+    await wrapper.setProps({ clock: { left: 90_000, total: 90_000 }, period: '7:4:guess' });
+    expect(wrapper.get('.seconds').text()).toBe('1:30');
+    await wrapper.setProps({ clock: { left: 120_000, total: 120_000 } });
+    expect(wrapper.get('.seconds').text()).toBe('2:00');
+    vi.advanceTimersByTime(10_000);
+    await wrapper.setProps({ clock: { left: 110_000, total: 120_000 }, frozen: true });
+    vi.advanceTimersByTime(60_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('1:50');
+    await wrapper.setProps({ frozen: false });
+    vi.advanceTimersByTime(1_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('1:49');
   });
 
   // How long the clock waits between wakeups, until it sets no further timer.
@@ -1322,13 +1364,13 @@ describe('ClockBar', () => {
   // A page with a clock has nothing to draw between two seconds, so the clock wakes up only when
   // the seconds shown change.
   test('wakes up once a second, when the seconds change, and no more once it is at zero', async () => {
-    const wrapper = mount(ClockBar, { props: { clock: { left: 2_300, total: 60_000 } }, global: global() });
+    const wrapper = clockBar(2_300);
     expect(wrapper.get('.seconds').text()).toBe('0:03');
     expect(waits()).toEqual([300, 1_000, 1_000]);
     await flushPromises();
     expect(wrapper.get('.seconds').text()).toBe('0:00');
 
-    const running = mount(ClockBar, { props: { clock: { left: 30_000, total: 60_000 } }, global: global() });
+    const running = clockBar(30_000);
     expect(vi.getTimerCount()).toBe(1);
     running.unmount();
     expect(vi.getTimerCount()).toBe(0);
@@ -1338,14 +1380,14 @@ describe('ClockBar', () => {
   // of 300.5 ms that was not rounded up would end before the second changed, and the clock would
   // have to wake up twice for one second.
   test('rounds its waits up to whole milliseconds', async () => {
-    const wrapper = mount(ClockBar, { props: { clock: { left: 2_300.5, total: 60_000 } }, global: global() });
+    const wrapper = clockBar(2_300.5);
     expect(waits()).toEqual([301, 1_000, 1_000]);
     await flushPromises();
     expect(wrapper.get('.seconds').text()).toBe('0:00');
   });
 
   test('shows minutes and seconds', () => {
-    const wrapper = mount(ClockBar, { props: { clock: { left: 600_000, total: 600_000 } }, global: global() });
+    const wrapper = clockBar(600_000, 600_000);
     expect(wrapper.get('.seconds').text()).toBe('10:00');
   });
 });

@@ -3,7 +3,7 @@ import type { GuessRule, KeywordsView, Seat } from '@reviewer2/shared';
 import { computed, onBeforeUnmount, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { bannerFor } from './banner';
-import ClockBar from './ClockBar.vue';
+import ClockBar, { periodOf } from './ClockBar.vue';
 import GroupBars, { type Group } from './GroupBars.vue';
 
 // Whose turn it is, in which phase, with the current clue, how much time the phase has left and
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
         </span>
       </p>
     </div>
-    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :frozen="game.paused" />
+    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :period="periodOf(game)" :frozen="game.paused" />
     <GroupBars :groups="groups" :remaining="game.remaining" :me="me" />
   </section>
 </template>
