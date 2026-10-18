@@ -19,7 +19,7 @@ try {
   const quota = new Quota(config.stateDir === null ? null : join(config.stateDir, 'sent.json'));
   const transport =
     config.transport === 'resend'
-      ? resendTransport(config.apiKey as string, log)
+      ? resendTransport(config.apiKey as string, config.from, log)
       : printTransport((line) => {
           console.log(line);
           if (config.printFile) appendFileSync(config.printFile, `${line}\n`);

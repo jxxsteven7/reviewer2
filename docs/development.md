@@ -4,14 +4,14 @@ How to run and test the app on your machine. Branches, commits and PRs are in [r
 
 ## Requirements
 
-- [Node.js](https://nodejs.org) 24.15 or later, and not 25: the test runner doesn't support it. CI uses 24 LTS.
+- [Node.js](https://nodejs.org) 24.15 or later, and not 25: the test runner doesn't support it. CI uses 24 LTS. If your system has another version, a version manager installs 24 beside it, such as [fnm](https://github.com/Schniz/fnm) (`fnm install 24`, then `fnm use 24`) or [nvm](https://github.com/nvm-sh/nvm) (`nvm install 24`).
 - npm and Git. The repository is an npm workspace of `shared`, `server`, `client` and `mailer`.
 
-In mainland China, `npm config set registry https://registry.npmmirror.com` is faster.
+In mainland China, `npm config set registry https://registry.npmmirror.com` is faster, and a version manager downloads Node faster from `https://npmmirror.com/mirrors/node`, set in `FNM_NODE_DIST_MIRROR` or `NVM_NODEJS_ORG_MIRROR`.
 
 ## Commands
 
-Run `npm install` first, in every worktree; it also turns on the git hooks.
+Run `npm install` first, in every worktree; it also turns on the git hooks. Recent versions of npm warn that the two copies of esbuild that the build tools use have install scripts (`npm warn install-scripts`); the warning is harmless.
 
 | Command | What it does |
 |---|---|
@@ -19,7 +19,7 @@ Run `npm install` first, in every worktree; it also turns on the git hooks.
 | `npm run dev:mailer` | The mailer, as `.env` says; see [Accounts and email](#accounts-and-email) |
 | `npm run dev:agent` | The agent, as `.env` says; see [AI players](#ai-players) |
 | `npm run build` | `client/dist`, `server/dist/index.cjs` and `admin.cjs`, `mailer/dist/mailer.cjs`, `agent/dist/agent.cjs` |
-| `npm start` | The production build on one port, <http://localhost:3000> |
+| `npm start` | The production build on one port, <http://localhost:3000>, without `.env`; see [Running the build](#running-the-build) |
 | `npm test` | The tests of `scripts/`, then Vitest (`npx vitest` watches) |
 | `npm run test:e2e` | Playwright, end to end; see below |
 | `npm run lint`, `npm run format` | ESLint and Prettier: check, or fix |
@@ -64,7 +64,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `AGENT_SOCKET` [off] | The agent's Unix socket, at most 107 bytes. Without it, no AI players ([architecture.md](architecture.md#ai-players)) |
 | `APP_VERSION` [`dev`] | Build time: the version `/healthz` and the footer report. The footer links to the history on GitHub up to the version's commit, the one on `main` titled with it, or the commit a hash names, and otherwise to `main` |
 
-The mailer reads `MAILER_TRANSPORT` [`resend`] (`print` writes the mails out as JSON instead of sending them), `RESEND_API_KEY` or `RESEND_API_KEY_FILE` (required with `resend`), `MAILER_BASE_URL` [`https://playreviewer2.com`] (where the links lead; HTTPS with `resend`), `MAILER_SOCKET` (required, unless systemd's socket activation hands a socket over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (where the daily count of mails is kept; required with `resend`) and `MAILER_PRINT_FILE` [off] (a file that `print` writes the mails to as well).
+The mailer reads `MAILER_TRANSPORT` [`resend`] (`print` writes the mails out as JSON instead of sending them), `RESEND_API_KEY` or `RESEND_API_KEY_FILE` (required with `resend`), `MAILER_BASE_URL` [`https://playreviewer2.com`] (where the links lead; HTTPS with `resend`), `MAILER_FROM` [`Reviewer 2 <noreply@playreviewer2.com>`] (who the mails are from, as `Name <address>` or the address alone; Resend sends only from a domain verified on your account, so a copy of your own needs one of yours), `MAILER_SOCKET` (required, unless systemd's socket activation hands a socket over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (where the daily count of mails is kept; required with `resend`) and `MAILER_PRINT_FILE` [off] (a file that `print` writes the mails to as well).
 
 The agent reads `AGENT_SOCKET` (required, unless systemd's socket activation hands a socket over), `AGENT_MODEL_URL` (required: a service that answers OpenAI's chat completions, without a slash at the end, such as `http://127.0.0.1:11434/v1` for a model that Ollama runs on the same machine), `AGENT_MODEL` (required: the model's name there), `AGENT_MODEL_KEY` or `AGENT_MODEL_KEY_FILE` [off] (the key that the service wants, if any; with one, `AGENT_MODEL_URL` is HTTPS unless it is on the same machine), `AGENT_CONCURRENCY` [2] (the requests that go to the model at once) and `AGENT_QUEUE` [32] (how many more may wait).
 
@@ -72,7 +72,7 @@ Never commit passwords, keys or tokens; `.env` is ignored by git.
 
 ## Accounts and email
 
-Accounts need no setting. Email needs the secret and the mailer: copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`; the mails appear in the mailer's output.
+Accounts need no setting. Email needs the secret and the mailer: copy `.env.example` to `.env` and run `npm run dev:mailer` beside `npm run dev`; the mails appear in the mailer's output. In a checkout deep in the file system, `data/mailer.sock` and `data/agent.sock` may be longer than the 107 bytes that a socket's path can have, and the programs that use them then refuse to start: set `MAILER_SOCKET` and `AGENT_SOCKET` in `.env` to shorter absolute paths, such as `/tmp/reviewer2-mailer.sock`.
 
 The operator's commands, which the build makes, run beside the running server:
 
@@ -149,6 +149,17 @@ The home page shows a little Markdown, the same as GitHub: after a title of one 
 A line of thanks has 1 to 40 visible characters, counted as in a nickname, ordinary single spaces with none at its ends, no control or hidden characters, at most four marks of a kind on a character, no links (no `http`, `://`, `www.`, domain such as `example.com`, email address or Markdown link) and no HTML (no `<`, `>`, `&...;` reference or `:emoji:` code); Markdown's characters such as `*` stay as written, and GitHub may show them as formatting. It has nothing to do with what someone gave, which is never shown. An entry has ` — ` once at most, and the home page shows the line under the name as written, in both languages.
 
 The workflow needs the repository secret `SPONSOR_TOKEN` ([maintainers.md](maintainers.md#sponsors)); without it, it does nothing. It also runs from the Actions tab, and `SPONSOR_TOKEN=<token> node scripts/update-sponsors.mjs` brings the file up to date locally. `npm test` checks the file, as it checks the acknowledgments.
+
+## Running the build
+
+```bash
+npm run build
+mkdir -p data
+PORT=3000 DATA_DIR=data COOKIE_SECURE=0 npm start
+curl http://127.0.0.1:3000/healthz   # from another terminal
+```
+
+`npm start` runs `node server/dist/index.cjs`, which reads no `.env`, unlike `npm run dev`, so its settings go on the command line. `DATA_DIR`, a directory that must exist already, keeps the data through a restart; without it, everything is lost at every stop. `COOKIE_SECURE=0` is for plain HTTP, over which a browser drops the login cookie, which is `Secure`, from anywhere but localhost. Once the server is up, `/healthz` answers with its version and how long it has run, such as `{"ok":true,"version":"dev","uptime":5}`.
 
 ## Testing on a phone
 

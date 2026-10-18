@@ -69,6 +69,9 @@ export default defineConfig({
     command: 'node e2e/server.mjs',
     url: `http://127.0.0.1:${PORT}/healthz`,
     reuseExistingServer: false,
+    // Stopped with SIGTERM rather than killed, so that e2e/server.mjs stops what it started and
+    // removes the directory of its sockets.
+    gracefulShutdown: { signal: 'SIGTERM', timeout: 10_000 },
     env: {
       E2E_PORT: String(PORT),
       E2E_SERVER_LOG: process.env.E2E_SERVER_LOG,
