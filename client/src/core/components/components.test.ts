@@ -79,6 +79,27 @@ describe('PlayerName', () => {
     expect(guest.find('.rank').exists()).toBe(false);
   });
 
+  test('stacks the rank and the marks under the name where the names have a column', () => {
+    const player = { id: 'a', name: 'Ann', online: true, rank: 'phd' as const };
+    const inline = mount(PlayerName, { props: { player, me: true, chair: true }, global: global() });
+    // On one line, the rank stands beside the name, and the marks after them.
+    expect(inline.get('.player').classes()).not.toContain('stacked');
+    expect(inline.get('.who .rank').text()).toBe('PhD student');
+    expect(inline.findAll('.marks .mark').map((mark) => mark.text())).toEqual(['you', 'chair']);
+    const stacked = mount(PlayerName, { props: { player, me: true, chair: true, stacked: true }, global: global() });
+    // Stacked, the name is alone on its line, and the rank leads the marks under it.
+    expect(stacked.get('.player').classes()).toContain('stacked');
+    expect(stacked.get('.who').text()).toBe('Ann');
+    expect(stacked.findAll('.marks > *').map((part) => part.text())).toEqual(['PhD student', 'you', 'chair']);
+    // A guest with nothing to mark has the name alone.
+    const plain = mount(PlayerName, {
+      props: { player: { id: 'b', name: 'Bob', online: true }, me: false, chair: false, stacked: true },
+      global: global(),
+    });
+    expect(plain.find('.marks').exists()).toBe(false);
+    expect(plain.get('.label').text()).toBe('Bob');
+  });
+
   test('marks an AI player with the robot that is its avatar, and a player whom an AI plays for', () => {
     const ai = mount(PlayerName, {
       props: {

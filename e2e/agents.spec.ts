@@ -8,6 +8,7 @@ import {
   gameOf,
   giveClue,
   interpolate,
+  isPhone,
   joinByLink,
   keyCard,
   newPlayer,
@@ -227,11 +228,11 @@ test('Reviewer 1 advises a student of its group, who reveals the cards', async (
   await expect(explained).toContainText(text.lobby.agentNote);
 });
 
-// Practice from the home page (docs/architecture.md#practice-rooms): an account that the operator
-// hasn't let have AI players opens "Practice with Reviewer 1", sees itself as the red PI beside
-// three of Reviewer 1, starts, and is in the game at once, where the AI players play the blue
-// group's turn by themselves and Reviewer 1 guesses Pat's clue as Pat's student.
-test('anyone with an account practices with Reviewer 1 from the home page', async ({ browser }) => {
+// A practice room from the home page (docs/architecture.md#practice-rooms): an account that the
+// operator hasn't let have AI players opens "Play with Reviewer 1", plays alone, sees itself as
+// the red PI beside three of Reviewer 1, starts, and is in the game at once, where the AI players
+// play the blue group's turn by themselves and Reviewer 1 guesses Pat's clue as Pat's student.
+test('anyone with an account plays alone with Reviewer 1 from the home page', async ({ browser }) => {
   test.setTimeout(90_000);
   const name = own('Pat');
   const pat = await newPlayer(browser, 'en');
@@ -264,4 +265,67 @@ test('anyone with an account practices with Reviewer 1 from the home page', asyn
   const index = await tellModel(pat, 'red');
   await giveClue(pat, 'Hint', 1, 'en');
   await expect(card(pat, index)).toHaveClass(/revealed/, { timeout: 30_000 });
+});
+
+// With friends: an account that may not have AI players elsewhere opens the waiting room of a
+// practice room from the same sheet, where it sits already, takes the red PI's seat, and, once a
+// friend has come by the link and taken the blue PI's, invites Reviewer 1 as both students from the
+// chip on each seat's row, which is a button named by its words; the waiting room is never wider
+// than the screen, with the longest name a player can have in it; and the game starts.
+test('an account opens a room to play with friends and Reviewer 1 from the home page', async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  // Sixteen characters, the most a name may have.
+  const name = own('Wolfeschleg');
+  const quinn = await newPlayer(browser, 'en');
+  snapshotsOf(quinn);
+  await register(quinn, name);
+  await expect(quinn.locator('.gate, .home').first()).toBeVisible();
+  const gate = quinn.getByRole('button', { name: new RegExp(`^${text.language.en}`) });
+  if (await gate.count()) await gate.click();
+  await quinn.locator('button.entry').click();
+  const sheet = quinn.locator('[role=dialog]');
+  await expect(sheet.locator('.seats')).toBeVisible();
+  await sheet.getByLabel(text.home.practice.whoChoice.friends).check();
+  await expect(sheet.locator('.seats')).toHaveCount(0);
+  await expect(sheet.locator('button.start')).toHaveText(text.home.practice.open);
+  await sheet.locator('button.start').click();
+  await quinn.waitForURL(/\/room\//);
+  await expect(quinn.locator('.lobby')).toBeVisible();
+  await expect(quinn.locator('.lobby')).toContainText(text.lobby.agentNote);
+  await sit(quinn, 'red', 'captain', 'en');
+  await expect(quinn.getByRole('button', { name: invite })).toHaveCount(3);
+
+  const ria = await newPlayer(browser, 'en');
+  await joinByLink(ria, quinn.url(), 'en');
+  await sit(ria, 'blue', 'captain', 'en');
+  const red = quinn.locator('.group.red');
+  const blue = quinn.locator('.group.blue');
+  await expect(quinn.getByRole('button', { name: invite })).toHaveCount(2);
+  const chip = red.getByRole('button', { name: invite });
+  await expect(chip.locator('.face .avatar')).toBeVisible();
+  await expect(chip.locator('.face .plus')).toBeVisible();
+  await chip.click();
+  await expect(red.getByText(text.room.agent, { exact: true })).toBeVisible();
+  await blue.getByRole('button', { name: invite }).click();
+  await expect(blue.getByText(text.room.agent, { exact: true })).toBeVisible();
+  await expect(quinn.getByRole('button', { name: invite })).toHaveCount(0);
+
+  // Nothing of the waiting room is wider than the screen: on a computer, at the widths where the
+  // two groups stand side by side in narrow cards, and on the narrowest phone.
+  const fits = () => quinn.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+  expect(await fits()).toBe(true);
+  if (!isPhone(testInfo)) {
+    for (const width of [1024, 320]) {
+      await quinn.setViewportSize({ width, height: 800 });
+      await expect.poll(fits).toBe(true);
+    }
+    await quinn.setViewportSize({ width: 1280, height: 720 });
+  }
+
+  await quinn.getByRole('button', { name: text.lobby.start }).click();
+  await expect(quinn.locator('.keywords-game')).toBeVisible();
+  const state = snapshotsOf(quinn).at(-1);
+  expect(state?.players.filter((player) => player.agent)).toHaveLength(2);
 });

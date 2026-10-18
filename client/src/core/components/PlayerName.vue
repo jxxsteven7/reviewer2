@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { ShownPlayer } from '../room';
 import AgentIcon from './AgentIcon.vue';
@@ -11,19 +12,27 @@ import ScoreFloat, { type Shown } from './ScoreFloat.vue';
 // (docs/architecture.md#ai-players). In a room, the avatar opens the player's panel, for everyone,
 // the viewer included (AvatarButton.vue); the name is plain text. A player who is offline has the
 // avatar of someone the room waits for, faded, with three grey dots in it (PlayerAvatar.vue), and
-// their name greyed; only a screen reader is told the word for it. Everything
-// stays on one line: where it is too long, the rank is cut short first, down to nothing, and only
-// then the name, never the marks.
+// their name greyed; only a screen reader is told the word for it.
+//
+// On one line, which is the default, everything stays on it: where it is too long, the rank is cut
+// short first, down to nothing, and only then the name, never the marks. `stacked`, in a list where
+// the names have a column's width, as in the waiting room's groups and the game's rosters, it takes
+// two lines: the name on the first, cut short where it is too long, and under it, smaller, the rank
+// with the marks after it; marks that don't fit beside the rank go on to a line of their own, and
+// the rank is cut short only when it is too long for a line by itself.
 // A `float` is a number that rises from the avatar, what a card or the end of a game did to the
 // player's points (ScoreFloat.vue).
-withDefaults(defineProps<{ player: ShownPlayer; me: boolean; chair: boolean; float?: Shown | null }>(), {
-  float: null,
-});
+const props = withDefaults(
+  defineProps<{ player: ShownPlayer; me: boolean; chair: boolean; float?: Shown | null; stacked?: boolean }>(),
+  { float: null, stacked: false },
+);
 const { t } = useI18n();
+const rank = computed(() => (props.player.rank ? t(`ranks.names.${props.player.rank}`) : null));
+const marked = computed(() => props.me || props.chair || !!props.player.agent || !!props.player.takenOver);
 </script>
 
 <template>
-  <span class="player" :class="{ offline: !player.online }">
+  <span class="player" :class="{ offline: !player.online, stacked }">
     <span class="face">
       <AvatarButton
         :player-id="player.id"
@@ -39,12 +48,15 @@ const { t } = useI18n();
     <span class="label">
       <span class="who">
         <span class="name">{{ player.name }}</span>
-        <span v-if="player.rank" class="rank">{{ t(`ranks.names.${player.rank}`) }}</span>
+        <span v-if="rank && !stacked" class="rank">{{ rank }}</span>
       </span>
-      <span v-if="me" class="mark">{{ t('room.you') }}</span>
-      <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
-      <span v-if="player.agent" class="mark agent"><AgentIcon />{{ t('room.agent') }}</span>
-      <span v-if="player.takenOver" class="mark agent">{{ t('room.takenOver') }}</span>
+      <span v-if="marked || (stacked && rank)" class="marks">
+        <span v-if="rank && stacked" class="rank">{{ rank }}</span>
+        <span v-if="me" class="mark">{{ t('room.you') }}</span>
+        <span v-if="chair" class="mark">{{ t('room.chair') }}</span>
+        <span v-if="player.agent" class="mark agent"><AgentIcon />{{ t('room.agent') }}</span>
+        <span v-if="player.takenOver" class="mark agent">{{ t('room.takenOver') }}</span>
+      </span>
       <span v-if="!player.online" class="sr-only">{{ t('room.offline') }}</span>
     </span>
   </span>
@@ -112,6 +124,13 @@ const { t } = useI18n();
   white-space: nowrap;
 }
 
+.marks {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .mark {
   flex: none;
   padding: 0 var(--space-2);
@@ -132,5 +151,35 @@ const { t } = useI18n();
   border: var(--line-thin) solid var(--ink);
   background: var(--paper);
   color: var(--ink);
+}
+
+/* Two lines: the name, and under it the rank and the marks, a row that wraps, so that the marks go
+   on to a third line rather than squeeze the rank out; the rank alone on a line is cut short. */
+.stacked .label {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  line-height: 1.25;
+}
+
+.stacked .who {
+  max-width: 100%;
+}
+
+.stacked .marks {
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 2px var(--space-1);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.stacked .rank {
+  max-width: 100%;
+  margin-right: var(--space-1);
+}
+
+.stacked .mark {
+  line-height: 1.5;
 }
 </style>

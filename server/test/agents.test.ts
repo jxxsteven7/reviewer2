@@ -962,7 +962,7 @@ describe('a practice room', () => {
       game: 'keywords',
       language: 'en',
       fields: ['general'],
-      practice: { role },
+      practice: { who: 'me', role },
     });
     if (!reply.ok) throw new Error(`could not make a practice room: ${reply.error}`);
     const code = reply.code as string;
@@ -1030,7 +1030,7 @@ describe('a practice room', () => {
         game: 'keywords',
         language: 'en',
         fields: ['general'],
-        practice: { role: 'captain' },
+        practice: { who: 'me', role: 'captain' },
         ...extra,
       });
     const guest = track(await TestClient.connect(server.url));
@@ -1040,7 +1040,7 @@ describe('a practice room', () => {
     const ann = track(await browser.connect());
     await until(() => server.app.stats().agents?.up === true, 'the agent');
     expect(await ann.send('meta:agents')).toEqual({ ok: true, available: true });
-    expect(await ask(ann, { practice: { role: 'spectator' } })).toEqual({ ok: false, error: 'bad_request' });
+    expect(await ask(ann, { practice: { who: 'me', role: 'spectator' } })).toEqual({ ok: false, error: 'bad_request' });
     expect(await ask(ann, { public: true })).toEqual({ ok: false, error: 'bad_request' });
     expect(await ask(ann, { match: RULES })).toEqual({ ok: false, error: 'bad_request' });
     expect(await ask(ann, { settings: defaultSettings('en') })).toEqual({ ok: false, error: 'bad_request' });
@@ -1066,6 +1066,39 @@ describe('a practice room', () => {
     server.advance(PING_MS);
     await until(() => server.app.stats().agents?.up === true, 'the agent back');
     expect(await ann.send('meta:agents')).toEqual({ ok: true, available: true });
+  });
+
+  test('opens a waiting room for an account with friends, where they invite Reviewer 1, and keeps the lists', async () => {
+    const browser = new Browser(server.url);
+    if (!(await browser.register('Ann')).body.ok) throw new Error('could not register');
+    const ann = track(await browser.connect());
+    await until(() => server.app.stats().agents?.up === true, 'the agent');
+    const reply = await ann.send('room:create', {
+      game: 'keywords',
+      language: 'en',
+      fields: ['general'],
+      practice: { who: 'friends' },
+    });
+    if (!reply.ok) throw new Error(`could not make a room with friends: ${reply.error}`);
+    const code = reply.code as string;
+    const state = await ann.waitFor((view) => view.code === code, 'the waiting room');
+    // No AI player sits and the game waits; Ann has come to play, and is dealt a student's seat.
+    expect(state.phase).toBe('lobby');
+    expect(aiOf(state)).toEqual([]);
+    expect(roomData(state).seats[ann.me as string]).toMatchObject({ role: 'guesser' });
+    expect(state.agents).toBe(true);
+    expect(roomOf(code)).toMatchObject({ practice: true, public: false, match: null, chairId: ann.me });
+    expect(server.logs).toContainEqual({
+      event: 'room_created',
+      fields: expect.objectContaining({ code, practice: 'friends', public: false }),
+    });
+    expect(server.logs.map((line) => line.event)).not.toContain('game_started');
+    // Ann invites Reviewer 1 to a seat, as the chair of any practice room may.
+    await expectOk(invite(ann, 'blue', 'captain'));
+    const invited = await ann.waitFor((view) => aiOf(view).length === 1, 'Reviewer 1');
+    expect(roomData(invited).seats[aiOf(invited)[0]?.id as string]).toEqual({ team: 'blue', role: 'captain' });
+    // The account's last practice setup keeps the lists, and names no role.
+    expect((await browser.account())?.roomSetup).toEqual({ keywords: { practice: { fields: ['general'] } } });
   });
 
   test('marks each of its games on the record, plays for its chair while offline, and takes AI players again', async () => {

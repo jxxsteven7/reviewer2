@@ -42,6 +42,13 @@ const match = z.object({
   grouping: z.enum(MATCH_GROUPINGS),
 });
 const matchId = z.string().max(64);
+// Who plays in a practice room (docs/architecture.md#practice-rooms): its creator alone, in the
+// role they name, as the game calls it, or the creator with friends.
+const practice = z.discriminatedUnion('who', [
+  z.object({ who: z.literal('me'), role: z.string().max(32) }),
+  z.object({ who: z.literal('friends') }),
+]);
+export type PracticeRequest = z.infer<typeof practice>;
 
 export const ROOM_MESSAGES = {
   'sys:ping': none,
@@ -68,10 +75,11 @@ export const ROOM_MESSAGES = {
   // name: a creator who is logged in has their username, and a guest a number in the room
   // (docs/architecture.md#players-and-identity). With `match`, the room plays a match by those
   // rules; with `public`, it is listed for anyone with an account to join. With `practice`, it is a
-  // practice room (docs/architecture.md#practice-rooms): the creator plays the role they name, as
-  // the game calls it, AI players take the other seats, and the game starts. With `randomFields`,
-  // every game draws its word lists anew (drawFields in protocol.ts), and `fields` may be empty; a
-  // practice room takes none.
+  // practice room (docs/architecture.md#practice-rooms): for the creator alone, they play the role
+  // they name, AI players take the other seats, and the game starts; for the creator with friends,
+  // it is a waiting room, where the creator sits and invites AI players to the seats nobody takes.
+  // With `randomFields`, every game draws its word lists anew (drawFields in protocol.ts), and
+  // `fields` may be empty; a practice room takes none.
   'room:create': z.object({
     game: z.string().max(32),
     language: z.enum(LANGUAGES),
@@ -81,7 +89,7 @@ export const ROOM_MESSAGES = {
     play,
     match: match.optional(),
     public: z.boolean().optional(),
-    practice: z.object({ role: z.string().max(32) }).optional(),
+    practice: practice.optional(),
   }),
   // Whoever has been in the room names its ID as well, so that a code that has since gone to
   // another room doesn't take them there. A client that has no ID to give may leave the field out

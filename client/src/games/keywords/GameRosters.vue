@@ -14,9 +14,10 @@ import { useKeywords } from './useKeywords';
 // the next one, so they are offered seats in that group only. In a match, a latecomer plays from
 // the next game instead, and may change their mind and just watch until the waiting room opens.
 //
-// Each role has a line of its own, the PI's and the students', and under it one player a line; the
-// spectators have theirs only when there are any. `floats` are the numbers that rise from the
-// players' avatars beside the board as their points change, by player ID (useScoreFloats.ts).
+// Each role has a line of its own, the PI's and the students', and under it one player a line, the
+// name on one line and the rank and the marks on the next (PlayerName.vue); the spectators have
+// theirs only when there are any. `floats` are the numbers that rise from the players' avatars
+// beside the board as their points change, by player ID (useScoreFloats.ts).
 const props = withDefaults(defineProps<{ room: RoomView; floats?: ReadonlyMap<string, Shown> }>(), {
   floats: () => new Map(),
 });
@@ -51,6 +52,7 @@ async function takeOver() {
           :me="isMe(group.captain)"
           :chair="isChairOf(group.captain)"
           :float="floats.get(group.captain.id) ?? null"
+          stacked
         />
         <p v-else class="vacant-line">
           <span class="vacant">{{ t('lobby.vacant') }}</span>
@@ -68,6 +70,7 @@ async function takeOver() {
               :me="isMe(player)"
               :chair="isChairOf(player)"
               :float="floats.get(player.id) ?? null"
+              stacked
             />
           </li>
         </ul>
@@ -85,7 +88,7 @@ async function takeOver() {
       <p class="role">{{ t('lobby.roles.spectator') }}</p>
       <ul class="names">
         <li v-for="player in spectators" :key="player.id">
-          <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
+          <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" stacked />
         </li>
       </ul>
     </div>
@@ -150,7 +153,8 @@ h3 {
   color: var(--blue-deep);
 }
 
-/* A role's name on a line of its own, and under it one player a line, each as wide as the column. */
+/* A role's name on a line of its own, and under it one player a line, each as wide as the column,
+   where a long name or rank is cut short. */
 .seat {
   display: flex;
   flex-direction: column;

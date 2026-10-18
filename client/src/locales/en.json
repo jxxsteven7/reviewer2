@@ -21,12 +21,21 @@
     "players": "4–30 players",
     "newRoom": "New room",
     "practice": {
-      "entry": "Practice with Reviewer\u00a01",
-      "entryHint": "Just you and three AI players",
+      "entry": "Play with Reviewer\u00a01",
+      "entryHint": "On your own or with friends; AI fills the seats",
       "offline": "Reviewer\u00a01 is offline for now",
-      "intro": "Play on your own: you are the PI or a student, and Reviewer\u00a01 takes the other three seats.",
+      "intro": "Play on your own or with friends: Reviewer\u00a01 takes the seats nobody takes.",
       "loginTitle": "Log in to start",
       "loginHint": "Registering takes only a username and a password.",
+      "who": "Who plays",
+      "whoChoice": {
+        "me": "Just me",
+        "friends": "With friends"
+      },
+      "whoHints": {
+        "me": "The game starts at once, and Reviewer\u00a01 takes the other three seats.",
+        "friends": "Wait in the room and send friends the link; Reviewer\u00a01 takes the seats nobody takes."
+      },
       "roleTitle": "You play as",
       "roles": {
         "captain": "PI",
@@ -38,8 +47,9 @@
       },
       "you": "You",
       "chooseField": "Choose at least one word list to start.",
-      "note": "Practice games bring no points, streaks or titles.",
-      "start": "Start"
+      "note": "Games that Reviewer\u00a01 plays in bring no points, streaks or titles.",
+      "start": "Start",
+      "open": "Open the room"
     },
     "forthcoming": "Forthcoming",
     "games": {
@@ -213,9 +223,9 @@
     "desk": "Chair's desk",
     "save": "Save",
     "saveHint": "Starting the game saves these as well.",
-    "shuffle": "Shuffle the groups",
+    "shuffle": "Shuffle groups",
     "shuffleHint": "Shuffling deals everyone seated into two even groups and picks a PI for each. A deal that repeats the groups as they were is dealt again once.",
-    "start": "Start the game",
+    "start": "Start",
     "ready": "Everyone needed is seated.",
     "unsavable": "What was changed at the desk can't be saved yet.",
     "waiting": "Waiting for the chair to start the game.",

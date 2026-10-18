@@ -25,7 +25,7 @@ import PublicRooms from './PublicRooms.vue';
 
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
 // on how to play, the ways into a room, by its number, by the rooms that friends are in or from the
-// list of public rooms, the first game on a big sticker, with the way to practice it with
+// list of public rooms, the first game on a big sticker, with the way to play it with
 // Reviewer 1, the games to come below it, the feedback contributions, the sponsors and the
 // acknowledgments, folded, and footnotes, which offer a way to buy the author a cola and the way to send
 // them feedback, each with a drawing, and name the build's version, which leads to the history up

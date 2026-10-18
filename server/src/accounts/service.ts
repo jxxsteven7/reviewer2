@@ -232,11 +232,18 @@ export class Accounts {
   }
 
   // Keeps how the account has just set up a room or a practice room of the game `game`, the other
-  // part of that game's and the other games' as they were. A game's setup too large to keep, or a
-  // database too full to write it to, leaves the last one in place.
+  // part of that game's and the other games' as they were; of a practice room's part, what the
+  // room names, so that one made with friends, which names no role, leaves the role as it was. A
+  // game's setup too large to keep, or a database too full to write it to, leaves the last one in
+  // place.
   rememberRoomSetup(accountId: number, game: string, part: GameRoomSetup): void {
     const kept = this.roomSetupOf(accountId);
-    const own = { ...kept[game], ...part };
+    const before = kept[game];
+    const own: GameRoomSetup = {
+      ...before,
+      ...part,
+      ...(part.practice ? { practice: { ...before?.practice, ...part.practice } } : {}),
+    };
     if (JSON.stringify(own).length > MAX_ROOM_SETUP || this.#full()) return;
     this.store.setRoomSetup(accountId, JSON.stringify({ ...kept, [game]: own }));
   }

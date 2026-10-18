@@ -47,6 +47,8 @@ beforeEach(async () => {
       },
     }),
   );
+  // Bob has only played with friends, which names no role.
+  accounts.setRoomSetup(bob.id, JSON.stringify({ test: { practice: { fields: ['general'] } } }));
   accounts.setAvatar(ann.id, AVATAR);
   const replays = new ReplayStore(db, () => NOW);
   // Ann (p1) and someone else (p2) play; p1 presses once, p2 says something.
