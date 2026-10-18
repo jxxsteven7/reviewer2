@@ -851,7 +851,8 @@
     "listTitle": "想上赞助者名单？",
     "listHow": "赞赏时在留言里写上你想用的名字；想用微信昵称，就写“把我放进名单”。否则不会列出你，名单也不显示金额。",
     "sponsor": "没有微信？在 GitHub 上赞助",
-    "version": "{version}"
+    "version": "{version}",
+    "versionLink": "版本 {version}：GitHub 上的更新记录"
   },
   "feedback": {
     "open": "提建议",

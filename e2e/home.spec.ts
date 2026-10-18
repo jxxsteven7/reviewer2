@@ -1,3 +1,4 @@
+import { REPOSITORY_URL } from '@reviewer2/shared';
 import { createRoom, interpolate, isPhone, newPlayer, TEXT, expect, test } from './helpers';
 
 // The home page names the author and the build's version, and offers the reward code, which is
@@ -42,8 +43,8 @@ for (const language of ['en', 'zh'] as const) {
     await expect(rules).toHaveCount(0);
 
     // The foot offers the cola and the way to send feedback, whose drawings screen readers skip, each
-    // centered on the line of its words, and names the version the page was built with, which is the
-    // one the server reports.
+    // a pixel above the middle of its words' line, and names the version the page was built with,
+    // which is the one the server reports, as a link to the history up to it on GitHub.
     const foot = page.locator('footer');
     for (const name of [text.footer.tip, text.footer.feedback]) {
       const button = foot.getByRole('button', { name, exact: true });
@@ -59,11 +60,20 @@ for (const language of ['en', 'zh'] as const) {
         const line = range.getBoundingClientRect();
         return [svg ? svg.top + svg.height / 2 : NaN, line.top + line.height / 2];
       });
-      expect(Math.abs((drawing ?? NaN) - (words ?? NaN))).toBeLessThanOrEqual(1.5);
+      expect(Math.abs((words ?? NaN) - (drawing ?? NaN) - 1)).toBeLessThanOrEqual(1.5);
     }
     const { version } = (await (await page.request.get('/healthz')).json()) as { version: string };
     const label = interpolate(text.footer.version, { version });
     await expect(foot.getByText(label, { exact: true })).toBeVisible();
+    const history = foot.getByRole('link', { name: interpolate(text.footer.versionLink, { version }), exact: true });
+    await expect(history).toHaveText(label);
+    // A build without a version, as the tests' own is, leads to the history of main.
+    const commits = `${REPOSITORY_URL}/commits/`;
+    if (version === 'dev') await expect(history).toHaveAttribute('href', `${commits}main`);
+    else expect((await history.getAttribute('href'))?.startsWith(commits)).toBe(true);
+    await expect(history).toHaveAttribute('target', '_blank');
+    await expect(history).toHaveAttribute('rel', 'noopener noreferrer');
+    expect((await history.boundingBox())?.height).toBe(44);
 
     await page.getByRole('button', { name: text.footer.tip }).click();
     const sheet = page.locator('[role=dialog]');

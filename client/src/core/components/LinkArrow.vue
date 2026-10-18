@@ -1,8 +1,9 @@
 <script setup lang="ts">
 // The arrow at the end of a link that leads off the site (docs/design.md): the link on a player's
-// page, and the GitHub username and the way to GitHub's contributors among the contributions. It
-// is drawn in the link's own color and says nothing to a screen reader, since the link's text
-// does; the link that holds it moves it out under a pointer and further under a press.
+// page, the GitHub username and the way to GitHub's contributors among the contributions, and the
+// version at the foot of the home page. It is drawn in the link's own color and says nothing to a
+// screen reader, since the link's text does; the link that holds it moves it out under a pointer
+// and further under a press.
 </script>
 
 <template>

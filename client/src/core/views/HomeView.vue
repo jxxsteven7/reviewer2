@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BOARD_SIZE } from '@reviewer2/shared';
+import { BOARD_SIZE, REPOSITORY_URL } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import tipCode from '../../assets/wechat-tip.jpg';
@@ -7,6 +7,7 @@ import AccountEntry from '../components/AccountEntry.vue';
 import AcknowledgmentsList from '../components/AcknowledgmentsList.vue';
 import ContributionsList from '../components/ContributionsList.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
+import LinkArrow from '../components/LinkArrow.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import SendFeedback from '../components/SendFeedback.vue';
 import SponsorsList from '../components/SponsorsList.vue';
@@ -27,16 +28,17 @@ import PublicRooms from './PublicRooms.vue';
 // list of public rooms, the first game on a big sticker, with the way to practice it with
 // Reviewer 1, the games to come below it, the feedback contributions, the sponsors and the
 // acknowledgments, folded, and footnotes, which offer a way to buy the author a cola and the way to send
-// them feedback, each with a drawing, and name the build's version. The author, linked to their
-// page, follows the line on how to play, or on a narrow English page the tagline, whose last line
-// has room for them there; the page holds both and shows one. On a wide screen the games stand on
-// the right, beside the rest.
+// them feedback, each with a drawing, and name the build's version, which leads to the history up
+// to it on GitHub. The author, linked to their page, follows the line on how to play, or on a
+// narrow English page the tagline, whose last line has room for them there; the page holds both
+// and shows one. On a wide screen the games stand on the right, beside the rest.
 // The WeChat reward code is bundled with the page, as is everything it shows, and kept as the author
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
 // sponsors: by a name, or "list me", in the tip's message.
 const { t } = useI18n();
 const version = __APP_VERSION__;
+const versionUrl = `${REPOSITORY_URL}/commits/${__APP_COMMIT__ ?? 'main'}`;
 const chosen = ref(storedLanguage() !== null);
 // The rules of the first game, beside its name, as a new room in the page's language has them.
 const keywords = games.keywords;
@@ -153,7 +155,16 @@ const forthcoming = ['impostor', 'titles', 'abstracts'];
           {{ t('footer.feedback') }}
         </span>
       </SendFeedback>
-      <p class="version num">{{ t('footer.version', { version }) }}</p>
+      <a
+        class="version"
+        :href="versionUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        :aria-label="t('footer.versionLink', { version })"
+        ><span class="line"
+          ><span class="text num">{{ t('footer.version', { version }) }}</span
+          ><LinkArrow /></span
+      ></a>
     </footer>
 
     <UiSheet :open="tipping" :title="t('footer.tip')" @close="tipping = false">
@@ -357,10 +368,9 @@ ol {
   gap: var(--space-3);
 }
 
-/* Every footnote, button or not, is 44 px high with the same room on either side, so the words
-   stand the same distance apart and on one middle line, the drawings' with them. The row reaches
-   that room past both edges of the column, so the first footnote of every line starts on the
-   column's edge. */
+/* Every footnote, button or link, is 44 px high with the same room on either side, so the words
+   stand the same distance apart and on one line. The row reaches that room past both edges of the
+   column, so the first footnote of every line starts on the column's edge. */
 .footnotes {
   display: flex;
   flex-wrap: wrap;
@@ -371,10 +381,72 @@ ol {
   font-size: var(--text-sm);
 }
 
+/* The build's version, a link off the site to the history up to it, grey as the issue numbers of
+   the contributions are (docs/design.md), with the arrow after it (LinkArrow.vue). Like the
+   buttons beside it, its box centers a line laid out in the words' font, so that its digits, in
+   the numbers' font, stand on the words' baseline on every system, where a line of their own font
+   would stand higher or lower from one system to another. In Chinese it stands a pixel higher,
+   where the digits' middle meets the characters'. Under a pointer it darkens, an underline sweeps
+   in under the version and the arrow moves out; pressed, the underline is there at once and the
+   arrow further out, and both ease back after. */
 .version {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0 var(--space-2);
   color: var(--ink-2);
-  line-height: 44px;
+  font-weight: var(--weight-text);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--motion);
+}
+
+.version .text {
+  line-height: 1;
+  background: linear-gradient(currentcolor, currentcolor) 0 100% / 0 2px no-repeat;
+  transition: background-size 220ms var(--ease-out);
+}
+
+.version .arrow {
+  margin-inline-start: 3px;
+}
+
+.home:lang(zh) .version {
+  position: relative;
+  top: -1px;
+}
+
+@media (hover: hover) {
+  .version:hover {
+    color: var(--ink);
+  }
+
+  .version:hover .text {
+    background-size: 100% 2px;
+  }
+
+  .version:hover .arrow {
+    transform: translate(2px, -2px);
+  }
+}
+
+.version:focus-visible .text {
+  background-size: 100% 2px;
+}
+
+.version:active {
+  color: var(--ink);
+  transition-duration: 0s;
+}
+
+.version:active .text {
+  background-size: 100% 2px;
+  transition-duration: 0s;
+}
+
+.version:active .arrow {
+  transform: translate(4px, -4px);
+  transition-duration: 0s;
 }
 
 /* A small button's padding outweighs the quiet one's, and its border takes room too. */
@@ -384,8 +456,8 @@ ol {
 }
 
 /* The footnotes' drawings, in ink, in front of their words: a cup of cola with a lid and a bent
-   straw, and a light bulb for ideas. Each stands centered on the line of its words, in either
-   language. */
+   straw, and a light bulb for ideas. Each stands a pixel above the middle of its words' line, in
+   either language, where it looks centered. */
 .footnote {
   display: inline-flex;
   align-items: center;
@@ -393,6 +465,8 @@ ol {
 }
 
 .icon {
+  position: relative;
+  top: -1px;
   display: block;
   flex: none;
   width: 1.5em;

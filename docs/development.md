@@ -62,7 +62,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `SERVER_SECRET` or `SERVER_SECRET_FILE` [off] | The server's secret, 32 characters or more, or a file holding it. It fingerprints email addresses ([architecture.md](architecture.md#mail)), so never change or lose it. Without it, no email |
 | `MAILER_SOCKET` [off] | The mailer's Unix socket, at most 107 bytes. Without it, no email |
 | `AGENT_SOCKET` [off] | The agent's Unix socket, at most 107 bytes. Without it, no AI players ([architecture.md](architecture.md#ai-players)) |
-| `APP_VERSION` [`dev`] | Build time: the version `/healthz` and the footer report |
+| `APP_VERSION` [`dev`] | Build time: the version `/healthz` and the footer report. The footer links to the history on GitHub up to the version's commit, the one on `main` titled with it, or the commit a hash names, and otherwise to `main` |
 
 The mailer reads `MAILER_TRANSPORT` [`resend`] (`print` writes the mails out as JSON instead of sending them), `RESEND_API_KEY` or `RESEND_API_KEY_FILE` (required with `resend`), `MAILER_BASE_URL` [`https://playreviewer2.com`] (where the links lead; HTTPS with `resend`), `MAILER_SOCKET` (required, unless systemd's socket activation hands a socket over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (where the daily count of mails is kept; required with `resend`) and `MAILER_PRINT_FILE` [off] (a file that `print` writes the mails to as well).
 

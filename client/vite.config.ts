@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
@@ -5,9 +6,24 @@ import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 import vue from '@vitejs/plugin-vue';
 import english from 'hyphen/en-us/index.js';
 import { defineConfig, type Plugin } from 'vite';
+import { versionCommit } from './src/core/versionCommit';
 
 const WORDS_DIR = fileURLToPath(new URL('../words/', import.meta.url));
 const HYPHENATION = 'virtual:hyphenation';
+const VERSION = process.env.APP_VERSION || 'dev';
+
+// The history of main, for the commit of the build's version (src/core/versionCommit.ts), or none
+// where the build has no git.
+function history(): string {
+  try {
+    return execFileSync('git', ['log', '--first-parent', '--format=%H %s'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return '';
+  }
+}
 
 // The English terms of the word library, hyphenated with Liang's en-us patterns (the `hyphen`
 // package, the same patterns that TeX uses) at build time, as a module that maps each term that
@@ -54,7 +70,8 @@ export default defineConfig({
     hyphenation(),
   ],
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || 'dev'),
+    __APP_VERSION__: JSON.stringify(VERSION),
+    __APP_COMMIT__: JSON.stringify(versionCommit(VERSION, history)),
   },
   server: {
     port: 5173,

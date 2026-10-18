@@ -851,7 +851,8 @@
     "listTitle": "Want to be on the list of sponsors?",
     "listHow": "When you tip, write the name you want in the message, or write \"list\u00a0me\" to be listed by your WeChat name. Otherwise you stay off the list, and the list never shows amounts.",
     "sponsor": "No WeChat? Sponsor the author on GitHub",
-    "version": "{version}"
+    "version": "{version}",
+    "versionLink": "Version {version}: the changes on GitHub"
   },
   "feedback": {
     "open": "Send feedback",
