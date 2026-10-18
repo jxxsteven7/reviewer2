@@ -382,10 +382,10 @@ export async function createRoom(
   const text = TEXT[language];
   snapshotsOf(page);
   await page.goto('/');
-  // The language gate stands on the browser's first visit. Its button begins with the language's
+  // The language gate stands on the browser's first visit. Its link begins with the language's
   // name, and goes on with a description.
   await expect(page.locator('.gate, .home').first()).toBeVisible();
-  const gate = page.getByRole('button', { name: new RegExp(`^${literally(text.language[language])}`) });
+  const gate = page.getByRole('link', { name: new RegExp(`^${literally(text.language[language])}`) });
   if (await gate.count()) await gate.click();
   await page.getByRole('button', { name: text.home.newRoom }).click();
   const fold = page.locator('.field-fold .toggle');

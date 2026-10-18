@@ -981,8 +981,10 @@ describe('TurnStrip', () => {
   // The banner over the strip is gone: the strip says who the viewer is and what is going on for
   // them now, and the tab's title says so on their move.
   test("says who the viewer is and what is going on for them, and on their move the tab's title says so", async () => {
-    document.title = 'Reviewer 2';
+    // The page's own title, which the tab shows again after the viewer's move (head.ts).
+    const title = document.title;
     const strip = mount(TurnStrip, { props: { game, guessRule: 'free', seat: seats.bob }, global: global() });
+    await nextTick();
     expect(strip.get('.who').text()).toBe('You are Red group \u00b7 Student');
     expect(strip.get('.who').classes()).toContain('red');
     expect(strip.get('.phase').text()).toBe('Your turn to guess!');
@@ -990,11 +992,12 @@ describe('TurnStrip', () => {
     await strip.setProps({ game: { ...game, phase: 'clue' } });
     expect(strip.get('.phase').text()).toBe('Your PI is thinking of a clue\u2026');
     expect(strip.get('.phase .dots').text()).toBe('\u2026');
-    expect(document.title).toBe('Reviewer 2');
+    expect(document.title).toBe(title);
     await strip.setProps({ game });
     expect(document.title).toBe('Your turn!');
     strip.unmount();
-    expect(document.title).toBe('Reviewer 2');
+    await nextTick();
+    expect(document.title).toBe(title);
     // A spectator is told who is doing what, and a big screen what the current group is doing.
     const spectator = mount(TurnStrip, { props: { game, guessRule: 'free', seat: seats.eve }, global: global() });
     expect(spectator.get('.who').text()).toBe('You are a spectator');

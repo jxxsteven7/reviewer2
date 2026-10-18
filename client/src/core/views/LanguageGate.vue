@@ -2,14 +2,20 @@
 import { LANGUAGES, type Language } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import { HTML_LANG, setLanguage } from '../i18n';
+import { homeIn } from '../site';
 import SiteWordmark from '../components/SiteWordmark.vue';
 
 // The first visit to the home page starts with the choice of language, because it decides the
-// words as well as the interface. Each option speaks its own language.
+// words as well as the interface. Each option speaks its own language. Each is a link to the home
+// page in its language (site.ts), which a crawler follows: it keeps no choice, so it would never
+// get past the gate otherwise. A click chooses here, without loading the page again, unless it
+// asks for a new tab or window, as a link does.
 const emit = defineEmits<{ chosen: [language: Language] }>();
 const { t } = useI18n();
 
-function choose(language: Language) {
+function choose(event: MouseEvent, language: Language) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
   setLanguage(language);
   emit('chosen', language);
 }
@@ -24,17 +30,17 @@ function choose(language: Language) {
       </span>
     </p>
     <div class="choices">
-      <button
+      <a
         v-for="language in LANGUAGES"
         :key="language"
-        type="button"
+        :href="homeIn(language)"
         class="choice press press-large"
         :lang="HTML_LANG[language]"
-        @click="choose(language)"
+        @click="choose($event, language)"
       >
         <span class="name">{{ t(`language.${language}`) }}</span>
         <span class="description">{{ t('gate.description', {}, { locale: language }) }}</span>
-      </button>
+      </a>
     </div>
     <p class="prompt">
       <span v-for="language in LANGUAGES" :key="language" :lang="HTML_LANG[language]">
@@ -87,7 +93,7 @@ function choose(language: Language) {
 }
 
 /* Each language is a large sticker, which lifts and presses as far as its shadow goes
-   (`press-large` in base.css). */
+   (`press-large` in base.css). A link, it sets its text as the page does, without an underline. */
 .choice {
   display: flex;
   flex-direction: column;
@@ -97,7 +103,9 @@ function choose(language: Language) {
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
+  font-weight: var(--weight-text);
   text-align: center;
+  text-decoration: none;
   cursor: pointer;
 }
 

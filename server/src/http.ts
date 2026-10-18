@@ -151,6 +151,9 @@ const ASSETS = '/assets/';
 //
 // sirv doesn't compress anything itself. With gzip and brotli on, it sends the .gz or .br copy
 // that the build leaves beside each text file (client/compress.mjs) to the browsers that accept it.
+//
+// sirv names no type for favicon.ico, which its list of types lacks, and with nosniff a file
+// should have one; the type set here is the one sirv sends.
 function staticFiles(publicDir: string) {
   return sirv(publicDir, {
     etag: true,
@@ -158,7 +161,9 @@ function staticFiles(publicDir: string) {
     brotli: true,
     single: true,
     ignores: [`^${ASSETS}`],
-    setHeaders: (res, path) =>
-      res.setHeader('Cache-Control', path.startsWith(ASSETS) ? 'public, max-age=31536000, immutable' : 'no-cache'),
+    setHeaders: (res, path) => {
+      res.setHeader('Cache-Control', path.startsWith(ASSETS) ? 'public, max-age=31536000, immutable' : 'no-cache');
+      if (path.endsWith('.ico')) res.setHeader('Content-Type', 'image/x-icon');
+    },
   });
 }

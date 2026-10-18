@@ -55,7 +55,7 @@ test('a player who opens the home page anew is offered the way back to their sea
   const code = new URL(table.url).pathname.split('/').at(-1) ?? '';
   await guesser.goto('/');
   // Whoever came in by the room's link chooses a language first.
-  await guesser.getByRole('button', { name: new RegExp(`^${TEXT.en.language.en}`) }).click();
+  await guesser.getByRole('link', { name: new RegExp(`^${TEXT.en.language.en}`) }).click();
   const seat = guesser.locator('.seat');
   await expect(seat).toContainText(interpolate(TEXT.en.home.seats.playing, { code: formatCode(code) }));
   // Nobody is taken back without asking.

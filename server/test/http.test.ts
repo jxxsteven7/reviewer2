@@ -15,6 +15,8 @@ import { FeedbackStore } from '../src/store/feedback';
 
 const INDEX = '<!doctype html><title>Reviewer 2</title>';
 const SCRIPT = 'console.log(1);';
+// The header of an .ico with no pictures in it, which is enough to serve.
+const ICON = Buffer.from([0, 0, 1, 0, 0, 0]);
 
 async function start(publicDir: string): Promise<{ server: AppServer; base: string }> {
   const { db } = await openDatabase(null);
@@ -64,6 +66,7 @@ describe('with a built front end', () => {
     mkdirSync(join(dir, 'assets'));
     writeFileSync(join(dir, 'index.html'), INDEX);
     writeFileSync(join(dir, 'assets', 'index-abc123.js'), SCRIPT);
+    writeFileSync(join(dir, 'favicon.ico'), ICON);
     // The copies that the build leaves beside each text file; see client/compress.mjs.
     for (const [file, content] of [
       ['index.html', INDEX],
@@ -93,6 +96,13 @@ describe('with a built front end', () => {
       expect(await response.text(), path).toBe(INDEX);
       expect(response.headers.get('cache-control'), path).toBe('no-cache');
     }
+  });
+
+  test('favicon.ico is sent as an icon', async () => {
+    const response = await fetch(`${base}/favicon.ico`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/x-icon');
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(ICON);
   });
 
   test('a request target that is not a valid URL gets the page, like any other unknown path', async () => {

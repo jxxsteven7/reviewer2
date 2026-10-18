@@ -63,6 +63,7 @@ In mainland China, set `PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/p
 | `MAILER_SOCKET` [off] | The mailer's Unix socket, at most 107 bytes. Without it, no email |
 | `AGENT_SOCKET` [off] | The agent's Unix socket, at most 107 bytes. Without it, no AI players ([architecture.md](architecture.md#ai-players)) |
 | `APP_VERSION` [`dev`] | Build time: the version `/healthz` and the footer report. The footer links to the history on GitHub up to the version's commit, the one on `main` titled with it, or the commit a hash names, and otherwise to `main` |
+| `SITE_URL` [off] | Build time: the site's address alone, such as `https://example.com`, for the full address of the picture in links' previews and for `sitemap.xml`, which there is only with it ([architecture.md](architecture.md#search-engines-and-link-previews)) |
 
 The mailer reads `MAILER_TRANSPORT` [`resend`] (`print` writes the mails out as JSON instead of sending them), `RESEND_API_KEY` or `RESEND_API_KEY_FILE` (required with `resend`), `MAILER_BASE_URL` [`https://playreviewer2.com`] (where the links lead; HTTPS with `resend`), `MAILER_FROM` [`Reviewer 2 <noreply@playreviewer2.com>`] (who the mails are from, as `Name <address>` or the address alone; Resend sends only from a domain verified on your account, so a copy of your own needs one of yours), `MAILER_SOCKET` (required, unless systemd's socket activation hands a socket over), `STATE_DIRECTORY` or `MAILER_STATE_DIR` (where the daily count of mails is kept; required with `resend`) and `MAILER_PRINT_FILE` [off] (a file that `print` writes the mails to as well).
 
@@ -176,10 +177,10 @@ AI players ([architecture.md](architecture.md#ai-players)) need the agent and a 
 
 ## Running in production
 
-The build needs only Node. Build it with its version, the latest one in the commit titles on `main`, since a change to the [docs for people](rules/versioning.md#docs-for-people) alone lands without one:
+The build needs only Node. Build it with your site's address and its version, the latest one in the commit titles on `main`, since a change to the [docs for people](rules/versioning.md#docs-for-people) alone lands without one:
 
 ```bash
-APP_VERSION="$(git log --first-parent --format=%s | awk '!v && /^v[0-9]+\.[0-9]+\.[0-9]+ / { v = $1 } END { if (!v) exit 1; print v }' || git rev-parse --short HEAD)" npm run build
+SITE_URL=https://example.com APP_VERSION="$(git log --first-parent --format=%s | awk '!v && /^v[0-9]+\.[0-9]+\.[0-9]+ / { v = $1 } END { if (!v) exit 1; print v }' || git rev-parse --short HEAD)" npm run build
 ```
 
 Copy `server/dist/`, `client/dist/`, `mailer/dist/`, `agent/dist/` and `words/` in the same layout and run `node server/dist/index.cjs`. What the code expects of any deployment:

@@ -2,11 +2,13 @@
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import PageTitle from '../components/PageTitle.vue';
+import { pageTitle, usePageHead } from '../head';
 
 // The frame of the pages that links in mails lead to, and of the one that sends those mails: the
 // title on its bar, with the way back when there is a page before (PageTitle.vue), and the page in a
-// card under it.
-defineProps<{ title: string }>();
+// card under it. The tab's title is the page's too.
+const props = defineProps<{ title: string }>();
+usePageHead(() => ({ title: pageTitle(props.title) }));
 </script>
 
 <template>

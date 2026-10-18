@@ -5,6 +5,8 @@
 declare const __APP_VERSION__: string;
 // The commit that names that version, for the footer's link, or null; see src/core/versionCommit.ts.
 declare const __APP_COMMIT__: string | null;
+// The site's address, from SITE_URL when the build sets it, or null; see src/core/site.ts.
+declare const __SITE_URL__: string | null;
 
 // hyphen ships without types or an exports map, so the build imports the file itself; this is
 // the part of it that the build uses.

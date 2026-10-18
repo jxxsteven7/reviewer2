@@ -20,7 +20,7 @@ test('the wordmark is in the same place on the home page, which does not scroll,
   await page.goto('/');
   // The language gate stands on the browser's first visit to the home page.
   await expect(page.locator('.gate, .home').first()).toBeVisible();
-  const gate = page.getByRole('button', { name: new RegExp(`^${TEXT.en.language.en}`) });
+  const gate = page.getByRole('link', { name: new RegExp(`^${TEXT.en.language.en}`) });
   if (await gate.count()) await gate.click();
   const wordmark = page.getByRole('link', { name: TEXT.en.app.name, exact: true });
   await expect(wordmark).toBeVisible();

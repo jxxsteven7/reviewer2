@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { formatCode } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import ConnectionBanner from '../components/ConnectionBanner.vue';
 import EmoteBubbles from '../components/EmoteBubbles.vue';
@@ -7,6 +9,7 @@ import ManuscriptId from '../components/ManuscriptId.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import PlayerPanel from '../components/PlayerPanel.vue';
 import RoomNotice from '../components/RoomNotice.vue';
+import { pageTitle, usePageHead } from '../head';
 import { provideOpenPlayer } from '../playerPanel';
 import { reconnecting } from '../socket';
 import { ROOM_ACTIONS, useRoomPage } from '../useRoomPage';
@@ -21,6 +24,7 @@ import RoomMenu from './RoomMenu.vue';
 // language for as long as it is open. A tap on a player's avatar anywhere on the page opens the
 // player's panel (PlayerPanel.vue).
 const props = defineProps<{ code: string }>();
+const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const invitation = computed(() => (typeof route.query.invite === 'string' ? route.query.invite : undefined));
@@ -28,6 +32,8 @@ const { room, entry, screens } = useRoomPage(toRef(props, 'code'), { invitation 
 const me = computed(() => room.value?.players.find((player) => player.id === room.value?.me));
 const opened = ref<string | null>(null);
 provideOpenPlayer((playerId) => (opened.value = playerId));
+// The tab says which manuscript this is, by the room's code once the room is known.
+usePageHead(() => ({ title: pageTitle(t('site.room', { code: formatCode(room.value?.code ?? props.code) })) }));
 
 // The invitation has done its work once the page is in the room, whether it brought the page in or
 // came while the page was in already. It leaves the address, so that a reload comes back as a

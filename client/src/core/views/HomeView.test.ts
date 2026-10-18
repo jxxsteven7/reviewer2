@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { i18n, setLanguage } from '../i18n';
+import { nextTick } from 'vue';
+import { i18n, setLanguage, storedLanguage } from '../i18n';
 import HomeView from './HomeView.vue';
 
 vi.mock('../socket', () => ({
@@ -18,7 +19,12 @@ vi.mock('../../games', async () => {
 });
 vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false } }));
 vi.mock('../friends', () => ({ askToJoin: vi.fn(), friendsVersion: { value: 0 } }));
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+// The address that the page opens at, which a test may give a query.
+const router = vi.hoisted(() => ({ route: { query: {} as Record<string, string> }, replace: vi.fn() }));
+vi.mock('vue-router', () => ({
+  useRoute: () => router.route,
+  useRouter: () => ({ push: vi.fn(), replace: router.replace }),
+}));
 
 const stubs = [
   'AccountEntry',
@@ -90,6 +96,38 @@ describe('the tip sheet', () => {
     expect(link?.getAttribute('href')).toBe('https://github.com/sponsors/jxxsteven7');
     expect(link?.getAttribute('target')).toBe('_blank');
     expect(link?.getAttribute('rel')).toBe('noopener noreferrer');
+    wrapper.unmount();
+  });
+});
+
+// The home page in a language, /?lang=zh, as the sitemap lists it and the language gate links to it.
+describe('the home page in a language', () => {
+  beforeEach(() => setLanguage('en', { remember: true }));
+  afterEach(() => {
+    router.route.query = {};
+    router.replace.mockClear();
+    document.body.innerHTML = '';
+    setLanguage('en', { remember: true });
+  });
+
+  test('opens in that language, which becomes the choice, and leaves the address', async () => {
+    router.route.query = { lang: 'zh', from: 'search' };
+    const wrapper = mount(HomeView, { attachTo: document.body, global: { plugins: [i18n], stubs } });
+    await nextTick();
+    expect(i18n.global.locale.value).toBe('zh');
+    expect(storedLanguage()).toBe('zh');
+    expect(router.replace).toHaveBeenCalledWith({ query: { from: 'search' } });
+    expect(wrapper.find('.gate').exists()).toBe(false);
+    expect(document.title).toBe('Reviewer 2 \u00b7 \u5b66\u672f\u5708\u7684\u805a\u4f1a\u6e38\u620f');
+    expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toMatch(/\/\?lang=zh$/);
+    wrapper.unmount();
+  });
+
+  test('leaves the address as it is for a language it has not', () => {
+    router.route.query = { lang: 'fr' };
+    const wrapper = mount(HomeView, { attachTo: document.body, global: { plugins: [i18n], stubs } });
+    expect(i18n.global.locale.value).toBe('en');
+    expect(router.replace).not.toHaveBeenCalled();
     wrapper.unmount();
   });
 });

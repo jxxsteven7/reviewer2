@@ -35,6 +35,11 @@ export default defineConfig([
     languageOptions: { globals: globals.node },
   },
   {
+    // It runs in Node and draws in a browser, with functions that run there.
+    files: ['client/images/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     // The front end must not bundle zod. A schema is built when its module loads, so no bundler
     // can leave it out, and building one probes `new Function`, which the page's own Content
     // Security Policy refuses. The schemas are in shared/src/schemas.ts, which only the server

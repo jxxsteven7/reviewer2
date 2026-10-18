@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCode } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConnectionBanner from '../components/ConnectionBanner.vue';
@@ -7,6 +8,7 @@ import ManuscriptId from '../components/ManuscriptId.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import RoomNotice from '../components/RoomNotice.vue';
 import SoundToggle from '../components/SoundToggle.vue';
+import { pageTitle, usePageHead } from '../head';
 import { muted, unlocked } from '../sound';
 import { useRoomPage } from '../useRoomPage';
 
@@ -17,6 +19,8 @@ const props = defineProps<{ code: string }>();
 const { t } = useI18n();
 const { room, entry, screens } = useRoomPage(toRef(props, 'code'), { screen: true });
 const soundLocked = computed(() => !muted.value && !unlocked.value);
+// The tab says which room's screen this is.
+usePageHead(() => ({ title: pageTitle(t('site.screen', { code: formatCode(room.value?.code ?? props.code) })) }));
 </script>
 
 <template>

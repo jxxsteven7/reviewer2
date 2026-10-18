@@ -3,6 +3,7 @@ import { computed, type ComputedRef } from 'vue';
 import { createI18n, useI18n } from 'vue-i18n';
 import en from '../locales/en.json';
 import zh from '../locales/zh.json';
+import { HTML_LANG } from './site';
 import { readStored, writeStored } from './storage';
 
 // All interface text lives in the locale files (docs/rules/constraints.md). The home page uses
@@ -11,8 +12,7 @@ import { readStored, writeStored } from './storage';
 
 const STORAGE_KEY = 'r2.language';
 
-// What each language is called in a lang attribute.
-export const HTML_LANG: Record<Language, string> = { zh: 'zh-CN', en: 'en' };
+export { HTML_LANG };
 
 // The language the visitor chose on an earlier visit, if any.
 export function storedLanguage(): Language | null {

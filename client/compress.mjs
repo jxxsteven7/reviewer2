@@ -8,7 +8,7 @@ import { brotliCompressSync, constants, gzipSync } from 'node:zlib';
 
 // Fonts and images are compressed already. Source maps are left out: only developer tools fetch
 // them, and at 1 MB they would take most of the compression time.
-const TEXT = /\.(css|html|js|json|svg|txt)$/;
+const TEXT = /\.(css|html|js|json|svg|txt|webmanifest|xml)$/;
 
 const dist = join(import.meta.dirname, 'dist');
 const kB = (bytes) => `${(bytes / 1000).toFixed(1)} kB`;

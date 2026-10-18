@@ -85,7 +85,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   const username = own('Ann');
   await register(page, username);
   await page.goto('/');
-  await page.getByRole('button', { name: /^English/ }).click();
+  await page.getByRole('link', { name: /^English/ }).click();
 
   await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
   const sheet = page.getByRole('dialog', { name: text.feedback.title });
@@ -150,7 +150,7 @@ test("adopted feedback is listed on the home page and counted on its author's pa
   const other = await newPlayer(browser, 'en');
   await register(other, own('Bob'));
   await other.goto('/');
-  await other.getByRole('button', { name: /^English/ }).click();
+  await other.getByRole('link', { name: /^English/ }).click();
   const otherFold = other.locator('.fold.contributions');
   await otherFold.locator('h2 button').click();
   await otherFold.locator('li', { hasText: username }).getByRole('button', { name: username }).click();
@@ -184,7 +184,7 @@ test('feedback sent anonymously names nobody, and counts for the account', async
   const username = own('Eve');
   await register(page, username);
   await page.goto('/');
-  await page.getByRole('button', { name: /^English/ }).click();
+  await page.getByRole('link', { name: /^English/ }).click();
   const idea = `Let the PI pass a turn. (${testInfo.project.name} ${username})`;
   await send(page, 'idea', idea, username, false);
   const sent = feedbackWith(idea);
@@ -206,7 +206,7 @@ test('feedback sent anonymously names nobody, and counts for the account', async
 test('a guest is asked to log in first, comes back after, and may send without', async ({ browser }) => {
   const page = await newPlayer(browser, 'en');
   await page.goto('/');
-  await page.getByRole('button', { name: /^English/ }).click();
+  await page.getByRole('link', { name: /^English/ }).click();
   await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
   const sheet = page.getByRole('dialog', { name: text.feedback.title });
   await expect(sheet).toContainText(text.feedback.guest);
@@ -228,7 +228,7 @@ test('a guest is asked to log in first, comes back after, and may send without',
 test('a login in another tab counts for the feedback sent from this one', async ({ browser }, testInfo) => {
   const page = await newPlayer(browser, 'en');
   await page.goto('/');
-  await page.getByRole('button', { name: /^English/ }).click();
+  await page.getByRole('link', { name: /^English/ }).click();
   // The connection of this tab is a guest's when the form opens.
   await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();
   const sheet = page.getByRole('dialog', { name: text.feedback.title });
@@ -290,7 +290,7 @@ test("an issue adopted from GitHub is listed by its author's GitHub username, or
 
   const page = await newPlayer(browser, 'en');
   await page.goto('/');
-  await page.getByRole('button', { name: /^English/ }).click();
+  await page.getByRole('link', { name: /^English/ }).click();
   const fold = page.locator('.fold.contributions');
   await fold.locator('h2 button').click();
   // The code, which only GitHub is about, has a section of its own, after the kinds of feedback.

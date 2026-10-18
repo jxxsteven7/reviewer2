@@ -6,6 +6,7 @@ import { account, loadAccount } from '../account';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import PageTitle from '../components/PageTitle.vue';
+import { pageTitle, usePageHead } from '../head';
 import ProfileView from './ProfileView.vue';
 import SignIn from './SignIn.vue';
 
@@ -34,6 +35,7 @@ const signingIn = ref(false);
 // Whether the page is on its way back to the room: one opened with `next` may be, until the server
 // has said whether the browser is logged in.
 const leaving = ref(next.value !== undefined);
+usePageHead(() => ({ title: pageTitle(t('account.profile.title')) }));
 
 onMounted(async () => {
   await loadAccount();

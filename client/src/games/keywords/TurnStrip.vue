@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { GuessRule, KeywordsView, Seat } from '@reviewer2/shared';
-import { computed, onBeforeUnmount, watchEffect } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useUrgentTitle } from '../../core/head';
 import { bannerFor } from './banner';
 import ClockBar, { periodOf } from './ClockBar.vue';
 import GroupBars, { type Group } from './GroupBars.vue';
@@ -55,13 +56,7 @@ const count = computed(() => {
   return value === 'unlimited' ? '\u221e' : String(value ?? '');
 });
 
-const title = document.title;
-watchEffect(() => {
-  document.title = banner.value?.urgent ? t('banner.tabTitle') : title;
-});
-onBeforeUnmount(() => {
-  document.title = title;
-});
+useUrgentTitle(() => (banner.value?.urgent ? t('banner.tabTitle') : null));
 </script>
 
 <template>
