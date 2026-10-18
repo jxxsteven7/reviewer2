@@ -108,7 +108,7 @@ export function clueSystem(game: AgentGame, persona: Persona): string {
       'surely work out from the clue: never stretch a clue to more cards than they can follow. Revealed cards are ' +
       'out of play.',
     clueRules(game),
-    'The clue is a new word that is not on the board and links the cards you aim at. It must not mention whose ' +
+    'The clue is new, not on the board, and links the cards you aim at. It must not mention whose ' +
       'the cards are, numbers, positions or letters, and it must not be a clue that was given before in this game.',
     `First choose ${min} to ${max} of OUR unrevealed cards that are close in meaning, ${preferred} if you can, as ` +
       'your targets; then think of the clue. Make sure that no NEUTRAL card, none of THEIRS and above all not ' +
@@ -117,17 +117,31 @@ export function clueSystem(game: AgentGame, persona: Persona): string {
   ].join('\n');
 }
 
-export function clueUser(game: AgentGame, refused: readonly { word: string; why: string }[] = []): string {
+// The clues that the rules refused: what was wrong (`problem`, a ClueProblem or the agent's own,
+// keywords.ts) and why, as the model is told.
+export interface RefusedClue {
+  word: string;
+  problem: string;
+  why: string;
+}
+
+export function clueUser(game: AgentGame, refused: readonly RefusedClue[] = []): string {
   const parts = [`Board:\n${board(game.cards, game.team)}`, earlierClues(game)];
   if (refused.length > 0) {
     const lines = refused.map(({ word, why }) => `- ${word}: ${why}`);
     parts.push(`The rules refused these clues, so give three new ones:\n${lines.join('\n')}`);
-    // What a model most often gets wrong in a Chinese room: spaces between the characters, and a
-    // character that a word on the board has.
+    // What a model most often gets wrong in a Chinese room, each told when it happened: spaces
+    // between the characters, and a character that a word on the board has. Revealed cards are out
+    // of play, and checkClue lets a clue share their characters.
     if (game.language === 'zh') {
-      parts.push(
-        'Write each clue with no spaces, and check every character of it: none may appear in any word on the board.',
-      );
+      const problems = new Set(refused.map(({ problem }) => problem));
+      const reminders = [
+        problems.has('clue_not_one_word') ? 'Write each clue with no spaces.' : '',
+        problems.has('clue_on_board')
+          ? 'Check every character of each clue: none may appear in a word on the board that is not revealed.'
+          : '',
+      ].filter((reminder) => reminder !== '');
+      if (reminders.length > 0) parts.push(reminders.join(' '));
     }
   }
   return parts.join('\n\n');

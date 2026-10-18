@@ -33,6 +33,9 @@ describe('the clue rules', () => {
       const rules = clueRules(language, clueLength);
       expect(rules).toMatch(AIM);
       expect(rules).toMatch(ONLY_SURE);
+      // Nothing says that a clue is one word, which the clue rules may allow it not to be.
+      expect(rules).toMatch(/The clue is new, not on the board, and links the cards you aim at\./);
+      expect(rules).not.toMatch(/new word/);
     }
   });
 
@@ -98,13 +101,25 @@ describe('the clue rules', () => {
     );
   });
 
-  test('after refused clues in a Chinese room, remind the model of spaces and of the characters on the board', () => {
-    const refused = [{ word: '光 电', why: 'it is not one word' }];
-    const reminder =
-      /Write each clue with no spaces, and check every character of it: none may appear in any word on the board\./;
-    expect(clueUser(clueRequest({ language: 'zh', settings: defaultSettings('zh') }), refused)).toMatch(reminder);
-    expect(clueUser(clueRequest({ language: 'zh', settings: defaultSettings('zh') }))).not.toMatch(reminder);
-    expect(clueUser(clueRequest(), refused)).not.toMatch(reminder);
+  test('after refused clues in a Chinese room, remind the model of what went wrong: spaces, or the board', () => {
+    const chinese = clueRequest({ language: 'zh', settings: defaultSettings('zh') });
+    const spaced = { word: '光 电', problem: 'clue_not_one_word', why: 'it is not one word' };
+    const onBoard = { word: '电磁', problem: 'clue_on_board', why: 'it shares or names a character of card 2 (电场)' };
+    const given = { word: '光', problem: 'clue_given', why: 'it was given before' };
+    const SPACES = /Write each clue with no spaces\./;
+    const BOARD = /Check every character of each clue: none may appear in a word on the board that is not revealed\./;
+    expect(clueUser(chinese, [spaced])).toMatch(SPACES);
+    expect(clueUser(chinese, [spaced])).not.toMatch(BOARD);
+    expect(clueUser(chinese, [onBoard])).toMatch(BOARD);
+    expect(clueUser(chinese, [onBoard])).not.toMatch(SPACES);
+    expect(clueUser(chinese, [spaced, onBoard])).toMatch(
+      /Write each clue with no spaces\. Check every character of each clue: none may appear in a word on the board that is not revealed\./,
+    );
+    // A clue refused for another reason, or none, brings no reminder, nor does an English room.
+    for (const user of [clueUser(chinese, [given]), clueUser(chinese), clueUser(clueRequest(), [spaced, onBoard])]) {
+      expect(user).not.toMatch(SPACES);
+      expect(user).not.toMatch(BOARD);
+    }
   });
 
   test('are noted with a new version of the prompts', () => {

@@ -49,23 +49,24 @@ const MAX_NOTED = 200;
 
 const ownLeft = (game: AgentGame) => game.cards.filter((card) => card.color === game.team && !card.revealed).length;
 
-// The cards of the group's own that a clue may be meant for: each of them once, still to be found,
-// and no more than the persona aims at, the first that the model named. The model's numbers are
-// whatever it wrote, so anything else is left out: a model told that a clue may link more cards
-// once in a while names nearly all of them.
-function ownTargets(game: AgentGame, targets: unknown, max: number): number[] {
+// The cards of the group's own that a clue may be meant for: each of them once, and still to be
+// found. The model's numbers are whatever it wrote, so anything else is left out.
+function ownTargets(game: AgentGame, targets: unknown): number[] {
   if (!Array.isArray(targets)) return [];
   const own = targets.filter(
     (card): card is number =>
       Number.isInteger(card) && game.cards[card]?.color === game.team && !game.cards[card]?.revealed,
   );
-  return [...new Set(own)].slice(0, max);
+  return [...new Set(own)];
 }
 
 // One clue that the model proposed, judged: `clean` when it breaks no rule even under the strict
 // clue rule and brings up no warning, `legal` when the rules of the room take it, which under the
-// loose rule may come with a warning. A clue that was given before in the game, or that aims at
-// none of the group's cards, is neither. `conflict` is the card that a clue on the board runs into.
+// loose rule may come with a warning. A clue that was given before in the game, that aims at none
+// of the group's cards, or at more than the persona does (`max`), is neither: a model told that a
+// clue may link more cards once in a while names nearly all of them, which no clue can carry, and
+// the targets it named stay in the note as they were. `conflict` is the card that a clue on the
+// board runs into.
 interface Judged {
   candidate: AgentCandidate;
   clean: boolean;
@@ -78,7 +79,7 @@ function judge(game: AgentGame, proposed: unknown, max: number): Judged | null {
   const { clue, targets: wanted } = proposed as { clue?: unknown; targets?: unknown };
   if (typeof clue !== 'string') return null;
   const word = cleanClue(clue);
-  const targets = ownTargets(game, wanted, max);
+  const targets = ownTargets(game, wanted);
   // The number goes with the cards that the clue is really meant for, within what the room allows:
   // under the free rule, no more than the cards the group has left.
   const allowed = clueCounts(game.settings.guessRule, ownLeft(game)).filter((n): n is number => n !== 'unlimited');
@@ -90,6 +91,7 @@ function judge(game: AgentGame, proposed: unknown, max: number): Judged | null {
   let problem: string | null = room.problem;
   if (problem === null && given) problem = 'clue_given';
   if (problem === null && count === 0) problem = 'no_targets';
+  if (problem === null && targets.length > max) problem = 'too_many_targets';
   const legal = problem === null;
   const clean = legal && strict.problem === null && strict.similar.length === 0;
   if (legal && !clean) problem = 'clue_similar';
@@ -123,8 +125,11 @@ const RUNS_INTO: Record<ClueMatch['kind'], string> = {
   prefix: 'starts like',
 };
 
-function why({ candidate, conflict }: Judged): string {
+function why({ candidate, conflict }: Judged, max: number): string {
   if (conflict) return `it ${RUNS_INTO[conflict.kind]} card ${conflict.card} (${conflict.text})`;
+  if (candidate.problem === 'too_many_targets') {
+    return `it aims at ${candidate.targets.length} cards, more than the ${max} that your students can follow`;
+  }
   return WHY[candidate.problem as string] ?? 'the rules refused it';
 }
 
@@ -242,8 +247,10 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
     ms: Math.round(turn.now() - started),
     candidates: considered,
   });
-  // The clues that the rules refused, with why, which the model is told when it is asked again.
-  const refused: { word: string; why: string }[] = [];
+  // The clues that the rules refused, with what was wrong and why, which the model is told when it
+  // is asked again.
+  const refused: { word: string; problem: string; why: string }[] = [];
+  const { max } = turn.persona.targets;
   try {
     let chosen: Judged[] = [];
     for (let attempt = 0; attempt < TRIES && chosen.length === 0; attempt += 1) {
@@ -258,13 +265,11 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
         turn.signal,
       );
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
-      const judged = proposed
-        .map((candidate) => judge(request, candidate, turn.persona.targets.max))
-        .filter((found) => found !== null);
+      const judged = proposed.map((candidate) => judge(request, candidate, max)).filter((found) => found !== null);
       considered.push(...judged.map(({ candidate }) => candidate));
       for (const found of judged) {
         const { problem, word } = found.candidate;
-        if (problem !== null && problem !== 'clue_similar') refused.push({ word, why: why(found) });
+        if (problem !== null && problem !== 'clue_similar') refused.push({ word, problem, why: why(found, max) });
       }
       // The clean clues if there are any, else those that the room's rules take with a warning.
       const clean = judged.filter(({ clean }) => clean);
