@@ -8,6 +8,7 @@ import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { admin } from './admin';
+import { ContributionStore } from './store/contributions';
 import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 import { FeedbackStore, type NewFeedback } from './store/feedback';
 
@@ -33,6 +34,8 @@ afterEach(() => {
 });
 
 const run = (...args: string[]) => admin(args, { DATA_DIR: dir }, (line) => printed.push(line));
+// The contributions as the home page lists them.
+const contributions = () => new ContributionStore(database.db).all();
 
 function annWithAvatar(): string {
   const ann = accounts.store.create('Ann Lee', 'ann lee', 'hash', RECORDS_NOTICE_VERSION);
@@ -371,37 +374,18 @@ describe('feedback adopt', () => {
       summaryZh: ZH,
       summaryEn: EN,
     });
-    expect(store.contributions()).toEqual([
-      {
-        kind: 'bug',
-        name: null,
-        profile: null,
-        avatar: null,
-        deleted: false,
-        summary: { zh: ZH, en: EN },
-        issue: 43,
-        month: '2026-10',
-      },
+    const site = { source: 'site', avatar: null, deleted: false, advisory: null, month: '2026-10' };
+    expect(contributions()).toEqual([
+      { kind: 'bug', name: null, profile: null, summary: { zh: ZH, en: EN }, issue: 43, ...site },
       {
         kind: 'words',
         name: 'octocat',
         profile: null,
-        avatar: null,
-        deleted: false,
         summary: { zh: '加了词', en: 'Added words' },
         issue: 42,
-        month: '2026-10',
+        ...site,
       },
-      {
-        kind: 'idea',
-        name: 'Ann',
-        profile: ann.handle,
-        avatar: null,
-        deleted: false,
-        summary: { zh: ZH, en: EN },
-        issue: 41,
-        month: '2026-10',
-      },
+      { kind: 'idea', name: 'Ann', profile: ann.handle, summary: { zh: ZH, en: EN }, issue: 41, ...site },
     ]);
     expect(accounts.summary(ann).contributions).toEqual([
       { kind: 'idea', count: 1 },
@@ -418,7 +402,7 @@ describe('feedback adopt', () => {
     expect(printed.at(-1)).toBe('There is no feedback #4.');
     expect(adopt('x')).toBe(1);
     expect(printed.at(-1)).toBe('There is no feedback #x.');
-    expect(store.contributions()).toHaveLength(3);
+    expect(contributions()).toHaveLength(3);
   });
 
   test('lists feedback signed with an account that is gone as a deleted player, counted for no account', () => {
@@ -433,7 +417,7 @@ describe('feedback adopt', () => {
       'Adopted feedback #1, issue #41. The home page lists it now, as a deleted player, counted for no account, ' +
         'saying that the player contributed:',
     );
-    expect(store.contributions()).toMatchObject([{ name: null, profile: null, deleted: true, issue: 41 }]);
+    expect(contributions()).toMatchObject([{ name: null, profile: null, deleted: true, issue: 41 }]);
   });
 
   test('takes only feedback that is a GitHub issue, which it keeps', () => {
@@ -454,7 +438,7 @@ describe('feedback adopt', () => {
         'place if #43 is wrong: feedback issue 1 <number>.',
     );
     expect(run('feedback', 'issue', '1', '44')).toBe(0);
-    expect(store.contributions()[0]?.issue).toBe(44);
+    expect(contributions()[0]?.issue).toBe(44);
   });
 
   test('takes what the player contributed in both languages, by the rules of a contribution', () => {
@@ -486,10 +470,10 @@ describe('feedback adopt', () => {
     expect(store.setIssue(1, 41)).toBe(true);
     expect(adopt('1')).toBe(1);
     expect(printed.at(-1)).toBe('Feedback #1 is in the trash. Restore it first: feedback restore 1.');
-    expect(store.contributions()).toEqual([]);
+    expect(contributions()).toEqual([]);
     expect(run('feedback', 'restore', '1')).toBe(0);
     expect(adopt('1')).toBe(0);
-    expect(store.contributions()).toHaveLength(1);
+    expect(contributions()).toHaveLength(1);
   });
 
   test('refuses closed feedback, which was set aside, until it is reopened', () => {
@@ -558,7 +542,7 @@ describe('feedback describe', () => {
       `  zh: ${ZH}`,
       `  en: ${EN}`,
     ]);
-    expect(store.contributions()[0]).toMatchObject({
+    expect(contributions()[0]).toMatchObject({
       name: 'Ann',
       summary: { zh: '提出了倒计时', en: 'Suggested a countdown' },
     });
@@ -622,7 +606,7 @@ describe('feedback draft', () => {
         id: 1,
         kind: 'bug',
         title: 'Bug: Line one',
-        body: `A bug report ${SENT}\n\n> Line one\n> Line two\n\nReported by Ann.`,
+        body: `A bug report ${SENT}\n\n> Line one\n> Line two\n\nReported by Ann.\n\nVersion: v1`,
       }),
     ]);
     expect(Object.keys(JSON.parse(printed[0] as string) as object)).toEqual(['id', 'kind', 'title', 'body']);
@@ -633,7 +617,6 @@ describe('feedback draft', () => {
     const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
     store.add(
       feedback({
-        kind: 'bug',
         text: 'The board is gone.',
         contact: 'wechat: r2',
         credit: 'Ann L',
@@ -645,12 +628,36 @@ describe('feedback draft', () => {
       }),
     );
     const { title, body } = drafted('1');
-    expect(title).toBe('Bug: The board is gone.');
-    expect(body).toBe(`A bug report ${SENT}\n\n> The board is gone\\.\n\nReported by Ann.`);
+    expect(title).toBe('Idea: The board is gone.');
+    expect(body).toBe(`An idea ${SENT}\n\n> The board is gone\\.\n\nSuggested by Ann.`);
     // No contact, link, account, version, language, page, browser, time or id.
     expect(`${title}\n${body}`).not.toMatch(
       /wechat|r2|ann\.example|account|v0\.1\.10|Chinese|zh|room|Mozilla|20\d\d|#1/,
     );
+  });
+
+  test('says which version and browser a bug report came from, by their names and versions alone', () => {
+    const store = new FeedbackStore(database.db);
+    const wechat =
+      'Mozilla/5.0 (Linux; Android 15; 2211133C Build/AQ3A.240912.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) ' +
+      'Version/4.0 Chrome/130.0.6723.107 Mobile Safari/537.36 MicroMessenger/8.0.56.2800(0x28003855)';
+    store.add(feedback({ kind: 'bug', text: 'The board is gone.', version: 'v0.1.42', userAgent: wechat }));
+    // A build named by its commit, which GitHub would link, and a browser it says nothing of.
+    store.add(feedback({ kind: 'bug', text: 'The board is gone.', version: 'abc1234def', userAgent: 'curl/8.5.0' }));
+    // A bug report from before the browser was kept.
+    store.add(feedback({ kind: 'bug', text: 'The board is gone.', version: 'v0.1.5' }));
+    // Only a bug report says them.
+    store.add(feedback({ text: 'The board is gone.', version: 'v0.1.42', userAgent: wechat }));
+    const bug = drafted('1').body;
+    expect(bug).toBe(
+      `A bug report ${SENT}\n\n> The board is gone\\.\n\nSent by an anonymous player.\n\n` +
+        'Version: v0\\.1\\.42\nBrowser: WeChat 8.0.56 on Android 15',
+    );
+    // Never the model or the user agent itself.
+    expect(bug).not.toMatch(/2211133C|Build|AppleWebKit|Mozilla|0x28003855/);
+    expect(drafted('2').body.split('\n').slice(-1)).toEqual([`Version: a${ZWSP}bc1234def`]);
+    expect(drafted('3').body.split('\n').slice(-2)).toEqual(['', 'Version: v0\\.1\\.5']);
+    expect(drafted('4').body).not.toMatch(/Version|Browser|v0\.1\.42|WeChat/);
   });
 
   test('names feedback signed with an account by the account as it is now, or a deleted player', () => {
@@ -663,7 +670,9 @@ describe('feedback draft', () => {
     expect(drafted('1').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Annie.`);
     accounts.store.delete(ann.id);
     expect(drafted('1').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by a deleted player.`);
-    expect(drafted('2').body).toBe(`A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by a deleted player.`);
+    expect(drafted('2').body).toBe(
+      `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by a deleted player.\n\nVersion: v1`,
+    );
   });
 
   test('opens by the kind, as the status page calls it, and names who sent it, or an anonymous player', () => {
@@ -682,14 +691,16 @@ describe('feedback draft', () => {
     });
     expect(drafted('3')).toMatchObject({
       title: 'Bug: A timer, please.',
-      body: `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by Ann.`,
+      body: `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nReported by Ann.\n\nVersion: v1`,
     });
     expect(drafted('4')).toMatchObject({
       title: 'Word lists: A timer, please.',
       body: `A suggestion for the word lists ${SENT}\n\n> A timer\\, please\\.\n\nSuggested by Ann.`,
     });
     expect(drafted('5').body).toBe(`An idea ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
-    expect(drafted('6').body).toBe(`A bug report ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.`);
+    expect(drafted('6').body).toBe(
+      `A bug report ${SENT}\n\n> A timer\\, please\\.\n\nSent by an anonymous player.\n\nVersion: v1`,
+    );
   });
 
   test('takes the first line for the title, on one line, cut after 60 characters that a reader sees', () => {
@@ -727,7 +738,8 @@ describe('feedback draft', () => {
     const store = new FeedbackStore(database.db);
     store.add(feedback({ kind: 'bug', text: 'Steps:\n1. Lock the phone\n\n2. Come back' }));
     expect(drafted('1').body).toBe(
-      `A bug report ${SENT}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.`,
+      `A bug report ${SENT}\n\n> Steps\\:\n> 1\\. Lock the phone\n>\n> 2\\. Come back\n\nSent by an anonymous player.\n\n` +
+        'Version: v1',
     );
   });
 
@@ -773,6 +785,8 @@ describe('feedback draft', () => {
         `> ${ZWSP}\\$${ZWSP}\\$`,
         '',
         `Reported by \\[\\@${ZWSP}bob\\]\\(\\#${ZWSP}1\\).`,
+        '',
+        'Version: v1',
       ].join('\n'),
     );
     // Nothing that GitHub links or replaces is left as it was.
@@ -1211,5 +1225,264 @@ describe('data check', () => {
       `There is no ${AVATAR_DIR} directory in ${dir}, so the avatar files were not checked.`,
       'Every check passed.',
     ]);
+  });
+});
+
+// A contribution from GitHub, as `github adopt` takes it: the issue, the kind, the author and the
+// two sentences.
+const FROM_GITHUB = ['--kind', 'code', '--login', 'octocat', '--id', '583231', ...SAID];
+const GITHUB_URL = 'https://github.com/octocat';
+const ADVISORY = 'GHSA-24fc-5gmw-5x4j';
+
+describe('github adopt', () => {
+  test('lists an issue from GitHub among the contributions at once, by its author or anonymously, and once only', () => {
+    vi.useFakeTimers({ now: Date.parse('2026-10-14T08:00:00.000Z') });
+    expect(run('github', 'adopt', '14', ...FROM_GITHUB)).toBe(0);
+    expect(printed).toEqual([
+      'Adopted issue #14 as a contribution to the code or the docs. The home page lists it now, as octocat, ' +
+        `linked to ${GITHUB_URL}, saying that the player contributed:`,
+      `  zh: ${ZH}`,
+      `  en: ${EN}`,
+    ]);
+    expect(
+      run('github', 'adopt', '16', '--kind', 'idea', '--login', 'hubot', '--id', '2', '--anonymous', ...SAID),
+    ).toBe(0);
+    expect(printed.at(-3)).toBe(
+      'Adopted issue #16 as an idea. The home page lists it now, as an anonymous player, saying that the player ' +
+        'contributed:',
+    );
+    const github = { source: 'github', profile: null, avatar: null, deleted: false, summary: { zh: ZH, en: EN } };
+    expect(contributions()).toEqual([
+      { kind: 'idea', name: null, issue: 16, advisory: null, month: '2026-10', ...github },
+      { kind: 'code', name: 'octocat', issue: 14, advisory: null, month: '2026-10', ...github },
+    ]);
+    expect(new ContributionStore(database.db).byRef({ issue: 16 })).toMatchObject({
+      login: 'hubot',
+      githubId: 2,
+      named: false,
+      adoptedAt: '2026-10-14T08:00:00.000Z',
+    });
+    // Only once.
+    expect(run('github', 'adopt', '14', ...FROM_GITHUB)).toBe(1);
+    expect(printed.at(-1)).toBe(
+      'Issue #14 was adopted already. To say again what was contributed: github describe 14 --zh <sentence> ' +
+        '--en <sentence>.',
+    );
+  });
+
+  test('adopts a published security advisory as a bug report, by its id', () => {
+    expect(run('github', 'adopt', '--advisory', ADVISORY, '--login', 'octocat', '--id', '583231', ...SAID)).toBe(0);
+    expect(printed[0]).toBe(
+      `Adopted advisory ${ADVISORY} as a bug report. The home page lists it now, as octocat, linked to ` +
+        `${GITHUB_URL}, saying that the player contributed:`,
+    );
+    expect(contributions()).toMatchObject([
+      { kind: 'bug', source: 'github', name: 'octocat', issue: null, advisory: ADVISORY },
+    ]);
+    // An advisory is a bug report, and is adopted once.
+    expect(
+      run(
+        'github',
+        'adopt',
+        '--advisory',
+        'GHSA-2345-6789-cfgh',
+        '--kind',
+        'idea',
+        '--login',
+        'octocat',
+        '--id',
+        '1',
+        ...SAID,
+      ),
+    ).toBe(1);
+    expect(printed.at(-1)).toBe('An advisory is adopted as a bug report: --kind bug.');
+    expect(
+      run('github', 'adopt', '--advisory', ADVISORY, '--kind', 'bug', '--login', 'octocat', '--id', '583231', ...SAID),
+    ).toBe(1);
+    expect(printed.at(-1)).toBe(
+      `Advisory ${ADVISORY} was adopted already. To say again what was contributed: github describe --advisory ` +
+        `${ADVISORY} --zh <sentence> --en <sentence>.`,
+    );
+  });
+
+  test("refuses an issue that a player's feedback was published as, and the other way round", () => {
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ credit: 'Ann' }));
+    store.setIssue(1, 41);
+    expect(run('github', 'adopt', '41', ...FROM_GITHUB)).toBe(1);
+    expect(printed.at(-1)).toBe(
+      "Issue #41 is a player's feedback, which is adopted as feedback: feedback adopt <id> --zh <sentence> " +
+        '--en <sentence>.',
+    );
+    expect(run('github', 'adopt', '14', ...FROM_GITHUB)).toBe(0);
+    store.add(feedback({ credit: 'Bob' }));
+    expect(run('feedback', 'issue', '2', '14')).toBe(1);
+    expect(printed.at(-1)).toBe(
+      "Issue #14 is a contribution from GitHub (github list), so it can't be a player's feedback too.",
+    );
+    expect(store.byId(2)?.issue).toBeNull();
+    expect(run('feedback', 'issue', '2', '15')).toBe(0);
+  });
+
+  test('names the issue by its number or the advisory by its id, one of the two', () => {
+    expect(run('github', 'adopt', ...FROM_GITHUB)).toBe(1);
+    expect(printed.at(-1)).toBe('Name the issue by its number, or an advisory with --advisory GHSA-xxxx-xxxx-xxxx.');
+    expect(run('github', 'adopt', 'x', ...FROM_GITHUB)).toBe(1);
+    expect(printed.at(-1)).toBe('x is not the number of an issue.');
+    expect(run('github', 'adopt', '0', ...FROM_GITHUB)).toBe(1);
+    expect(run('github', 'adopt', '14', '--advisory', ADVISORY, ...FROM_GITHUB)).toBe(1);
+    expect(printed.at(-1)).toBe('Name the issue by its number, or the advisory with --advisory, not both.');
+    for (const advisory of ['GHSA-24fc-5gmw', 'ghsa-24fc-5gmw-5x4j', 'GHSA-aaaa-bbbb-cccc', 'CVE-2026-1']) {
+      expect(run('github', 'adopt', '--advisory', advisory, ...FROM_GITHUB), advisory).toBe(1);
+      expect(printed.at(-1)).toBe(
+        `${advisory} is not the id of a GitHub security advisory, which is GHSA- and three groups of four.`,
+      );
+    }
+    // Two words, or a flag it doesn't take, are a usage error.
+    expect(run('github', 'adopt', '14', '15', ...FROM_GITHUB)).toBe(2);
+    expect(run('github', 'adopt', '14', '--ban', ...FROM_GITHUB)).toBe(2);
+    expect(contributions()).toEqual([]);
+  });
+
+  test('takes the kind, the author and the sentences, by their rules', () => {
+    expect(run('github', 'adopt', '14', ...SAID)).toBe(2);
+    expect(printed.at(-1)).toBe(
+      'Say what kind of contribution it is and who made it: --kind <kind> --login <GitHub username> ' +
+        '--id <id of the GitHub account>.',
+    );
+    expect(run('github', 'adopt', '14', '--kind', 'code', '--login', 'octocat', '--id', '583231')).toBe(2);
+    expect(printed.at(-1)).toBe(
+      'Say what the player contributed in both languages: --zh "<a sentence in Chinese>" --en "<a sentence in English>".',
+    );
+    expect(run('github', 'adopt', '14', '--kind', 'rant', '--login', 'octocat', '--id', '583231', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe('rant is not a kind of contribution: one of idea, game, bug, words, code.');
+    for (const login of ['-octo-', 'octo cat', 'x'.repeat(40), 'octo@cat']) {
+      expect(run('github', 'adopt', '14', '--kind', 'code', '--login', login, '--id', '583231', ...SAID), login).toBe(
+        1,
+      );
+      expect(printed.at(-1)).toBe(`${login} is not a GitHub username.`);
+    }
+    expect(run('github', 'adopt', '14', '--kind', 'code', '--login', 'octocat', '--id', 'x', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe('x is not the id of a GitHub account.');
+    expect(
+      run('github', 'adopt', '14', '--kind', 'code', '--login', 'octocat', '--id', '583231', '--zh', ' ', '--en', EN),
+    ).toBe(1);
+    expect(printed.at(-1)).toBe('--zh shows nothing.');
+    expect(contributions()).toEqual([]);
+    // Cleaned as a bio is, and every kind.
+    expect(
+      run(
+        'github',
+        'adopt',
+        '14',
+        '--kind',
+        'words',
+        '--login',
+        'Mona-Lisa',
+        '--id',
+        '7',
+        '--zh',
+        ' 提了词 ',
+        '--en',
+        'Proposed terms',
+      ),
+    ).toBe(0);
+    expect(printed.at(-3)).toBe(
+      'Adopted issue #14 as a contribution to the word lists. The home page lists it now, as Mona-Lisa, linked to ' +
+        'https://github.com/Mona-Lisa, saying that the player contributed:',
+    );
+    expect(contributions()[0]).toMatchObject({
+      kind: 'words',
+      name: 'Mona-Lisa',
+      summary: { zh: '提了词', en: 'Proposed terms' },
+    });
+    expect(run('github', 'adopt', '15', '--kind', 'game', '--login', 'octocat', '--id', '1', ...SAID)).toBe(0);
+    expect(printed.at(-3)).toContain('Adopted issue #15 as an idea for a new game.');
+  });
+});
+
+describe('github describe, anonymous and forget', () => {
+  test('write the sentences again, list the author anonymously or forget them, at their request, and delete nothing', () => {
+    expect(run('github', 'describe', '14', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe(
+      "Issue #14 isn't adopted. Adopt it with github adopt 14 --kind <kind> --login <username> --id <number> " +
+        '--zh <sentence> --en <sentence>.',
+    );
+    expect(run('github', 'adopt', '14', ...FROM_GITHUB)).toBe(0);
+    printed = [];
+    expect(run('github', 'describe', '14', '--zh', '整理了测试', '--en', 'Tidied the tests')).toBe(0);
+    expect(printed).toEqual([
+      'Issue #14 now says that the player contributed:',
+      '  zh: 整理了测试',
+      '  en: Tidied the tests',
+      'It said:',
+      `  zh: ${ZH}`,
+      `  en: ${EN}`,
+    ]);
+    expect(run('github', 'describe', '14', '--zh', ZH)).toBe(2);
+    expect(contributions()[0]).toMatchObject({
+      name: 'octocat',
+      summary: { zh: '整理了测试', en: 'Tidied the tests' },
+    });
+
+    expect(run('github', 'anonymous', '15')).toBe(1);
+    expect(printed.at(-1)).toBe("Issue #15 isn't adopted.");
+    expect(run('github', 'anonymous', '14')).toBe(0);
+    expect(printed.at(-1)).toBe(
+      'Issue #14 is listed as an anonymous player from now on. Its author, octocat, stays on record; github forget ' +
+        '14 drops them too.',
+    );
+    expect(run('github', 'anonymous', '14')).toBe(1);
+    expect(printed.at(-1)).toBe('Issue #14 is listed anonymously already.');
+    expect(contributions()[0]).toMatchObject({ name: null });
+    const store = new ContributionStore(database.db);
+    expect(store.byRef({ issue: 14 })).toMatchObject({ login: 'octocat', githubId: 583231, named: false });
+
+    expect(run('github', 'forget', '15')).toBe(1);
+    expect(printed.at(-1)).toBe("Issue #15 isn't adopted.");
+    expect(run('github', 'forget', '14')).toBe(0);
+    expect(printed.at(-1)).toBe(
+      'Forgot that octocat made issue #14: it is listed as an anonymous player, and nothing names its author any more.',
+    );
+    expect(run('github', 'forget', '14')).toBe(1);
+    expect(printed.at(-1)).toBe('The author of issue #14 was forgotten already.');
+    expect(store.byRef({ issue: 14 })).toMatchObject({ login: null, githubId: null, named: false });
+    expect(contributions()).toHaveLength(1);
+    // By the advisory too.
+    expect(run('github', 'adopt', '--advisory', ADVISORY, '--login', 'hubot', '--id', '2', ...SAID)).toBe(0);
+    expect(run('github', 'anonymous', '--advisory', ADVISORY)).toBe(0);
+    expect(printed.at(-1)).toBe(
+      `Advisory ${ADVISORY} is listed as an anonymous player from now on. Its author, hubot, stays on record; ` +
+        `github forget --advisory ${ADVISORY} drops them too.`,
+    );
+    expect(run('github', 'forget', '--advisory', 'GHSA-24fc-5gmw')).toBe(1);
+    expect(run('github', 'describe', '--advisory', ADVISORY, '14', ...SAID)).toBe(1);
+  });
+});
+
+describe('github list', () => {
+  test('shows every contribution from GitHub, the latest first, with its author as the home page lists them', () => {
+    expect(run('github', 'list')).toBe(0);
+    expect(printed).toEqual(['No contribution from GitHub yet.']);
+    vi.useFakeTimers({ now: Date.parse('2026-10-14T08:00:00.000Z') });
+    run('github', 'adopt', '14', ...FROM_GITHUB);
+    printed = [];
+    expect(run('github', 'list')).toBe(0);
+    expect(printed).toEqual(['1 contribution from GitHub:', `#14  2026-10-14  code  octocat (583231)  ${ZH} · ${EN}`]);
+    vi.setSystemTime(Date.parse('2026-10-15T08:00:00.000Z'));
+    run('github', 'adopt', '16', '--kind', 'idea', '--login', 'hubot', '--id', '2', '--anonymous', ...SAID);
+    vi.setSystemTime(Date.parse('2026-10-16T08:00:00.000Z'));
+    run('github', 'adopt', '--advisory', ADVISORY, '--login', 'quiet-heron', '--id', '9', ...SAID);
+    run('github', 'forget', '--advisory', ADVISORY);
+    printed = [];
+    expect(run('github', 'list')).toBe(0);
+    expect(printed).toEqual([
+      '3 contributions from GitHub, the latest first:',
+      `${ADVISORY}  2026-10-16  bug  author forgotten  ${ZH} · ${EN}`,
+      `#16  2026-10-15  idea  hubot (2), listed anonymously  ${ZH} · ${EN}`,
+      `#14  2026-10-14  code  octocat (583231)  ${ZH} · ${EN}`,
+    ]);
+    // It only reads.
+    expect(run('github', 'list', '14')).toBe(2);
   });
 });

@@ -44,8 +44,7 @@ import UiSheet from './UiSheet.vue';
 // then asks for. A guest is asked to log in first, by a way to the account page that brings them
 // back to their room, if they are in one, and may send it all the same. Feedback that the server
 // couldn't sign with the account makes the page ask again who the browser is, so that the form
-// follows. A new game, which the player suggests the project make next, gets a word on what to
-// write.
+// follows. Each kind gets a word on what to write, under the kinds.
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
@@ -172,7 +171,7 @@ function submit() {
         </label>
       </fieldset>
 
-      <p v-if="kind === 'game'" class="note">{{ t('feedback.gameNote') }}</p>
+      <p class="note">{{ t(`feedback.notes.${kind}`) }}</p>
       <UiField
         v-model="text"
         multiline

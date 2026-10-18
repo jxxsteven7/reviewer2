@@ -28,10 +28,16 @@ These rules apply to everyone: project members, outside contributors and AI codi
 
 Codex reads [AGENTS.md](AGENTS.md); Claude Code reads it through `CLAUDE.md`. Point any other assistant at the file first. Bring a rule into a chat with `@`, for example `@docs/rules/review.md`. You are responsible for an assistant's work as for your own, and say which parts it generated in the PR template's "AI assistance" section.
 
-## Issues
+## Issues and pull requests
 
-Use GitHub Issues for bugs, tasks and ideas, and open one before a large change. A bug report names the device and browser, whether the page was opened in WeChat, the steps, what you expected and what happened.
+Where to tell us something depends on who you are and what it is:
+
+- **Playing?** Use **Send feedback** on the site. You need no GitHub account, and an adopted idea counts for your account there.
+- **Working on the project?** Open an issue here with the form that fits: Idea, New game, Bug report, Word lists, or Code and docs for what players don't see. An adopted issue is listed among the contributions on the site, by your GitHub username or anonymously.
+- **A security problem?** Report it privately, never in an issue or feedback ([Security](#security)).
+
+A pull request is the best way to make something better. A small fix, such as a typo, can go straight to a pull request; a larger change starts with an issue, so that we agree on the plan before you write the code. Code is credited by GitHub, among the repository's contributors.
 
 ## Security
 
-Don't open a public issue for a security problem, such as a way to see card colors you shouldn't or to impersonate a player. Use **Report a vulnerability** on the repository's Security tab.
+Don't open a public issue for a security problem, such as a way to see card colors you shouldn't or to impersonate a player. Use **Report a vulnerability** on the repository's Security tab. Once the problem is fixed, the advisory is published, and you are credited as its reporter on GitHub and among the contributions on the site, by your GitHub username or anonymously, as you prefer.

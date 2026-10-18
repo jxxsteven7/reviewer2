@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { type Contribution, CONTRIBUTIONS_API, FEEDBACK_KINDS, REPOSITORY_URL } from '@reviewer2/shared';
+import {
+  CONTRIBUTION_KINDS,
+  type Contribution,
+  CONTRIBUTIONS_API,
+  GITHUB_URL,
+  REPOSITORY_URL,
+} from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
 import { useLanguage } from '../i18n';
 import { nameOf } from '../names';
@@ -7,34 +13,58 @@ import { openProfile } from '../profilePanel';
 import { countPeople } from '../thanks';
 import FoldedList from './FoldedList.vue';
 import FoldedSection from './FoldedSection.vue';
+import GithubAvatar from './GithubAvatar.vue';
+import LinkArrow from './LinkArrow.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 
-// The feedback contributions on the home page (docs/architecture.md#feedback-contributions): the
-// feedback that the operator adopted, which the server reads from its database, newest first, in a
-// section for each kind of feedback that has any. Each says who it is from: the account that
-// signed it, "a deleted player" once that account is gone, the name a guest left, or "an
-// anonymous player"; then what they contributed, as the operator wrote it in the page's language;
-// the GitHub issue it became, where the discussion and the changes are; and the month it was
-// adopted. Feedback signed with an account comes with the handle of its profile, and shows the
+// The contributions on the home page (docs/architecture.md#feedback-contributions): the feedback
+// that players sent through the site and the operator adopted, and the issues that developers
+// opened on GitHub and the operator adopted, which the server reads from its database as one list,
+// newest first, in a section for each kind that has any, the kinds of feedback and then the code,
+// which only GitHub is about. Each says who it is from: the account that signed it, "a deleted
+// player" once that account is gone, the name a guest left, the GitHub username of an issue's
+// author, or "an anonymous player"; then what they contributed, as the operator wrote it in the
+// page's language; the GitHub issue it is or became, where the discussion and the changes are, or
+// the security advisory published once a problem reported privately was fixed; and the month it
+// was adopted. Feedback signed with an account comes with the handle of its profile, and shows the
 // account's avatar before its username, or the name that the viewer gives a friend (names.ts): a
 // tap on either opens the account's panel over the home page, as an avatar does anywhere else
-// (ProfilePanel.vue). Any other name, and what they did, is plain text. What follows the name is
-// one piece, which wraps under itself rather than under the name, and goes to a line of its own
-// after a long name; an avatar hangs in a column of its own before the name.
+// (ProfilePanel.vue). An issue's author shows GitHub's mark before their username, in the link
+// blue with an arrow after it, since both lead off the site, to their GitHub page. Any other name,
+// and what they did, is plain text. What follows the name is one piece, which wraps under itself
+// rather than under the name, and goes to a line of its own after a long name; an avatar hangs in
+// a column of its own before the name. The card's intro also says where those who wrote the code
+// are listed: on GitHub, among the repository's contributors.
 const { t } = useI18n();
 const language = useLanguage();
 
 type Contributions = { contributions: Contribution[] };
-const people = ({ contributions }: Contributions) => countPeople(contributions.map(({ name }) => name));
+// The people named, counted for each place they came from on its own, since a username on the site
+// and the same username on GitHub may be two people.
+const people = ({ contributions }: Contributions) =>
+  countPeople(contributions.filter(({ source }) => source === 'site').map(({ name }) => name)) +
+  countPeople(contributions.filter(({ source }) => source === 'github').map(({ name }) => name));
 const empty = ({ contributions }: Contributions) => contributions.length === 0;
 const sections = ({ contributions }: Contributions) =>
-  FEEDBACK_KINDS.map((kind) => ({ kind, entries: contributions.filter((entry) => entry.kind === kind) })).filter(
+  CONTRIBUTION_KINDS.map((kind) => ({ kind, entries: contributions.filter((entry) => entry.kind === kind) })).filter(
     ({ entries }) => entries.length > 0,
   );
+// Whether an entry has an avatar, an account's or GitHub's, which hangs before the name.
+const hangs = ({ name, profile, source }: Contribution) => name !== null && (profile !== null || source === 'github');
+const CONTRIBUTORS_URL = `${REPOSITORY_URL}/graphs/contributors`;
 </script>
 
 <template>
   <FoldedList name="contributions" :api="CONTRIBUTIONS_API" :people="people" :empty="empty" intro>
+    <template #intro>
+      <i18n-t keypath="contributions.intro" scope="global">
+        <template #github>
+          <a class="text-link coders" :href="CONTRIBUTORS_URL" target="_blank" rel="noopener noreferrer"
+            >{{ t('contributions.github') }}<LinkArrow
+          /></a>
+        </template>
+      </i18n-t>
+    </template>
     <template #none>{{ t('contributions.none') }}</template>
     <template #default="{ data }">
       <FoldedSection
@@ -44,7 +74,7 @@ const sections = ({ contributions }: Contributions) =>
         :heading="t(`contributions.kinds.${section.kind}`)"
         :entries="section.entries"
       >
-        <span class="entry" :class="{ hangs: entry.name !== null && entry.profile }">
+        <span class="entry" :class="{ hangs: hangs(entry) }">
           <button
             v-if="entry.name !== null && entry.profile"
             type="button"
@@ -55,6 +85,17 @@ const sections = ({ contributions }: Contributions) =>
             <PlayerAvatar class="press-part" :name="entry.name" :avatar="entry.avatar" />
             <span>{{ nameOf({ name: entry.name, handle: entry.profile }) }}</span>
           </button>
+          <a
+            v-else-if="entry.name !== null && entry.source === 'github'"
+            class="name person github press-host"
+            :href="`${GITHUB_URL}/${entry.name}`"
+            target="_blank"
+            rel="nofollow ugc noopener"
+          >
+            <GithubAvatar class="press-part" />
+            <span class="text">{{ entry.name }}</span
+            ><LinkArrow />
+          </a>
           <span v-else class="name">{{
             entry.deleted ? t('contributions.deleted') : (entry.name ?? t('contributions.anonymous'))
           }}</span>
@@ -64,7 +105,13 @@ const sections = ({ contributions }: Contributions) =>
             <span class="said">
               <span v-if="entry.summary" class="what">{{ entry.summary[language] }}</span>
               <span class="meta"
-                >&nbsp;<a :href="`${REPOSITORY_URL}/issues/${entry.issue}`" target="_blank" rel="noopener noreferrer"
+                >&nbsp;<a
+                  v-if="entry.advisory !== null"
+                  :href="`${REPOSITORY_URL}/security/advisories/${entry.advisory}`"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ t('contributions.advisory') }}</a
+                ><a v-else :href="`${REPOSITORY_URL}/issues/${entry.issue}`" target="_blank" rel="noopener noreferrer"
                   >#{{ entry.issue }}</a
                 >
                 &middot; {{ entry.month }}</span
@@ -146,6 +193,80 @@ const sections = ({ contributions }: Contributions) =>
   outline: var(--line-strong) solid var(--focus);
   outline-offset: 2px;
   border-radius: var(--radius-small);
+}
+
+/* An issue's author on GitHub: GitHub's mark hangs where an account's avatar does, and the username
+   is a link that leads off the site, in the deep blue that reads on the beige row (docs/design.md),
+   with the arrow after it (LinkArrow.vue): under a pointer an underline sweeps in under the
+   username alone and the arrow moves out; pressed, the underline is there at once and the arrow
+   further out, and both ease back after. A username too long for the line wraps at its hyphens,
+   with the underline under every line, and the arrow stays at the end of the last one: the word
+   joiner that closes the username lets no line break before the arrow. */
+.github {
+  display: inline-block;
+  color: var(--blue-deep);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--motion);
+}
+
+.github .text {
+  background: linear-gradient(currentcolor, currentcolor) 0 100% / 0 2px no-repeat;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-size 220ms var(--ease-out);
+}
+
+.github .text::after {
+  content: '\2060';
+}
+
+.github .arrow {
+  margin-inline-start: 3px;
+}
+
+@media (hover: hover) {
+  .github:hover {
+    color: var(--blue-deeper);
+  }
+
+  .github:hover .text {
+    background-size: 100% 2px;
+  }
+
+  .github:hover .arrow {
+    transform: translate(2px, -2px);
+  }
+}
+
+.github:focus-visible .text {
+  background-size: 100% 2px;
+}
+
+.github:active {
+  color: var(--blue-deeper);
+  transition-duration: 0s;
+}
+
+.github:active .text {
+  background-size: 100% 2px;
+  transition-duration: 0s;
+}
+
+.github:active .arrow {
+  transform: translate(4px, -4px);
+  transition-duration: 0s;
+}
+
+/* The way to GitHub's contributors, in the intro, with its arrow a little apart. */
+.coders {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+.coders .arrow {
+  top: 0;
 }
 
 .dash,

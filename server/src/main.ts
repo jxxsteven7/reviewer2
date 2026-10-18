@@ -15,6 +15,7 @@ import { createAppServer, type AppServer } from './server';
 import { History, watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
+import { ContributionStore } from './store/contributions';
 import { FeedbackStore, feedbackLimits } from './store/feedback';
 import { hasGamesOf, recountDue, recountRecords } from './store/recount';
 import {
@@ -131,6 +132,7 @@ export async function main({
     }
   }
   const feedback = new FeedbackStore(db, undefined, feedbackLimits(config.maxFeedback));
+  const contributions = new ContributionStore(db);
   const snapshots = database.snapshots === null ? null : new Snapshots(db, database.snapshots, log);
 
   // Secure delete overwrites what is deleted in the database file, such as a contact that has been
@@ -199,6 +201,7 @@ export async function main({
       games: GAMES,
       ...(config.agentSocket !== null && { agent: socketAgent(config.agentSocket) }),
       feedback,
+      contributions,
       accounts,
       lists,
       socketLimits: {

@@ -1,3 +1,4 @@
+import { GITHUB_LOGIN, GITHUB_URL } from './contributions';
 import {
   finish,
   LINKED,
@@ -49,13 +50,10 @@ export const MAX_THANKS_LENGTH = 40;
 
 export type SponsorSection = ListSection<SponsorKind, Sponsor>;
 
-// A GitHub username: letters, digits and single hyphens between them, up to 39 characters.
-const USERNAME = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
-
 function onGitHub(text: string): Sponsor | string {
   const linked = LINKED.exec(text);
   const name = linked?.[1];
-  if (name === undefined || !USERNAME.test(name) || linked?.[2] !== `https://github.com/${name}`) {
+  if (name === undefined || !GITHUB_LOGIN.test(name) || linked?.[2] !== `${GITHUB_URL}/${name}`) {
     return 'A sponsor on GitHub is "- [<username>](https://github.com/<username>)", as the workflow writes it.';
   }
   return { name, link: linked[2], thanks: null };

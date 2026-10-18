@@ -3,8 +3,11 @@ import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import {
   AGENT_PERSONAS,
+  CONTRIBUTION_KINDS,
   FEEDBACK_KINDS,
   FRIEND_LIMITS,
+  GITHUB_ADVISORY,
+  GITHUB_LOGIN,
   HANDLE,
   isLanguage,
   MATCH_GROUPINGS,
@@ -386,6 +389,33 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'feedback with a contact kept past its time',
     'SELECT id FROM feedback WHERE contact IS NOT NULL AND created_at < ?',
     cleared(DEFAULT_FEEDBACK_LIMITS.contactMs),
+  );
+
+  // The contributions from GitHub (docs/architecture.md#feedback-contributions), each named by its
+  // issue or its advisory: what the code checks as one is adopted, the kind, the username and the
+  // advisory's number, and that an issue is a player's feedback or a developer's, never both. The
+  // schema makes sure of the rest: one of issue and advisory, the username and the id together, and
+  // no name without a username.
+  const github = (where: string, column = '') =>
+    `SELECT coalesce('#' || issue, advisory) AS id${column} FROM github_contributions ${where}`;
+  sql(
+    'GitHub contributions of a kind there is not',
+    github('WHERE kind NOT IN (' + CONTRIBUTION_KINDS.map(() => '?').join(', ') + ')'),
+    ...CONTRIBUTION_KINDS,
+  );
+  each(
+    'GitHub contributions whose username is not a GitHub username',
+    github('WHERE login IS NOT NULL', ', login'),
+    ({ login }) => !GITHUB_LOGIN.test(String(login)),
+  );
+  each(
+    'GitHub contributions whose advisory is not numbered as one',
+    github('WHERE advisory IS NOT NULL', ', advisory'),
+    ({ advisory }) => !GITHUB_ADVISORY.test(String(advisory)),
+  );
+  sql(
+    "GitHub contributions of an issue that is a player's feedback",
+    github('WHERE issue IN (SELECT issue FROM feedback WHERE issue IS NOT NULL)'),
   );
 
   // Friends (docs/architecture.md#friends): the line comes with a request and goes with its answer,

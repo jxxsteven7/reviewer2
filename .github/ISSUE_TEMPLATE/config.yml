@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feedback from playing
+    url: https://playreviewer2.com
+    about: Playing, not coding? Use Send feedback, at the foot of the home page and of every room. It needs no GitHub account, and an adopted idea counts for your account on the site.
+  - name: A security problem
+    url: https://github.com/jxxsteven7/reviewer2/security/advisories/new
+    about: Such as a way to see card colors you shouldn't, or to act as another player. Report it privately here, never in a public issue. Once it is fixed, the advisory is published, and you are credited on GitHub and on the site.
+  - name: How to contribute
+    url: https://github.com/jxxsteven7/reviewer2/blob/main/CONTRIBUTING.md
+    about: The rules for issues and pull requests, and how to run the app on your machine.

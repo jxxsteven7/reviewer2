@@ -4,12 +4,17 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   checkSummary,
   cleanName,
+  CONTRIBUTION_KINDS,
   escapeName,
   formatCode,
+  GITHUB_ADVISORY,
+  GITHUB_LOGIN,
+  GITHUB_URL,
   isGuestName,
   MAX_SUMMARY_LENGTH,
   REPOSITORY_URL,
   usernameKey,
+  type ContributionKind,
   type ContributionSummary,
   type FeedbackKind,
 } from '@reviewer2/shared';
@@ -19,10 +24,12 @@ import { loadConfig } from './config';
 import { GAMES } from './games';
 import { AccountStore } from './store/accounts';
 import { checkData } from './store/check';
+import { ContributionStore, type GithubContribution, type GithubRef } from './store/contributions';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
 import { FeedbackStore, type Feedback, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
 import { KINDS } from './statusPage';
+import { describeBrowser } from './userAgent';
 
 // The operator's commands (docs/development.md), which run beside the server on its data:
 //
@@ -47,6 +54,12 @@ import { KINDS } from './statusPage';
 //   node server/dist/admin.cjs feedback delete <id>
 //   node server/dist/admin.cjs feedback restore <id>
 //   node server/dist/admin.cjs feedback trash
+//   node server/dist/admin.cjs github adopt <issue>|--advisory <GHSA> --kind <kind> --login <username> --id <number>
+//                                          [--anonymous] --zh <sentence> --en <sentence>
+//   node server/dist/admin.cjs github describe <issue>|--advisory <GHSA> --zh <sentence> --en <sentence>
+//   node server/dist/admin.cjs github anonymous <issue>|--advisory <GHSA>
+//   node server/dist/admin.cjs github forget <issue>|--advisory <GHSA>
+//   node server/dist/admin.cjs github list
 //   node server/dist/admin.cjs reports list
 //   node server/dist/admin.cjs data check
 //
@@ -77,6 +90,20 @@ import { KINDS } from './statusPage';
 // lists it, nor can feedback that is an issue, which is public and is closed instead. Nothing
 // changes what a player sent, or deletes reports: those are archives
 // (docs/architecture.md#feedback).
+//
+// The `github` commands are the contributions from GitHub
+// (docs/architecture.md#feedback-contributions): `github adopt` adopts an issue that a developer
+// opened on GitHub, or, for a security problem reported privately, the advisory published once it
+// was fixed, which lists it on the home page at once beside the adopted feedback, by the author's
+// GitHub username, linked to their GitHub page, or as an anonymous player with --anonymous, as the
+// author chose on the form, with a sentence in each language on what they contributed, and keeps
+// the username and the id of the author's GitHub account as they are then: the operator reads them
+// from GitHub, which the server never talks to. An issue that a player's feedback was published as
+// is adopted as feedback, never here. `github describe` writes the sentences again; `github
+// anonymous` lists the author anonymously from then on, at their request; `github forget` also
+// drops their username and id, at their request, so that nothing names them any more; `github
+// list` shows every contribution from GitHub. No command deletes one.
+//
 // `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
 // bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
@@ -85,7 +112,8 @@ import { KINDS } from './statusPage';
 // now. `data check` holds every row against the rules that the code takes for granted of the data
 // (store/check.ts, docs/rules/constraints.md#data), and prints each rule broken with the rows that
 // break it, by id alone, or that every check passed; it exits with 1 when any is broken.
-// `accounts`, `feedback draft`, `trash`, `reports list`, `profile list` and `data check` only read.
+// `accounts`, `feedback draft`, `trash`, `github list`, `reports list`, `profile list` and `data check`
+// only read.
 // DATA_DIR names the server's data, as it does for the server. The database is opened as it is,
 // never migrated, and the server may go on running meanwhile.
 
@@ -112,25 +140,34 @@ const USAGE = [
   '  feedback delete <id>',
   '  feedback restore <id>',
   '  feedback trash',
+  '  github adopt <issue>|--advisory <GHSA> --kind <kind> --login <username> --id <number> [--anonymous]',
+  '               --zh <sentence> --en <sentence>',
+  '  github describe <issue>|--advisory <GHSA> --zh <sentence> --en <sentence>',
+  '  github anonymous <issue>|--advisory <GHSA>',
+  '  github forget <issue>|--advisory <GHSA>',
+  '  github list',
   '  reports list',
   '  data check',
 ].join('\n');
 
-type Flags = { ban?: true; json?: true; zh?: string; en?: string };
+const ALONE = ['ban', 'json', 'anonymous'] as const;
+const VALUED = ['zh', 'en', 'kind', 'login', 'id', 'advisory'] as const;
+type Flags = Partial<Record<(typeof ALONE)[number], true> & Record<(typeof VALUED)[number], string>>;
 
-// The words of a command and its flags: --ban and --json stand alone, and --zh and --en take a
-// value. Anything else is a word, even when it begins with --, as a name may. Null for a flag that
-// has no value.
+// The words of a command and its flags: --ban, --json and --anonymous stand alone, and the others
+// take a value. Anything else is a word, even when it begins with --, as a name may. Null for a
+// flag that has no value.
 function parse(args: readonly string[]): { words: string[]; flags: Flags } | null {
   const words: string[] = [];
   const flags: Flags = {};
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i] as string;
-    if (arg === '--ban' || arg === '--json') {
-      flags[arg.slice(2) as 'ban' | 'json'] = true;
-    } else if (arg === '--zh' || arg === '--en') {
+    const name = arg.slice(2);
+    if (arg.startsWith('--') && (ALONE as readonly string[]).includes(name)) {
+      flags[name as (typeof ALONE)[number]] = true;
+    } else if (arg.startsWith('--') && (VALUED as readonly string[]).includes(name)) {
       if (i + 1 >= args.length) return null;
-      flags[arg.slice(2) as 'zh' | 'en'] = args[(i += 1)] as string;
+      flags[name as (typeof VALUED)[number]] = args[(i += 1)] as string;
     } else {
       words.push(arg);
     }
@@ -143,14 +180,15 @@ interface Data {
   dataDir: string;
   accounts: Accounts;
   feedback: FeedbackStore;
+  contributions: ContributionStore;
 }
 
 type Print = (line: string) => void;
 
 interface Command {
-  // How many words follow the one or two that name it.
-  words: number;
-  flags: (keyof Flags)[];
+  // How many words follow the one or two that name it, or the counts that will do.
+  words: number | readonly number[];
+  flags: readonly (keyof Flags)[];
   // Only reads, so that the connection refuses to write (admin()), and the command can't by mistake.
   readOnly?: true;
   run(data: Data, words: string[], flags: Flags, print: Print): number;
@@ -330,13 +368,80 @@ function issueTitle({ kind, text }: Feedback): string {
 // The body, in Markdown: the opening sentence, the text as one quotation, line by line, with a
 // blank line kept as a bare >, and who sent it: the username of the account that signed it, as it
 // is when the draft is written, or a deleted player once the account is gone; a guest's name; or
-// that the player left none.
-function issueBody({ kind, text, credit, linkProfile, username }: Feedback): string {
+// that the player left none. A bug report then says which build of the page it came from and
+// which browser, as the form promises: the names and the versions of the browser and the system
+// alone (userAgent.ts), never the model or the user agent itself. The version came from the page,
+// so it is written as the text is.
+function issueBody({ kind, text, credit, linkProfile, username, version, userAgent }: Feedback): string {
   const quoted = text.split('\n').map((line) => (line === '' ? '>' : `> ${literal(line)}`));
   const sent = kind === 'bug' ? 'Reported' : 'Suggested';
   const name = linkProfile ? (username === null ? 'a deleted player' : literal(username)) : credit && literal(credit);
   const who = name === null ? 'Sent by an anonymous player.' : `${sent} by ${name}.`;
-  return [`${OPENINGS[kind]} that a player sent through the feedback form:`, '', ...quoted, '', who].join('\n');
+  const browser = kind === 'bug' && userAgent !== null ? describeBrowser(userAgent) : null;
+  const facts =
+    kind === 'bug' ? ['', `Version: ${literal(version)}`, ...(browser === null ? [] : [`Browser: ${browser}`])] : [];
+  return [`${OPENINGS[kind]} that a player sent through the feedback form:`, '', ...quoted, '', who, ...facts].join(
+    '\n',
+  );
+}
+
+// What a contribution from GitHub is adopted as, by its kind, in the command's answer.
+const ADOPTED_AS: Record<ContributionKind, string> = {
+  idea: 'an idea',
+  game: 'an idea for a new game',
+  bug: 'a bug report',
+  words: 'a contribution to the word lists',
+  code: 'a contribution to the code or the docs',
+};
+
+// What a `github` command is about: the issue, by its number as the command's one word, or the
+// security advisory, by its id after --advisory and no word; or null, said, for neither or both.
+function githubRef(words: string[], { advisory }: Flags, print: Print): GithubRef | null {
+  if (advisory !== undefined) {
+    if (words.length > 0) {
+      print('Name the issue by its number, or the advisory with --advisory, not both.');
+      return null;
+    }
+    if (!GITHUB_ADVISORY.test(advisory)) {
+      print(`${advisory} is not the id of a GitHub security advisory, which is GHSA- and three groups of four.`);
+      return null;
+    }
+    return { advisory };
+  }
+  const [word] = words;
+  if (word === undefined) {
+    print('Name the issue by its number, or an advisory with --advisory GHSA-xxxx-xxxx-xxxx.');
+    return null;
+  }
+  const issue = numberOf(word);
+  if (issue === null) {
+    print(`${word} is not the number of an issue.`);
+    return null;
+  }
+  return { issue };
+}
+
+// How a `github` command names what it is about, and the way to refer to it in the next command.
+const refName = (ref: GithubRef) => ('issue' in ref ? `Issue #${ref.issue}` : `Advisory ${ref.advisory}`);
+const refNamed = (ref: GithubRef) => ('issue' in ref ? `issue #${ref.issue}` : `advisory ${ref.advisory}`);
+const refWord = (ref: GithubRef) => ('issue' in ref ? String(ref.issue) : `--advisory ${ref.advisory}`);
+
+// A contribution from GitHub as `github list` shows it, on one line: the issue or the advisory, the
+// day it was adopted, its kind, who made it, with the id of their GitHub account, and how the home
+// page lists them, and then the two sentences.
+function githubLine({
+  issue,
+  advisory,
+  adoptedAt,
+  kind,
+  login,
+  githubId,
+  named,
+  summaryZh,
+  summaryEn,
+}: GithubContribution) {
+  const author = login === null ? 'author forgotten' : `${login} (${githubId})${named ? '' : ', listed anonymously'}`;
+  return `${issue === null ? advisory : `#${issue}`}  ${adoptedAt.slice(0, 10)}  ${kind}  ${author}  ${summaryZh} · ${summaryEn}`;
 }
 
 // What the player contributed, from --zh and --en, which `feedback adopt` and `feedback describe`
@@ -716,6 +821,11 @@ const COMMANDS: Record<string, Command> = {
         inTrash(print, found);
         return 1;
       }
+      // An issue is a player's feedback or a developer's, never both.
+      if (data.contributions.byRef({ issue }) !== undefined) {
+        print(`Issue #${issue} is a contribution from GitHub (github list), so it can't be a player's feedback too.`);
+        return 1;
+      }
       data.feedback.setIssue(found.id, issue);
       print(
         `Feedback #${found.id} is issue #${issue}, ${REPOSITORY_URL}/issues/${issue}` +
@@ -877,6 +987,158 @@ const COMMANDS: Record<string, Command> = {
       return 0;
     },
   },
+  'github adopt': {
+    words: [0, 1],
+    flags: ['advisory', 'kind', 'login', 'id', 'anonymous', 'zh', 'en'],
+    run(data, words, flags, print) {
+      const ref = githubRef(words, flags, print);
+      if (ref === null) return 1;
+      const { login, id, anonymous } = flags;
+      // An advisory is a bug report, published once the problem was fixed.
+      const kind = flags.kind ?? ('advisory' in ref ? 'bug' : undefined);
+      if (kind === undefined || login === undefined || id === undefined) {
+        print(
+          'Say what kind of contribution it is and who made it: --kind <kind> --login <GitHub username> ' +
+            '--id <id of the GitHub account>.',
+        );
+        return 2;
+      }
+      const summary = summaryOf(flags, print);
+      if (typeof summary === 'number') return summary;
+      if (!(CONTRIBUTION_KINDS as readonly string[]).includes(kind)) {
+        print(`${kind} is not a kind of contribution: one of ${CONTRIBUTION_KINDS.join(', ')}.`);
+        return 1;
+      }
+      if ('advisory' in ref && kind !== 'bug') {
+        print('An advisory is adopted as a bug report: --kind bug.');
+        return 1;
+      }
+      if (!GITHUB_LOGIN.test(login)) {
+        print(`${login} is not a GitHub username.`);
+        return 1;
+      }
+      const githubId = numberOf(id);
+      if (githubId === null) {
+        print(`${id} is not the id of a GitHub account.`);
+        return 1;
+      }
+      const named = anonymous !== true;
+      const adopted = data.contributions.adopt({
+        ref,
+        kind: kind as ContributionKind,
+        login,
+        githubId,
+        named,
+        summary,
+      });
+      if (adopted === 'adopted_already') {
+        print(
+          `${refName(ref)} was adopted already. To say again what was contributed: github describe ${refWord(ref)} ` +
+            '--zh <sentence> --en <sentence>.',
+        );
+        return 1;
+      }
+      if (adopted === 'feedback_issue') {
+        print(
+          `${refName(ref)} is a player's feedback, which is adopted as feedback: feedback adopt <id> --zh <sentence> ` +
+            '--en <sentence>.',
+        );
+        return 1;
+      }
+      const as = named ? `as ${login}, linked to ${GITHUB_URL}/${login}` : 'as an anonymous player';
+      print(
+        `Adopted ${refNamed(ref)} as ${ADOPTED_AS[kind as ContributionKind]}. The home page lists it ` +
+          `now, ${as}, saying that the player contributed:`,
+      );
+      printSummary(print, summary.zh, summary.en);
+      return 0;
+    },
+  },
+  'github describe': {
+    words: [0, 1],
+    flags: ['advisory', 'zh', 'en'],
+    run(data, words, flags, print) {
+      const ref = githubRef(words, flags, print);
+      if (ref === null) return 1;
+      const summary = summaryOf(flags, print);
+      if (typeof summary === 'number') return summary;
+      const found = data.contributions.byRef(ref);
+      if (found === undefined || !data.contributions.describe(ref, summary)) {
+        print(
+          `${refName(ref)} isn't adopted. Adopt it with github adopt ${refWord(ref)} --kind <kind> --login <username> --id <number> --zh <sentence> --en <sentence>.`,
+        );
+        return 1;
+      }
+      print(`${refName(ref)} now says that the player contributed:`);
+      printSummary(print, summary.zh, summary.en);
+      print('It said:');
+      printSummary(print, found.summaryZh, found.summaryEn);
+      return 0;
+    },
+  },
+  'github anonymous': {
+    words: [0, 1],
+    flags: ['advisory'],
+    run(data, words, flags, print) {
+      const ref = githubRef(words, flags, print);
+      if (ref === null) return 1;
+      const found = data.contributions.byRef(ref);
+      if (found === undefined) {
+        print(`${refName(ref)} isn't adopted.`);
+        return 1;
+      }
+      if (!data.contributions.anonymize(ref)) {
+        print(`${refName(ref)} is listed anonymously already.`);
+        return 1;
+      }
+      print(
+        `${refName(ref)} is listed as an anonymous player from now on. Its author, ${found.login}, stays on record; ` +
+          `github forget ${refWord(ref)} drops them too.`,
+      );
+      return 0;
+    },
+  },
+  'github forget': {
+    words: [0, 1],
+    flags: ['advisory'],
+    run(data, words, flags, print) {
+      const ref = githubRef(words, flags, print);
+      if (ref === null) return 1;
+      const found = data.contributions.byRef(ref);
+      if (found === undefined) {
+        print(`${refName(ref)} isn't adopted.`);
+        return 1;
+      }
+      if (!data.contributions.forget(ref)) {
+        print(`The author of ${refNamed(ref)} was forgotten already.`);
+        return 1;
+      }
+      print(
+        `Forgot that ${found.login} made ${refNamed(ref)}: it is listed as an anonymous player, and ` +
+          'nothing names its author any more.',
+      );
+      return 0;
+    },
+  },
+  'github list': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run({ contributions }, _words, _flags, print) {
+      const rows = contributions.list();
+      if (rows.length === 0) {
+        print('No contribution from GitHub yet.');
+        return 0;
+      }
+      print(
+        rows.length === 1
+          ? '1 contribution from GitHub:'
+          : `${rows.length} contributions from GitHub, the latest first:`,
+      );
+      for (const row of rows) print(githubLine(row));
+      return 0;
+    },
+  },
 };
 
 export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Print): number {
@@ -887,10 +1149,11 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
   const key = all.slice(0, named).join(' ');
   const command = Object.hasOwn(COMMANDS, key) ? COMMANDS[key] : undefined;
   const words = all.slice(named);
+  const counts = typeof command?.words === 'number' ? [command.words] : command?.words;
   if (
     !parsed ||
     !command ||
-    words.length !== command.words ||
+    !counts?.includes(words.length) ||
     Object.keys(parsed.flags).some((flag) => !command.flags.includes(flag as keyof Flags))
   ) {
     print(USAGE);
@@ -922,6 +1185,7 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
     // Made on first use, so that a command that only reads never makes the avatars' directory.
     let accounts: Accounts | undefined;
     let feedback: FeedbackStore | undefined;
+    let contributions: ContributionStore | undefined;
     const data: Data = {
       db,
       dataDir,
@@ -935,6 +1199,9 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
       },
       get feedback() {
         return (feedback ??= new FeedbackStore(db));
+      },
+      get contributions() {
+        return (contributions ??= new ContributionStore(db));
       },
     };
     return command.run(data, words, parsed.flags, print);

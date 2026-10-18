@@ -28,6 +28,7 @@ import { DEFAULT_SOCKET_LIMITS, type SocketLimits, type Timers } from '../src/co
 import { WordLibrary, type WordListData } from '../src/core/words';
 import { createAppServer, type AppServer } from '../src/server';
 import { openDatabase } from '../src/store/database';
+import { ContributionStore } from '../src/store/contributions';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, type FeedbackLimits } from '../src/store/feedback';
 import { fakeGame } from './fakeGame';
 
@@ -199,6 +200,7 @@ export async function startServer(
       trustProxy: options.trustProxy ?? false,
       cookieSecure: options.cookieSecure ?? false,
       feedback,
+      contributions: new ContributionStore(db),
       accounts,
       socketLimits,
       ...(options.limits ? { limits: options.limits } : {}),

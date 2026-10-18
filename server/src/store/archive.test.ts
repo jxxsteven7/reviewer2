@@ -2,15 +2,19 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
+import { ContributionStore } from './contributions';
 import { FeedbackStore } from './feedback';
 import { MIGRATIONS } from './migrations';
 
-// The feedback and the reports of players are archives (docs/architecture.md#feedback): what a
-// player sent and whom a report is about are never changed, and no row of the reports is ever
-// deleted. The only changes are the ones that the players were promised and the operator's notes:
-// a contact is cleared after 90 days, what became of the feedback is recorded (the GitHub issue,
-// the pull request, adopted or not, with what the player contributed, closed or not, in the trash
-// or not), and a deleted account is unlinked from both, which its foreign keys do; besides them,
+// The feedback, the reports of players and the contributions from GitHub are archives
+// (docs/architecture.md#feedback, docs/architecture.md#feedback-contributions): what a player
+// sent and whom a report is about are never changed, and no row of the reports or of the
+// contributions from GitHub is ever deleted. The only changes are the ones that the players were
+// promised and the operator's notes: a contact is cleared after 90 days, what became of the
+// feedback is recorded (the GitHub issue, the pull request, adopted or not, with what the player
+// contributed, closed or not, in the trash or not), a contribution from GitHub gets its sentences
+// written again or its author listed anonymously or forgotten at their request, and a deleted
+// account is unlinked from the feedback and the reports, which its foreign keys do; besides them,
 // the migrations named below, each once, as the maintainers agreed. The one way a row of feedback
 // goes is the purge of what has been in the trash for 30 days, and feedback that was adopted or is
 // a GitHub issue never goes. These tests fail when code that breaks that is added; change them
@@ -28,27 +32,39 @@ function sources(dir = SOURCE): string[] {
   });
 }
 
-// What was promised, and the operator's notes, each as it is written in store/feedback.ts, where
-// each is written once: a statement is allowed there, with the code around it, and nowhere else,
-// so that no other command can run the purge at a time of its own, or write a time of its own
-// into the trash.
+// What was promised, and the operator's notes, each as it is written in its store, where each is
+// written once: a statement is allowed there, with the code around it, and nowhere else, so that
+// no other command can run the purge at a time of its own, or write a time of its own into the
+// trash. The feedback's are in store/feedback.ts, and those of the contributions from GitHub in
+// store/contributions.ts, which name a row by its issue or its advisory.
 const FEEDBACK_FILE = join(import.meta.dirname, 'feedback.ts');
-const ALLOWED = [
-  'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
-  'UPDATE feedback SET issue = ? WHERE id = ?',
-  'UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?',
-  'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL AND adopted_at IS NULL',
-  'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
-  'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND adopted_at IS NULL AND issue IS NULL',
-  'UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL',
-  'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL AND issue IS NULL',
-  'UPDATE feedback SET adopted_at = ?, summary_zh = ?, summary_en = ? ' +
-    'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL AND closed_at IS NULL AND issue IS NOT NULL',
-  'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
+const CONTRIBUTIONS_FILE = join(import.meta.dirname, 'contributions.ts');
+const ALLOWED: { statement: string; file: string }[] = [
+  ...[
+    'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
+    'UPDATE feedback SET issue = ? WHERE id = ?',
+    'UPDATE feedback SET resolved_pr = ?, resolved_at = ? WHERE id = ?',
+    'UPDATE feedback SET closed_at = ? WHERE id = ? AND closed_at IS NULL AND deleted_at IS NULL AND adopted_at IS NULL',
+    'UPDATE feedback SET closed_at = NULL WHERE id = ? AND closed_at IS NOT NULL AND deleted_at IS NULL',
+    'UPDATE feedback SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL AND adopted_at IS NULL AND issue IS NULL',
+    'UPDATE feedback SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL',
+    'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND deleted_at < ? AND adopted_at IS NULL AND issue IS NULL',
+    'UPDATE feedback SET adopted_at = ?, summary_zh = ?, summary_en = ? ' +
+      'WHERE id = ? AND adopted_at IS NULL AND deleted_at IS NULL AND closed_at IS NULL AND issue IS NOT NULL',
+    'UPDATE feedback SET summary_zh = ?, summary_en = ? WHERE id = ? AND adopted_at IS NOT NULL',
+  ].map((statement) => ({ statement, file: FEEDBACK_FILE })),
+  ...[
+    'UPDATE github_contributions SET summary_zh = ?, summary_en = ? WHERE issue IS ? AND advisory IS ?',
+    'UPDATE github_contributions SET named = 0 WHERE issue IS ? AND advisory IS ? AND named = 1',
+    'UPDATE github_contributions SET login = NULL, github_id = NULL, named = 0 ' +
+      'WHERE issue IS ? AND advisory IS ? AND login IS NOT NULL',
+  ].map((statement) => ({ statement, file: CONTRIBUTIONS_FILE })),
 ];
+const ALLOWED_STATEMENTS = ALLOWED.map(({ statement }) => statement);
 
 // The methods of the stores whose names say that they delete or rewrite, and the ones of the
-// feedback that may: the notes and the trash.
+// feedback that may: the notes and the trash. The contributions from GitHub have none such: their
+// changes, describe(), anonymize() and forget(), are the statements allowed above.
 const CHANGING = /delete|remove|drop|purge|erase|update|edit|set/i;
 const FEEDBACK_METHODS = ['setIssue', 'delete', 'purge'];
 
@@ -132,14 +148,14 @@ const named = (names: string) => `(?:${names}|"(?:${names})"|\`(?:${names})\`|\\
 const SQL = new RegExp(
   '\\b(?:DELETE\\s+FROM|UPDATE(?:\\s+OR\\s+\\w+)?|REPLACE\\s+INTO|INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO|' +
     'DROP\\s+TABLE(?:\\s+IF\\s+EXISTS)?|ALTER\\s+TABLE|ALTER\\s+TABLE\\s+\\S+\\s+RENAME\\s+TO)\\s+' +
-    `(?:${named('main')}\\s*\\.\\s*)?${named('feedback|acknowledgments|reports')}(?![\\w$])[^;]*`,
+    `(?:${named('main')}\\s*\\.\\s*)?${named('feedback|acknowledgments|reports|github_contributions')}(?![\\w$])[^;]*`,
   'gi',
 );
 
 // The statements in SQL that change the archive, or could, besides what is allowed, each on one
 // line. ALTER TABLE ... ADD COLUMN only adds, unless the new column's foreign key deletes the row
 // with its parent, and a plain INSERT only adds a row.
-function offending(sql: string, allowed: readonly string[] = ALLOWED): string[] {
+function offending(sql: string, allowed: readonly string[] = ALLOWED_STATEMENTS): string[] {
   const found: string[] = [];
   const plain = sql.replace(/\/\*[\s\S]*?\*\/|--[^\n]*/g, ' ');
   for (const [match] of plain.matchAll(SQL)) {
@@ -159,7 +175,7 @@ const offendingCode = (code: string): string[] => strings(code).flatMap((sql) =>
 const offendingMigrations = (migrations: readonly string[]): string[] =>
   migrations.flatMap((migration, index) => {
     const once = [REBUILD, RETIREMENT, SIGNING].find(({ migration: number }) => number === index + 1);
-    const allowed = once ? [...ALLOWED, ...once.statements] : ALLOWED;
+    const allowed = once ? [...ALLOWED_STATEMENTS, ...once.statements] : ALLOWED_STATEMENTS;
     return offending(migration, allowed).map((statement) => `migration ${index + 1}: ${statement}`);
   });
 
@@ -168,6 +184,7 @@ describe('the archive', () => {
     const changing = (store: object) =>
       Object.getOwnPropertyNames((store as { prototype: object }).prototype).filter((name) => CHANGING.test(name));
     expect(changing(FeedbackStore).sort()).toEqual([...FEEDBACK_METHODS].sort());
+    expect(changing(ContributionStore)).toEqual([]);
   });
 
   test('is changed by no SQL in the server but what was promised, each written once, in the store', () => {
@@ -179,18 +196,22 @@ describe('the archive', () => {
     expect(found).toEqual([]);
     expect(offendingMigrations(MIGRATIONS)).toEqual([]);
     // The scan sees the server's SQL, the migrations and the statements written in pieces among it,
-    // and each statement allowed is in the store of the feedback, once.
+    // and each statement allowed is in its store, once.
     const seen = all.map(({ sql }) => sql);
     expect(seen).toEqual(expect.arrayContaining([...MIGRATIONS]));
-    for (const statement of ALLOWED) {
+    for (const { statement, file } of ALLOWED) {
       expect(
-        all.filter(({ sql }) => sql === statement).map(({ file }) => file),
+        all.filter(({ sql }) => sql === statement).map(({ file: found }) => found),
         statement,
-      ).toEqual([FEEDBACK_FILE]);
+      ).toEqual([file]);
     }
     expect(seen.some((sql) => /^INSERT INTO feedback \(created_at, .* VALUES \(\?(, \?)+\)$/.test(sql))).toBe(true);
+    expect(seen.some((sql) => /^INSERT INTO github_contributions \(issue, .* VALUES \(\?(, \?)+\)$/.test(sql))).toBe(
+      true,
+    );
     expect(sources()).toContain(MIGRATIONS_FILE);
     expect(sources()).toContain(FEEDBACK_FILE);
+    expect(sources()).toContain(CONTRIBUTIONS_FILE);
     expect(sources().length).toBeGreaterThan(20);
   });
 
@@ -309,6 +330,9 @@ describe('the archive', () => {
       'DROP TABLE IF EXISTS feedback',
       'DELETE FROM reports WHERE created_at < ?',
       'UPDATE reports SET text = NULL',
+      'DELETE FROM github_contributions WHERE issue = ?',
+      'UPDATE github_contributions SET kind = ? WHERE issue = ?',
+      'UPDATE github_contributions SET named = 0 WHERE issue = ?',
       // The trash, purged without waiting, emptied by hand, or purged with what was adopted.
       'DELETE FROM feedback WHERE deleted_at IS NOT NULL',
       'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND id = ?',

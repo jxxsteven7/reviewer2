@@ -21,6 +21,7 @@ import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
 import { log as defaultLog } from './log';
 import { collectStats, type Stats } from './stats';
+import type { ContributionStore } from './store/contributions';
 import type { FeedbackStore } from './store/feedback';
 import { ThanksLists } from './thanks';
 
@@ -48,6 +49,8 @@ export interface AppOptions
   words: WordLibrary;
   games: readonly GameModule[];
   feedback: FeedbackStore;
+  // The contributions for the home page, from the same database.
+  contributions: ContributionStore;
   // Accounts, which keep their data in the same database. Without them, the server has no
   // account API and every player is a guest.
   accounts?: Accounts;
@@ -95,7 +98,7 @@ export function createAppServer(options: AppOptions): AppServer {
       publicDir: options.publicDir,
       version: options.version,
       lists: options.lists ?? new ThanksLists(null, log),
-      contributions: () => options.feedback.contributions(),
+      contributions: () => options.contributions.all(),
       log,
       ...(accounts && {
         accounts: createAccountApi({

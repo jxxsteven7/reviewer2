@@ -16,6 +16,7 @@ import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
 import DuoSummary from './DuoSummary.vue';
 import FriendActions from './FriendActions.vue';
+import LinkArrow from './LinkArrow.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 import RankLadder from './RankLadder.vue';
@@ -173,9 +174,7 @@ watch(
 
         <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">
           <span class="text">{{ profile.link }}</span>
-          <svg class="arrow" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-            <path d="M3.5 8.5 8.5 3.5M4.5 3.5h4v4" />
-          </svg>
+          <LinkArrow />
         </a>
         <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
 
@@ -324,12 +323,12 @@ watch(
   white-space: pre-wrap;
 }
 
-/* The link is one line of small text in the link blue, not bold, with an arrow after it, which
-   says that it leads off the site (docs/design.md): under a pointer an underline sweeps in under
-   the address alone and the arrow moves out; pressed, the underline is there at once, the arrow
-   further out and the link a pixel lower, and both ease back after. Padding that the margins take
-   back makes it 44px tall to tap, as the buttons are, without moving anything; the focus ring is
-   drawn around the text alone. */
+/* The link is one line of small text in the link blue, not bold, with an arrow after it
+   (LinkArrow.vue), which says that it leads off the site (docs/design.md): under a pointer an
+   underline sweeps in under the address alone and the arrow moves out; pressed, the underline is
+   there at once, the arrow further out and the link a pixel lower, and both ease back after.
+   Padding that the margins take back makes it 44px tall to tap, as the buttons are, without
+   moving anything; the focus ring is drawn around the text alone. */
 .link {
   position: relative;
   display: inline-flex;
@@ -369,20 +368,6 @@ watch(
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 220ms var(--ease-out);
-}
-
-.link .arrow {
-  position: relative;
-  top: -1px;
-  flex: none;
-  width: 0.8em;
-  height: 0.8em;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform var(--motion);
 }
 
 .link:focus-visible {
