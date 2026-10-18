@@ -40,4 +40,4 @@ A pull request is the best way to make something better. A small fix, such as a 
 
 ## Security
 
-Don't open a public issue for a security problem, such as a way to see card colors you shouldn't or to impersonate a player. Use **Report a vulnerability** on the repository's Security tab. Once the problem is fixed, the advisory is published, and you are credited as its reporter on GitHub and among the contributions on the site, by your GitHub username or anonymously, as you prefer.
+Don't open a public issue for a security problem, such as a way to see card colors you shouldn't or to impersonate a player. Use **Report a vulnerability** on the repository's Security tab. Once the problem is fixed, the advisory is published, and you are credited as its reporter on GitHub and among the contributions on the site, by your GitHub username or anonymously, as you prefer. [SECURITY.md](SECURITY.md) says what counts and which versions get fixes.

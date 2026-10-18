@@ -11,11 +11,10 @@ export interface Transport {
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
-export const SENDER = 'Reviewer 2 <noreply@playreviewer2.com>';
 const RESEND = 'https://api.resend.com/emails';
 const TIMEOUT_MS = 10_000;
 
-export function resendTransport(apiKey: string, log: Log, fetchMail: typeof fetch = fetch): Transport {
+export function resendTransport(apiKey: string, from: string, log: Log, fetchMail: typeof fetch = fetch): Transport {
   return {
     async send(request, { subject, text, html }) {
       try {
@@ -27,7 +26,7 @@ export function resendTransport(apiKey: string, log: Log, fetchMail: typeof fetc
             // The same mail is sent once, should the request be repeated.
             'Idempotency-Key': `${request.kind}-${createHash('sha256').update(request.token).digest('hex')}`,
           },
-          body: JSON.stringify({ from: SENDER, to: [request.to], subject, text, html }),
+          body: JSON.stringify({ from, to: [request.to], subject, text, html }),
           signal: AbortSignal.timeout(TIMEOUT_MS),
         });
         // The body of an error names the address, which stays out of the log.

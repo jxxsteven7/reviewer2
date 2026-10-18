@@ -4,7 +4,8 @@
 // testing on a phone, so whatever it reads and isn't set here has its default. Its log goes to a
 // file, which helpers.ts reads after each test to fail the test on an error the server reported.
 import { spawn } from 'node:child_process';
-import { createWriteStream, existsSync, mkdirSync, rmSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { MODEL, startModel } from './model.mjs';
 
@@ -38,9 +39,14 @@ for (const [name, dir] of [
   mkdirSync(dir, { recursive: true });
 }
 
+// The sockets of the mailer and the agent, in a directory of their own under the system's
+// temporary one: a socket's path can have 107 bytes at most, which test-results would go over in a
+// checkout deep in the file system.
+const sockets = mkdtempSync(join(tmpdir(), 'reviewer2-e2e-'));
+
 // The mailer, which writes the mails out to a file that helpers.ts reads the links from, rather
-// than send them. Its socket is beside the logs, whose directory has a short enough path for one.
-const socket = join(dirname(log), `mailer-${port}.sock`);
+// than send them.
+const socket = join(sockets, 'mailer.sock');
 const mailer = spawn(process.execPath, [join(root, 'mailer', 'dist', 'mailer.cjs')], {
   cwd: root,
   env: {
@@ -58,7 +64,7 @@ for (let tries = 0; !existsSync(socket); tries += 1) {
 
 // The agent, which plays for the AI players, with the model of the tests on the next port.
 const model = await startModel(Number(port) + 1);
-const agentSocket = join(dirname(log), `agent-${port}.sock`);
+const agentSocket = join(sockets, 'agent.sock');
 const agent = spawn(process.execPath, [join(root, 'agent', 'dist', 'agent.cjs')], {
   cwd: root,
   env: {
@@ -113,6 +119,7 @@ server.on('close', (code) => {
   mailer.kill();
   agent.kill();
   model.close();
+  rmSync(sockets, { recursive: true, force: true });
   file.end();
   process.exitCode = code ?? 0;
 });
