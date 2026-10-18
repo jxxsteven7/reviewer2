@@ -69,6 +69,47 @@ describe('a clue', () => {
     expect(stubborn.asked).toHaveLength(3);
   });
 
+  test('is refused when it aims at more cards than the persona does, and the note keeps them all', async () => {
+    const stretched = candidate('Biology', [6, 7, 5, 4, 3, 2, 1, 0, 8]);
+    const model = new ScriptedModel({
+      clue: [{ candidates: [stretched, candidate('Space', [12, 13])] }, { candidates: [candidate('Cell', [6, 8])] }],
+    });
+    const reply = allowed(await giveClue(clueRequest(), turn(model)));
+    expect(PERSONAS.reviewer1.targets.max).toBe(3);
+    expect(reply).toMatchObject({ ok: true, word: 'Cell', count: 2, targets: [6, 8] });
+    if (!reply.ok || reply.kind !== 'clue') throw new Error('no clue');
+    expect(reply.note.candidates?.[0]).toMatchObject({
+      word: 'Biology',
+      problem: 'too_many_targets',
+      targets: [6, 7, 5, 4, 3, 2, 1, 0, 8],
+    });
+    expect(model.asked[1]?.user).toContain(
+      '- Biology: it aims at 9 cards, more than the 3 that your students can follow',
+    );
+    // Up to the persona's most is fine.
+    const three = new ScriptedModel({ clue: [{ candidates: [candidate('Biology', [6, 7, 5])] }] });
+    expect(allowed(await giveClue(clueRequest(), turn(three)))).toMatchObject({
+      ok: true,
+      count: 3,
+      targets: [6, 7, 5],
+    });
+  });
+
+  test('tells the model which card each refused clue runs into', async () => {
+    const english = new ScriptedModel({
+      clue: [{ candidates: [candidate('Tensors', [1, 2])] }, { candidates: [candidate('Biology', [6, 7])] }],
+    });
+    await giveClue(clueRequest(), turn(english));
+    expect(english.asked[1]?.user).toContain('- Tensors: it repeats card 1 (Tensor)');
+
+    const cards = captainCards().map((card, index) => (index === 2 ? { ...card, word: '电场' } : card));
+    const chinese = new ScriptedModel({
+      clue: [{ candidates: [candidate('电磁', [1, 2])] }, { candidates: [candidate('光', [1, 2])] }],
+    });
+    await giveClue(clueRequest({ language: 'zh', settings: defaultSettings('zh'), cards }), turn(chinese));
+    expect(chinese.asked[1]?.user).toContain('- 电磁: it shares or names a character of card 2 (电场)');
+  });
+
   test('is never one that was given before', async () => {
     const model = new ScriptedModel({
       clue: [{ candidates: [candidate('biology', [6, 7]), candidate('Cell', [6, 8])] }],
