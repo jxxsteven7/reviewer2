@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { BOARD_SIZE, REPOSITORY_URL } from '@reviewer2/shared';
+import { BOARD_SIZE, isLanguage, REPOSITORY_URL } from '@reviewer2/shared';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, useRouter } from 'vue-router';
 import tipCode from '../../assets/wechat-tip.jpg';
 import AccountEntry from '../components/AccountEntry.vue';
 import AcknowledgmentsList from '../components/AcknowledgmentsList.vue';
@@ -14,7 +15,9 @@ import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { games } from '../../games';
-import { storedLanguage, useLanguage } from '../i18n';
+import { siteAddress, usePageHead } from '../head';
+import { setLanguage, storedLanguage, useLanguage } from '../i18n';
+import { homeIn, LANGUAGE_QUERY } from '../site';
 import BackToRoom from './BackToRoom.vue';
 import CreateRoom from './CreateRoom.vue';
 import JoinRoom from './JoinRoom.vue';
@@ -39,7 +42,20 @@ import PublicRooms from './PublicRooms.vue';
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const versionUrl = `${REPOSITORY_URL}/commits/${__APP_COMMIT__ ?? 'main'}`;
-const chosen = ref(storedLanguage() !== null);
+// The home page in a language, /?lang=zh as the sitemap lists it and the language gate links to it
+// (site.ts), opens in that language, which becomes the visitor's choice, as on the gate; the
+// address is then the home page's again.
+const route = useRoute();
+const router = useRouter();
+const asked = route.query[LANGUAGE_QUERY];
+const linked = typeof asked === 'string' && isLanguage(asked) ? asked : null;
+if (linked) {
+  setLanguage(linked);
+  const query = { ...route.query };
+  delete query[LANGUAGE_QUERY];
+  void router.replace({ query });
+}
+const chosen = ref(linked !== null || storedLanguage() !== null);
 // The rules of the first game, beside its name, as a new room in the page's language has them.
 const keywords = games.keywords;
 const language = useLanguage();
@@ -47,6 +63,18 @@ const creating = ref(false);
 const tipping = ref(false);
 
 const forthcoming = ['impostor', 'titles', 'abstracts'];
+
+// The home page's title and description in its language, and its address in it; the language gate
+// keeps index.html's, in both languages.
+usePageHead(() =>
+  chosen.value
+    ? {
+        title: t('site.homeTitle', { site: t('app.name'), tagline: t('app.tagline') }),
+        description: t('site.description'),
+        canonical: siteAddress(homeIn(language.value)),
+      }
+    : { canonical: siteAddress('/') },
+);
 </script>
 
 <template>

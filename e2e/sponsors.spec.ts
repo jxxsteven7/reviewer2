@@ -16,7 +16,7 @@ for (const language of ['en', 'zh'] as const) {
     // Whatever another test has written to CONTENT_DIR, this one sees an empty list.
     await page.route('**/api/sponsors', (route) => route.fulfill({ json: { ok: true, sections: [] } }));
     await page.goto('/');
-    await page.getByRole('button', { name: new RegExp(`^${text.language[language]}`) }).click();
+    await page.getByRole('link', { name: new RegExp(`^${text.language[language]}`) }).click();
 
     const fold = page.locator('.fold.sponsors');
     // With nobody to count, the card's title is the list's name alone.
@@ -66,7 +66,7 @@ test('the home page shows SPONSORS.md as the server finds it in CONTENT_DIR', as
   try {
     write(['octocat'], 1_000_000);
     await page.goto('/');
-    await page.getByRole('button', { name: /^English/ }).click();
+    await page.getByRole('link', { name: /^English/ }).click();
     const fold = page.locator('.fold.sponsors');
     await expect(fold.locator('h2')).toHaveText(plural(text.sponsors.counted, 2));
     await fold.locator('h2 button').click();

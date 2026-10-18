@@ -159,7 +159,7 @@ test('the chair switches the room between public and private from the tag beside
   // once it is private again; the list is asked for afresh each time.
   const eve = await newPlayer(browser, 'en');
   await eve.goto('/');
-  await eve.getByRole('button', { name: /^English/ }).click();
+  await eve.getByRole('link', { name: /^English/ }).click();
   await eve.getByRole('button', { name: text.home.publicRooms.open }).click();
   const inList = eve.locator('.public-rooms .room', { has: eve.locator(`a[href="/room/${url.slice(-4)}"]`) });
   await expect(eve.locator('.public-rooms .rooms, .public-rooms .hint').last()).toBeVisible();

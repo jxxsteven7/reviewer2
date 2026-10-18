@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
+import { pageTitle, usePageHead } from '../head';
 
 const { t } = useI18n();
+usePageHead(() => ({ title: pageTitle(t('notFound.title')) }));
 </script>
 
 <template>

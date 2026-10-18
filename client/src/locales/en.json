@@ -3,6 +3,21 @@
     "name": "Reviewer 2",
     "tagline": "Academic party games"
   },
+  "site": {
+    "title": "{page} · {site}",
+    "homeTitle": "{site} · {tagline}",
+    "room": "Manuscript {code}",
+    "screen": "Big screen · {code}",
+    "profile": "{name} · Player page",
+    "description": "Party games for academics, played on everyone's phone: two research groups race to find their keywords, and whoever reveals Reviewer 2 is rejected.",
+    "hook": "Reveal Reviewer 2, and your paper is rejected.",
+    "intro": "Party games for academics, played on everyone's phone. In Double Blind, two research groups race to find their keywords: each group's PI gives a short clue and a number, and the students reveal cards. Reveal Reviewer 2, and your paper is rejected on the spot. 4–30 players, and joining a room needs no account. You can also play with Reviewer 1, an AI player.",
+    "picture": {
+      "phones": "Play on your phones",
+      "card": "Reviewer 2",
+      "stamp": "Rejected"
+    }
+  },
   "language": {
     "label": "Language",
     "zh": "中文",

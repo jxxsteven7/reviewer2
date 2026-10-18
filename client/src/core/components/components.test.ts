@@ -639,7 +639,7 @@ describe('the press of a sticker', () => {
 
   test('is on the two cards of the choice of language, which press as far as their shadow goes', () => {
     const gate = mount(LanguageGate, { global: global() });
-    const choices = gate.findAll('button.choice');
+    const choices = gate.findAll('a.choice');
     expect(choices).toHaveLength(2);
     expect(choices.every((choice) => choice.classes('press') && choice.classes('press-large'))).toBe(true);
   });

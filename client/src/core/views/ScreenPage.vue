@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { formatCode } from '@reviewer2/shared';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ConnectionBanner from '../components/ConnectionBanner.vue';
@@ -7,6 +8,7 @@ import ManuscriptId from '../components/ManuscriptId.vue';
 import PageMasthead from '../components/PageMasthead.vue';
 import RoomNotice from '../components/RoomNotice.vue';
 import SoundToggle from '../components/SoundToggle.vue';
+import { pageTitle, usePageHead } from '../head';
 import { muted, unlocked } from '../sound';
 import { useRoomPage } from '../useRoomPage';
 
@@ -15,8 +17,12 @@ import { useRoomPage } from '../useRoomPage';
 // once someone has clicked it, which it asks for until then, and has a switch to keep them quiet.
 const props = defineProps<{ code: string }>();
 const { t } = useI18n();
-const { room, entry, screens } = useRoomPage(toRef(props, 'code'), { screen: true });
+const { room, entry, screens, roomCode } = useRoomPage(toRef(props, 'code'), { screen: true });
 const soundLocked = computed(() => !muted.value && !unlocked.value);
+// The tab says which room's screen this is, or that there is no such room.
+usePageHead(() => ({
+  title: pageTitle(roomCode.value ? t('site.screen', { code: formatCode(roomCode.value) }) : t('room.notFound.title')),
+}));
 </script>
 
 <template>

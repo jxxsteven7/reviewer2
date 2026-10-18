@@ -48,6 +48,9 @@ const props = withDefaults(defineProps<{ handle: string; brief?: boolean; named?
   brief: false,
   named: true,
 });
+// The owner's name, as the card shows it, whenever it changes, such as when the profile is read: the
+// player's page puts it in the tab's title (ProfilePage.vue). Empty while there is no profile.
+const emit = defineEmits<{ name: [name: string] }>();
 const { t, locale } = useI18n();
 const profile = ref<ProfileView | null>(null);
 const failed = ref<string | undefined>();
@@ -91,6 +94,7 @@ const viewer = computed(() => account.summary);
 const name = computed(() =>
   profile.value ? nameOf({ name: profile.value.username, handle: profile.value.handle }) : '',
 );
+watch(name, (value) => emit('name', value));
 const username = computed(() =>
   profile.value ? usernameAfter({ name: name.value, username: profile.value.username }) : null,
 );

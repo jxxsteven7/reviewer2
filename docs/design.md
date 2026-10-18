@@ -36,6 +36,10 @@ Every color, font, outline, corner, shadow and page width is a variable in `toke
 
 Four web fonts from npm, served by our own server (`docs/rules/constraints.md`): ZCOOL KuaiLe for Chinese headings and status sentences, Baloo 2 for numbers and the Latin of headings, Noto Sans SC for text, and Nanum Pen Script, a pencil's hand, for the points that rise in a game alone, which are digits and signs: only its Latin slice is declared, about 15 KB, which a browser downloads with the first of them, showing Baloo 2 until it is there (`font-display: swap`). All four are under the SIL Open Font License. `--font-display` names Baloo 2 before ZCOOL KuaiLe, so a heading takes Latin from the one and Chinese from the other, with `font-synthesis: none`, since ZCOOL KuaiLe has one weight. The Chinese fonts come sliced by character range (93 and 101 `@font-face` rules), so a browser downloads only the slices it needs; the build keeps every slice as a file (`assetsInlineLimit: 0`), because a `data:` URL breaks the Content Security Policy.
 
+## Icons and the preview picture
+
+The site's icon is the wordmark's tile: ink, with "R2" in yellow. The picture that previews of links show, 1200 by 630, has the wordmark, the tagline in both languages and Reviewer 2's card with the rejection stamped on it. `client/images/render.mjs` draws them all into `client/public`: the icons from the outlines of the letters, so that they need no font, and the picture from `client/images/share.html`, with the texts of the locale files (`site.picture`). Run it after changing either, and commit what it draws.
+
 ## Rules
 
 - **Contrast.** Text reads at 4.5:1 or more: small text on red is ink (white would be 3.4:1), on blue white, on yellow and the tints ink; red and blue text on white or yellow use the deep shades; hints use `--ink-2`. Nothing dims small text: a card's color label at 80% would fall to 3.9:1 on red and on blue. Default avatars are bright colors with an ink initial (tested). A card that shows a color carries its label too.

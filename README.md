@@ -49,7 +49,7 @@ What we promise players:
 
 ## Status
 
-🚧 Early development. The first game is online at <https://playreviewer2.com>; you can also run your own copy ([Running locally](#running-locally)).
+🚧 Early development. The first game is online at <https://playreviewer2.com>, and a short video in Chinese shows it, on [Bilibili](https://www.bilibili.com/video/BV1zWnV6dEZJ/) and [Xiaohongshu](https://www.xiaohongshu.com/explore/6ad4e5dd00000000260167e2?xsec_token=AByTN8Z8X6brbc3zw_WfC7p2wDOBsnAxwnBSDCy9YLHzU=); you can also run your own copy ([Running locally](#running-locally)).
 
 ## Tech stack
 

@@ -75,7 +75,7 @@ test('a public page is set up, opened by its address and from a room, liked and 
   await ann.goto('/');
   // The language gate stands on the browser's first visit to the home page.
   await expect(ann.locator('.gate, .home').first()).toBeVisible();
-  const gate = ann.getByRole('button', { name: new RegExp(`^${text.language.en}`) });
+  const gate = ann.getByRole('link', { name: new RegExp(`^${text.language.en}`) });
   if (await gate.count()) await gate.click();
   await expect(ann.locator('.avatar-link .badge')).toHaveText('1');
   await ann.locator('.avatar-link').click();

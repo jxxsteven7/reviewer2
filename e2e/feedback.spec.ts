@@ -18,7 +18,7 @@ test('a bug report goes from the home page to the server, which logs its number 
 }, testInfo) => {
   const page = await newPlayer(browser, 'en');
   await page.goto('/');
-  await page.getByRole('button', { name: /^English/ }).click();
+  await page.getByRole('link', { name: /^English/ }).click();
   const before = logged().filter(({ event }) => event === 'feedback_received').length;
 
   await page.getByRole('button', { name: text.footer.feedback, exact: true }).click();

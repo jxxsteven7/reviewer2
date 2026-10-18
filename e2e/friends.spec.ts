@@ -254,7 +254,7 @@ test('a friend in a private room is asked to let a player in, and invites them o
   // its number, and he asks to join.
   const code = (await createRoom(ann, 'en')).slice(-4);
   await bob.goto('/');
-  await bob.getByRole('button', { name: new RegExp(`^${text.language.en}`) }).click();
+  await bob.getByRole('link', { name: new RegExp(`^${text.language.en}`) }).click();
   const playing = bob.locator('.friends-playing');
   await expect(playing.locator('h2')).toHaveText(text.home.friendsPlaying.title);
   const row = playing.locator('.room', { hasText: annName });

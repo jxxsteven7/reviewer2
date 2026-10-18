@@ -15,7 +15,7 @@ test('the home page shows ACKNOWLEDGMENTS.md as it is written, after the contrib
     const words = TEXT[language];
     const page = await newPlayer(browser, language);
     await page.goto('/');
-    await page.getByRole('button', { name: new RegExp(`^${words.language[language]}`) }).click();
+    await page.getByRole('link', { name: new RegExp(`^${words.language[language]}`) }).click();
     await expect(page.locator('.thanks > .fold')).toHaveClass([/contributions/, /sponsors/, /acknowledgments/]);
     const fold = page.locator('.fold.acknowledgments');
     const toggle = fold.locator('h2 button');

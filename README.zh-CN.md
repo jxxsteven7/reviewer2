@@ -49,7 +49,7 @@
 
 ## 当前状态
 
-🚧 早期开发。第一个游戏已在 <https://playreviewer2.com> 上线，你也可以自己运行一份（[本地运行](#本地运行)）。
+🚧 早期开发。第一个游戏已在 <https://playreviewer2.com> 上线，介绍视频在 [B 站](https://www.bilibili.com/video/BV1zWnV6dEZJ/)和[小红书](https://www.xiaohongshu.com/explore/6ad4e5dd00000000260167e2?xsec_token=AByTN8Z8X6brbc3zw_WfC7p2wDOBsnAxwnBSDCy9YLHzU=)；你也可以自己运行一份（[本地运行](#本地运行)）。
 
 ## 技术栈
 
@@ -111,4 +111,4 @@ Reviewer 2 免费、无广告。如果你喜欢，可以在首页底部用微信
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)，`words/dictionary/han-glosses.json`（词库里汉字的英文释义，由 [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict) 生成）也一样。
 
-<!-- readme-sync: f87681c3e6fb7abbd220bd79a6ae7c4fa7323d3fb10e536c1ad562d5f082906b -->
+<!-- readme-sync: 8843bc66afc610c3f2c451a3527f65cd1fb457ef80ba0974bad2abc4fd1e8699 -->

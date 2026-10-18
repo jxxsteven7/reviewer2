@@ -36,7 +36,7 @@ test('a public room is joined from the home page with an account, and a removed 
   const code = url.slice(-4);
   const bob = await newPlayer(browser, 'en');
   await bob.goto('/');
-  await bob.getByRole('button', { name: /^English/ }).click();
+  await bob.getByRole('link', { name: /^English/ }).click();
   await bob.getByRole('button', { name: text.home.publicRooms.open }).click();
   const listed = bob.locator('.public-rooms .room', { has: bob.locator(`a[href="/room/${code}"]`) });
   await expect(listed).toHaveCount(1);

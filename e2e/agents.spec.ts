@@ -240,7 +240,7 @@ test('anyone with an account plays alone with Reviewer 1 from the home page', as
   await register(pat, name);
   // The language gate stands on the browser's first visit to the home page.
   await expect(pat.locator('.gate, .home').first()).toBeVisible();
-  const gate = pat.getByRole('button', { name: new RegExp(`^${text.language.en}`) });
+  const gate = pat.getByRole('link', { name: new RegExp(`^${text.language.en}`) });
   if (await gate.count()) await gate.click();
   await pat.locator('button.entry').click();
   const sheet = pat.locator('[role=dialog]');
@@ -282,7 +282,7 @@ test('an account opens a room to play with friends and Reviewer 1 from the home 
   snapshotsOf(quinn);
   await register(quinn, name);
   await expect(quinn.locator('.gate, .home').first()).toBeVisible();
-  const gate = quinn.getByRole('button', { name: new RegExp(`^${text.language.en}`) });
+  const gate = quinn.getByRole('link', { name: new RegExp(`^${text.language.en}`) });
   if (await gate.count()) await gate.click();
   await quinn.locator('button.entry').click();
   const sheet = quinn.locator('[role=dialog]');

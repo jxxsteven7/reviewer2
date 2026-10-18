@@ -108,7 +108,7 @@ test('the tagline stays on one line where the columns are narrowest', async ({ b
     const page = await newPlayer(browser, language);
     await page.setViewportSize({ width: 960, height: 800 });
     await page.goto('/');
-    await page.getByRole('button', { name: new RegExp(`^${TEXT[language].language[language]}`) }).click();
+    await page.getByRole('link', { name: new RegExp(`^${TEXT[language].language[language]}`) }).click();
     const tagline = page.getByRole('heading', { level: 1, name: TEXT[language].app.tagline });
     await expect(tagline).toBeVisible();
     await page.evaluate(() => document.fonts.ready);

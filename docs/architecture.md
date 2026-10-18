@@ -154,6 +154,14 @@ A match plays a set number of games, scores every player in each, and ranks them
 
 Files under `/assets/` carry a content hash and are cached for good; everything else is `no-cache`. Every response carries a Content Security Policy (`script-src 'self'`, no framing) and `nosniff`.
 
+## Search engines and link previews
+
+Search engines, and chat apps that preview a link, read the page as the server sends it, before or without its script, and can't tell which language the reader reads. So `index.html` has, in both languages and English first, the home page's title and description, the Open Graph and Twitter tags of a preview, with the picture `/share.png`, and inside `#app` an introduction to the game, which the app replaces as it starts. The build writes them from the locale files (`client/src/core/site.ts`); as it runs, the app gives each page its own title and description in the interface's language (`client/src/core/head.ts`).
+
+`/?lang=en` and `/?lang=zh` open the home page in that language, as choosing it on the language gate does, and remember the choice. The gate's choices are links to them, so that a search engine, which finds the gate as every first visit does, can follow them. A player's page asks search engines not to list it, and `robots.txt` keeps them out of rooms, the account pages, the API, avatars and Socket.IO.
+
+With `SITE_URL` set at build time ([development.md](development.md#environment-variables)), the picture's address is a full one, which some apps need, the home page names its address in its language as canonical, and `sitemap.xml` lists the home page in each language and the gate, each naming the others as its alternates. Without it, the page names no address of its own, and there is no sitemap.
+
 ## Data
 
 - **`DATA_DIR`** ([development.md](development.md)) holds `reviewer2.db`, `snapshots/` and `avatars/`. Without it, the database is in memory, gone at every stop.
