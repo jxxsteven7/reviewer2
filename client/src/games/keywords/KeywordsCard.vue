@@ -61,9 +61,10 @@ const state = computed(() => {
 
 // The face of the card as it lies, which the turn keeps until the card stands edge on: the table's
 // yellow of the viewer's choice, the tint of the color that the viewer's group has marked it with
-// or that the viewer knows it to be, Reviewer 2's ink for a PI who knows it, or the paper. The turn
-// and the reveal come in one snapshot, so the face that turns away is the one the card had the
-// moment before.
+// or that the viewer knows it to be, Reviewer 2's ink for a PI who knows it, or the paper; and
+// whether the viewer didn't know its color, when it lay without the color's label. The turn and
+// the reveal come in one snapshot, so the face that turns away is the one the card had the moment
+// before.
 type Face = 'choice' | 'red' | 'blue' | 'neutral' | 'r2' | 'ink' | 'paper';
 const face = computed<Face>(() => {
   if (props.selected) return 'choice';
@@ -72,8 +73,11 @@ const face = computed<Face>(() => {
   return 'paper';
 });
 const turnedFace = ref<Face>('paper');
-watch([() => props.turning, face], ([turning], [wasTurning, faceBefore]) => {
-  if (turning && !wasTurning) turnedFace.value = faceBefore ?? 'paper';
+const turnedHidden = ref(false);
+watch([() => props.turning, face, state], ([turning], [wasTurning, faceBefore, stateBefore]) => {
+  if (!turning || wasTurning) return;
+  turnedFace.value = faceBefore ?? 'paper';
+  turnedHidden.value = stateBefore === 'hidden';
 });
 
 const label = computed(() => (props.card.color ? t(`game.card.${props.card.color}`) : ''));
@@ -113,7 +117,7 @@ const ariaLabel = computed(() =>
       size,
       note && !noteQuiet ? `noted note-${note.color}` : '',
       { large, selected, selectable, marked, targeted: target !== null, chosen: choosers.length > 0 },
-      turning ? ['turning', `face-${turnedFace}`] : '',
+      turning ? ['turning', `face-${turnedFace}`, { 'was-hidden': turnedHidden }] : '',
     ]"
     :aria-disabled="selectable ? undefined : 'true'"
     :tabindex="selectable ? undefined : -1"
@@ -147,6 +151,10 @@ const ariaLabel = computed(() =>
 <style scoped>
 /* A long press marks a student's card (useCardGestures.ts): it selects no text and opens no menu. */
 .card {
+  /* The room above the word, and the room with the label in the corner (.known, .revealed). */
+  --room: 4px;
+  --room-labeled: 13px;
+
   position: relative;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -158,7 +166,7 @@ const ariaLabel = computed(() =>
   min-width: 0;
   min-height: 48px;
   aspect-ratio: 7 / 6;
-  padding: 4px 3px;
+  padding: var(--room) 3px;
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-card);
   background: var(--paper);
@@ -277,7 +285,7 @@ const ariaLabel = computed(() =>
 /* Room for the label in the corner. */
 .known,
 .revealed {
-  padding-top: 13px;
+  padding-top: var(--room-labeled);
 }
 
 /* A color the viewer knows but that hasn't been revealed: a tint. */
@@ -519,16 +527,34 @@ const ariaLabel = computed(() =>
    until the half-turn, as the ink of the word and the label is held, so that the face turns away
    with what it had on it and the back comes with the color. Under it the card's own background is
    held at the face until the turn ends, when it is the color already. Reviewer 2's stamp slams
-   down once the card has landed. The turn is over after TURN_MS (useTurnedCard.ts), when the layer
-   goes, which shows nothing, since the card has its color by then. */
+   down once the card has landed, and takes its room under the word only at the half-turn. The turn
+   is over after TURN_MS (useTurnedCard.ts), when the layer goes, which shows nothing, since the
+   card has its color by then. The card's transitions are off meanwhile: the reveal changes what
+   they are for at the moment the turn begins, and a browser that starts one then, as Safari does
+   for the card's position, plays it once the turn is over, which rocks the card that has just
+   landed back and down again. */
 .turning {
   --face: var(--paper);
   --face-ink: var(--ink);
+  --lay-room: var(--room-labeled);
 
   isolation: isolate;
+  transition: none;
   animation:
     flip 460ms var(--ease-out),
-    face 460ms step-end;
+    face 460ms step-end,
+    room 230ms step-end;
+}
+
+/* A card whose color the viewer didn't know lay without the label, and with less room at the top
+   (.known, .revealed): it keeps both until the half-turn (`room`, `ink`), so that the word doesn't
+   jump down as the turn begins. */
+.turning.was-hidden {
+  --lay-room: var(--room);
+}
+
+.turning.was-hidden .tag {
+  --lay-label: 0;
 }
 
 .turning.face-choice {
@@ -591,7 +617,9 @@ const ariaLabel = computed(() =>
 /* The stamp's curve settles more than the spring does, so that the stamp lands rather than
    bounces: it is pressed down, not dropped. */
 .turning .stamp {
-  animation: slam 380ms cubic-bezier(0.2, 1.2, 0.4, 1) 430ms both;
+  animation:
+    slam 380ms cubic-bezier(0.2, 1.2, 0.4, 1) 430ms both,
+    unstamped 230ms step-end;
 }
 
 @keyframes flip {
@@ -626,12 +654,29 @@ const ariaLabel = computed(() =>
   from {
     color: var(--face-ink);
     text-decoration-color: transparent;
+    /* The label of a card whose color the viewer didn't know wasn't there (.was-hidden). */
+    opacity: var(--lay-label, 1);
   }
 }
 
 @keyframes appear {
   from {
     opacity: 0;
+  }
+}
+
+/* The room above the word that the card lay with. */
+@keyframes room {
+  from {
+    padding-top: var(--lay-room);
+  }
+}
+
+@keyframes unstamped {
+  from {
+    max-height: 0;
+    margin-top: 0;
+    border-width: 0;
   }
 }
 
