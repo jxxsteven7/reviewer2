@@ -55,8 +55,12 @@ function baseUrl(text: string, https: boolean): string {
   return url.origin;
 }
 
-// An address alone, or a name and the address in angle brackets, as Resend takes the sender.
-const SENDER_RE = /^(?:[^\s<>@]+@[^\s<>@]+|[^<>\r\n]+ <[^\s<>@]+@[^\s<>@]+>)$/;
+// An address alone, or a name and the address in angle brackets, as Resend takes the sender. The
+// name is words with spaces between, or anything but quotes in quotes: a comma, a quote or a
+// semicolon outside quotes would make the sender two addresses, or none, to the mail service.
+const ADDRESS = '[^\\s<>@"(),:;\\\\]+@[^\\s<>@"(),:;\\\\]+\\.[^\\s<>@"(),:;\\\\]+';
+const NAME = '(?:"[^"\\r\\n\\\\]+"|[^\\s<>@"(),:;\\\\]+(?: [^\\s<>@"(),:;\\\\]+)*)';
+const SENDER_RE = new RegExp(`^(?:${ADDRESS}|${NAME} <${ADDRESS}>)$`);
 
 function sender(text: string): string {
   if (!SENDER_RE.test(text)) {

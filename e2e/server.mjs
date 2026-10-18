@@ -43,6 +43,8 @@ for (const [name, dir] of [
 // temporary one: a socket's path can have 107 bytes at most, which test-results would go over in a
 // checkout deep in the file system.
 const sockets = mkdtempSync(join(tmpdir(), 'reviewer2-e2e-'));
+// Removed however this process ends, a failed start included.
+process.on('exit', () => rmSync(sockets, { recursive: true, force: true }));
 
 // The mailer, which writes the mails out to a file that helpers.ts reads the links from, rather
 // than send them.
@@ -119,7 +121,6 @@ server.on('close', (code) => {
   mailer.kill();
   agent.kill();
   model.close();
-  rmSync(sockets, { recursive: true, force: true });
   file.end();
   process.exitCode = code ?? 0;
 });

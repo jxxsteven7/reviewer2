@@ -291,8 +291,8 @@ describe('the settings', () => {
 
   test('take a relative path from the repository root, as the game server does', () => {
     const root = join(import.meta.dirname, '..', '..');
-    // The socket's leads to a short path: a socket's path can have 107 bytes at most, which
-    // data/mailer.sock would go over in a checkout deep in the file system.
+    // A path relative to the root that leads to a short one: a socket's path can have 107 bytes at
+    // most, which data/mailer.sock would go over in a checkout deep in the file system.
     const socket = relative(root, '/run/mail/mailer.sock');
     expect(
       loadConfig({ MAILER_TRANSPORT: 'print', MAILER_SOCKET: socket, MAILER_PRINT_FILE: 'data/mails' }, 1),
@@ -331,13 +331,23 @@ describe('the settings', () => {
       'Game Night <mail@example.org>',
     );
     expect(loadConfig({ ...print, MAILER_FROM: 'mail@example.org' }, 1).from).toBe('mail@example.org');
+    expect(loadConfig({ ...print, MAILER_FROM: '"Night, Game" <mail@example.org>' }, 1).from).toBe(
+      '"Night, Game" <mail@example.org>',
+    );
     for (const from of [
       'Game Night',
       'Game Night mail@example.org',
       'Game Night <mail@example.org',
       'Game Night <mail@example.org> <other@example.org>',
       'Game\nNight <mail@example.org>',
+      'Game  Night <mail@example.org>',
+      // A comma, a quote or a semicolon outside quotes would make two addresses, or none.
+      'Night, Game <mail@example.org>',
+      '"Night, Game <mail@example.org>',
+      'Game Night; <mail@example.org>',
       'mail@@example.org',
+      'mail@example',
+      'game,night@example.org',
       '<mail@example.org>',
     ]) {
       expect(() => loadConfig({ ...print, MAILER_FROM: from }, 1), from).toThrow(/MAILER_FROM/);
