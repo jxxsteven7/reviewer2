@@ -1,15 +1,15 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import type { MailRequest } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { DEFAULT_BASE_URL, loadConfig } from './config';
+import { DEFAULT_BASE_URL, DEFAULT_FROM, loadConfig } from './config';
 import { createMailer } from './mailer';
 import { parseRequest } from './protocol';
 import { DEFAULT_QUOTA, Quota } from './quota';
 import { render } from './templates';
-import { printTransport, resendTransport, SENDER, type Transport } from './transports';
+import { printTransport, resendTransport, type Transport } from './transports';
 
 const TOKEN = 'T'.repeat(43);
 const request = (changes: Partial<Record<keyof MailRequest, unknown>> = {}): MailRequest =>
@@ -132,10 +132,11 @@ describe('the count of mails', () => {
 });
 
 describe('Resend', () => {
-  test('gets the mail from the fixed sender, once for each secret', async () => {
+  test('gets the mail from the sender it is given, once for each secret', async () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const logs: unknown[] = [];
-    const transport = resendTransport('re_key', (...entry) => logs.push(entry), (async (
+    const from = 'Game Night <mail@example.org>';
+    const transport = resendTransport('re_key', from, (...entry) => logs.push(entry), (async (
       url: string,
       init: RequestInit,
     ) => {
@@ -152,13 +153,12 @@ describe('Resend', () => {
       'Idempotency-Key': expect.stringMatching(/^reset-[0-9a-f]{64}$/),
     });
     expect(JSON.parse(init.body as string)).toEqual({
-      from: SENDER,
+      from,
       to: ['ann@example.com'],
       subject: mail.subject,
       text: mail.text,
       html: mail.html,
     });
-    expect(SENDER).toBe('Reviewer 2 <noreply@playreviewer2.com>');
     expect(logs).toEqual([]);
   });
 
@@ -167,11 +167,12 @@ describe('Resend', () => {
     const log = (...entry: unknown[]) => logs.push(entry);
     const refusing = resendTransport(
       're_key',
+      DEFAULT_FROM,
       log,
       (async () =>
         new Response('{"message":"ann@example.com is invalid"}', { status: 422 })) as unknown as typeof fetch,
     );
-    const unreachable = resendTransport('re_key', log, (async () => {
+    const unreachable = resendTransport('re_key', DEFAULT_FROM, log, (async () => {
       throw new Error('getaddrinfo ENOTFOUND');
     }) as unknown as typeof fetch);
     const mail = render(request(), DEFAULT_BASE_URL);
@@ -272,6 +273,7 @@ describe('the settings', () => {
       transport: 'resend',
       apiKey: 're_secret',
       baseUrl: 'https://playreviewer2.com',
+      from: 'Reviewer 2 <noreply@playreviewer2.com>',
       activated: false,
       socket: '/s',
       stateDir: '/srv/mailer-state',
@@ -289,9 +291,12 @@ describe('the settings', () => {
 
   test('take a relative path from the repository root, as the game server does', () => {
     const root = join(import.meta.dirname, '..', '..');
+    // A path relative to the root that leads to a short one: a socket's path can have 107 bytes at
+    // most, which data/mailer.sock would go over in a checkout deep in the file system.
+    const socket = relative(root, '/run/mail/mailer.sock');
     expect(
-      loadConfig({ MAILER_TRANSPORT: 'print', MAILER_SOCKET: 'data/mailer.sock', MAILER_PRINT_FILE: 'data/mails' }, 1),
-    ).toMatchObject({ socket: join(root, 'data', 'mailer.sock'), printFile: join(root, 'data', 'mails') });
+      loadConfig({ MAILER_TRANSPORT: 'print', MAILER_SOCKET: socket, MAILER_PRINT_FILE: 'data/mails' }, 1),
+    ).toMatchObject({ socket: '/run/mail/mailer.sock', printFile: join(root, 'data', 'mails') });
   });
 
   test('take the socket that systemd hands over, when it is for this process', () => {
@@ -315,5 +320,37 @@ describe('the settings', () => {
     }
     expect(() => loadConfig({ MAILER_TRANSPORT: 'smtp', MAILER_SOCKET: '/s' }, 1)).toThrow(/MAILER_TRANSPORT/);
     expect(() => loadConfig({ ...print, MAILER_SOCKET: `/${'x'.repeat(107)}` }, 1)).toThrow(/at most 107 bytes/);
+  });
+
+  test('send from MAILER_FROM, an address alone or with a name, or else from the default', () => {
+    const print = { MAILER_TRANSPORT: 'print', MAILER_SOCKET: '/s' };
+    for (const MAILER_FROM of [undefined, '', '  ']) {
+      expect(loadConfig({ ...print, MAILER_FROM }, 1).from, JSON.stringify(MAILER_FROM)).toBe(DEFAULT_FROM);
+    }
+    expect(loadConfig({ ...print, MAILER_FROM: ' Game Night <mail@example.org>\n' }, 1).from).toBe(
+      'Game Night <mail@example.org>',
+    );
+    expect(loadConfig({ ...print, MAILER_FROM: 'mail@example.org' }, 1).from).toBe('mail@example.org');
+    expect(loadConfig({ ...print, MAILER_FROM: '"Night, Game" <mail@example.org>' }, 1).from).toBe(
+      '"Night, Game" <mail@example.org>',
+    );
+    for (const from of [
+      'Game Night',
+      'Game Night mail@example.org',
+      'Game Night <mail@example.org',
+      'Game Night <mail@example.org> <other@example.org>',
+      'Game\nNight <mail@example.org>',
+      'Game  Night <mail@example.org>',
+      // A comma, a quote or a semicolon outside quotes would make two addresses, or none.
+      'Night, Game <mail@example.org>',
+      '"Night, Game <mail@example.org>',
+      'Game Night; <mail@example.org>',
+      'mail@@example.org',
+      'mail@example',
+      'game,night@example.org',
+      '<mail@example.org>',
+    ]) {
+      expect(() => loadConfig({ ...print, MAILER_FROM: from }, 1), from).toThrow(/MAILER_FROM/);
+    }
   });
 });

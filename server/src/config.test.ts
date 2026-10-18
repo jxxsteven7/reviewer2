@@ -1,11 +1,15 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { loadConfig } from './config';
 
 // The repository's root, from server/src.
 const root = resolve(import.meta.dirname, '..', '..');
+
+// A path relative to the repository's root that leads to a short one. A socket's path can have 107
+// bytes at most, which `data/mailer.sock` would go over in a checkout deep in the file system.
+const fromRoot = (path: string) => relative(root, path);
 
 describe('PORT', () => {
   test('defaults to 3000 when it is unset, empty or blank', () => {
@@ -189,7 +193,7 @@ describe('MAILER_SOCKET', () => {
   test('is off when unset, and taken from the repository root when it is relative', () => {
     expect(loadConfig({}).mailerSocket).toBeNull();
     expect(loadConfig({ MAILER_SOCKET: '/srv/mail/mailer.sock' }).mailerSocket).toBe('/srv/mail/mailer.sock');
-    expect(loadConfig({ MAILER_SOCKET: 'data/mailer.sock' }).mailerSocket).toBe(join(root, 'data', 'mailer.sock'));
+    expect(loadConfig({ MAILER_SOCKET: fromRoot('/run/mail/mailer.sock') }).mailerSocket).toBe('/run/mail/mailer.sock');
   });
 
   test('is a path that a socket can have', () => {
@@ -201,7 +205,7 @@ describe('AGENT_SOCKET', () => {
   test('is off when unset, and taken from the repository root when it is relative', () => {
     expect(loadConfig({}).agentSocket).toBeNull();
     expect(loadConfig({ AGENT_SOCKET: '/srv/agent/agent.sock' }).agentSocket).toBe('/srv/agent/agent.sock');
-    expect(loadConfig({ AGENT_SOCKET: 'data/agent.sock' }).agentSocket).toBe(join(root, 'data', 'agent.sock'));
+    expect(loadConfig({ AGENT_SOCKET: fromRoot('/run/agent/agent.sock') }).agentSocket).toBe('/run/agent/agent.sock');
   });
 
   test('is a path that a socket can have, and says so by its own name', () => {
