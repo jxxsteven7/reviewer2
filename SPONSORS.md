@@ -9,8 +9,8 @@ We thank the people who sponsor Reviewer 2. Those on [GitHub Sponsors](https://g
 
 ## Other ways
 
-- cici — 感恩作者家属无时无刻的大力支持
-- RyeCatcher
-- 一个大胖猪
+- cici — 感恩作者家属无时无刻的大力支持hhh
+- RyeCatcher - 第一位赞助者，虽然就给了1块钱，但还是感谢一下吧……
+- 一个大胖猪 - 给1块钱是因为最少给1块钱，还想被感谢，谁让我善良……
 - re\- — 大哥nb
 - 粒子 — 萱帝大气
