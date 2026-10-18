@@ -123,8 +123,11 @@ async function start() {
     formError.value = t(errorKey(reply.error));
     return;
   }
-  storePractice(role.value, chosen.value);
-  keepRoomSetup(GAME, { practice: { role: role.value, fields: [...chosen.value] } });
+  // What the next sheet starts from, as the server keeps it: the lists, and the role when the
+  // player played alone; a room with friends leaves the role as it was.
+  const alone = who.value === 'me';
+  storePractice(alone ? role.value : null, chosen.value);
+  keepRoomSetup(GAME, { practice: { ...(alone ? { role: role.value } : {}), fields: [...chosen.value] } });
   await router.push(`/room/${reply.code}`);
 }
 </script>

@@ -45,10 +45,19 @@ export function lastPractice(game: string): GameRoomSetup['practice'] | null {
   return account.summary?.roomSetup[game]?.practice ?? null;
 }
 
+// Keeps a setup as the server does (Accounts.rememberRoomSetup): a room's part whole, and of a
+// practice room's part what it names, so that one with friends, which names no role, leaves the
+// role as it was.
 export function keepRoomSetup(game: string, part: GameRoomSetup): void {
   if (account.summary) {
     const kept = account.summary.roomSetup;
-    account.summary.roomSetup = { ...kept, [game]: { ...kept[game], ...part } };
+    const before = kept[game];
+    const own: GameRoomSetup = {
+      ...before,
+      ...part,
+      ...(part.practice ? { practice: { ...before?.practice, ...part.practice } } : {}),
+    };
+    account.summary.roomSetup = { ...kept, [game]: own };
   } else if (part.room) writeStored(KEY, JSON.stringify({ ...storedRooms(), [game]: part.room }));
 }
 

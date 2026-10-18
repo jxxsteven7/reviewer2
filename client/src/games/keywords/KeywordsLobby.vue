@@ -282,7 +282,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
           <h2 class="section-title">{{ t('match.drawn') }}</h2>
           <ul v-if="pool.length" class="names inline">
             <li v-for="player in pool" :key="player.id">
-              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" stacked />
+              <PlayerName :player="player" :me="isMe(player)" :chair="isChairOf(player)" />
             </li>
           </ul>
           <p v-else class="vacant">{{ t('lobby.nobody') }}</p>
