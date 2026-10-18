@@ -151,6 +151,10 @@ const ariaLabel = computed(() =>
 <style scoped>
 /* A long press marks a student's card (useCardGestures.ts): it selects no text and opens no menu. */
 .card {
+  /* The room above the word, and the room with the label in the corner (.known, .revealed). */
+  --room: 4px;
+  --room-labeled: 13px;
+
   position: relative;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -162,7 +166,7 @@ const ariaLabel = computed(() =>
   min-width: 0;
   min-height: 48px;
   aspect-ratio: 7 / 6;
-  padding: 4px 3px;
+  padding: var(--room) 3px;
   border: var(--line) solid var(--ink);
   border-radius: var(--radius-card);
   background: var(--paper);
@@ -281,7 +285,7 @@ const ariaLabel = computed(() =>
 /* Room for the label in the corner. */
 .known,
 .revealed {
-  padding-top: 13px;
+  padding-top: var(--room-labeled);
 }
 
 /* A color the viewer knows but that hasn't been revealed: a tint. */
@@ -532,26 +536,25 @@ const ariaLabel = computed(() =>
 .turning {
   --face: var(--paper);
   --face-ink: var(--ink);
+  --lay-room: var(--room-labeled);
 
   isolation: isolate;
   transition: none;
   animation:
     flip 460ms var(--ease-out),
-    face 460ms step-end;
+    face 460ms step-end,
+    room 230ms step-end;
 }
 
 /* A card whose color the viewer didn't know lay without the label, and with less room at the top
-   (.known, .revealed): it keeps both until the half-turn, so that the word doesn't jump down as the
-   turn begins. */
+   (.known, .revealed): it keeps both until the half-turn (`room`, `ink`), so that the word doesn't
+   jump down as the turn begins. */
 .turning.was-hidden {
-  animation:
-    flip 460ms var(--ease-out),
-    face 460ms step-end,
-    unlabeled 230ms step-end;
+  --lay-room: var(--room);
 }
 
 .turning.was-hidden .tag {
-  animation: untagged 230ms step-end;
+  --lay-label: 0;
 }
 
 .turning.face-choice {
@@ -651,6 +654,8 @@ const ariaLabel = computed(() =>
   from {
     color: var(--face-ink);
     text-decoration-color: transparent;
+    /* The label of a card whose color the viewer didn't know wasn't there (.was-hidden). */
+    opacity: var(--lay-label, 1);
   }
 }
 
@@ -660,16 +665,10 @@ const ariaLabel = computed(() =>
   }
 }
 
-/* The room of a hidden card, as .card gives it. */
-@keyframes unlabeled {
+/* The room above the word that the card lay with. */
+@keyframes room {
   from {
-    padding-top: 4px;
-  }
-}
-
-@keyframes untagged {
-  from {
-    opacity: 0;
+    padding-top: var(--lay-room);
   }
 }
 
@@ -701,11 +700,9 @@ const ariaLabel = computed(() =>
    than held at the start of a turn that the page cuts short (base.css). */
 @media (prefers-reduced-motion: reduce) {
   .turning,
-  .turning.was-hidden,
   .turning::after,
   .turning .word,
   .turning .tag,
-  .turning.was-hidden .tag,
   .turning .stamp {
     animation: none;
   }

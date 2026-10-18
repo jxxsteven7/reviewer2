@@ -8,6 +8,7 @@ export const periodOf = (game: KeywordsView): string => `${game.gameId}:${game.t
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { connection } from '../../core/socket';
 
 // How long the current phase has left, as a bar that runs down and the seconds beside it. The
 // server keeps the time and ends the phase (docs/games/keywords.md): every snapshot says how much
@@ -28,11 +29,13 @@ const URGENT_MS = 10_000;
 // is late by that time, and never early: the clock keeps the earliest end that the snapshots of a
 // period have given, and a snapshot that took longer than one before it doesn't set the seconds
 // back. A new period starts afresh, and so do more time for it (`total` grows, as with an
-// extension) and a game that goes on after a pause. The clock moves on only when the seconds shown
-// change, and the bar steps down with them rather than gliding: a bar that glides has the browser
-// draw it again on every frame for as long as the phase lasts, on every page in the room.
+// extension), a game that goes on after a pause, and a new connection (`connection.connects`): a
+// page that was away, as after a locked screen, may have missed a pause, after which the end that
+// the snapshots before gave is too early. The clock moves on only when the seconds shown change,
+// and the bar steps down with them rather than gliding: a bar that glides has the browser draw it
+// again on every frame for as long as the phase lasts, on every page in the room.
 let ends = 0;
-let counting: { period: string; total: number } | null = null;
+let counting: { period: string; total: number; connects: number } | null = null;
 const left = ref(0);
 let timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -56,9 +59,10 @@ watch(
       return;
     }
     const end = performance.now() + clock.left;
-    const same = counting?.period === period && counting.total === clock.total;
+    const { connects } = connection;
+    const same = counting?.period === period && counting.total === clock.total && counting.connects === connects;
     ends = same ? Math.min(ends, end) : end;
-    counting = { period, total: clock.total };
+    counting = { period, total: clock.total, connects };
     tick();
   },
   { immediate: true },

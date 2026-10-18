@@ -50,7 +50,7 @@ const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
 );
 // The page is connected already.
-const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true } }));
+const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true, connects: 1 } }));
 vi.mock('../../core/socket', async () => {
   const { computed, reactive } = await import('vue');
   page.connection = reactive(page.connection);
@@ -1329,6 +1329,25 @@ describe('ClockBar', () => {
     vi.advanceTimersByTime(500);
     await flushPromises();
     expect(wrapper.get('.seconds').text()).toBe('0:45');
+  });
+
+  // A page that was away, as after a locked screen, may have missed a pause: the first snapshot of
+  // its new connection gives a later end than the snapshots before it did, and is right.
+  test('starts afresh when the page connects again', async () => {
+    const wrapper = clockBar(40_000);
+    vi.advanceTimersByTime(5_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:35');
+    // Away for 2 minutes, while the game was paused and resumed.
+    vi.advanceTimersByTime(120_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:00');
+    page.connection.connects += 1;
+    await wrapper.setProps({ clock: { left: 34_000, total: 60_000 } });
+    expect(wrapper.get('.seconds').text()).toBe('0:34');
+    vi.advanceTimersByTime(1_000);
+    await flushPromises();
+    expect(wrapper.get('.seconds').text()).toBe('0:33');
   });
 
   // A new phase or turn, more time for this one, and a game that goes on after a pause each give an
