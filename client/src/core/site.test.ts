@@ -87,10 +87,12 @@ describe('headTags', () => {
   });
 
   test("name the picture by its full address when the site's is known, and by its path otherwise", () => {
-    expect(headTags(TEXT, 'https://example.com')).toContain(
-      '<meta property="og:image" content="https://example.com/share.png" />',
-    );
-    expect(headTags(TEXT, null)).toContain('<meta property="og:image" content="/share.png" />');
+    const full = headTags(TEXT, 'https://example.com');
+    expect(full).toContain('<meta property="og:image" content="https://example.com/share.png" />');
+    expect(full).toContain('<meta name="twitter:image" content="https://example.com/share.png" />');
+    const path = headTags(TEXT, null);
+    expect(path).toContain('<meta property="og:image" content="/share.png" />');
+    expect(path).toContain('<meta name="twitter:image" content="/share.png" />');
   });
 
   test('name no address of the page, which every page of the site shares', () => {

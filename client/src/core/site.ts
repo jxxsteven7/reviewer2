@@ -75,9 +75,11 @@ const both = ({ en, zh }: SiteText, path: string) => `${message(en, path)} ${mes
 // previews of links show, a shorter description and the picture. Open Graph wants the picture's
 // full address, which only `url` gives; without it, the picture's path is the best there is. The
 // page names no address of its own, og:url or a canonical link: every page of the site is this one
-// file, and a room's link, say, would claim to be the home page's.
+// file, and a room's link, say, would claim to be the home page's. Some apps, such as Lark, show the
+// picture only from twitter:image, so it is named there too.
 export function headTags(text: SiteText, url: string | null): string {
   const title = escape(bilingualTitle(text));
+  const image = escape(`${url ?? ''}${SHARE_IMAGE.path}`);
   const tags = [
     `<title>${title}</title>`,
     `<meta name="description" content="${escape(both(text, 'site.description'))}" />`,
@@ -85,7 +87,7 @@ export function headTags(text: SiteText, url: string | null): string {
     `<meta property="og:site_name" content="${escape(message(text.en, 'app.name'))}" />`,
     `<meta property="og:title" content="${title}" />`,
     `<meta property="og:description" content="${escape(both(text, 'site.hook'))}" />`,
-    `<meta property="og:image" content="${escape(`${url ?? ''}${SHARE_IMAGE.path}`)}" />`,
+    `<meta property="og:image" content="${image}" />`,
     `<meta property="og:image:type" content="image/png" />`,
     `<meta property="og:image:width" content="${SHARE_IMAGE.width}" />`,
     `<meta property="og:image:height" content="${SHARE_IMAGE.height}" />`,
@@ -93,6 +95,7 @@ export function headTags(text: SiteText, url: string | null): string {
     `<meta property="og:locale" content="${OG_LOCALE.en}" />`,
     `<meta property="og:locale:alternate" content="${OG_LOCALE.zh}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:image" content="${image}" />`,
   ];
   return tags.join('\n    ');
 }
