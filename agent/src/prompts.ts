@@ -8,9 +8,13 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'keywords-3';
+export const PROMPT_VERSION = 'keywords-4';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
+
+// The most Chinese characters that one candidate is asked to use (clueRules()): the room's length,
+// up to four, beyond which a clue reads as a sentence.
+const FULL_LENGTH = 4;
 
 // Whose a card is, as the group sees it. The model is told "ours" and "theirs" rather than red and
 // blue, so that the agent plays the blue group as well as the red one.
@@ -43,12 +47,15 @@ function earlierClues(game: AgentGame): string {
 // What a clue may be in the room (clueOptions() in shared/src/games/keywords/settings.ts), as the
 // strict clue rule has it, which the agent keeps to even where the room's rule is loose.
 //
-// Told to write one word, a model nearly always gives a common word of two characters in a Chinese
-// room, though a single character, with its several meanings and the many words it forms, often
-// ties more cards together. So the model is told that a clue may be a single character, or
-// characters that need not form a word, and, where the room allows more than one character, to
-// offer at least one single character among its candidates. The agent gives the first candidate
-// that the rules take (keywords.ts), so the best must come first, whether it is single or not.
+// How a clue is written is a means to the aim that clueSystem() sets, the most of the group's cards
+// that its students can work out, and the model is told so. In a Chinese room, a clue may be a
+// single character, a few characters that need not form a word, a word, or a word with a character
+// or two beside it. Told only that it may, a model nearly always writes a common word of two
+// characters, and told that a single character is often best, it gives one nearly every time; so
+// its three candidates are written in three ways, one of them as long as the room allows, up to
+// FULL_LENGTH. Told that each character points at a card, it takes the characters from the cards'
+// own words, which the rules refuse, so it is told that none of them comes from the board. The
+// agent gives the first candidate that the rules take (keywords.ts), so the best must come first.
 function clueRules(game: AgentGame): string {
   const { clueLength } = game.settings;
   if (game.language === 'zh') {
@@ -64,17 +71,25 @@ function clueRules(game: AgentGame): string {
         'Put the best candidate first.',
       ].join(' ');
     }
+    const wordAndCharacters = clueLength >= 3 ? '; or a word with a single character or two beside it' : '';
+    const full = Math.min(clueLength, FULL_LENGTH);
     return [
-      'Clue rules: write the clue in Chinese, as a single Chinese character, or a few characters that need not be a ' +
-        `dictionary word, at most ${clueLength} Chinese characters (two Latin letters or digits count as one ` +
-        'character). A single character is often the best clue: through its different meanings and the different ' +
-        'words it forms, it can tie several related cards together.',
+      `Clue rules: write the clue in Chinese, at most ${clueLength} Chinese characters (two Latin letters or digits ` +
+        'count as one character).',
       offBoard,
-      'At least one of the three candidates must be a single character. Put the best candidate first, whether it ' +
-        'is a single character or not.',
+      'How the clue is written is up to you, as a means to the aim: a single character; a few single characters ' +
+        'that need not form a word, written together with no spaces, none of them taken from the board, each tying ' +
+        `cards together through its own meanings; a word or a phrase${wordAndCharacters}. Write it in whichever ` +
+        'way lets your students link the most of OUR cards without going wrong.',
+      `Write the three candidates in three different ways, and make one of them ${full} characters long. Rank ` +
+        'them by the aim and put the best first.',
     ].join(' ');
   }
-  const words = clueLength === 1 ? 'exactly one English word' : `at most ${clueLength} English words`;
+  const words =
+    clueLength === 1
+      ? 'exactly one English word'
+      : `at most ${clueLength} English words, in whichever way lets your students link the most of OUR cards ` +
+        'without going wrong';
   return (
     `Clue rules: the clue is ${words}. It must not be a word on the board, a plural or a part of one, or the ` +
     'Chinese term of one.'
@@ -88,8 +103,10 @@ export function clueSystem(game: AgentGame, persona: Persona): string {
       'has 25 cards, each an academic term, numbered 0 to 24. You can see whose each card is: OURS are your ' +
       "group's, THEIRS are the other group's, NEUTRAL are irrelevant papers, and REVIEWER 2 loses the game at once " +
       'if your group reveals it.',
-    "Your students can't see whose the cards are. Give one clue and a number so that they reveal as many of OUR " +
-      'cards as they can and stay away from REVIEWER 2 and THEIR cards. Revealed cards are out of play.',
+    "Your students can't see whose the cards are. The aim: give one clue and a number so that they reveal as many " +
+      'of OUR cards as they can and stay away from REVIEWER 2 and THEIR cards. Count only the cards that they can ' +
+      'surely work out from the clue: never stretch a clue to more cards than they can follow. Revealed cards are ' +
+      'out of play.',
     clueRules(game),
     'The clue is a new word that is not on the board and links the cards you aim at. It must not mention whose ' +
       'the cards are, numbers, positions or letters, and it must not be a clue that was given before in this game.',
@@ -105,6 +122,13 @@ export function clueUser(game: AgentGame, refused: readonly { word: string; why:
   if (refused.length > 0) {
     const lines = refused.map(({ word, why }) => `- ${word}: ${why}`);
     parts.push(`The rules refused these clues, so give three new ones:\n${lines.join('\n')}`);
+    // What a model most often gets wrong in a Chinese room: spaces between the characters, and a
+    // character that a word on the board has.
+    if (game.language === 'zh') {
+      parts.push(
+        'Write each clue with no spaces, and check every character of it: none may appear in any word on the board.',
+      );
+    }
   }
   return parts.join('\n\n');
 }

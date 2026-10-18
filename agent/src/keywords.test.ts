@@ -69,6 +69,28 @@ describe('a clue', () => {
     expect(stubborn.asked).toHaveLength(3);
   });
 
+  test('aims at no more cards than the persona does, the first that the model named', async () => {
+    const model = new ScriptedModel({ clue: [{ candidates: [candidate('Biology', [6, 7, 5, 4, 3, 2, 1, 0, 8])] }] });
+    const reply = allowed(await giveClue(clueRequest(), turn(model)));
+    expect(PERSONAS.reviewer1.targets.max).toBe(3);
+    expect(reply).toMatchObject({ ok: true, word: 'Biology', count: 3, targets: [6, 7, 5] });
+  });
+
+  test('tells the model which card each refused clue runs into', async () => {
+    const english = new ScriptedModel({
+      clue: [{ candidates: [candidate('Tensors', [1, 2])] }, { candidates: [candidate('Biology', [6, 7])] }],
+    });
+    await giveClue(clueRequest(), turn(english));
+    expect(english.asked[1]?.user).toContain('- Tensors: it repeats card 1 (Tensor)');
+
+    const cards = captainCards().map((card, index) => (index === 2 ? { ...card, word: '电场' } : card));
+    const chinese = new ScriptedModel({
+      clue: [{ candidates: [candidate('电磁', [1, 2])] }, { candidates: [candidate('光', [1, 2])] }],
+    });
+    await giveClue(clueRequest({ language: 'zh', settings: defaultSettings('zh'), cards }), turn(chinese));
+    expect(chinese.asked[1]?.user).toContain('- 电磁: it shares or names a character of card 2 (电场)');
+  });
+
   test('is never one that was given before', async () => {
     const model = new ScriptedModel({
       clue: [{ candidates: [candidate('biology', [6, 7]), candidate('Cell', [6, 8])] }],

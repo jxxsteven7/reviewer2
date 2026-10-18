@@ -13,13 +13,16 @@ export interface Persona {
   // How freely the model may choose its words, from 0 to 2.
   temperature: number;
   // As a PI: how many of the group's cards a clue should aim at, from `min` to `max`, best
-  // `preferred`. Fewer cards make a clue that the students can follow; more win faster.
+  // `preferred`. Fewer cards make a clue that the students can follow; more win faster. Measured
+  // on fixed boards, aiming at up to 4 cards, 3 if it could, raised the number but not the cards
+  // found, and ran into the other group's cards more often.
   targets: { min: number; preferred: number; max: number };
   // As a PI: whether the agent has each clue it would give guessed first, by the model playing a
   // student who sees no colors, and gives the clue whose guesses go best (keywords.ts). It costs a
-  // question to the model for every clue that the rules take. Measured on fixed boards, it made the
-  // turns safer but found fewer cards, and took two to three times as long, so Reviewer 1 does
-  // without it.
+  // question to the model for every clue that the rules take. Measured on fixed boards, it found
+  // more cards and ran into fewer of the other group's when the model that gave the clue guessed
+  // it, but hardly so when another model did, and took two to three times as long, so Reviewer 1
+  // does without it.
   rehearse: boolean;
   // As a student: how sure it must be of a card, after the first, to reveal it, in the words the
   // model is told; a student that is less sure stops. And how the one sentence of the reason
