@@ -6,7 +6,7 @@ import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
 import vue from '@vitejs/plugin-vue';
 import english from 'hyphen/en-us/index.js';
 import { defineConfig, type Plugin } from 'vite';
-import { headTags, introHtml, robotsTxt, siteUrl, sitemapXml, type SiteText } from './src/core/site';
+import { headTags, introHtml, pageHtml, pageIn, robotsTxt, siteUrl, sitemapXml, type SiteText } from './src/core/site';
 import { versionCommit } from './src/core/versionCommit';
 
 const WORDS_DIR = fileURLToPath(new URL('../words/', import.meta.url));
@@ -62,6 +62,10 @@ function hyphenation(): Plugin {
   };
 }
 
+// Both locale files, as the build reads them for the page.
+const read = (language: string) => JSON.parse(readFileSync(join(LOCALES_DIR, `${language}.json`), 'utf8'));
+const siteText = (): SiteText => ({ en: read('en'), zh: read('zh') });
+
 // The page's head and the introduction in the empty page, in both languages, and robots.txt and
 // sitemap.xml, all from the locale files and the site's address (src/core/site.ts). index.html
 // marks where the head and the introduction go.
@@ -70,8 +74,7 @@ function site(): Plugin {
   return {
     name: 'site',
     transformIndexHtml(html) {
-      const read = (language: string) => JSON.parse(readFileSync(join(LOCALES_DIR, `${language}.json`), 'utf8'));
-      const text: SiteText = { en: read('en'), zh: read('zh') };
+      const text = siteText();
       const missing = places.filter((place) => !html.includes(place));
       if (missing.length) throw new Error(`index.html has lost ${missing.join(' and ')}`);
       return html.replace(places[0], () => headTags(text, SITE_URL)).replace(places[1], () => introHtml(text));
@@ -79,6 +82,30 @@ function site(): Plugin {
     generateBundle() {
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: robotsTxt(SITE_URL) });
       if (SITE_URL) this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: sitemapXml(SITE_URL) });
+    },
+  };
+}
+
+// The copies of the page with its head in one language (src/core/site.ts), made from index.html
+// as Vite wrote it, with the assets' names in it. Vite's own plugin puts it in the bundle in its
+// generateBundle hook, so this one runs after the others' ('post').
+function languagePages(): Plugin {
+  return {
+    name: 'language-pages',
+    generateBundle: {
+      order: 'post',
+      handler(_, bundle) {
+        const page = bundle['index.html'];
+        if (page?.type !== 'asset') throw new Error('the build wrote no index.html to copy');
+        const text = siteText();
+        for (const language of ['en', 'zh'] as const) {
+          this.emitFile({
+            type: 'asset',
+            fileName: pageIn(language),
+            source: pageHtml(String(page.source), text, SITE_URL, language),
+          });
+        }
+      },
     },
   };
 }
@@ -93,6 +120,7 @@ export default defineConfig({
     }),
     hyphenation(),
     site(),
+    languagePages(),
   ],
   define: {
     __APP_VERSION__: JSON.stringify(VERSION),

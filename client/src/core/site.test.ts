@@ -1,7 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { bilingualTitle, headTags, introHtml, message, robotsTxt, siteUrl, sitemapXml, type SiteText } from './site';
+import {
+  bilingualTitle,
+  headTags,
+  introHtml,
+  message,
+  pageHtml,
+  pageIn,
+  robotsTxt,
+  siteUrl,
+  sitemapXml,
+  type SiteText,
+} from './site';
 
 // Invented messages, with every character that HTML escapes in them.
 const TEXT: SiteText = {
@@ -104,14 +115,69 @@ describe('headTags', () => {
     expect(tags).not.toContain('canonical');
   });
 
+  test('are in one language alone for the home page opened in it, with its picture', () => {
+    const english = headTags(TEXT, 'https://example.com', 'en');
+    expect(english).toContain('<title>Reviewer 2 \u00b7 Games &amp; &lt;fun&gt;</title>');
+    expect(english).toContain('<meta name="description" content="Say &quot;yes&quot; &amp; play." />');
+    expect(english).toContain('<meta property="og:description" content="Reveal the card." />');
+    expect(english).toContain('<meta property="og:image" content="https://example.com/share-en.png" />');
+    expect(english).toContain('<meta name="twitter:image" content="https://example.com/share-en.png" />');
+    expect(english).toContain('<meta property="og:locale" content="en_US" />');
+    expect(english).not.toContain('\u6e38\u620f');
+
+    // The Chinese page keeps the picture in both languages, which the maintainer chose.
+    const chinese = headTags(TEXT, 'https://example.com', 'zh');
+    expect(chinese).toContain('<title>Reviewer 2 \u00b7 \u6e38\u620f</title>');
+    expect(chinese).toContain('<meta name="description" content="\u4e2d\u6587\u63cf\u8ff0" />');
+    expect(chinese).toContain('<meta property="og:description" content="\u7ffb\u724c" />');
+    expect(chinese).toContain('<meta property="og:image" content="https://example.com/share.png" />');
+    expect(chinese).toContain('<meta property="og:locale" content="zh_CN" />');
+    expect(chinese).toContain('<meta property="og:locale:alternate" content="en_US" />');
+    expect(chinese).not.toContain('Games');
+  });
+
   test('read every message they need from the real locale files', () => {
     const read = (language: string) =>
       JSON.parse(
         readFileSync(join(import.meta.dirname, '..', 'locales', `${language}.json`), 'utf8'),
       ) as SiteText['en'];
     const text: SiteText = { en: read('en'), zh: read('zh') };
-    expect(() => headTags(text, 'https://example.com')).not.toThrow();
+    for (const language of [undefined, 'en', 'zh'] as const) {
+      expect(() => headTags(text, 'https://example.com', language), language).not.toThrow();
+    }
     expect(() => introHtml(text)).not.toThrow();
+  });
+});
+
+describe('pageHtml', () => {
+  const page = (head: string) =>
+    `<!doctype html>\n<html lang="en">\n  <head>\n    ${head}\n  </head>\n  <body><script src="/assets/index-abc.js"></script></body>\n</html>\n`;
+
+  test("puts the home page's head in one language and its lang attribute in place of index.html's", () => {
+    const html = page(headTags(TEXT, 'https://example.com'));
+    for (const language of ['en', 'zh'] as const) {
+      const copy = pageHtml(html, TEXT, 'https://example.com', language);
+      expect(copy, language).toBe(
+        page(headTags(TEXT, 'https://example.com', language)).replace(
+          '<html lang="en">',
+          `<html lang="${language === 'zh' ? 'zh-CN' : 'en'}">`,
+        ),
+      );
+      expect(copy, language).toContain('<script src="/assets/index-abc.js"></script>');
+    }
+    expect(pageIn('en')).toBe('index.en.html');
+    expect(pageIn('zh')).toBe('index.zh.html');
+  });
+
+  test('stops the build when index.html has no head in both languages, or no lang attribute', () => {
+    const head = headTags(TEXT, 'https://example.com');
+    for (const html of [
+      page(headTags(TEXT, null)),
+      page(`${head}${head}`),
+      page(head).replace('<html lang="en">', '<html>'),
+    ]) {
+      expect(() => pageHtml(html, TEXT, 'https://example.com', 'en')).toThrow(/^index.html must have /);
+    }
   });
 });
 

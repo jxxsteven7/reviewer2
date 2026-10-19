@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import type { IncomingMessage, RequestListener, ServerResponse } from 'node:http';
-import { CONTRIBUTIONS_API, LIST_API, type Contribution, type ListName } from '@reviewer2/shared';
+import { join } from 'node:path';
+import { CONTRIBUTIONS_API, LANGUAGES, LIST_API, type Contribution, type ListName } from '@reviewer2/shared';
 import sirv from 'sirv';
 import type { ThanksLists } from './thanks';
 
@@ -111,6 +112,7 @@ export function createRequestHandler({
   // sirv lists the files when it starts, so it only serves the front end that was built then.
   // A new build needs a restart: until then, a new index.html would name assets sirv doesn't know.
   const files = existsSync(publicDir) ? staticFiles(publicDir) : null;
+  const pages = languagePages(publicDir);
 
   return (req, res) => {
     setSecurityHeaders(req, res);
@@ -133,12 +135,36 @@ export function createRequestHandler({
     } else if (!files) {
       send(res, 404, 'text/plain; charset=utf-8', NOT_BUILT);
     } else {
+      const page = pages.get(languageAsked(req.url ?? '/') ?? '');
+      if (page) req.url = page;
       files(req, res, () => notFound(res));
     }
   };
 }
 
 const ASSETS = '/assets/';
+
+// The home page opened in a language, /?lang=en, is sent as the copy of index.html whose head is in
+// that language alone, so that a link's preview shows that language (pageIn in
+// client/src/core/site.ts names the copies; the app reads the query itself). Maps each language to
+// the path of its copy, if the build wrote one; without it, the page is index.html.
+function languagePages(publicDir: string): Map<string, string> {
+  return new Map(
+    LANGUAGES.filter((language) => existsSync(join(publicDir, `index.${language}.html`))).map((language) => [
+      language,
+      `/index.${language}.html`,
+    ]),
+  );
+}
+
+// The language that a request for the home page asks for in its query, if it asks for one: the app
+// ignores a query that names several, and so does this.
+function languageAsked(target: string): string | null {
+  if (pathOf(target) !== '/') return null;
+  const query = target.indexOf('?');
+  const asked = query < 0 ? [] : new URLSearchParams(target.slice(query + 1)).getAll('lang');
+  return asked.length === 1 ? (asked[0] ?? null) : null;
+}
 
 // The front end, with every route that isn't a file falling back to index.html. A missing asset
 // is a 404 rather than the page, so that a stale page fails visibly: sirv falls back for no path
