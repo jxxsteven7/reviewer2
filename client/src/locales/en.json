@@ -57,8 +57,8 @@
         "guesser": "Student"
       },
       "roleHints": {
-        "captain": "You give the clues, and Reviewer\u00a01 guesses as your student.",
-        "guesser": "Reviewer\u00a01 gives the clues as your PI, and you guess."
+        "captain": "You give the clues, and Reviewer\u00a01 guesses as your student. It's a first-year: opposites, puns and in-jokes go over its head, so go easy on it.",
+        "guesser": "Reviewer\u00a01 gives the clues as your PI, and you guess. It's a brand-new PI, and its clues can be way off. Bear with it."
       },
       "you": "You",
       "chooseField": "Choose at least one word list to start.",
@@ -233,6 +233,7 @@
     "screens": "Big screens showing this room: {count}.",
     "dismissScreens": "Send the screens away",
     "captainNote": "The PI sees which cards belong to the group and gives the clues.",
+    "agentLevel": "Reviewer\u00a01 is still new at this: opposites, puns and in-jokes mostly go over its head, and its clues can be way off. Don't take it too seriously.",
     "agentNote": "A game that an AI plays in brings nobody points, a streak, a title or a friend title.",
     "takeoverNote": "A player who is offline for 20 seconds in their turn is played for by an AI until they are back.",
     "desk": "Chair's desk",

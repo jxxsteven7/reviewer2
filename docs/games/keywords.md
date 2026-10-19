@@ -29,7 +29,7 @@ Set by the chair, locked during a game.
 |---|---|---|
 | Guess rule | `free` or `standard` ([Turns](#turns)) | `free` |
 | Clue rule | `strict` or `loose` ([The clue](#the-clue)) | `strict` |
-| Clue length | Chinese room: 1 to 10 characters, two letters or digits counting as one; English room: 1 to 3 words | 2; 1 |
+| Clue length | Chinese room: 1 to 10 characters, two letters or digits counting as one; English room: 1 to 3 words | 4; 1 |
 | Time for the first clue, later clues, the guesses of a turn | 0 for no limit, or 10 to 600 seconds | 120, 90, 120 |
 | Extensions | `true` or `false` ([Pauses and extensions](#pauses-and-extensions)) | `false` |
 
@@ -45,7 +45,7 @@ Turns are numbered from 1; the starting group plays the odd ones.
 
 ## The clue
 
-The captain's screen runs the check while typing, and the server again. A clue is made of **words**: letters, digits, hyphens and apostrophes, each with a letter or digit; "Self-attention" is one word. An **English room** allows up to the clue length in words, each up to 24 characters, and a clue with Chinese characters in it of up to 10 characters in all. A **Chinese room** allows one word, without spaces, of up to the clue length as `clueLength()` counts: a Chinese character is one, and two letters or digits are one, rounded up, as Weibo counts, so that GPU is 2, Python 3 and Transformer 6, and the default of 2 allows 4 letters. An English word or abbreviation such as GPU is fine, but not a card's English term. Errors: `clue_too_many_words`, `clue_not_one_word`, `clue_too_long`. The clue is checked against every word still on the board, whatever its color.
+The captain's screen runs the check while typing, and the server again. A clue is made of **words**: letters, digits, hyphens and apostrophes, each with a letter or digit; "Self-attention" is one word. An **English room** allows up to the clue length in words, each up to 24 characters, and a clue with Chinese characters in it of up to 10 characters in all. A **Chinese room** allows one word, without spaces, of up to the clue length as `clueLength()` counts: a Chinese character is one, and two letters or digits are one, rounded up, as Weibo counts, so that GPU is 2, Python 3 and Transformer 6, and the default of 4 allows 8 letters. An English word or abbreviation such as GPU is fine, but not a card's English term. Errors: `clue_too_many_words`, `clue_not_one_word`, `clue_too_long`. The clue is checked against every word still on the board, whatever its color.
 
 **Refused under either rule** (`clue_on_board`), after NFKC, trimming, lowercasing, dropping accents and folding traditional to simplified Chinese:
 
@@ -165,7 +165,7 @@ Where the chair may have them ([../architecture.md](../architecture.md#ai-player
 - **As a student beside people,** it advises: it chooses its surest card for the group to see and says in the group's chat why, once, and leaves the revealing to them; when they reveal that card, it chooses the next. A person who has been offline for less than 20 seconds is there still, so that nobody's reload turns advice into play.
 - **For a player who is offline** for 20 seconds in their turn, an AI plays as they would, the PI's clue or the student's guesses, unless a person of the group is there to play it or the group has an AI student, who plays the guesses alone; of several students offline, one is played for. It stops when they are back. The others see whom it plays for, from the moment an AI is set to play for them.
 
-It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's.
+It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's. It is not a strong player yet: the role hints in the practice sheet, and a footnote in the waiting room of a room that may have AI players, warn that roundabout clues such as opposites, puns and in-jokes mostly go over its head, and that its own clues can be way off.
 
 ## Practice rooms
 

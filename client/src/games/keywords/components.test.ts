@@ -1658,7 +1658,7 @@ describe('SettingsForm', () => {
   test('counts a clue in Chinese characters in a Chinese room', async () => {
     const wrapper = form('zh');
     expect(wrapper.text()).toContain('Characters in a clue');
-    expect((boxes(wrapper)[0]?.element as HTMLInputElement).value).toBe('2');
+    expect((boxes(wrapper)[0]?.element as HTMLInputElement).value).toBe('4');
     // Another language brings its own default length.
     await wrapper.setProps({ language: 'en' });
     expect(sent(wrapper).clueLength).toBe(1);

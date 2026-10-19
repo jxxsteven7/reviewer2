@@ -85,6 +85,7 @@ test('Reviewer 1 plays a group, and gives the clue of a PI who is offline until 
   // mean.
   const red = ann.locator('.group.red');
   await sit(ann, 'blue', 'captain', 'en');
+  await expect(ann.locator('.lobby')).toContainText(text.lobby.agentLevel);
   await expect(ann.locator('.lobby')).toContainText(text.lobby.agentNote);
   await red.locator('.seat-line').getByRole('button', { name: invite }).click();
   await expect(red.locator('.seat-line').getByText(text.room.agent, { exact: true })).toBeVisible();
@@ -293,6 +294,7 @@ test('an account opens a room to play with friends and Reviewer 1 from the home 
   await sheet.locator('button.start').click();
   await quinn.waitForURL(/\/room\//);
   await expect(quinn.locator('.lobby')).toBeVisible();
+  await expect(quinn.locator('.lobby')).toContainText(text.lobby.agentLevel);
   await expect(quinn.locator('.lobby')).toContainText(text.lobby.agentNote);
   await sit(quinn, 'red', 'captain', 'en');
   await expect(quinn.getByRole('button', { name: invite })).toHaveCount(3);
