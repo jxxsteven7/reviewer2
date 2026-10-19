@@ -245,7 +245,7 @@ function printAccountStats(store: AccountStore, print: Print): void {
   print(`${'Id'.padStart(width)}  Registered  Games  Matches  Username`);
   for (const { id, username, createdAt, games, matches, barred } of accounts) {
     print(
-      `${`#${id}`.padStart(width)}  ${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ` +
+      `${`#${id}`.padStart(width)}  ${day(createdAt)}  ${String(games).padStart(5)}  ` +
         `${String(matches).padStart(7)}  ${username}` +
         (barred ? '  (barred from public rooms)' : ''),
     );
@@ -256,14 +256,22 @@ function printAccountStats(store: AccountStore, print: Print): void {
 const REPORTS_SHOWN = 100;
 const TRASH_SHOWN = 100;
 
+// "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
+const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
+const day = (iso: string) => iso.slice(0, 10);
+
+// Why the purge leaves a piece of feedback in the trash, or null when it doesn't: it was adopted,
+// or is a GitHub issue, which only feedback adopted or recorded on its way to the trash is, or
+// feedback that was in the trash as an issue before issues kept feedback out of it
+// (store/feedback.ts).
+const keptInTrash = ({ adoptedAt, issue }: Feedback): 'adopted' | 'issue' | null =>
+  adoptedAt !== null ? 'adopted' : issue !== null ? 'issue' : null;
+
 // How long feedback in the trash has left: "27 days left", "1 day left", or "0 days left" on the
-// day the next purge takes it; or that it is kept, since it was adopted or is a GitHub issue,
-// which only feedback adopted or recorded on its way to the trash is, or feedback that was in the
-// trash as an issue before issues kept feedback out of it (store/feedback.ts).
+// day the next purge takes it; or that it is kept, and why.
 function trashTime(feedback: Feedback, daysLeft: number): string {
-  if (feedback.adoptedAt !== null) return 'kept: adopted';
-  if (feedback.issue !== null) return 'kept: issue';
-  return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+  const kept = keptInTrash(feedback);
+  return kept === null ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : `kept: ${kept}`;
 }
 
 // Feedback in the trash as the operator reads it, one line each: the id, the day it went in, how
@@ -272,8 +280,34 @@ function trashLine(feedback: Feedback, daysLeft: number): string {
   // Cut by code points, so that an emoji isn't cut in two.
   const chars = Array.from(feedback.text.replace(/\n/g, ' / '));
   const text = chars.length > 60 ? `${chars.slice(0, 60).join('')}...` : chars.join('');
-  return `#${feedback.id}  ${(feedback.deletedAt as string).slice(0, 10)}  ${trashTime(feedback, daysLeft)}  ${feedback.kind}  ${text}`;
+  return `#${feedback.id}  ${day(feedback.deletedAt as string)}  ${trashTime(feedback, daysLeft)}  ${feedback.kind}  ${text}`;
 }
+
+// Characters that a terminal may take for a command rather than show: the control characters,
+// among them the C1 controls that clear the screen, move the cursor or set the title, which Node
+// reads a header's bytes of 0x80 to 0x9f as; and the format characters, such as the ones that turn
+// the direction of text around. What a player writes loses them on its way in
+// (shared/src/text.ts), but a bug's user agent is kept as the browser sent it.
+const UNSEEN = /[\p{Cc}\p{Cf}]/gu;
+
+// Text for people on the terminal, with each such character written out as its code point, as
+// `\u{9b}`, so that it is seen and does nothing.
+const seen = (text: string): string =>
+  text.replace(UNSEEN, (char) => `\\u{${(char.codePointAt(0) as number).toString(16)}}`);
+
+// The same in JSON text, but for the C0 controls, which JSON.stringify escapes inside every string
+// already: the ones left are the newlines between the lines.
+const UNSEEN_IN_JSON = /[\x7f-\x9f\p{Cf}]/gu;
+
+// JSON for scripts, with each such character escaped as JSON does, as `\u009b`, one escape for each
+// half of a surrogate pair: it parses to the same value, and is safe to print.
+const seenJson = (json: string): string =>
+  json.replace(UNSEEN_IN_JSON, (char) =>
+    char
+      .split('')
+      .map((half) => `\\u${half.charCodeAt(0).toString(16).padStart(4, '0')}`)
+      .join(''),
+  );
 
 // The way out of the trash, which a command that needs the feedback out of it points to.
 const inTrash = (print: Print, { id }: Feedback) =>
@@ -306,10 +340,6 @@ const VIEW_NAMES: Record<ListView, string> = {
   closed: 'closed feedback',
   trash: 'feedback in the trash',
 };
-
-// "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
-const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
-const day = (iso: string) => iso.slice(0, 10);
 
 // The status of a piece of feedback in a few words, with what it stands for written out: for
 // feedback that waits as an issue, the issue's number and the pull request's, when one was recorded
@@ -354,7 +384,8 @@ function sender({ linkProfile, username, credit, nameTakenBy }: Feedback): strin
 // A piece of feedback as `feedback list` shows it to people: the id, the time, the kind, as this
 // build calls it, or as it is, from a later server that this one was rolled back from, and the
 // status on the first line; then, indented, what became of it, who it is from, the contact, the
-// browser of a bug, and the text, each of its lines quoted, so that none passes for another entry.
+// browser of a bug, with what a terminal would obey written out (seen), and the text, each of its
+// lines quoted, so that none passes for another entry.
 function feedbackLines(feedback: Feedback, daysLeft: number | null): string[] {
   const kind = (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? feedback.kind;
   const steps = trail(feedback, daysLeft);
@@ -363,7 +394,7 @@ function feedbackLines(feedback: Feedback, daysLeft: number | null): string[] {
     ...(steps.length === 0 ? [] : [`    ${steps.join(' · ')}`]),
     `    from: ${sender(feedback)}`,
     `    contact: ${feedback.contact ?? '(none)'}`,
-    ...(feedback.userAgent === null ? [] : [`    browser: ${feedback.userAgent}`]),
+    ...(feedback.userAgent === null ? [] : [`    browser: ${seen(feedback.userAgent)}`]),
     ...feedback.text.split('\n').map((line) => `    > ${line}`.trimEnd()),
   ];
 }
@@ -374,7 +405,6 @@ function feedbackLines(feedback: Feedback, daysLeft: number | null): string[] {
 function feedbackJson(feedback: Feedback, daysLeft: number | null) {
   const { id, createdAt, kind, status, issue, resolvedPr, adoptedAt, closedAt, deletedAt } = feedback;
   const { linkProfile, username, credit, nameTakenBy, contact, text, userAgent } = feedback;
-  const kept = adoptedAt !== null || issue !== null;
   return {
     id,
     createdAt,
@@ -385,7 +415,7 @@ function feedbackJson(feedback: Feedback, daysLeft: number | null) {
     adoptedAt,
     closedAt,
     deletedAt,
-    daysLeft: kept ? null : daysLeft,
+    daysLeft: keptInTrash(feedback) === null ? daysLeft : null,
     linkProfile,
     username,
     credit,
@@ -413,7 +443,7 @@ function reportLine({
   let who = `${reportedName} (account ${reported}${reportedBarred ? ', barred' : ''})`;
   if (reported === null) who = isGuestName(reportedName) ? reportedName : `${reportedName} (deleted account)`;
   return (
-    `#${id}  ${createdAt.slice(0, 10)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
+    `#${id}  ${day(createdAt)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
     (text === null ? '' : `: ${text.replace(/\n/g, ' / ')}`)
   );
 }
@@ -556,7 +586,7 @@ function githubLine({
   summaryEn,
 }: GithubContribution) {
   const author = login === null ? 'author forgotten' : `${login} (${githubId})${named ? '' : ', listed anonymously'}`;
-  return `${issue === null ? advisory : `#${issue}`}  ${adoptedAt.slice(0, 10)}  ${kind}  ${author}  ${summaryZh} · ${summaryEn}`;
+  return `${issue === null ? advisory : `#${issue}`}  ${day(adoptedAt)}  ${kind}  ${author}  ${summaryZh} · ${summaryEn}`;
 }
 
 // What the player contributed, from --zh and --en, which `feedback adopt` and `feedback describe`
@@ -789,7 +819,7 @@ const COMMANDS: Record<string, Command> = {
       const listed = entries.map((entry) => ({ entry, daysLeft: feedback.daysLeft(entry) }));
       if (json) {
         const rows = listed.map(({ entry, daysLeft }) => feedbackJson(entry, daysLeft));
-        print(JSON.stringify(rows, null, 2));
+        print(seenJson(JSON.stringify(rows, null, 2)));
         return 0;
       }
       const name = VIEW_NAMES[view];
@@ -815,7 +845,7 @@ const COMMANDS: Record<string, Command> = {
       if (!found) return 1;
       if (found.adoptedAt !== null) {
         print(
-          `Feedback #${found.id} was adopted already, on ${found.adoptedAt.slice(0, 10)}. To say again what the ` +
+          `Feedback #${found.id} was adopted already, on ${day(found.adoptedAt)}. To say again what the ` +
             `player contributed: feedback describe ${found.id} --zh <sentence> --en <sentence>.`,
         );
         return 1;
