@@ -1,5 +1,6 @@
 // Draws the site's pictures into client/public: the icons, an ink tile with "R2" on it as the
-// wordmark has, and the picture that previews of the site's links show (share.html). Run it after
+// wordmark has, and the pictures that previews of the site's links show, in both languages
+// (share.html) and in English alone (share-en.html). Run it after
 // changing either, or the texts that the picture takes from the locale files, and commit what it
 // draws:
 //
@@ -93,23 +94,29 @@ writeFileSync(join(PUBLIC, 'icon-192.png'), await png(rounded, 192));
 writeFileSync(join(PUBLIC, 'icon-512.png'), await png(rounded, 512));
 writeFileSync(join(PUBLIC, 'icon-maskable-512.png'), await png(square, 512));
 
-// The picture of a link's preview, from share.html with the repository's files behind it.
-const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
-await page.route(`${ORIGIN}/**`, (route) => {
-  const path = join(ROOT, decodeURIComponent(new URL(route.request().url()).pathname));
-  if (!existsSync(path)) return route.fulfill({ status: 404 });
-  return route.fulfill({ body: readFileSync(path), contentType: TYPES[extname(path)] });
-});
-await page.goto(`${ORIGIN}/client/images/share.html`);
-// Each font comes as the text needs it, once the text is laid out.
-await page.evaluate(async (text) => {
-  for (const element of document.querySelectorAll('[data-text]')) {
-    const [language, path] = element.dataset.text.split(':');
-    element.textContent = path.split('.').reduce((messages, key) => messages[key], text[language]);
-  }
-  document.body.getBoundingClientRect();
-  await document.fonts.ready;
-}, text);
-writeFileSync(join(PUBLIC, 'share.png'), await page.screenshot());
+// The pictures of a link's preview, from their pages with the repository's files behind them.
+for (const [source, picture] of [
+  ['share.html', 'share.png'],
+  ['share-en.html', 'share-en.png'],
+]) {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
+  await page.route(`${ORIGIN}/**`, (route) => {
+    const path = join(ROOT, decodeURIComponent(new URL(route.request().url()).pathname));
+    if (!existsSync(path)) return route.fulfill({ status: 404 });
+    return route.fulfill({ body: readFileSync(path), contentType: TYPES[extname(path)] });
+  });
+  await page.goto(`${ORIGIN}/client/images/${source}`);
+  // Each font comes as the text needs it, once the text is laid out.
+  await page.evaluate(async (text) => {
+    for (const element of document.querySelectorAll('[data-text]')) {
+      const [language, path] = element.dataset.text.split(':');
+      element.textContent = path.split('.').reduce((messages, key) => messages[key], text[language]);
+    }
+    document.body.getBoundingClientRect();
+    await document.fonts.ready;
+  }, text);
+  writeFileSync(join(PUBLIC, picture), await page.screenshot());
+  await page.close();
+}
 
 await browser.close();

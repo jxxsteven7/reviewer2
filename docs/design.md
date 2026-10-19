@@ -38,7 +38,7 @@ Four web fonts from npm, served by our own server (`docs/rules/constraints.md`):
 
 ## Icons and the preview picture
 
-The site's icon is the wordmark's tile: ink, with "R2" in yellow. The picture that previews of links show, 1200 by 630, has the wordmark, the tagline in both languages and Reviewer 2's card with the rejection stamped on it. `client/images/render.mjs` draws them all into `client/public`: the icons from the outlines of the letters, so that they need no font, and the picture from `client/images/share.html`, with the texts of the locale files (`site.picture`). Run it after changing either, and commit what it draws.
+The site's icon is the wordmark's tile: ink, with "R2" in yellow. The picture that previews of links show, 1200 by 630, has the wordmark, the tagline in both languages and Reviewer 2's card with the rejection stamped on it; the home page in English has one in English alone, with the hook under the tagline. `client/images/render.mjs` draws them all into `client/public`: the icons from the outlines of the letters, so that they need no font, and the pictures from `client/images/share.html` and `share-en.html`, with the texts of the locale files (`site.picture`, and the tagline and hook). Run it after changing either, and commit what it draws.
 
 ## Rules
 

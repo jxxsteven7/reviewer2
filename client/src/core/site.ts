@@ -21,8 +21,15 @@ const OG_LOCALE: Readonly<Record<Language, string>> = { en: 'en_US', zh: 'zh_CN'
 export const LANGUAGE_QUERY = 'lang';
 export const homeIn = (language: Language) => `/?${LANGUAGE_QUERY}=${language}`;
 
-// The picture of a link's preview (client/images/), and its size.
+// The pictures of a link's preview (client/images/), and their size: the one in both languages,
+// which the home page in Chinese shows too, and the one in English alone.
 export const SHARE_IMAGE = { path: '/share.png', width: 1200, height: 630 };
+const SHARE_IMAGE_PATH: Readonly<Record<Language, string>> = { zh: SHARE_IMAGE.path, en: '/share-en.png' };
+
+// The copy of index.html whose head is in one language alone, which the server sends for the home
+// page opened in that language (server/src/http.ts names it the same way): a link to it in a chat
+// app then shows its preview in that language. The app reads the query itself.
+export const pageIn = (language: Language) => `index.${language}.html`;
 
 // The paths that are for players and not for search engines: rooms and their big screens, the
 // account pages, the API, the avatars and Socket.IO. Players' public pages stay open to crawlers,
@@ -64,42 +71,66 @@ const escape = (text: string) => text.replace(/[&<>"]/g, (character) => ESCAPES[
 // The title of the home page in both languages, which the page has before the app runs and on the
 // language gate: "Reviewer 2 · Academic party games · " and the Chinese tagline.
 export function bilingualTitle({ en, zh }: SiteText): string {
-  const title = message(en, 'site.homeTitle', { site: message(en, 'app.name'), tagline: message(en, 'app.tagline') });
-  return `${title} · ${message(zh, 'app.tagline')}`;
+  return `${homeTitle(en)} · ${message(zh, 'app.tagline')}`;
 }
+
+// The title of the home page in one language: "Reviewer 2 · Academic party games".
+const homeTitle = (messages: Messages) =>
+  message(messages, 'site.homeTitle', {
+    site: message(messages, 'app.name'),
+    tagline: message(messages, 'app.tagline'),
+  });
 
 // The same message in both languages, English first.
 const both = ({ en, zh }: SiteText, path: string) => `${message(en, path)} ${message(zh, path)}`;
 
 // The tags of the page's head: its title, its description, which search engines show, and what the
-// previews of links show, a shorter description and the picture. Open Graph wants the picture's
+// previews of links show, a shorter description and the picture, in both languages, or in
+// `language` alone for the home page opened in it. Open Graph wants the picture's
 // full address, which only `url` gives; without it, the picture's path is the best there is. The
 // page names no address of its own, og:url or a canonical link: every page of the site is this one
 // file, and a room's link, say, would claim to be the home page's. Lark showed no picture with
 // og:image alone, so the picture and its description are named in twitter: tags too, as GitHub's
 // pages do.
-export function headTags(text: SiteText, url: string | null): string {
-  const title = escape(bilingualTitle(text));
-  const image = escape(`${url ?? ''}${SHARE_IMAGE.path}`);
+export function headTags(text: SiteText, url: string | null, language?: Language): string {
+  const inLanguage = (path: string) => (language ? message(text[language], path) : both(text, path));
+  const title = escape(language ? homeTitle(text[language]) : bilingualTitle(text));
+  const image = escape(`${url ?? ''}${language ? SHARE_IMAGE_PATH[language] : SHARE_IMAGE.path}`);
+  const [locale, alternate] = language === 'zh' ? [OG_LOCALE.zh, OG_LOCALE.en] : [OG_LOCALE.en, OG_LOCALE.zh];
   const tags = [
     `<title>${title}</title>`,
-    `<meta name="description" content="${escape(both(text, 'site.description'))}" />`,
+    `<meta name="description" content="${escape(inLanguage('site.description'))}" />`,
     `<meta property="og:type" content="website" />`,
     `<meta property="og:site_name" content="${escape(message(text.en, 'app.name'))}" />`,
     `<meta property="og:title" content="${title}" />`,
-    `<meta property="og:description" content="${escape(both(text, 'site.hook'))}" />`,
+    `<meta property="og:description" content="${escape(inLanguage('site.hook'))}" />`,
     `<meta property="og:image" content="${image}" />`,
     `<meta property="og:image:type" content="image/png" />`,
     `<meta property="og:image:width" content="${SHARE_IMAGE.width}" />`,
     `<meta property="og:image:height" content="${SHARE_IMAGE.height}" />`,
     `<meta property="og:image:alt" content="${title}" />`,
-    `<meta property="og:locale" content="${OG_LOCALE.en}" />`,
-    `<meta property="og:locale:alternate" content="${OG_LOCALE.zh}" />`,
+    `<meta property="og:locale" content="${locale}" />`,
+    `<meta property="og:locale:alternate" content="${alternate}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
     `<meta name="twitter:image" content="${image}" />`,
     `<meta name="twitter:image:alt" content="${title}" />`,
   ];
   return tags.join('\n    ');
+}
+
+// index.html, as the build wrote it, for the home page in `language` alone (pageIn): its head in
+// that language, and its lang attribute. The introduction stays in both. Each must be there once,
+// or the build stops rather than send a page in the wrong language.
+export function pageHtml(html: string, text: SiteText, url: string | null, language: Language): string {
+  const head = headTags(text, url);
+  const lang = '<html lang="en">';
+  for (const part of [head, lang]) {
+    if (html.split(part).length !== 2)
+      throw new Error(`index.html must have its head in both languages once, and ${lang}`);
+  }
+  return html
+    .replace(lang, () => `<html lang="${HTML_LANG[language]}">`)
+    .replace(head, () => headTags(text, url, language));
 }
 
 // What the empty page shows until the app takes its place, and all that a crawler that runs no

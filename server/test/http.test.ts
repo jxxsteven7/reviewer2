@@ -14,6 +14,8 @@ import { openDatabase } from '../src/store/database';
 import { FeedbackStore } from '../src/store/feedback';
 
 const INDEX = '<!doctype html><title>Reviewer 2</title>';
+// The copies of the page with the head in one language, which the build writes beside it.
+const PAGES = { en: '<!doctype html><title>English</title>', zh: '<!doctype html><title>Chinese</title>' };
 const SCRIPT = 'console.log(1);';
 // The header of an .ico with no pictures in it, which is enough to serve.
 const ICON = Buffer.from([0, 0, 1, 0, 0, 0]);
@@ -67,6 +69,7 @@ describe('with a built front end', () => {
     writeFileSync(join(dir, 'index.html'), INDEX);
     writeFileSync(join(dir, 'assets', 'index-abc123.js'), SCRIPT);
     writeFileSync(join(dir, 'favicon.ico'), ICON);
+    for (const [language, page] of Object.entries(PAGES)) writeFileSync(join(dir, `index.${language}.html`), page);
     // The copies that the build leaves beside each text file; see client/compress.mjs.
     for (const [file, content] of [
       ['index.html', INDEX],
@@ -95,6 +98,24 @@ describe('with a built front end', () => {
       expect(response.status, path).toBe(200);
       expect(await response.text(), path).toBe(INDEX);
       expect(response.headers.get('cache-control'), path).toBe('no-cache');
+    }
+  });
+
+  test('the home page opened in a language is sent with its head in that language', async () => {
+    for (const [target, page] of [
+      ['/?lang=en', PAGES.en],
+      ['/?lang=zh', PAGES.zh],
+      ['/?utm_source=chat&lang=zh', PAGES.zh],
+      // Any other language, query or page gets index.html; the app reads the query itself.
+      ['/?lang=fr', INDEX],
+      ['/?lang=', INDEX],
+      ['/?language=en', INDEX],
+      ['/room/K7QX?lang=en', INDEX],
+    ] as const) {
+      const response = await fetch(`${base}${target}`);
+      expect(response.status, target).toBe(200);
+      expect(await response.text(), target).toBe(page);
+      expect(response.headers.get('cache-control'), target).toBe('no-cache');
     }
   });
 
@@ -237,6 +258,22 @@ describe('without a built front end', () => {
       expect((await fetch(`${base}/healthz`)).status).toBe(200);
     } finally {
       await server.close();
+    }
+  });
+});
+
+describe('with a front end built without the pages in one language', () => {
+  test('the home page opened in a language is index.html, not a 404', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'reviewer2-http-'));
+    writeFileSync(join(dir, 'index.html'), INDEX);
+    const { server, base } = await start(dir);
+    try {
+      const response = await fetch(`${base}/?lang=en`);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe(INDEX);
+    } finally {
+      await server.close();
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
