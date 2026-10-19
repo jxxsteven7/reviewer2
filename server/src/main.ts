@@ -12,7 +12,7 @@ import { loadWordLibrary } from './core/words';
 import { GAMES } from './games';
 import { log as defaultLog } from './log';
 import { createAppServer, type AppServer } from './server';
-import { History, watchStats } from './stats';
+import { watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
 import { ContributionStore } from './store/contributions';
@@ -29,7 +29,7 @@ import {
 import { ThanksLists } from './thanks';
 
 // Starts the server and stops it (docs/architecture.md): the settings, the word library, the
-// database, the game's port, the timers and the status page, and on SIGTERM or SIGINT all of it
+// database, the game's port, the timers and the status port, and on SIGTERM or SIGINT all of it
 // again in reverse. index.ts runs it; tests run it with an environment, a log and an exit of their
 // own.
 
@@ -277,32 +277,21 @@ export async function main({
   // The first snapshot comes at once unless the latest is less than an hour old.
   if (snapshots?.due()) void snapshots.take();
 
-  // The `stats` log line every 5 minutes, and the samples for the status page's chart, which are
-  // only taken while there is a page to show them on.
-  const { statusPort } = config;
-  const history = statusPort === null ? null : new History();
-  const stopStats = watchStats(server.stats, log, history);
+  // The `stats` log line every 5 minutes.
+  const stopStats = watchStats(server.stats, log);
 
+  const { statusPort } = config;
   let status: HttpServer | null = null;
-  if (statusPort !== null && history !== null) {
-    const page = createServer(
-      createStatusHandler(
-        server.stats,
-        history,
-        feedback,
-        log,
-        { admin: config.adminCommand, feedback: config.feedbackCommand },
-        () => accounts.store.counts(7),
-      ),
-    );
-    status = page;
-    // The page is the operator's alone. A port that can't be opened, because something else has
-    // it, is logged, and the game goes on without the page: the listen error would otherwise end
-    // the process.
-    page.on('error', (error) =>
+  if (statusPort !== null) {
+    const data = createServer(createStatusHandler(server.stats, server.live, log));
+    status = data;
+    // The data is the operator's alone. A port that can't be opened, because something else has
+    // it, is logged, and the game goes on without it: the listen error would otherwise end the
+    // process.
+    data.on('error', (error) =>
       log('status_unavailable', { host: STATUS_HOST, port: statusPort, message: error.message }),
     );
-    page.listen(statusPort, STATUS_HOST, () => log('status_listening', { host: STATUS_HOST, port: statusPort }));
+    data.listen(statusPort, STATUS_HOST, () => log('status_listening', { host: STATUS_HOST, port: statusPort }));
   }
 
   // The process ends once, with the first code: a stop that finishes after it has timed out

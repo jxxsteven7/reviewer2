@@ -3,9 +3,9 @@ import type { RoomPhase } from '@reviewer2/shared';
 import type { Rooms } from './core/rooms';
 import type { ConnectionInfo } from './core/socket';
 
-// What the operator sees of the server (docs/architecture.md). The `stats` log line and the status
-// page both come from collectStats(). None of it says who anyone is: no addresses, tokens, names
-// or room codes, and countries only as counts.
+// What the operator sees of the server (docs/architecture.md). The `stats` log line and
+// /status.json on the status port both come from collectStats(). None of it says who anyone is: no
+// addresses, tokens, names, ids or room codes, and countries only as counts.
 
 export interface Stats {
   version: string;
@@ -30,13 +30,9 @@ export interface Stats {
   countries: { country: string; connections: number; latency: number | null }[];
 }
 
-// How often the log gets a `stats` line when something changed, how often it gets one anyway, and
-// how often the status page's chart gets a sample.
+// How often the log gets a `stats` line when something changed, and how often it gets one anyway.
 export const STATS_LOG_MS = 5 * 60_000;
 export const STATS_LOG_ALWAYS_MS = 60 * 60_000;
-export const SAMPLE_MS = 30_000;
-// How far back the chart goes.
-export const HISTORY_MS = 24 * 60 * 60_000;
 
 export function collectStats(
   version: string,
@@ -127,71 +123,19 @@ export function statsLog(log: Log, always = STATS_LOG_ALWAYS_MS / STATS_LOG_MS):
   };
 }
 
-export interface Sample {
-  // When the sample was taken, on the history's clock.
-  at: number;
-  players: number;
-  rooms: number;
-}
-
-// The players online and the rooms open, every 30 seconds for the last 24 hours, for the status
-// page's chart. It lives in memory, so it starts again with every restart. Its clock is one that
-// only runs forward, as the server's is (server.ts): the system's clock gets corrected, and the
-// chart would fold up with it. The samples are read against the same clock, through `now`.
-export class History {
-  readonly #samples: Sample[] = [];
-  readonly span: number;
-  readonly now: () => number;
-
-  constructor({ span = HISTORY_MS, now = () => performance.now() }: { span?: number; now?: () => number } = {}) {
-    this.span = span;
-    this.now = now;
-  }
-
-  add(stats: Stats): void {
-    const at = this.now();
-    const { lobby, playing, ended } = stats.rooms;
-    this.#samples.push({ at, players: stats.players.online, rooms: lobby + playing + ended });
-    while (this.#samples.length > 0 && (this.#samples[0] as Sample).at < at - this.span) this.#samples.shift();
-  }
-
-  samples(): readonly Sample[] {
-    return this.#samples;
-  }
-}
-
-// Writes the `stats` line, and takes the chart's samples when there is a history to take them
-// for, on their own clocks until the returned function stops them. The times can be changed for
-// tests. Counting throws only when the system does, as process.memoryUsage() does when the
-// process has run out of file descriptors, and a timer that threw would end the process: here it
-// is logged and the next tick tries again.
-export function watchStats(
-  collect: () => Stats,
-  log: Log,
-  history: History | null,
-  { logMs = STATS_LOG_MS, sampleMs = SAMPLE_MS } = {},
-): () => void {
+// Writes the `stats` line, on its own clock until the returned function stops it. The time can be
+// changed for tests. Counting throws only when the system does, as process.memoryUsage() does when
+// the process has run out of file descriptors, and a timer that threw would end the process: here
+// it is logged and the next tick tries again.
+export function watchStats(collect: () => Stats, log: Log, { logMs = STATS_LOG_MS } = {}): () => void {
   const write = statsLog(log);
-  const tick = (where: string, run: () => void) => () => {
+  const timer = setInterval(() => {
     try {
-      run();
+      write(collect());
     } catch (error) {
-      log('error', { where, message: error instanceof Error ? error.message : String(error) });
+      log('error', { where: 'stats', message: error instanceof Error ? error.message : String(error) });
     }
-  };
-  const timers = [
-    setInterval(
-      tick('stats', () => write(collect())),
-      logMs,
-    ),
-  ];
-  if (history)
-    timers.push(
-      setInterval(
-        tick('sample', () => history.add(collect())),
-        sampleMs,
-      ),
-    );
-  for (const timer of timers) timer.unref();
-  return () => timers.forEach((timer) => clearInterval(timer));
+  }, logMs);
+  timer.unref();
+  return () => clearInterval(timer);
 }

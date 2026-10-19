@@ -122,7 +122,6 @@ export class AccountStore {
   readonly #setSetup: StatementSync;
   readonly #delete: StatementSync;
   readonly #count: StatementSync;
-  readonly #counts: StatementSync;
   readonly #createdByDay: StatementSync;
   readonly #activeSince: StatementSync;
   readonly #list: StatementSync;
@@ -162,10 +161,7 @@ export class AccountStore {
     this.#agentUsers = db.prepare('SELECT id, username FROM accounts WHERE agents = 1 ORDER BY id');
     this.#delete = db.prepare(`DELETE FROM accounts WHERE id = ? RETURNING ${COLUMNS}`);
     this.#count = db.prepare('SELECT count(*) AS count FROM accounts');
-    // The statistics for the operator (admin.ts) and the status page.
-    this.#counts = db.prepare(
-      'SELECT count(*) AS total, count(*) FILTER (WHERE created_at >= ?) AS recent FROM accounts',
-    );
+    // The statistics for the operator (admin.ts).
     this.#createdByDay = db.prepare(
       'SELECT substr(created_at, 1, 10) AS day, count(*) AS count FROM accounts WHERE created_at >= ? ' +
         'GROUP BY day ORDER BY day',
@@ -317,12 +313,6 @@ export class AccountStore {
 
   count(): number {
     return (this.#count.get() as { count: number }).count;
-  }
-
-  // How many accounts there are, and how many of them were created in the last `days` days, read
-  // in one statement so that the two agree.
-  counts(days: number): { total: number; recent: number } {
-    return this.#counts.get(this.#since(days)) as { total: number; recent: number };
   }
 
   // How many accounts were created on each of the last `days` days, in UTC, oldest first, today

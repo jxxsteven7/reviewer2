@@ -3,7 +3,7 @@ import { createServer, type AddressInfo, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { LIST_API, RECORDS_NOTICE_VERSION, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
+import { LIST_API, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { until } from '../test/helpers';
 import { main, type MainOptions, type Running } from './main';
@@ -339,31 +339,19 @@ describe('starting', () => {
     expect(existsSync(join(dir, 'missing'))).toBe(false);
   });
 
-  test('serves the feedback and the number of accounts on the status page', async () => {
+  test('serves the data on the status port, and ignores the settings of the pages it had', async () => {
     const statusPort = await freePort();
-    const started = (await start({ STATUS_PORT: String(statusPort) })) as Running;
-    started.feedback.add({
-      kind: 'bug',
-      text: '<script>alert(1)</script>',
-      contact: null,
-      credit: null,
-      accountId: null,
-      linkProfile: false,
-      version: 'test',
-      language: 'zh',
-      page: 'room',
-      userAgent: 'Agent',
-    });
-    started.accounts.store.create('Ann', 'ann', 'scrypt$hash', RECORDS_NOTICE_VERSION);
-    await until(() => events().includes('status_listening'), 'the status page');
-    const status = await (await fetch(`http://127.0.0.1:${statusPort}/`)).text();
-    expect(status).toContain('<p class="note">1 in all &middot; <a href="/feedback">Read it</a></p>');
-    expect(status).toContain('<dt>Accounts</dt><dd>1<small>registered</small></dd>');
-    expect(status).toContain('<dt>New accounts</dt><dd>1<small>in the last 7 days</small></dd>');
-    const page = await (await fetch(`http://127.0.0.1:${statusPort}/feedback`)).text();
-    expect(page).toContain('1 in all, newest first');
-    expect(page).toContain('&#60;script&#62;alert(1)&#60;/script&#62;');
-    expect(page).not.toContain('<script>');
+    // ADMIN_COMMAND and FEEDBACK_COMMAND were for pages that the status port no longer has.
+    await start({ STATUS_PORT: String(statusPort), ADMIN_COMMAND: 'npm run admin --', FEEDBACK_COMMAND: 'triage' });
+    await until(() => events().includes('status_listening'), 'the status port');
+    expect(logged('status_listening')).toEqual({ host: '127.0.0.1', port: statusPort });
+    const numbers = await (await fetch(`http://127.0.0.1:${statusPort}/status.json`)).json();
+    expect(numbers).toMatchObject({ rooms: { lobby: 0, playing: 0, ended: 0 }, players: { online: 0, offline: 0 } });
+    const live = await (await fetch(`http://127.0.0.1:${statusPort}/live.json`)).json();
+    expect(live).toEqual({ connections: [], rooms: [] });
+    for (const path of ['/', '/feedback', '/reports']) {
+      expect((await fetch(`http://127.0.0.1:${statusPort}${path}`)).status, path).toBe(404);
+    }
   });
 });
 

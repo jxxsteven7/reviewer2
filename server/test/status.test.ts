@@ -1,14 +1,13 @@
 import { createServer, request, type IncomingHttpHeaders, type Server } from 'node:http';
 import { createConnection, type AddressInfo } from 'node:net';
 import { afterEach, describe, expect, test } from 'vitest';
-import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
-import { History, type Stats } from '../src/stats';
-import { createStatusHandler, FEEDBACK_SHOWN } from '../src/status';
-import { DEFAULT_ADMIN_COMMAND } from '../src/statusPage';
+import type { Live } from '../src/live';
+import type { Stats } from '../src/stats';
+import { createStatusHandler } from '../src/status';
 import { createRoom, joinRoom, loggedIn, rawPolling, startServer, TestClient, until, type TestServer } from './helpers';
 
-// The numbers that the `stats` line and the status page show, counted on a real server, and the
-// status page's own HTTP server.
+// The numbers that the `stats` line and /status.json give, counted on a real server, who is
+// connected and in which room for /live.json, and the status port's own HTTP server.
 
 let server: TestServer;
 const clients: TestClient[] = [];
@@ -169,16 +168,12 @@ describe('the status server', () => {
   let base: string;
 
   async function startStatus({
-    history = new History(),
     stats = () => server.app.stats(),
-    adminCommand = DEFAULT_ADMIN_COMMAND,
-    feedbackCommand = null,
-  }: { history?: History; stats?: () => Stats; adminCommand?: string; feedbackCommand?: string | null } = {}) {
+    live = () => server.app.live(),
+  }: { stats?: () => Stats; live?: () => Live } = {}) {
     const log = (event: string, fields?: Record<string, unknown>) =>
       server.logs.push({ event, ...(fields ? { fields } : {}) });
-    const started = createServer(
-      createStatusHandler(stats, history, server.feedback, log, { admin: adminCommand, feedback: feedbackCommand }),
-    );
+    const started = createServer(createStatusHandler(stats, live, log));
     status = started;
     await new Promise<void>((resolve) => started.listen(0, '127.0.0.1', resolve));
     base = `http://127.0.0.1:${(started.address() as AddressInfo).port}`;
@@ -191,23 +186,16 @@ describe('the status server', () => {
     if (started) await new Promise((resolve) => started.close(resolve));
   });
 
-  test('serves the page without a script and the numbers as JSON', async () => {
+  test('serves the numbers as JSON', async () => {
     server = await startServer();
-    const history = new History();
-    history.add(server.app.stats());
-    await startStatus({ history });
-
-    const page = await get(base, '/');
-    expect(page.status).toBe(200);
-    expect(page.headers['content-type']).toBe('text/html; charset=utf-8');
-    expect(page.headers['cache-control']).toBe('no-store');
-    expect(page.headers['content-security-policy']).toMatch(/^default-src 'none'; style-src 'unsafe-inline';/);
-    expect(page.body).toContain('<title>Reviewer 2 status</title>');
-    expect(page.body).toContain('<polyline class="players"');
+    await startStatus();
 
     const json = await get(base, '/status.json?fresh=1');
     expect(json.status).toBe(200);
     expect(json.headers['content-type']).toBe('application/json');
+    expect(json.headers['cache-control']).toBe('no-store');
+    expect(json.headers['x-content-type-options']).toBe('nosniff');
+    expect(json.headers['content-security-policy']).toBe("default-src 'none'; frame-ancestors 'none'");
     const { uptime, memory, ...counts } = JSON.parse(json.body);
     expect(uptime).toBeTypeOf('number');
     expect(memory.rss).toBeTypeOf('number');
@@ -221,16 +209,15 @@ describe('the status server', () => {
     });
 
     // HEAD gets the headers alone.
-    const head = await get(base, '/', {}, 'HEAD');
+    const head = await get(base, '/status.json', {}, 'HEAD');
     expect(head.status).toBe(200);
+    expect(head.headers['content-type']).toBe('application/json');
     expect(head.body).toBe('');
   });
 
-  test('shows nobody: no codes, room IDs, names, tokens or addresses', async () => {
+  test('names nobody in the numbers: no codes, room IDs, names, ids, tokens or addresses', async () => {
     server = await startServer({ trustProxy: true });
-    // A guest chairs, and an account is in the room with them, which calls it by its username. The
-    // feedback comes from the guest: one sent from an account names the account on the page, by
-    // design (feedback.test.ts).
+    // A guest chairs, and an account is in the room with them, which calls it by its username.
     const { chair, code, roomId } = await createRoom(server.url);
     const quentin = await joinRoom(server.url, code, {}, await loggedIn(server.url, 'Quentin'));
     const screen = await TestClient.connect(server.url, {}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
@@ -238,265 +225,137 @@ describe('the status server', () => {
     await chair.waitFor((state) => state.players.length === 2);
     expect(chair.state?.players.map(({ name }) => name)).toEqual(['Guest 1', 'Quentin']);
     expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
-    expect(
-      await chair.send('meta:feedback', {
-        kind: 'bug',
-        text: 'From the room',
-        version: 'v',
-        language: 'en',
-        page: 'room',
-      }),
-    ).toEqual({ ok: true });
     await startStatus();
 
-    for (const path of ['/', '/feedback', '/reports', '/status.json']) {
-      const { body } = await get(base, path);
-      for (const secret of [
-        roomId,
-        chair.token,
-        quentin.token,
-        chair.me,
-        quentin.me,
-        'Guest 1',
-        'Quentin',
-        '203.0.113',
-      ]) {
-        expect(body, `${path} has ${secret}`).not.toContain(secret);
-      }
-      expect(body, path).not.toMatch(new RegExp(`\\b${code}\\b`));
+    const { body } = await get(base, '/status.json');
+    for (const secret of [
+      roomId,
+      chair.token,
+      quentin.token,
+      chair.me,
+      quentin.me,
+      'Guest 1',
+      'Quentin',
+      '203.0.113',
+    ]) {
+      expect(body, `/status.json has ${secret}`).not.toContain(secret);
     }
-    expect(JSON.parse((await get(base, '/status.json')).body).connections).toEqual({ websocket: 3, polling: 0 });
+    expect(body).not.toMatch(new RegExp(`\\b${code}\\b`));
+    expect(body).not.toContain('"account"');
+    expect(JSON.parse(body).connections).toEqual({ websocket: 3, polling: 0 });
   });
 
-  test('shows the reports a page at a time, with the way to bar an account', async () => {
-    server = await startServer();
-    const ann = server.accounts.store.create('Ann', 'ann', 'h', RECORDS_NOTICE_VERSION);
-    const bob = server.accounts.store.create('Bob', 'bob', 'h', RECORDS_NOTICE_VERSION);
-    if (!ann || !bob) throw new Error('no account');
-    const total = FEEDBACK_SHOWN + 2;
-    for (let i = 1; i <= total; i += 1) {
-      server.feedback.report({
-        reporterId: ann.id,
-        reportedId: bob.id,
-        reportedName: 'Bob',
-        roomCode: 'K7QX',
-        text: `Number ${i}`,
-      });
+  test('gives who is connected and who is in each room this moment, by account id and never by name', async () => {
+    server = await startServer({ trustProxy: true });
+    const singapore = { 'cf-ipcountry': 'SG' };
+    // A guest chairs. Quentin, who has an account, is in the room in two tabs, from Singapore, and
+    // has a third tab open that is in no room. Bob, a guest, came and went. A screen shows the
+    // room, from an address that a proxy forwarded, and another guest is connected in no room.
+    const { chair, code, roomId } = await createRoom(server.url);
+    const browser = await loggedIn(server.url, 'Quentin');
+    const tabs: TestClient[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      const tab = await browser.connect({}, singapore);
+      clients.push(tab);
+      expect(await tab.send('room:join', { code, play: false })).toMatchObject({ ok: true });
+      await tab.waitFor((state) => state.code === code);
+      tabs.push(tab);
     }
-    server.accounts.store.setPublicBarred(bob.id, true);
+    const away = await browser.connect({}, singapore);
+    const bob = await joinRoom(server.url, code);
+    const screen = await TestClient.connect(server.url, {}, { extraHeaders: { 'x-forwarded-for': '203.0.113.9' } });
+    const idle = await TestClient.connect(server.url);
+    clients.push(chair, away, bob, screen, idle);
+    expect(await screen.send('room:watch', { code })).toMatchObject({ ok: true });
+    await chair.waitFor((state) => state.players.length === 3);
+    const names = chair.state?.players.map(({ name }) => name);
+    expect(names).toEqual(['Guest 1', 'Quentin', 'Guest 2']);
+    bob.close();
+    await until(() => server.app.rooms.find(code)?.onlineCount() === 2, 'Bob to go offline');
+    // A minute later, and one of Quentin's tabs has had a heartbeat back in 85 milliseconds.
+    server.advance(60_000);
+    const conn = server.app.io.sockets.sockets.get(tabs[0]?.socket.id as string)?.conn;
+    conn?.emit('flush', [{ type: 'ping' }]);
+    server.advance(85);
+    conn?.emit('packet', { type: 'pong' });
     await startStatus();
-    const shown = (body: string) =>
-      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
+    const logged = server.logs.length;
 
-    const status = await get(base, '/');
-    expect(status.body).toContain(`<p class="note">${total} in all &middot; <a href="/reports">Read them</a></p>`);
-    const latest = await get(base, '/reports');
-    expect(latest.status).toBe(200);
-    expect(latest.headers['cache-control']).toBe('no-store');
-    expect(latest.headers['content-security-policy']).toContain("frame-ancestors 'none'");
-    expect(latest.body).toContain('<title>Reviewer 2 reports</title>');
-    expect(latest.body).toContain('admin.cjs accounts bar &lt;username&gt;');
-    expect(latest.body).toContain(
-      '<p class="text">Bob (account Bob &middot; <strong>barred from public rooms</strong>)</p>',
+    const before = Date.now();
+    const response = await get(base, '/live.json');
+    const after = Date.now();
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toBe('application/json');
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['content-security-policy']).toBe("default-src 'none'; frame-ancestors 'none'");
+    const live = JSON.parse(response.body) as Live;
+
+    const account = server.accounts.byName('Quentin')?.id as number;
+    expect(account).toBeTypeOf('number');
+    // One for each connection, in no order that matters.
+    const sorted = (connections: Live['connections']) =>
+      [...connections].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    expect(sorted(live.connections)).toEqual(
+      sorted([
+        { account: null, room: code, country: 'XX', latency: null },
+        { account, room: code, country: 'SG', latency: 85 },
+        { account, room: code, country: 'SG', latency: null },
+        { account, room: null, country: 'SG', latency: null },
+        { account: null, room: code, country: 'XX', latency: null },
+        { account: null, room: null, country: 'XX', latency: null },
+      ]),
     );
-    expect(latest.body).toContain('<p class="meta">Reported by Ann</p>');
-    expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
-    expect(latest.body).toContain('<p class="more"><a href="/reports?before=3">Older</a></p>');
-    expect(shown((await get(base, '/reports?before=3')).body)).toEqual([2, 1]);
-  });
+    const offlineSince = live.rooms[0]?.members[2]?.offlineSince as string;
+    expect(live.rooms).toEqual([
+      {
+        code,
+        members: [
+          { account: null, guest: 1, agent: null, online: true, offlineSince: null, takenOver: false },
+          { account, guest: null, agent: null, online: true, offlineSince: null, takenOver: false },
+          { account: null, guest: 2, agent: null, online: false, offlineSince, takenOver: false },
+        ],
+        screens: 1,
+      },
+    ]);
+    // Bob went a minute and 85 milliseconds before, by the server's clock, which is told as the
+    // system's time.
+    expect(offlineSince).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+    expect(Date.parse(offlineSince)).toBeGreaterThanOrEqual(before - 60_085);
+    expect(Date.parse(offlineSince)).toBeLessThanOrEqual(after - 60_085);
 
-  test('shows the feedback a page at a time, back from the latest', async () => {
-    server = await startServer();
-    const total = FEEDBACK_SHOWN + 5;
-    for (let i = 1; i <= total; i += 1) {
-      server.feedback.add({
-        kind: 'idea',
-        text: `Number ${i}`,
-        contact: null,
-        credit: null,
-        accountId: null,
-        linkProfile: false,
-        version: 'test',
-        language: 'en',
-        page: 'home',
-        userAgent: null,
-      });
+    // Nothing else of anyone: no username, name, address, token, login, member or room ID.
+    for (const secret of [
+      'Quentin',
+      'quentin',
+      'Guest',
+      'name',
+      '203.0.113',
+      '127.0.0.1',
+      roomId,
+      chair.token,
+      bob.token,
+      browser.secret,
+      chair.me,
+      tabs[0]?.me as string,
+      tabs[0]?.socket.id as string,
+    ]) {
+      expect(response.body, `/live.json has ${secret}`).not.toContain(secret);
     }
-    await startStatus();
-    const shown = (body: string) =>
-      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
 
-    // The status page has the counts and the link, and none of the feedback.
-    const status = await get(base, '/');
-    expect(status.body).toContain(`<p class="note">${total} in all &middot; <a href="/feedback">Read it</a></p>`);
-    expect(status.body).toContain(`<a class="badge" href="/feedback">Open <b>${total}</b></a>`);
-    expect(status.body).toContain('<a class="badge issue" href="/feedback?status=issue">Issued <b>0</b></a>');
-    expect(shown(status.body)).toEqual([]);
+    // Asking writes nothing to the log.
+    expect(server.logs).toHaveLength(logged);
 
-    const latest = await get(base, '/feedback');
-    expect(latest.status).toBe(200);
-    expect(latest.headers['content-type']).toBe('text/html; charset=utf-8');
-    expect(latest.headers['cache-control']).toBe('no-store');
-    expect(latest.headers['content-security-policy']).toBe(
-      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-    );
-    expect(latest.body).toContain(`${total} in all, newest first`);
-    expect(latest.body).not.toContain('http-equiv="refresh"');
-    // Each piece has its commands to copy, with the default in front.
-    expect(latest.body).toContain(
-      `<details><summary>Commands</summary><p class="command"><code>node server/dist/admin.cjs feedback draft ${total}</code></p>`,
-    );
-    expect(shown(latest.body)).toEqual(Array.from({ length: FEEDBACK_SHOWN }, (_, i) => total - i));
-    expect(latest.body).toContain('<p class="more"><a href="/feedback?before=6">Older</a></p>');
-
-    const older = (await get(base, '/feedback?before=6')).body;
-    expect(shown(older)).toEqual([5, 4, 3, 2, 1]);
-    expect(older).toContain('<p class="more"><a href="/feedback">Latest</a></p>');
-
-    // A query that isn't a number is taken for none.
-    for (const query of ['?before=abc', '?before=-1', '?before=1e3', '?other=1']) {
-      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual(shown(latest.body));
-    }
-  });
-
-  test('puts how admin.cjs is run, as ADMIN_COMMAND says, in front of the commands it shows', async () => {
-    server = await startServer();
-    server.feedback.add({
-      kind: 'idea',
-      text: 'Number 1',
-      contact: null,
-      credit: null,
-      accountId: null,
-      linkProfile: false,
-      version: 'test',
-      language: 'en',
-      page: 'home',
-      userAgent: null,
-    });
-    await startStatus({ adminCommand: 'npm run admin --' });
-    const page = await get(base, '/feedback');
-    expect(page.body).toContain('<p class="command"><code>npm run admin -- feedback resolve 1 &#60;pr&#62;</code></p>');
-    expect(page.body).not.toContain('node server/dist/admin.cjs');
-  });
-
-  test('puts the command that FEEDBACK_COMMAND names in front of the commands, with publish first', async () => {
-    server = await startServer();
-    const add = () =>
-      server.feedback.add({
-        kind: 'idea',
-        text: 'Number 1',
-        contact: null,
-        credit: null,
-        accountId: null,
-        linkProfile: false,
-        version: 'test',
-        language: 'en',
-        page: 'home',
-        userAgent: null,
-      });
-    add();
-    add();
-    // Published already, it has no publish, and the command adopts it as it records the PR.
-    server.feedback.setIssue(2, 42);
-    await startStatus({ feedbackCommand: 'triage-feedback' });
-    const page = await get(base, '/feedback?status=all');
-    const first = (id: number) =>
-      page.body.split(`<article><p class="head"><span>#${id}`)[1]?.match(/<code>([^<]*)<\/code>/)?.[1];
-    expect(first(1)).toBe('triage-feedback publish 1');
-    expect(page.body).toContain('<code>triage-feedback draft 1</code>');
-    expect(first(2)).toBe('triage-feedback issue 2 --clear');
-    expect(page.body).toContain(
-      "<code>triage-feedback resolve 2 &#60;pr&#62;</code> records the pull request and adopts it, which can't be undone",
-    );
-    expect(page.body).not.toContain('triage-feedback adopt');
-    expect(page.body).not.toContain('triage-feedback publish 2');
-    expect(page.body).not.toContain('admin.cjs feedback resolve');
-  });
-
-  test('shows the open feedback unless asked for a status, with the trail of each and the trash with its days left', async () => {
-    server = await startServer();
-    for (let i = 1; i <= 7; i += 1) {
-      server.feedback.add({
-        kind: i % 2 === 0 ? 'bug' : 'idea',
-        text: `Number ${i}`,
-        contact: null,
-        credit: i === 4 || i === 7 ? 'Ann' : null,
-        accountId: null,
-        linkProfile: false,
-        version: 'test',
-        language: 'en',
-        page: 'home',
-        userAgent: null,
-      });
-    }
-    server.feedback.setIssue(2, 42);
-    server.feedback.resolve(3, 50);
-    server.feedback.setIssue(4, 43);
-    server.feedback.adopt(4, { zh: '提出了计时器', en: 'Suggested a timer' });
-    server.feedback.close(5);
-    server.feedback.delete(6);
-    // Adopted with a pull request recorded, which is resolved all the same.
-    server.feedback.resolve(7, 51);
-    server.feedback.setIssue(7, 44);
-    server.feedback.adopt(7, { zh: '\u63d0\u51fa\u4e86\u6682\u505c', en: 'Suggested a pause' });
-    await startStatus();
-    const shown = (body: string) =>
-      [...body.matchAll(/<p class="text">Number (\d+)<\/p>/g)].map((match) => Number(match[1]));
-
-    // Open is what nobody has dealt with yet, the new feedback; all is everything, the trash too.
-    const open = (await get(base, '/feedback')).body;
-    expect(shown(open)).toEqual([1]);
-    expect(open).toContain(
-      '<p class="pills"><a href="/feedback?status=all">All <b>7</b></a><strong>Open <b>1</b></strong>' +
-        '<a href="/feedback?status=issue">Issued <b>2</b></a><a href="/feedback?status=resolved">Resolved <b>2</b></a>' +
-        '<a href="/feedback?status=closed">Closed <b>1</b></a><a href="/feedback?status=trash">Trash <b>1</b></a></p>',
-    );
-    expect(open).not.toContain('Thanked');
-    expect(open).toContain('<span class="badge new">New</span>');
-    // An issue, and feedback with a pull request recorded but not adopted, which waits for that.
-    const issued = (await get(base, '/feedback?status=issue')).body;
-    expect(issued).toContain('<span class="badge issue">Issue #42</span>');
-    expect(issued).toContain('<span class="badge issue">PR #50</span>');
-    expect(issued).toContain('<p class="trail">resolved by PR #50</p>');
-    for (const [query, ids] of [
-      ['?status=all', [7, 6, 5, 4, 3, 2, 1]],
-      ['?status=all&before=4', [3, 2, 1]],
-      ['?status=issue', [3, 2]],
-      ['?status=resolved', [7, 4]],
-      ['?status=closed', [5]],
-      ['?status=trash', [6]],
-      ['?status=open&before=2', [1]],
-      // There is no choosing a kind any more.
-      ['?status=issue&kind=idea', [3, 2]],
-      // A view that isn't one is taken for none, as are the ones that the page had once.
-      ['?status=', [1]],
-      ['?status=Trash', [1]],
-      ['?status=new', [1]],
-      ['?status=thanked', [1]],
-    ] as const) {
-      expect(shown((await get(base, `/feedback${query}`)).body), query).toEqual([...ids]);
-    }
-    // The badges write out what the feedback came to.
-    const resolved = (await get(base, '/feedback?status=resolved')).body;
-    expect(resolved).toContain('<span class="badge resolved">Resolved &middot; PR #51 &middot; issue #44</span>');
-    expect(resolved).toContain('<span class="badge resolved">Resolved &middot; issue #43</span>');
-    expect(resolved).toMatch(/<p class="trail">published as issue #43 &middot; adopted \d{4}-\d\d-\d\d<\/p>/);
-    expect(resolved).toContain('Contributed: 提出了计时器 &middot; Suggested a timer');
-    const trash = (await get(base, '/feedback?status=trash')).body;
-    expect(trash).toContain('<span class="badge trash">Trash</span>');
-    expect(trash).toMatch(/<p class="trail">in the trash since \d{4}-\d{2}-\d{2}, 30 days left<\/p>/);
-    expect(trash).toContain('<a href="/feedback?status=closed">Closed <b>1</b></a>');
-    expect(trash).toContain('<strong>Trash <b>1</b></strong>');
-    const all = (await get(base, '/feedback?status=all')).body;
-    for (const badge of ['new', 'issue', 'resolved', 'closed', 'trash']) {
-      expect(all, badge).toContain(`<span class="badge ${badge}">`);
-    }
-    const status = (await get(base, '/')).body;
-    expect(status).toContain('<a class="badge" href="/feedback">Open <b>1</b></a>');
-    expect(status).toContain('<a class="badge issue" href="/feedback?status=issue">Issued <b>2</b></a>');
-    expect(status).toContain('<a class="badge resolved" href="/feedback?status=resolved">Resolved <b>2</b></a>');
-    expect(status).not.toContain('Thanked');
-    expect(status).toContain('<p class="note">7 in all &middot; <a href="/feedback">Read it</a></p>');
+    // Asked again, it is worked out again: when everyone else has gone, the guest in no room is
+    // left.
+    for (const client of [chair, ...tabs, away, screen]) client.close();
+    await until(() => server.app.io.sockets.sockets.size === 1, 'everyone but the idle guest to go');
+    expect(JSON.parse((await get(base, '/live.json')).body).connections).toEqual([
+      { account: null, room: null, country: 'XX', latency: null },
+    ]);
+    const head = await get(base, '/live.json', {}, 'HEAD');
+    expect(head.status).toBe(200);
+    expect(head.body).toBe('');
   });
 
   test('answers only to the names of this machine, on any port, to keep a page elsewhere from reading it', async () => {
@@ -515,9 +374,12 @@ describe('the status server', () => {
       '127.0.0.1',
       '[::1]',
     ]) {
-      const response = await get(base, '/status.json', { host });
-      expect(response.status, host).toBe(200);
-      expect(response.body).toContain('"players"');
+      const numbers = await get(base, '/status.json', { host });
+      expect(numbers.status, host).toBe(200);
+      expect(numbers.body).toContain('"players"');
+      const live = await get(base, '/live.json', { host });
+      expect(live.status, host).toBe(200);
+      expect(live.body).toContain('"connections"');
     }
     // A name that isn't this machine's, with or without the port, or one of them with more on it.
     for (const host of [
@@ -532,7 +394,7 @@ describe('the status server', () => {
       `127.0.0.2:${port}`,
       `::1:${port}`,
     ]) {
-      for (const path of ['/', '/feedback', '/reports', '/status.json']) {
+      for (const path of ['/status.json', '/live.json', '/']) {
         const response = await get(base, path, { host });
         expect(response.status, `${host} ${path}`).toBe(421);
         expect(response.body, `${host} ${path}`).toBe('');
@@ -541,43 +403,57 @@ describe('the status server', () => {
       }
     }
     // No Host at all, which HTTP/1.0 allows.
-    const raw = await new Promise<string>((resolve, reject) => {
-      const socket = createConnection(Number(port), '127.0.0.1');
-      let data = '';
-      socket.on('data', (chunk: Buffer) => (data += chunk.toString()));
-      socket.on('end', () => resolve(data));
-      socket.on('error', reject);
-      socket.end('GET /status.json HTTP/1.0\r\n\r\n');
-    });
-    expect(raw).toMatch(/^HTTP\/1\.1 421 /);
-    expect(raw).not.toContain('"players"');
+    for (const path of ['/status.json', '/live.json']) {
+      const raw = await new Promise<string>((resolve, reject) => {
+        const socket = createConnection(Number(port), '127.0.0.1');
+        let data = '';
+        socket.on('data', (chunk: Buffer) => (data += chunk.toString()));
+        socket.on('end', () => resolve(data));
+        socket.on('error', reject);
+        socket.end(`GET ${path} HTTP/1.0\r\n\r\n`);
+      });
+      expect(raw, path).toMatch(/^HTTP\/1\.1 421 /);
+      expect(raw, path).not.toContain('"players"');
+      expect(raw, path).not.toContain('"connections"');
+    }
   });
 
-  test('is read-only, and knows no other path', async () => {
+  test('is read-only, has no pages, and knows no other path', async () => {
     server = await startServer();
     await startStatus();
-    for (const path of ['/status.json', '/feedback', '/feedback?status=trash', '/reports', '/']) {
+    for (const path of ['/status.json', '/live.json']) {
       const post = await get(base, path, { 'content-type': 'application/x-www-form-urlencoded' }, 'POST');
       expect(post.status, path).toBe(405);
       expect(post.headers.allow).toBe('GET, HEAD');
     }
-    for (const path of ['/status', '/status.json/', '/feedback/', '/index.html', '/healthz', '//']) {
-      expect((await get(base, path)).status, path).toBe(404);
-    }
-    for (const path of ['/', '/feedback', '/reports']) {
-      expect((await get(base, path)).body, path).not.toMatch(/<form|<input|<button|<script/);
+    // The pages it had are gone: the feedback and the reports are read with admin.cjs.
+    for (const path of [
+      '/',
+      '/feedback',
+      '/feedback?status=trash',
+      '/reports',
+      '/status',
+      '/status.json/',
+      '/live.json/',
+      '/live',
+      '/index.html',
+      '/healthz',
+      '//',
+    ]) {
+      const response = await get(base, path);
+      expect(response.status, path).toBe(404);
+      expect(response.headers['content-type'], path).toBe('text/plain; charset=utf-8');
     }
   });
 
   test('answers 500 and logs it when counting throws, and the game goes on', async () => {
     server = await startServer();
     const message = 'EMFILE: too many open files, uv_resident_set_memory';
-    await startStatus({
-      stats: () => {
-        throw new Error(message);
-      },
-    });
-    for (const path of ['/', '/status.json']) {
+    const broken = () => {
+      throw new Error(message);
+    };
+    await startStatus({ stats: broken, live: broken });
+    for (const path of ['/status.json', '/live.json']) {
       const response = await get(base, path);
       expect(response.status, path).toBe(500);
       expect(response.body).toBe('Internal server error\n');
@@ -594,8 +470,11 @@ describe('the status server', () => {
   test("isn't part of the game's own port", async () => {
     server = await startServer();
     await startStatus();
-    const response = await get(server.url, '/status.json');
-    expect(response.status).toBe(404);
-    expect(response.body).not.toContain('"players"');
+    for (const path of ['/status.json', '/live.json']) {
+      const response = await get(server.url, path);
+      expect(response.status, path).toBe(404);
+      expect(response.body).not.toContain('"players"');
+      expect(response.body).not.toContain('"connections"');
+    }
   });
 });

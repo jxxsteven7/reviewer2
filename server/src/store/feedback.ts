@@ -10,14 +10,14 @@ import {
 import type { DatabaseSync, SQLOutputValue, StatementSync } from 'node:sqlite';
 import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 
-// Feedback from players, kept for the author to read on the status page (docs/architecture.md).
-// What is kept is what the player wrote and what came along by itself, and nothing that says who
-// they are: no address, nickname, token or room code. The contact, which the player may leave so
-// that the author can reply, is cleared after 90 days. The feedback itself is the project's
-// archive of suggestions: nothing here changes what the player sent, and the one way a row goes
-// is the purge of what the operator put in the trash 30 days before (archive.test.ts). Beside the
-// text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it was
-// published as, the pull request that resolved it, when it was adopted and what the player
+// Feedback from players, kept for the author to read with `admin.cjs feedback list`
+// (docs/architecture.md). What is kept is what the player wrote and what came along by itself, and
+// nothing that says who they are: no address, nickname, token or room code. The contact, which the
+// player may leave so that the author can reply, is cleared after 90 days. The feedback itself is
+// the project's archive of suggestions: nothing here changes what the player sent, and the one way
+// a row goes is the purge of what the operator put in the trash 30 days before (archive.test.ts).
+// Beside the text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it
+// was published as, the pull request that resolved it, when it was adopted and what the player
 // contributed, whether it was closed, and whether it is in the trash. Feedback that was adopted is
 // a feedback contribution, which the home page lists (contributions.ts) by the account that signed
 // it as the account is now, by the name a guest left with it, or as anonymous, and which counts for
@@ -64,8 +64,8 @@ export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
 // in the trash; closed without being adopted; resolved, by being adopted, which lists it among the
 // feedback contributions, whether a pull request was recorded or not; published as a GitHub issue,
 // or recorded as resolved by a pull request without being adopted, which still waits for the
-// adoption; or new. The page shows the status, and the whole trail beside it. As views, each is
-// the feedback of that status, and none overlaps another.
+// adoption; or new. `admin.cjs feedback list` shows the status, and the whole trail beside it. As
+// views, each is the feedback of that status, and none overlaps another.
 export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'closed', 'trash'] as const;
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 

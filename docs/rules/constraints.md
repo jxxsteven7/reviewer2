@@ -6,7 +6,7 @@ Reviewers check these item by item.
 
 - No Google services: Firebase, Google Fonts, Google Analytics, Google Sign-In, reCAPTCHA.
 - Nothing from public CDNs such as unpkg, jsDelivr or cdnjs. Fonts, scripts and icons are bundled and served by our own server.
-- One Node process serves the front end and WebSocket on one domain and one port. The only exceptions, which serve no player, are the operator's status page ([status](../architecture.md#status)) and the mailer ([mail](../architecture.md#mail)).
+- One Node process serves the front end and WebSocket on one domain and one port. The only exceptions, which serve no player, are the operator's status data, JSON with no interface ([status](../architecture.md#status)), and the mailer ([mail](../architecture.md#mail)).
 - Check that any new dependency or third-party service is available and reliable in mainland China.
 
 ## Intellectual property
@@ -23,7 +23,7 @@ Reviewers check these item by item.
 
 ## UI
 
-- All UI text lives in `zh.json` and `en.json`, never in components, every string in both. The one exception is the operator's status page, in English only, in `server/src/statusPage.ts`.
+- All UI text lives in `zh.json` and `en.json`, never in components, every string in both.
 - Mobile-first, and works in WeChat's built-in browser.
 - Reconnection keeps working: after a refresh or a locked screen, players return to their room, team and role.
 

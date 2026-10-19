@@ -3,7 +3,6 @@ import { join, resolve } from 'node:path';
 import { MIN_SECRET_LENGTH } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
-import { DEFAULT_ADMIN_COMMAND } from './statusPage';
 import { DEFAULT_FEEDBACK_LIMITS } from './store/feedback';
 
 // Settings come from environment variables; docs/development.md lists them.
@@ -28,15 +27,9 @@ export interface Config {
   // A directory to read newer copies of ACKNOWLEDGMENTS.md and SPONSORS.md from, or null for the
   // ones the build bundled (thanks.ts).
   contentDir: string | null;
-  // The port of the status page, or null when it is off (docs/architecture.md).
+  // The status port, for the operator's data on this machine, or null when it is off
+  // (docs/architecture.md#status).
   statusPort: number | null;
-  // What the status page puts in front of the arguments of the operator's commands it shows, for
-  // copying: how admin.cjs is run where the server is (statusPage.ts).
-  adminCommand: string;
-  // A command of the operator's that takes the subcommands of `admin.cjs feedback`, and
-  // `publish <id>`, which publishes the feedback as an issue in one go: the status page shows the
-  // feedback commands with it in front, or null for none (statusPage.ts).
-  feedbackCommand: string | null;
   // The server's secret, which email fingerprints are made with, and the mailer's socket. Without
   // both, accounts have no email (docs/architecture.md).
   secret: string | null;
@@ -109,7 +102,7 @@ function socketPath(name: string, value: string | undefined): string | null {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const port = wholeNumber('PORT', env.PORT, 3000, 65535);
-  // The status page listens on 127.0.0.1 only, and is off unless STATUS_PORT names a port for it.
+  // The status port listens on 127.0.0.1 only, and is off unless STATUS_PORT names a port for it.
   const statusPort = wholeNumber('STATUS_PORT', env.STATUS_PORT, null, 65535);
   if (statusPort === port) throw new Error(`STATUS_PORT must be another port than PORT, not ${port} as well`);
   return {
@@ -142,8 +135,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,
     contentDir: env.CONTENT_DIR?.trim() ? resolve(root, env.CONTENT_DIR.trim()) : null,
     statusPort,
-    adminCommand: env.ADMIN_COMMAND?.trim() || DEFAULT_ADMIN_COMMAND,
-    feedbackCommand: env.FEEDBACK_COMMAND?.trim() || null,
     secret: serverSecret(env),
     mailerSocket: socketPath('MAILER_SOCKET', env.MAILER_SOCKET),
     agentSocket: socketPath('AGENT_SOCKET', env.AGENT_SOCKET),
