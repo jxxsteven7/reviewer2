@@ -68,6 +68,14 @@ jobs:
         run: node scripts/check-commits.mjs range "origin/$BASE_REF..$HEAD_SHA"
       - name: Pull request title and body
         run: |
+          # An event can come just before the PR is merged and its run start just after, when main
+          # already has the PR's version and the next one is higher. A closed PR keeps its title.
+          state="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .state)"
+          if [ "$state" = closed ]; then
+            echo "#$PR_NUMBER is closed, so its title stays as it is."
+            exit 0
+          fi
+
           title="$(node scripts/check-commits.mjs pr-title --base "origin/$BASE_REF" --head "$HEAD_SHA" --fix -- "$PR_TITLE")"
 
           # Only maintainers choose a minor or major version (docs/rules/versioning.md). Check
