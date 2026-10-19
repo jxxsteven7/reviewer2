@@ -146,8 +146,8 @@ const ASSETS = '/assets/';
 
 // The home page opened in a language, /?lang=en, is sent as the copy of index.html whose head is in
 // that language alone, so that a link's preview shows that language (pageIn in
-// client/src/core/site.ts names the copies; the app reads the query itself). The copies the build
-// left, by language, as sirv serves them; a build without them sends index.html.
+// client/src/core/site.ts names the copies; the app reads the query itself). Maps each language to
+// the path of its copy, if the build wrote one; without it, the page is index.html.
 function languagePages(publicDir: string): Map<string, string> {
   return new Map(
     LANGUAGES.filter((language) => existsSync(join(publicDir, `index.${language}.html`))).map((language) => [
@@ -157,11 +157,13 @@ function languagePages(publicDir: string): Map<string, string> {
   );
 }
 
-// The language that a request for the home page asks for in its query, if it is one.
+// The language that a request for the home page asks for in its query, if it asks for one: the app
+// ignores a query that names several, and so does this.
 function languageAsked(target: string): string | null {
   if (pathOf(target) !== '/') return null;
   const query = target.indexOf('?');
-  return query < 0 ? null : new URLSearchParams(target.slice(query + 1)).get('lang');
+  const asked = query < 0 ? [] : new URLSearchParams(target.slice(query + 1)).getAll('lang');
+  return asked.length === 1 ? (asked[0] ?? null) : null;
 }
 
 // The front end, with every route that isn't a file falling back to index.html. A missing asset

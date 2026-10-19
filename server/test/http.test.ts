@@ -69,7 +69,10 @@ describe('with a built front end', () => {
     writeFileSync(join(dir, 'index.html'), INDEX);
     writeFileSync(join(dir, 'assets', 'index-abc123.js'), SCRIPT);
     writeFileSync(join(dir, 'favicon.ico'), ICON);
-    for (const [language, page] of Object.entries(PAGES)) writeFileSync(join(dir, `index.${language}.html`), page);
+    for (const [language, page] of Object.entries(PAGES)) {
+      writeFileSync(join(dir, `index.${language}.html`), page);
+      writeFileSync(join(dir, `index.${language}.html.br`), brotliCompressSync(page));
+    }
     // The copies that the build leaves beside each text file; see client/compress.mjs.
     for (const [file, content] of [
       ['index.html', INDEX],
@@ -110,6 +113,7 @@ describe('with a built front end', () => {
       ['/?lang=fr', INDEX],
       ['/?lang=', INDEX],
       ['/?language=en', INDEX],
+      ['/?lang=en&lang=zh', INDEX],
       ['/room/K7QX?lang=en', INDEX],
     ] as const) {
       const response = await fetch(`${base}${target}`);
@@ -117,6 +121,12 @@ describe('with a built front end', () => {
       expect(await response.text(), target).toBe(page);
       expect(response.headers.get('cache-control'), target).toBe('no-cache');
     }
+    const compressed = await get(base, '/?lang=zh', { 'accept-encoding': 'br' });
+    expect(compressed.headers['content-encoding']).toBe('br');
+    expect(brotliDecompressSync(compressed.body).toString()).toBe(PAGES.zh);
+    const head = await get(base, '/?lang=en', {}, 'HEAD');
+    expect(head.status).toBe(200);
+    expect(head.headers['content-length']).toBe(String(Buffer.byteLength(PAGES.en)));
   });
 
   test('favicon.ico is sent as an icon', async () => {

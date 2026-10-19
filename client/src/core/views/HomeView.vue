@@ -65,7 +65,8 @@ const tipping = ref(false);
 const forthcoming = ['impostor', 'titles', 'abstracts'];
 
 // The home page's title and description in its language, and its address in it; the language gate
-// keeps index.html's, in both languages.
+// keeps the head that the page came with, which is in both languages unless the page was opened in
+// one (site.ts).
 usePageHead(() =>
   chosen.value
     ? {

@@ -2,10 +2,10 @@ import { effectScope, onBeforeUnmount, shallowRef, watchEffect } from 'vue';
 import { i18n } from './i18n';
 
 // The page's head as the app runs: the tab's title, the description that search engines show, the
-// page's canonical address and whether search engines may list it. index.html comes with the title
-// and the description of the home page in both languages (site.ts); each page puts its own in their
-// place while it is shown, in the interface's language, and what a page doesn't say stays as
-// index.html has it. A game's turn may put an urgent title over the page's for a while.
+// page's canonical address and whether search engines may list it. The page comes with the title
+// and the description of the home page in both languages, or in one for the home page opened in it
+// (site.ts); each page puts its own in their place while it is shown, in the interface's language,
+// and what a page doesn't say stays as the page came with it. A game's turn may put an urgent title over the page's for a while.
 
 export interface Head {
   title?: string;

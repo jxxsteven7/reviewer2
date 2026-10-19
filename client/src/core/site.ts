@@ -3,8 +3,8 @@ import type { Language } from '@reviewer2/shared';
 // What the server's page says before the app runs, for search engines and for the previews of links
 // in chat apps, which run no script, or don't wait for it, and can't tell which language the reader
 // reads (docs/architecture.md#search-engines-and-link-previews). The page's head gives its title
-// and descriptions in both languages, English first, and the empty page an introduction to the
-// game in both; robots.txt and sitemap.xml go beside it. vite.config.ts writes them at build time,
+// and descriptions in both languages, English first, or in one for the home page opened in it, and
+// the empty page an introduction to the game in both; robots.txt and sitemap.xml go beside it. vite.config.ts writes them at build time,
 // from the locale files, and the app puts each page's own title and description in their place as
 // it runs (head.ts). Nothing here may import a module at run time: vite.config.ts loads it.
 
@@ -124,10 +124,8 @@ export function headTags(text: SiteText, url: string | null, language?: Language
 export function pageHtml(html: string, text: SiteText, url: string | null, language: Language): string {
   const head = headTags(text, url);
   const lang = '<html lang="en">';
-  for (const part of [head, lang]) {
-    if (html.split(part).length !== 2)
-      throw new Error(`index.html must have its head in both languages once, and ${lang}`);
-  }
+  if (html.split(head).length !== 2) throw new Error('index.html must have its head in both languages once');
+  if (html.split(lang).length !== 2) throw new Error(`index.html must have ${lang} once`);
   return html
     .replace(lang, () => `<html lang="${HTML_LANG[language]}">`)
     .replace(head, () => headTags(text, url, language));

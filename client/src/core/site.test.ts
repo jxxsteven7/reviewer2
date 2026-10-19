@@ -176,7 +176,7 @@ describe('pageHtml', () => {
       page(`${head}${head}`),
       page(head).replace('<html lang="en">', '<html>'),
     ]) {
-      expect(() => pageHtml(html, TEXT, 'https://example.com', 'en')).toThrow(/index.html must have/);
+      expect(() => pageHtml(html, TEXT, 'https://example.com', 'en')).toThrow(/^index.html must have /);
     }
   });
 });
