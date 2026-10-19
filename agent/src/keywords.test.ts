@@ -158,7 +158,7 @@ describe('a clue', () => {
     const reply = allowed(await giveClue(request, turn(model)));
     expect(reply).toMatchObject({ ok: true, word: '生物' });
     expect(model.asked[0]?.system).toContain('write the clue in Chinese');
-    expect(model.asked[0]?.system).toContain('at most 2 Chinese characters');
+    expect(model.asked[0]?.system).toContain('at most 4 Chinese characters');
   });
 
   test('fails with the model, and says what it had considered', async () => {
