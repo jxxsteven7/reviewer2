@@ -211,7 +211,7 @@ export class FeedbackStore {
         'coalesce(length(CAST(credit AS BLOB)), 0) + coalesce(length(CAST(user_agent AS BLOB)), 0) + ' +
         'length(version)), 0) AS bytes FROM feedback',
     );
-    this.#latest = db.prepare(`SELECT * FROM ${ROWS} WHERE id < ? AND ${VIEW} ORDER BY id DESC LIMIT ?`);
+    this.#latest = db.prepare(`SELECT * FROM ${ROWS} WHERE ${VIEW} ORDER BY id DESC LIMIT ?`);
     this.#statuses = db.prepare(
       "SELECT coalesce(sum(status = 'new'), 0) AS new, coalesce(sum(status = 'issue'), 0) AS issue, " +
         "coalesce(sum(status = 'resolved'), 0) AS resolved, " +
@@ -262,7 +262,7 @@ export class FeedbackStore {
       'SELECT r.id, r.created_at AS createdAt, r.reported_id AS reportedId, r.reported_name AS reportedName, ' +
         'r.room_code AS roomCode, r.text, a.username AS reporter, b.username AS reported, ' +
         'coalesce(b.public_barred, 0) AS reportedBarred FROM reports r LEFT JOIN accounts a ON a.id = r.reporter_id ' +
-        'LEFT JOIN accounts b ON b.id = r.reported_id WHERE r.id < ? ORDER BY r.id DESC LIMIT ?',
+        'LEFT JOIN accounts b ON b.id = r.reported_id ORDER BY r.id DESC LIMIT ?',
     );
     this.#reportCount = db.prepare('SELECT count(*) AS count FROM reports');
   }
@@ -301,10 +301,9 @@ export class FeedbackStore {
     return (this.#count.get() as { count: number }).count;
   }
 
-  // The latest feedback first, up to `limit` of it, from before the id `before` when it is given,
-  // and of one view when `view` is.
-  latest(limit: number, before = Number.MAX_SAFE_INTEGER, view: FeedbackView = 'all'): Feedback[] {
-    return this.#latest.all(before, ...viewParams(view), limit).map((row) => this.#fromRow(row));
+  // The latest feedback first, up to `limit` of it, and of one view when `view` is given.
+  latest(limit: number, view: FeedbackView = 'all'): Feedback[] {
+    return this.#latest.all(...viewParams(view), limit).map((row) => this.#fromRow(row));
   }
 
   // How much feedback there is of each status (FEEDBACK_STATUSES), with 0 for one that has none.
@@ -414,8 +413,8 @@ export class FeedbackStore {
   }
 
   // The latest reports first, as latest() gives feedback.
-  reports(limit: number, before = Number.MAX_SAFE_INTEGER): Report[] {
-    const rows = this.#reports.all(before, limit) as unknown as (Omit<Report, 'reportedBarred'> & {
+  reports(limit: number): Report[] {
+    const rows = this.#reports.all(limit) as unknown as (Omit<Report, 'reportedBarred'> & {
       reportedBarred: number;
     })[];
     return rows.map((row) => ({ ...row, reportedBarred: row.reportedBarred === 1 }));

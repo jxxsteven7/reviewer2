@@ -556,15 +556,18 @@ describe('feedback list', () => {
     vi.useFakeTimers({ now: NOW });
     // Node reads a header's bytes of 0x80 to 0x9f as the C1 controls they are, which a terminal
     // obeys as it does an escape: here one clears the screen and one sets the title. Then a
-    // direction override, and a language tag, which is beyond the first plane.
-    const agent = 'Mozilla/5.0\u009b2J\u009d0;a title\u009c\u202esdrawkcab\u{e0001}';
+    // direction override, and a language tag, which is beyond the first plane. Last, the text
+    // `\u{9b}` itself, a backslash and all, which must not pass for the character.
+    const agent = 'Mozilla/5.0\u009b2J\u009d0;a title\u009c\u202esdrawkcab\u{e0001} \\u{9b}';
     new FeedbackStore(database.db).add(feedback({ kind: 'bug', userAgent: agent }));
     const text = listed();
     expect(text.lines).toContain(
-      '    browser: Mozilla/5.0\\u{9b}2J\\u{9d}0;a title\\u{9c}\\u{202e}sdrawkcab\\u{e0001}',
+      '    browser: Mozilla/5.0\\u{9b}2J\\u{9d}0;a title\\u{9c}\\u{202e}sdrawkcab\\u{e0001} \\\\u{9b}',
     );
     const json = listed('--json').lines.join('\n');
-    expect(json).toContain('"userAgent": "Mozilla/5.0\\u009b2J\\u009d0;a title\\u009c\\u202esdrawkcab\\udb40\\udc01"');
+    expect(json).toContain(
+      '"userAgent": "Mozilla/5.0\\u009b2J\\u009d0;a title\\u009c\\u202esdrawkcab\\udb40\\udc01 \\\\u{9b}"',
+    );
     expect(JSON.parse(json)[0].userAgent).toBe(agent);
     for (const line of [...text.lines, ...json.split('\n')]) expect(line).not.toMatch(/[\p{Cc}\p{Cf}]/u);
   });

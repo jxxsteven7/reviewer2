@@ -287,13 +287,15 @@ function trashLine(feedback: Feedback, daysLeft: number): string {
 // among them the C1 controls that clear the screen, move the cursor or set the title, which Node
 // reads a header's bytes of 0x80 to 0x9f as; and the format characters, such as the ones that turn
 // the direction of text around. What a player writes loses them on its way in
-// (shared/src/text.ts), but a bug's user agent is kept as the browser sent it.
-const UNSEEN = /[\p{Cc}\p{Cf}]/gu;
+// (shared/src/text.ts), but a bug's user agent is kept as the browser sent it. The backslash is
+// among them so that it can be written out too, and a user agent that holds the text `\u{9b}`
+// isn't taken for one that holds the character.
+const UNSEEN = /[\\\p{Cc}\p{Cf}]/gu;
 
 // Text for people on the terminal, with each such character written out as its code point, as
-// `\u{9b}`, so that it is seen and does nothing.
+// `\u{9b}`, so that it is seen and does nothing, and each backslash as `\\`.
 const seen = (text: string): string =>
-  text.replace(UNSEEN, (char) => `\\u{${(char.codePointAt(0) as number).toString(16)}}`);
+  text.replace(UNSEEN, (char) => (char === '\\' ? '\\\\' : `\\u{${(char.codePointAt(0) as number).toString(16)}}`));
 
 // The same in JSON text, but for the C0 controls, which JSON.stringify escapes inside every string
 // already: the ones left are the newlines between the lines.
@@ -815,7 +817,7 @@ const COMMANDS: Record<string, Command> = {
       }
       const view = status as ListView;
       // All of it, the newest first: the feedback is read whole, never a page of it.
-      const entries = feedback.latest(Number.MAX_SAFE_INTEGER, undefined, storeView(view));
+      const entries = feedback.latest(Number.MAX_SAFE_INTEGER, storeView(view));
       const listed = entries.map((entry) => ({ entry, daysLeft: feedback.daysLeft(entry) }));
       if (json) {
         const rows = listed.map(({ entry, daysLeft }) => feedbackJson(entry, daysLeft));
@@ -1148,7 +1150,7 @@ const COMMANDS: Record<string, Command> = {
     flags: [],
     readOnly: true,
     run({ feedback }, _words, _flags, print) {
-      const entries = feedback.latest(TRASH_SHOWN, undefined, 'trash');
+      const entries = feedback.latest(TRASH_SHOWN, 'trash');
       const total = feedback.statuses().trash;
       if (total === 0) {
         print('The trash is empty.');
