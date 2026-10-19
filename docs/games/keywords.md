@@ -165,7 +165,7 @@ Where the chair may have them ([../architecture.md](../architecture.md#ai-player
 - **As a student beside people,** it advises: it chooses its surest card for the group to see and says in the group's chat why, once, and leaves the revealing to them; when they reveal that card, it chooses the next. A person who has been offline for less than 20 seconds is there still, so that nobody's reload turns advice into play.
 - **For a player who is offline** for 20 seconds in their turn, an AI plays as they would, the PI's clue or the student's guesses, unless a person of the group is there to play it or the group has an AI student, who plays the guesses alone; of several students offline, one is played for. It stops when they are back. The others see whom it plays for, from the moment an AI is set to play for them.
 
-It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's. It is no strong player yet, so the practice sheet's role hints and the waiting room of a room that may have it warn players that roundabout clues, such as opposites, puns and in-jokes, mostly go past it, and that its own clues can be way off.
+It knows what the seat it plays sees, no more: a student never the colors of the cards still face down. It reads no chat. What it says and does goes through the same rules and checks as anyone's. It is not a strong player yet: the role hints in the practice sheet, and a footnote in the waiting room of a room that may have AI players, warn that roundabout clues such as opposites, puns and in-jokes mostly go over its head, and that its own clues can be way off.
 
 ## Practice rooms
 
