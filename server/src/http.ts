@@ -51,7 +51,7 @@ function setSecurityHeaders(req: IncomingMessage, res: ServerResponse): void {
   res.setHeader('Referrer-Policy', 'same-origin');
 }
 
-// The answers that this handler and the status page's (status.ts) have in common.
+// The answers that this handler and the status port's (status.ts) have in common.
 
 export function send(res: ServerResponse, status: number, type: string, body: string): void {
   res.statusCode = status;

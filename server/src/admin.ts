@@ -26,9 +26,8 @@ import { AccountStore } from './store/accounts';
 import { checkData } from './store/check';
 import { ContributionStore, type GithubContribution, type GithubRef } from './store/contributions';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
-import { FeedbackStore, type Feedback, type Report } from './store/feedback';
+import { FeedbackStore, type Feedback, type FeedbackView, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
-import { KINDS } from './statusPage';
 import { describeBrowser } from './userAgent';
 
 // The operator's commands (docs/development.md), which run beside the server on its data:
@@ -44,6 +43,7 @@ import { describeBrowser } from './userAgent';
 //   node server/dist/admin.cjs agents allow <username>
 //   node server/dist/admin.cjs agents deny <username>
 //   node server/dist/admin.cjs agents list
+//   node server/dist/admin.cjs feedback list [--status <view>] [--json]
 //   node server/dist/admin.cjs feedback adopt <id> --zh <sentence> --en <sentence>
 //   node server/dist/admin.cjs feedback describe <id> --zh <sentence> --en <sentence>
 //   node server/dist/admin.cjs feedback draft <id> [--json]
@@ -71,25 +71,27 @@ import { describeBrowser } from './userAgent';
 // (docs/architecture.md#public-profiles), `profile allow` lifts the bar, and `profile list` shows
 // every profile with a link or a bio, for the operator to look over.
 //
-// `feedback draft` writes the title and the body of the GitHub issue for a piece of feedback, from
-// a template, with the player's text and name alone: the operator creates the issue from them on a
-// machine that reaches GitHub, which the server needn't, and then records its number with
-// `feedback issue`. The other `feedback` commands are the operator's notes on what became of the
-// feedback, which the status page shows (docs/architecture.md#feedback) and which only these
-// commands change: `issue` records the GitHub issue it was published as; `resolve` the pull
-// request that resolved it; `adopt` adopts it, which lists it among the feedback contributions on
-// the home page at once (docs/architecture.md#feedback-contributions), by the account that signed
-// it as the account is now, or as a deleted player once it is gone, by a guest's name, or as
+// `feedback list` shows the feedback that players sent, all of it or the feedback of one status,
+// the open feedback by default, the newest first: each piece with what became of it, who it is
+// from, the contact while it is kept, the text, and the browser of a bug, for people to read, or as
+// JSON for scripts. `feedback draft` writes the title and the body of the GitHub issue for a piece
+// of feedback, from a template, with the player's text and name alone: the operator creates the
+// issue from them on a machine that reaches GitHub, which the server needn't, and then records its
+// number with `feedback issue`. The other `feedback` commands are the operator's notes on what
+// became of the feedback, which `feedback list` shows (docs/architecture.md#feedback) and which
+// only these commands change: `issue` records the GitHub issue it was published as; `resolve` the
+// pull request that resolved it; `adopt` adopts it, which lists it among the feedback contributions
+// on the home page at once (docs/architecture.md#feedback-contributions), by the account that
+// signed it as the account is now, or as a deleted player once it is gone, by a guest's name, or as
 // anonymous, counted for the account the player was logged in to, if any, with a sentence in each
-// language on what they contributed, and says when a guest's name is an account's username.
-// Only feedback that is a GitHub issue may be adopted, and it keeps one; closed feedback is
-// reopened first. `describe` writes those sentences again; `close` and `reopen` record whether it
-// was closed without being adopted, which adopted feedback can't be; `delete` puts it in the
-// trash, from which `restore` takes it back and the server deletes it for good after 30 days, and
-// `trash` lists what is there. Feedback that was adopted can't be deleted, since the home page
-// lists it, nor can feedback that is an issue, which is public and is closed instead. Nothing
-// changes what a player sent, or deletes reports: those are archives
-// (docs/architecture.md#feedback).
+// language on what they contributed, and says when a guest's name is an account's username. Only
+// feedback that is a GitHub issue may be adopted, and it keeps one; closed feedback is reopened
+// first. `describe` writes those sentences again; `close` and `reopen` record whether it was closed
+// without being adopted, which adopted feedback can't be; `delete` puts it in the trash, from which
+// `restore` takes it back and the server deletes it for good after 30 days, and `trash` lists what
+// is there. Feedback that was adopted can't be deleted, since the home page lists it, nor can
+// feedback that is an issue, which is public and is closed instead. Nothing changes what a player
+// sent, or deletes reports: those are archives (docs/architecture.md#feedback).
 //
 // The `github` commands are the contributions from GitHub
 // (docs/architecture.md#feedback-contributions): `github adopt` adopts an issue that a developer
@@ -112,8 +114,8 @@ import { describeBrowser } from './userAgent';
 // now. `data check` holds every row against the rules that the code takes for granted of the data
 // (store/check.ts, docs/rules/constraints.md#data), and prints each rule broken with the rows that
 // break it, by id alone, or that every check passed; it exits with 1 when any is broken.
-// `accounts`, `feedback draft`, `trash`, `github list`, `reports list`, `profile list` and `data check`
-// only read.
+// `accounts`, `feedback list`, `feedback draft`, `trash`, `github list`, `reports list`, `profile
+// list` and `data check` only read.
 // DATA_DIR names the server's data, as it does for the server. The database is opened as it is,
 // never migrated, and the server may go on running meanwhile.
 
@@ -130,6 +132,7 @@ const USAGE = [
   '  agents allow <username>',
   '  agents deny <username>',
   '  agents list',
+  '  feedback list [--status <view>] [--json]',
   '  feedback adopt <id> --zh <sentence> --en <sentence>',
   '  feedback describe <id> --zh <sentence> --en <sentence>',
   '  feedback draft <id> [--json]',
@@ -151,7 +154,7 @@ const USAGE = [
 ].join('\n');
 
 const ALONE = ['ban', 'json', 'anonymous'] as const;
-const VALUED = ['zh', 'en', 'kind', 'login', 'id', 'advisory'] as const;
+const VALUED = ['zh', 'en', 'kind', 'login', 'id', 'advisory', 'status'] as const;
 type Flags = Partial<Record<(typeof ALONE)[number], true> & Record<(typeof VALUED)[number], string>>;
 
 // The words of a command and its flags: --ban, --json and --anonymous stand alone, and the others
@@ -242,7 +245,7 @@ function printAccountStats(store: AccountStore, print: Print): void {
   print(`${'Id'.padStart(width)}  Registered  Games  Matches  Username`);
   for (const { id, username, createdAt, games, matches, barred } of accounts) {
     print(
-      `${`#${id}`.padStart(width)}  ${createdAt.slice(0, 10)}  ${String(games).padStart(5)}  ` +
+      `${`#${id}`.padStart(width)}  ${day(createdAt)}  ${String(games).padStart(5)}  ` +
         `${String(matches).padStart(7)}  ${username}` +
         (barred ? '  (barred from public rooms)' : ''),
     );
@@ -253,14 +256,22 @@ function printAccountStats(store: AccountStore, print: Print): void {
 const REPORTS_SHOWN = 100;
 const TRASH_SHOWN = 100;
 
+// "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
+const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
+const day = (iso: string) => iso.slice(0, 10);
+
+// Why the purge leaves a piece of feedback in the trash, or null when it doesn't: it was adopted,
+// or is a GitHub issue, which only feedback adopted or recorded on its way to the trash is, or
+// feedback that was in the trash as an issue before issues kept feedback out of it
+// (store/feedback.ts).
+const keptInTrash = ({ adoptedAt, issue }: Feedback): 'adopted' | 'issue' | null =>
+  adoptedAt !== null ? 'adopted' : issue !== null ? 'issue' : null;
+
 // How long feedback in the trash has left: "27 days left", "1 day left", or "0 days left" on the
-// day the next purge takes it; or that it is kept, since it was adopted or is a GitHub issue,
-// which only feedback adopted or recorded on its way to the trash is, or feedback that was in the
-// trash as an issue before issues kept feedback out of it (store/feedback.ts).
+// day the next purge takes it; or that it is kept, and why.
 function trashTime(feedback: Feedback, daysLeft: number): string {
-  if (feedback.adoptedAt !== null) return 'kept: adopted';
-  if (feedback.issue !== null) return 'kept: issue';
-  return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+  const kept = keptInTrash(feedback);
+  return kept === null ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left` : `kept: ${kept}`;
 }
 
 // Feedback in the trash as the operator reads it, one line each: the id, the day it went in, how
@@ -269,8 +280,36 @@ function trashLine(feedback: Feedback, daysLeft: number): string {
   // Cut by code points, so that an emoji isn't cut in two.
   const chars = Array.from(feedback.text.replace(/\n/g, ' / '));
   const text = chars.length > 60 ? `${chars.slice(0, 60).join('')}...` : chars.join('');
-  return `#${feedback.id}  ${(feedback.deletedAt as string).slice(0, 10)}  ${trashTime(feedback, daysLeft)}  ${feedback.kind}  ${text}`;
+  return `#${feedback.id}  ${day(feedback.deletedAt as string)}  ${trashTime(feedback, daysLeft)}  ${feedback.kind}  ${text}`;
 }
+
+// Characters that a terminal may take for a command rather than show: the control characters,
+// among them the C1 controls that clear the screen, move the cursor or set the title, which Node
+// reads a header's bytes of 0x80 to 0x9f as; and the format characters, such as the ones that turn
+// the direction of text around. What a player writes loses them on its way in
+// (shared/src/text.ts), but a bug's user agent is kept as the browser sent it. The backslash is
+// among them so that it can be written out too, and a user agent that holds the text `\u{9b}`
+// isn't taken for one that holds the character.
+const UNSEEN = /[\\\p{Cc}\p{Cf}]/gu;
+
+// Text for people on the terminal, with each such character written out as its code point, as
+// `\u{9b}`, so that it is seen and does nothing, and each backslash as `\\`.
+const seen = (text: string): string =>
+  text.replace(UNSEEN, (char) => (char === '\\' ? '\\\\' : `\\u{${(char.codePointAt(0) as number).toString(16)}}`));
+
+// The same in JSON text, but for the C0 controls, which JSON.stringify escapes inside every string
+// already: the ones left are the newlines between the lines.
+const UNSEEN_IN_JSON = /[\x7f-\x9f\p{Cf}]/gu;
+
+// JSON for scripts, with each such character escaped as JSON does, as `\u009b`, one escape for each
+// half of a surrogate pair: it parses to the same value, and is safe to print.
+const seenJson = (json: string): string =>
+  json.replace(UNSEEN_IN_JSON, (char) =>
+    char
+      .split('')
+      .map((half) => `\\u${half.charCodeAt(0).toString(16).padStart(4, '0')}`)
+      .join(''),
+  );
 
 // The way out of the trash, which a command that needs the feedback out of it points to.
 const inTrash = (print: Print, { id }: Feedback) =>
@@ -280,6 +319,114 @@ const inTrash = (print: Print, { id }: Feedback) =>
 const trashNote = (print: Print, { id, deletedAt }: Feedback) => {
   if (deletedAt !== null) print(`It is in the trash, by the way: feedback restore ${id} brings it back.`);
 };
+
+// What `feedback list` and the title of an issue call the kinds.
+const KINDS: Record<FeedbackKind, string> = { idea: 'Idea', game: 'New game', bug: 'Bug', words: 'Word lists' };
+
+// What `feedback list` shows, chosen with --status: all of it, in the trash too until it is
+// purged; the open feedback, which nobody has dealt with yet, that is, the new, which it shows
+// unless told otherwise; or the feedback of one of the other statuses (store/feedback.ts). None
+// overlaps another but all.
+const FEEDBACK_VIEWS = ['all', 'open', 'issue', 'resolved', 'closed', 'trash'] as const;
+type ListView = (typeof FEEDBACK_VIEWS)[number];
+
+// The feedback that a view reads.
+const storeView = (view: ListView): FeedbackView => (view === 'open' ? 'new' : view);
+
+// What `feedback list` calls the feedback of each view.
+const VIEW_NAMES: Record<ListView, string> = {
+  all: 'feedback',
+  open: 'open feedback',
+  issue: 'issued feedback, waiting to be adopted',
+  resolved: 'resolved feedback',
+  closed: 'closed feedback',
+  trash: 'feedback in the trash',
+};
+
+// The status of a piece of feedback in a few words, with what it stands for written out: for
+// feedback that waits as an issue, the issue's number and the pull request's, when one was recorded
+// without the adoption, such as "Issue #77 · PR #76", which tells the operator that the adoption is
+// still to come; for resolved feedback, that is, adopted, the pull request's number and the
+// issue's, such as "Resolved · PR #76 · issue #77".
+function statusLabel({ status, issue, resolvedPr }: Feedback): string {
+  const pr = resolvedPr === null ? [] : [`PR #${resolvedPr}`];
+  if (status === 'issue') return [...(issue === null ? [] : [`Issue #${issue}`]), ...pr].join(' · ');
+  if (status === 'resolved') return ['Resolved', ...pr, ...(issue === null ? [] : [`issue #${issue}`])].join(' · ');
+  return { new: 'New', closed: 'Closed', trash: 'Trash' }[status];
+}
+
+// Everything that became of the feedback, in the order it happens, or nothing for feedback that is
+// new, with how long it has left in the trash, if it is there.
+function trail(feedback: Feedback, daysLeft: number | null): string[] {
+  const { issue, resolvedPr, adoptedAt, closedAt, deletedAt } = feedback;
+  return [
+    ...(issue === null ? [] : [`published as issue #${issue}`]),
+    ...(resolvedPr === null ? [] : [`resolved by PR #${resolvedPr}`]),
+    ...(adoptedAt === null ? [] : [`adopted ${day(adoptedAt)}`]),
+    ...(closedAt === null ? [] : [`closed ${day(closedAt)}`]),
+    ...(deletedAt === null ? [] : [`in the trash since ${day(deletedAt)}, ${trashTime(feedback, daysLeft ?? 0)}`]),
+  ];
+}
+
+// Who a piece of feedback is from: the account that signed it, by its username as it is now, or
+// that the account is gone; a guest's name, and an account whose username the name is, which may
+// be someone passing for that account's owner; or no name, with the account it was sent from, if
+// any.
+function sender({ linkProfile, username, credit, nameTakenBy }: Feedback): string {
+  if (linkProfile) {
+    return username === null ? 'an account since deleted, which signed it' : `the account ${username}, which signed it`;
+  }
+  if (credit === null) return username === null ? 'anonymous' : `anonymous, sent from the account ${username}`;
+  return (
+    `${credit}, a guest's name` +
+    (nameTakenBy === null ? '' : `, also the username of the account ${nameTakenBy}, which didn't send it`)
+  );
+}
+
+// A piece of feedback as `feedback list` shows it to people: the id, the time, the kind, as this
+// build calls it, or as it is, from a later server that this one was rolled back from, and the
+// status on the first line; then, indented, what became of it, who it is from, the contact, the
+// browser of a bug, with what a terminal would obey written out (seen), and the text, each of its
+// lines quoted, so that none passes for another entry.
+function feedbackLines(feedback: Feedback, daysLeft: number | null): string[] {
+  const kind = (KINDS as Partial<Record<string, string>>)[feedback.kind] ?? feedback.kind;
+  const steps = trail(feedback, daysLeft);
+  return [
+    `#${feedback.id}  ${when(feedback.createdAt)}  ${kind}  ${statusLabel(feedback)}`,
+    ...(steps.length === 0 ? [] : [`    ${steps.join(' · ')}`]),
+    `    from: ${sender(feedback)}`,
+    `    contact: ${feedback.contact ?? '(none)'}`,
+    ...(feedback.userAgent === null ? [] : [`    browser: ${seen(feedback.userAgent)}`]),
+    ...feedback.text.split('\n').map((line) => `    > ${line}`.trimEnd()),
+  ];
+}
+
+// A piece of feedback as `feedback list --json` gives it to scripts, with the fields of the
+// feedback that the text shows. `daysLeft` is how long it has left in the trash, or null when it
+// isn't there or is kept there, as adopted feedback and an issue are.
+function feedbackJson(feedback: Feedback, daysLeft: number | null) {
+  const { id, createdAt, kind, status, issue, resolvedPr, adoptedAt, closedAt, deletedAt } = feedback;
+  const { linkProfile, username, credit, nameTakenBy, contact, text, userAgent } = feedback;
+  return {
+    id,
+    createdAt,
+    kind,
+    status,
+    issue,
+    resolvedPr,
+    adoptedAt,
+    closedAt,
+    deletedAt,
+    daysLeft: keptInTrash(feedback) === null ? daysLeft : null,
+    linkProfile,
+    username,
+    credit,
+    nameTakenBy,
+    contact,
+    text,
+    userAgent,
+  };
+}
 
 // One report as the operator reads it: the id, the date, who reported whom, in which room, and the
 // note. The player reported is named as they were in the room, with their account, if they had one.
@@ -298,7 +445,7 @@ function reportLine({
   let who = `${reportedName} (account ${reported}${reportedBarred ? ', barred' : ''})`;
   if (reported === null) who = isGuestName(reportedName) ? reportedName : `${reportedName} (deleted account)`;
   return (
-    `#${id}  ${createdAt.slice(0, 10)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
+    `#${id}  ${day(createdAt)}  ${reporter ?? '(deleted account)'} reported ${who} in ${formatCode(roomCode)}` +
     (text === null ? '' : `: ${text.replace(/\n/g, ' / ')}`)
   );
 }
@@ -347,7 +494,7 @@ const unlinked = (text: string): string => text.replace(LINKED, `$&${ZERO_WIDTH_
 // rule, emphasis, code, a link, an image, a tag or a web address.
 const literal = (text: string): string => escapeName(unlinked(text));
 
-// The title: the kind, as the status page calls it, and the first line of the text, on one line
+// The title: the kind, as `feedback list` calls it, and the first line of the text, on one line
 // with its spaces collapsed, cut after TITLE_LENGTH characters, or fewer when they are more than
 // TITLE_POINTS code points, with an ellipsis. The characters are the ones that a reader sees, as
 // textLength counts them (shared/src/text.ts), so that a Chinese character or an emoji is never
@@ -441,7 +588,7 @@ function githubLine({
   summaryEn,
 }: GithubContribution) {
   const author = login === null ? 'author forgotten' : `${login} (${githubId})${named ? '' : ', listed anonymously'}`;
-  return `${issue === null ? advisory : `#${issue}`}  ${adoptedAt.slice(0, 10)}  ${kind}  ${author}  ${summaryZh} · ${summaryEn}`;
+  return `${issue === null ? advisory : `#${issue}`}  ${day(adoptedAt)}  ${kind}  ${author}  ${summaryZh} · ${summaryEn}`;
 }
 
 // What the player contributed, from --zh and --en, which `feedback adopt` and `feedback describe`
@@ -659,6 +806,37 @@ const COMMANDS: Record<string, Command> = {
       return 0;
     },
   },
+  'feedback list': {
+    words: 0,
+    flags: ['status', 'json'],
+    readOnly: true,
+    run({ feedback }, _words, { status = 'open', json }, print) {
+      if (!(FEEDBACK_VIEWS as readonly string[]).includes(status)) {
+        print(`${status} is not a status to list: one of ${FEEDBACK_VIEWS.join(', ')}.`);
+        return 1;
+      }
+      const view = status as ListView;
+      // All of it, the newest first: the feedback is read whole, never a page of it.
+      const entries = feedback.latest(Number.MAX_SAFE_INTEGER, storeView(view));
+      const listed = entries.map((entry) => ({ entry, daysLeft: feedback.daysLeft(entry) }));
+      if (json) {
+        const rows = listed.map(({ entry, daysLeft }) => feedbackJson(entry, daysLeft));
+        print(seenJson(JSON.stringify(rows, null, 2)));
+        return 0;
+      }
+      const name = VIEW_NAMES[view];
+      if (entries.length === 0) {
+        print(`No ${name}.`);
+        return 0;
+      }
+      print(entries.length === 1 ? `1 piece of ${name}:` : `${entries.length} pieces of ${name}, the newest first:`);
+      for (const { entry, daysLeft } of listed) {
+        print('');
+        for (const line of feedbackLines(entry, daysLeft)) print(line);
+      }
+      return 0;
+    },
+  },
   'feedback adopt': {
     words: 1,
     flags: ['zh', 'en'],
@@ -669,7 +847,7 @@ const COMMANDS: Record<string, Command> = {
       if (!found) return 1;
       if (found.adoptedAt !== null) {
         print(
-          `Feedback #${found.id} was adopted already, on ${found.adoptedAt.slice(0, 10)}. To say again what the ` +
+          `Feedback #${found.id} was adopted already, on ${day(found.adoptedAt)}. To say again what the ` +
             `player contributed: feedback describe ${found.id} --zh <sentence> --en <sentence>.`,
         );
         return 1;
@@ -680,8 +858,8 @@ const COMMANDS: Record<string, Command> = {
         inTrash(print, found);
         return 1;
       }
-      // Closed feedback was set aside as not adopted; the status page files it as closed and
-      // offers no adoption, so it is reopened first.
+      // Closed feedback was set aside as not adopted, and `feedback list` files it as closed, so it
+      // is reopened first.
       if (found.closedAt !== null) {
         print(`Feedback #${found.id} is closed. Reopen it first: feedback reopen ${found.id}.`);
         return 1;
@@ -717,7 +895,7 @@ const COMMANDS: Record<string, Command> = {
       );
       printSummary(print, summary.zh, summary.en);
       // A guest's name may be anyone's, but one that is an account's username may be someone
-      // passing for its owner, which the status page points out too.
+      // passing for its owner, which `feedback list` points out too.
       if (found.nameTakenBy !== null) {
         print(
           `${found.credit} is also the username of the account ${found.nameTakenBy}, which didn't send the ` +
@@ -972,7 +1150,7 @@ const COMMANDS: Record<string, Command> = {
     flags: [],
     readOnly: true,
     run({ feedback }, _words, _flags, print) {
-      const entries = feedback.latest(TRASH_SHOWN, undefined, 'trash');
+      const entries = feedback.latest(TRASH_SHOWN, 'trash');
       const total = feedback.statuses().trash;
       if (total === 0) {
         print('The trash is empty.');

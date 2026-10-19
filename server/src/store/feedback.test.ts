@@ -165,13 +165,11 @@ describe('the feedback', () => {
     expect(feedback.latest(10).map(({ id }) => id)).toEqual([4, 2, 1]);
   });
 
-  test('is read a page at a time, back from an id', () => {
+  test('is read the latest first, up to a limit', () => {
     const feedback = store();
     for (let i = 1; i <= 5; i += 1) feedback.add(entry({ text: `Number ${i}` }));
     expect(feedback.latest(2).map(({ id }) => id)).toEqual([5, 4]);
-    expect(feedback.latest(2, 4).map(({ id }) => id)).toEqual([3, 2]);
-    expect(feedback.latest(2, 2).map(({ id }) => id)).toEqual([1]);
-    expect(feedback.latest(2, 1)).toEqual([]);
+    expect(feedback.latest(10).map(({ id }) => id)).toEqual([5, 4, 3, 2, 1]);
   });
 
   test('of a language or a page that does not exist is refused by the database too', () => {
@@ -404,7 +402,7 @@ describe('what became of the feedback', () => {
     adopt(7);
     feedback.resolve(8, 52);
     feedback.close(8);
-    const ids = (view: FeedbackView) => feedback.latest(10, undefined, view).map(({ id }) => id);
+    const ids = (view: FeedbackView) => feedback.latest(10, view).map(({ id }) => id);
     // All of it, in the trash too, newest first.
     expect(ids('all')).toEqual([8, 7, 6, 5, 4, 3, 2, 1]);
     expect(ids('new')).toEqual([1]);
@@ -415,7 +413,7 @@ describe('what became of the feedback', () => {
     expect(ids('resolved')).toEqual([7, 4]);
     expect(ids('closed')).toEqual([8, 5]);
     expect(ids('trash')).toEqual([6]);
-    expect(feedback.latest(1, 7, 'resolved').map(({ id }) => id)).toEqual([4]);
+    expect(feedback.latest(1, 'resolved').map(({ id }) => id)).toEqual([7]);
     expect(feedback.statuses()).toEqual({ new: 1, issue: 2, resolved: 2, closed: 2, trash: 1 });
   });
 });
@@ -601,7 +599,7 @@ describe('a report', () => {
         text: 'Rude',
       },
     ]);
-    expect(feedback.reports(10, 2).map(({ id }) => id)).toEqual([1]);
+    expect(feedback.reports(1).map(({ id }) => id)).toEqual([2]);
     accounts.delete(bob.id);
     expect(feedback.reports(10)).toMatchObject([
       { id: 2, reporter: null },

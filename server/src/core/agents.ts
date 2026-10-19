@@ -55,7 +55,7 @@ export const FRESH_MS = 30_000;
 const MAX_MOVES = 30;
 // The persona that plays for someone offline.
 export const STANDIN: AgentPersona = 'reviewer1';
-// How far back the status page counts the AI's steps.
+// How far back /status.json counts the AI's steps.
 const STATS_MS = 60 * 60_000;
 // What the agent answers when it, or the model behind it, is gone rather than short of an answer:
 // then the AI players are offline until a ping finds it back.
@@ -177,7 +177,7 @@ export class AgentDriver {
     this.#unwake(room);
   }
 
-  // For the status page: whether the agent answers, and how many steps the AI took in the last hour,
+  // For /status.json: whether the agent answers, and how many steps the AI took in the last hour,
   // and how many of them failed.
   stats(): { up: boolean; steps: number; failures: number } {
     this.#forgetOld();

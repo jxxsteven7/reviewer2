@@ -10,14 +10,14 @@ import {
 import type { DatabaseSync, SQLOutputValue, StatementSync } from 'node:sqlite';
 import { databaseBytes, MAX_DATABASE_BYTES } from './database';
 
-// Feedback from players, kept for the author to read on the status page (docs/architecture.md).
-// What is kept is what the player wrote and what came along by itself, and nothing that says who
-// they are: no address, nickname, token or room code. The contact, which the player may leave so
-// that the author can reply, is cleared after 90 days. The feedback itself is the project's
-// archive of suggestions: nothing here changes what the player sent, and the one way a row goes
-// is the purge of what the operator put in the trash 30 days before (archive.test.ts). Beside the
-// text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it was
-// published as, the pull request that resolved it, when it was adopted and what the player
+// Feedback from players, kept for the author to read with `admin.cjs feedback list`
+// (docs/architecture.md). What is kept is what the player wrote and what came along by itself, and
+// nothing that says who they are: no address, nickname, token or room code. The contact, which the
+// player may leave so that the author can reply, is cleared after 90 days. The feedback itself is
+// the project's archive of suggestions: nothing here changes what the player sent, and the one way
+// a row goes is the purge of what the operator put in the trash 30 days before (archive.test.ts).
+// Beside the text, the operator keeps notes of what became of it (admin.ts): the GitHub issue it
+// was published as, the pull request that resolved it, when it was adopted and what the player
 // contributed, whether it was closed, and whether it is in the trash. Feedback that was adopted is
 // a feedback contribution, which the home page lists (contributions.ts) by the account that signed
 // it as the account is now, by the name a guest left with it, or as anonymous, and which counts for
@@ -64,8 +64,8 @@ export const feedbackLimits = (maxEntries: number): FeedbackLimits => ({
 // in the trash; closed without being adopted; resolved, by being adopted, which lists it among the
 // feedback contributions, whether a pull request was recorded or not; published as a GitHub issue,
 // or recorded as resolved by a pull request without being adopted, which still waits for the
-// adoption; or new. The page shows the status, and the whole trail beside it. As views, each is
-// the feedback of that status, and none overlaps another.
+// adoption; or new. `admin.cjs feedback list` shows the status, and the whole trail beside it. As
+// views, each is the feedback of that status, and none overlaps another.
 export const FEEDBACK_STATUSES = ['new', 'issue', 'resolved', 'closed', 'trash'] as const;
 export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
@@ -211,7 +211,7 @@ export class FeedbackStore {
         'coalesce(length(CAST(credit AS BLOB)), 0) + coalesce(length(CAST(user_agent AS BLOB)), 0) + ' +
         'length(version)), 0) AS bytes FROM feedback',
     );
-    this.#latest = db.prepare(`SELECT * FROM ${ROWS} WHERE id < ? AND ${VIEW} ORDER BY id DESC LIMIT ?`);
+    this.#latest = db.prepare(`SELECT * FROM ${ROWS} WHERE ${VIEW} ORDER BY id DESC LIMIT ?`);
     this.#statuses = db.prepare(
       "SELECT coalesce(sum(status = 'new'), 0) AS new, coalesce(sum(status = 'issue'), 0) AS issue, " +
         "coalesce(sum(status = 'resolved'), 0) AS resolved, " +
@@ -262,7 +262,7 @@ export class FeedbackStore {
       'SELECT r.id, r.created_at AS createdAt, r.reported_id AS reportedId, r.reported_name AS reportedName, ' +
         'r.room_code AS roomCode, r.text, a.username AS reporter, b.username AS reported, ' +
         'coalesce(b.public_barred, 0) AS reportedBarred FROM reports r LEFT JOIN accounts a ON a.id = r.reporter_id ' +
-        'LEFT JOIN accounts b ON b.id = r.reported_id WHERE r.id < ? ORDER BY r.id DESC LIMIT ?',
+        'LEFT JOIN accounts b ON b.id = r.reported_id ORDER BY r.id DESC LIMIT ?',
     );
     this.#reportCount = db.prepare('SELECT count(*) AS count FROM reports');
   }
@@ -301,10 +301,9 @@ export class FeedbackStore {
     return (this.#count.get() as { count: number }).count;
   }
 
-  // The latest feedback first, up to `limit` of it, from before the id `before` when it is given,
-  // and of one view when `view` is.
-  latest(limit: number, before = Number.MAX_SAFE_INTEGER, view: FeedbackView = 'all'): Feedback[] {
-    return this.#latest.all(before, ...viewParams(view), limit).map((row) => this.#fromRow(row));
+  // The latest feedback first, up to `limit` of it, and of one view when `view` is given.
+  latest(limit: number, view: FeedbackView = 'all'): Feedback[] {
+    return this.#latest.all(...viewParams(view), limit).map((row) => this.#fromRow(row));
   }
 
   // How much feedback there is of each status (FEEDBACK_STATUSES), with 0 for one that has none.
@@ -414,8 +413,8 @@ export class FeedbackStore {
   }
 
   // The latest reports first, as latest() gives feedback.
-  reports(limit: number, before = Number.MAX_SAFE_INTEGER): Report[] {
-    const rows = this.#reports.all(before, limit) as unknown as (Omit<Report, 'reportedBarred'> & {
+  reports(limit: number): Report[] {
+    const rows = this.#reports.all(limit) as unknown as (Omit<Report, 'reportedBarred'> & {
       reportedBarred: number;
     })[];
     return rows.map((row) => ({ ...row, reportedBarred: row.reportedBarred === 1 }));

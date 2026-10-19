@@ -339,6 +339,265 @@ const EN = 'Suggested a timer';
 const SAID = ['--zh', ZH, '--en', EN];
 const adopt = (id: string, ...said: string[]) => run('feedback', 'adopt', id, ...(said.length > 0 ? said : SAID));
 
+describe('feedback list', () => {
+  const NOW = Date.UTC(2026, 10, 1, 9);
+  const AGENT = 'Mozilla/5.0 (X11; Linux x86_64) Chrome/141.0.0.0';
+
+  // Feedback of every status, from every kind of sender: anonymous, with a contact; signed with
+  // Ann's account, a bug, published; a guest's name that is Bob's username, resolved by a pull
+  // request alone; anonymous from Ann's account, adopted; a guest's name, closed; in the trash; and
+  // signed with an account since deleted, adopted with a pull request.
+  function sent(): FeedbackStore {
+    vi.useFakeTimers({ now: NOW });
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
+    const bob = accounts.store.create('Bob', 'bob', 'hash', RECORDS_NOTICE_VERSION);
+    const dan = accounts.store.create('Dan', 'dan', 'hash', RECORDS_NOTICE_VERSION);
+    if (!ann || !bob || !dan) throw new Error('no account');
+    const store = new FeedbackStore(database.db);
+    store.add(feedback({ contact: 'ann@example.com' }));
+    store.add(
+      feedback({
+        kind: 'bug',
+        text: 'It froze.\n\nOn the board.',
+        contact: 'wechat: ann',
+        accountId: ann.id,
+        linkProfile: true,
+        userAgent: AGENT,
+      }),
+    );
+    store.add(feedback({ credit: 'Bob' }));
+    store.add(feedback({ kind: 'words', accountId: ann.id }));
+    store.add(feedback({ kind: 'game', credit: 'Cat' }));
+    store.add(feedback());
+    store.add(feedback({ accountId: dan.id, linkProfile: true }));
+    store.setIssue(2, 42);
+    store.resolve(3, 50);
+    store.setIssue(4, 43);
+    store.adopt(4, { zh: ZH, en: EN });
+    store.close(5);
+    store.delete(6);
+    store.setIssue(7, 44);
+    store.resolve(7, 51);
+    store.adopt(7, { zh: ZH, en: EN });
+    accounts.store.delete(dan.id);
+    return store;
+  }
+
+  const listed = (...args: string[]) => {
+    printed = [];
+    const code = run('feedback', 'list', ...args);
+    return { code, lines: printed };
+  };
+  const ids = (status: string) =>
+    (JSON.parse(listed('--status', status, '--json').lines.join('\n')) as { id: number }[]).map(({ id }) => id);
+
+  test('shows the open feedback unless told otherwise, the newest first', () => {
+    sent();
+    expect(listed()).toEqual({
+      code: 0,
+      lines: [
+        '1 piece of open feedback:',
+        '',
+        '#1  2026-11-01 09:00 UTC  Idea  New',
+        '    from: anonymous',
+        '    contact: ann@example.com',
+        '    > A timer, please.',
+      ],
+    });
+  });
+
+  test('shows each piece with its status and trail, who sent it, the contact, the browser and the text', () => {
+    sent();
+    expect(listed('--status', 'all')).toEqual({
+      code: 0,
+      lines: [
+        '7 pieces of feedback, the newest first:',
+        '',
+        '#7  2026-11-01 09:00 UTC  Idea  Resolved · PR #51 · issue #44',
+        '    published as issue #44 · resolved by PR #51 · adopted 2026-11-01',
+        '    from: an account since deleted, which signed it',
+        '    contact: (none)',
+        '    > A timer, please.',
+        '',
+        '#6  2026-11-01 09:00 UTC  Idea  Trash',
+        '    in the trash since 2026-11-01, 30 days left',
+        '    from: anonymous',
+        '    contact: (none)',
+        '    > A timer, please.',
+        '',
+        '#5  2026-11-01 09:00 UTC  New game  Closed',
+        '    closed 2026-11-01',
+        "    from: Cat, a guest's name",
+        '    contact: (none)',
+        '    > A timer, please.',
+        '',
+        '#4  2026-11-01 09:00 UTC  Word lists  Resolved · issue #43',
+        '    published as issue #43 · adopted 2026-11-01',
+        '    from: anonymous, sent from the account Ann',
+        '    contact: (none)',
+        '    > A timer, please.',
+        '',
+        '#3  2026-11-01 09:00 UTC  Idea  PR #50',
+        '    resolved by PR #50',
+        "    from: Bob, a guest's name, also the username of the account Bob, which didn't send it",
+        '    contact: (none)',
+        '    > A timer, please.',
+        '',
+        '#2  2026-11-01 09:00 UTC  Bug  Issue #42',
+        '    published as issue #42',
+        '    from: the account Ann, which signed it',
+        '    contact: wechat: ann',
+        `    browser: ${AGENT}`,
+        '    > It froze.',
+        '    >',
+        '    > On the board.',
+        '',
+        '#1  2026-11-01 09:00 UTC  Idea  New',
+        '    from: anonymous',
+        '    contact: ann@example.com',
+        '    > A timer, please.',
+      ],
+    });
+  });
+
+  test('shows each view as the store files the feedback, none overlapping another but all', () => {
+    sent();
+    expect(ids('all')).toEqual([7, 6, 5, 4, 3, 2, 1]);
+    expect(ids('open')).toEqual([1]);
+    expect(ids('issue')).toEqual([3, 2]);
+    expect(ids('resolved')).toEqual([7, 4]);
+    expect(ids('closed')).toEqual([5]);
+    expect(ids('trash')).toEqual([6]);
+    expect(listed('--status', 'issue').lines[0]).toBe(
+      '2 pieces of issued feedback, waiting to be adopted, the newest first:',
+    );
+    expect(listed('--status', 'resolved').lines[0]).toBe('2 pieces of resolved feedback, the newest first:');
+    expect(listed('--status', 'closed').lines[0]).toBe('1 piece of closed feedback:');
+    expect(listed('--status', 'trash').lines[0]).toBe('1 piece of feedback in the trash:');
+  });
+
+  test('gives scripts the same as JSON', () => {
+    sent();
+    const entries = JSON.parse(listed('--status', 'all', '--json').lines.join('\n'));
+    expect(entries).toHaveLength(7);
+    const same = { createdAt: '2026-11-01T09:00:00.000Z', text: 'A timer, please.', userAgent: null };
+    expect(entries.find(({ id }: { id: number }) => id === 2)).toEqual({
+      id: 2,
+      createdAt: '2026-11-01T09:00:00.000Z',
+      kind: 'bug',
+      status: 'issue',
+      issue: 42,
+      resolvedPr: null,
+      adoptedAt: null,
+      closedAt: null,
+      deletedAt: null,
+      daysLeft: null,
+      linkProfile: true,
+      username: 'Ann',
+      credit: null,
+      nameTakenBy: null,
+      contact: 'wechat: ann',
+      text: 'It froze.\n\nOn the board.',
+      userAgent: AGENT,
+    });
+    expect(entries.find(({ id }: { id: number }) => id === 6)).toEqual({
+      id: 6,
+      kind: 'idea',
+      status: 'trash',
+      issue: null,
+      resolvedPr: null,
+      adoptedAt: null,
+      closedAt: null,
+      deletedAt: '2026-11-01T09:00:00.000Z',
+      daysLeft: 30,
+      linkProfile: false,
+      username: null,
+      credit: null,
+      nameTakenBy: null,
+      contact: null,
+      ...same,
+    });
+    expect(entries.find(({ id }: { id: number }) => id === 3)).toMatchObject({
+      status: 'issue',
+      resolvedPr: 50,
+      credit: 'Bob',
+      nameTakenBy: 'Bob',
+      username: null,
+    });
+    expect(entries.find(({ id }: { id: number }) => id === 7)).toMatchObject({
+      status: 'resolved',
+      adoptedAt: '2026-11-01T09:00:00.000Z',
+      linkProfile: true,
+      username: null,
+    });
+  });
+
+  test('shows feedback kept in the trash as kept, with no days left', () => {
+    const store = sent();
+    // As `feedback adopt` would have, had it read the feedback just before it went to the trash.
+    database.db.exec(`UPDATE feedback SET deleted_at = '${new Date(NOW).toISOString()}' WHERE id = 4`);
+    expect(store.byId(4)?.status).toBe('trash');
+    expect(listed('--status', 'trash').lines.slice(0, 4)).toEqual([
+      '2 pieces of feedback in the trash, the newest first:',
+      '',
+      '#6  2026-11-01 09:00 UTC  Idea  Trash',
+      '    in the trash since 2026-11-01, 30 days left',
+    ]);
+    expect(listed('--status', 'trash').lines).toContain(
+      '    published as issue #43 · adopted 2026-11-01 · in the trash since 2026-11-01, kept: adopted',
+    );
+    expect(JSON.parse(listed('--status', 'trash', '--json').lines.join('\n'))[1]).toMatchObject({
+      id: 4,
+      daysLeft: null,
+    });
+  });
+
+  test('writes out what a terminal would obey in the browser of a bug, which came as it was sent', () => {
+    vi.useFakeTimers({ now: NOW });
+    // Node reads a header's bytes of 0x80 to 0x9f as the C1 controls they are, which a terminal
+    // obeys as it does an escape: here one clears the screen and one sets the title. Then a
+    // direction override, and a language tag, which is beyond the first plane. Last, the text
+    // `\u{9b}` itself, a backslash and all, which must not pass for the character.
+    const agent = 'Mozilla/5.0\u009b2J\u009d0;a title\u009c\u202esdrawkcab\u{e0001} \\u{9b}';
+    new FeedbackStore(database.db).add(feedback({ kind: 'bug', userAgent: agent }));
+    const text = listed();
+    expect(text.lines).toContain(
+      '    browser: Mozilla/5.0\\u{9b}2J\\u{9d}0;a title\\u{9c}\\u{202e}sdrawkcab\\u{e0001} \\\\u{9b}',
+    );
+    const json = listed('--json').lines.join('\n');
+    expect(json).toContain(
+      '"userAgent": "Mozilla/5.0\\u009b2J\\u009d0;a title\\u009c\\u202esdrawkcab\\udb40\\udc01 \\\\u{9b}"',
+    );
+    expect(JSON.parse(json)[0].userAgent).toBe(agent);
+    for (const line of [...text.lines, ...json.split('\n')]) expect(line).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+  });
+
+  test('says when there is none, and refuses a status that it has no view of', () => {
+    expect(listed()).toEqual({ code: 0, lines: ['No open feedback.'] });
+    expect(listed('--status', 'all')).toEqual({ code: 0, lines: ['No feedback.'] });
+    expect(listed('--status', 'trash')).toEqual({ code: 0, lines: ['No feedback in the trash.'] });
+    expect(listed('--json')).toEqual({ code: 0, lines: ['[]'] });
+    // The store calls the open feedback new, but the view is open.
+    for (const status of ['new', 'Open', 'thanked', '']) {
+      expect(listed('--status', status), status).toEqual({
+        code: 1,
+        lines: [`${status} is not a status to list: one of all, open, issue, resolved, closed, trash.`],
+      });
+    }
+    for (const args of [['--status'], ['1'], ['--ban']]) {
+      expect(listed(...args).code, args.join(' ')).toBe(2);
+      expect(printed.at(-1)).toMatch(/^usage: /);
+    }
+  });
+
+  test('only reads, on a database that no server has open, and leaves no WAL behind', () => {
+    new FeedbackStore(database.db).add(feedback());
+    database.db.close();
+    expect(listed().code).toBe(0);
+    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
+  });
+});
+
 describe('feedback adopt', () => {
   test('lists the feedback among the contributions at once, by its name, counted for its account', () => {
     const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
@@ -675,7 +934,7 @@ describe('feedback draft', () => {
     );
   });
 
-  test('opens by the kind, as the status page calls it, and names who sent it, or an anonymous player', () => {
+  test('opens by the kind, as `feedback list` calls it, and names who sent it, or an anonymous player', () => {
     const store = new FeedbackStore(database.db);
     for (const kind of ['idea', 'game', 'bug', 'words'] as const) store.add(feedback({ kind, credit: 'Ann' }));
     for (const kind of ['idea', 'bug'] as const) store.add(feedback({ kind }));

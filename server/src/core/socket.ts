@@ -126,19 +126,23 @@ interface Connection {
   // for a guest. It is settled in the handshake, and the key comes from it then.
   account: { id: number; session: string } | null;
   ip: string;
-  // For the status page only.
+  // For the status port only (stats.ts, live.ts).
   country: string;
   room: Room | null;
   screen: boolean;
   bucket: TokenBucket;
 }
 
-// What the status page is told about one connection (stats.ts): how it is carried, the country it
-// comes from, and in how many milliseconds its last heartbeat came back, if one has.
+// What the status port is told about one connection: how it is carried, the country it comes from,
+// and in how many milliseconds its last heartbeat came back, if one has, which /status.json counts
+// by country (stats.ts); and the account it is logged in to, if any, and the code of the room it is
+// in, as a member or a screen, if any, which /live.json gives as they are (live.ts).
 export interface ConnectionInfo {
   transport: string;
   country: string;
   latency: number | null;
+  account: number | null;
+  room: string | null;
 }
 
 // What a message is answered with (docs/architecture.md).
@@ -155,8 +159,8 @@ export interface RoomSockets {
   sweep(): void;
   closeAll(reason: ClosedReason): void;
   connections(): ConnectionInfo[];
-  // For the status page: whether the agent answers, and the AI's steps of the last hour, or null on
-  // a server without an agent.
+  // For /status.json: whether the agent answers, and the AI's steps of the last hour, or null on a
+  // server without an agent.
   agents(): { up: boolean; steps: number; failures: number } | null;
 }
 
@@ -1027,14 +1031,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok({ seats });
     });
 
-    // Feedback for the author, which the status page shows. What is kept is what the player wrote
-    // and what the page sent along, and, with a bug, the browser's user agent; nothing that says
-    // who they are but the account they are logged in to, if any, so that the feedback counts for
-    // it once it is adopted, and whether they signed with it, or a guest's name for the feedback
-    // contributions. A player who is logged in signs with the account (`linkProfile`), which keeps
-    // no name, since its username is looked up whenever the feedback is shown, or stays anonymous;
-    // a name that comes along, as older pages sent it, signs with the account too, and goes. A
-    // guest may leave a name of their own. Feedback to be signed with an account that the
+    // Feedback for the author, which `admin.cjs feedback list` shows. What is kept is what the
+    // player wrote and what the page sent along, and, with a bug, the browser's user agent; nothing
+    // that says who they are but the account they are logged in to, if any, so that the feedback
+    // counts for it once it is adopted, and whether they signed with it, or a guest's name for the
+    // feedback contributions. A player who is logged in signs with the account (`linkProfile`),
+    // which keeps no name, since its username is looked up whenever the feedback is shown, or stays
+    // anonymous; a name that comes along, as older pages sent it, signs with the account too, and
+    // goes. A guest may leave a name of their own. Feedback to be signed with an account that the
     // connection no longer has, as when the login ended after the page was loaded, is refused with
     // no name to fall back on, rather than kept as anonymous. The log gets its number and kind, and
     // never its text, contact or name. Only what was kept counts against the address, so that a
@@ -1683,11 +1687,16 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       driver?.close();
     },
     connections() {
-      return [...io.sockets.sockets.values()].map((socket) => ({
-        transport: socket.conn.transport.name,
-        country: connection(socket).country,
-        latency: latencies.get(socket.conn) ?? null,
-      }));
+      return [...io.sockets.sockets.values()].map((socket) => {
+        const { country, account, room } = connection(socket);
+        return {
+          transport: socket.conn.transport.name,
+          country,
+          latency: latencies.get(socket.conn) ?? null,
+          account: account?.id ?? null,
+          room: room && isOpen(room) ? room.code : null,
+        };
+      });
     },
     agents() {
       return driver ? driver.stats() : null;

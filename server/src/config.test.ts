@@ -76,7 +76,7 @@ describe('ROOMS_PER_MINUTE', () => {
 });
 
 describe('STATUS_PORT', () => {
-  test('leaves the status page off when it is unset, empty or blank', () => {
+  test('leaves the status port off when it is unset, empty or blank', () => {
     for (const STATUS_PORT of [undefined, '', ' ']) {
       expect(loadConfig({ STATUS_PORT }).statusPort, JSON.stringify(STATUS_PORT)).toBeNull();
     }
@@ -242,23 +242,10 @@ describe('CONTENT_DIR', () => {
   });
 });
 
-describe('ADMIN_COMMAND', () => {
-  test('is the default unless it is set, and is trimmed', () => {
-    for (const ADMIN_COMMAND of [undefined, '', ' ']) {
-      expect(loadConfig({ ADMIN_COMMAND }).adminCommand, JSON.stringify(ADMIN_COMMAND)).toBe(
-        'node server/dist/admin.cjs',
-      );
-    }
-    expect(loadConfig({ ADMIN_COMMAND: 'npm run admin --' }).adminCommand).toBe('npm run admin --');
-    expect(loadConfig({ ADMIN_COMMAND: '  npm run admin --\n' }).adminCommand).toBe('npm run admin --');
-  });
-});
-
-describe('FEEDBACK_COMMAND', () => {
-  test('is none unless it is set, and is trimmed', () => {
-    for (const FEEDBACK_COMMAND of [undefined, '', ' ']) {
-      expect(loadConfig({ FEEDBACK_COMMAND }).feedbackCommand, JSON.stringify(FEEDBACK_COMMAND)).toBeNull();
-    }
-    expect(loadConfig({ FEEDBACK_COMMAND: ' triage-feedback\n' }).feedbackCommand).toBe('triage-feedback');
+describe('settings that are gone', () => {
+  test('are ignored, as ADMIN_COMMAND and FEEDBACK_COMMAND are since the status port lost its pages', () => {
+    expect(loadConfig({ ADMIN_COMMAND: 'npm run admin --', FEEDBACK_COMMAND: 'triage-feedback' })).toEqual(
+      loadConfig({}),
+    );
   });
 });

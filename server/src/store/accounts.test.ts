@@ -124,8 +124,6 @@ describe('an account', () => {
 describe('the statistics of the accounts', () => {
   test('count the accounts created lately, by day, and the ones active lately', () => {
     addAccounts(db, START);
-    expect(accounts.counts(7)).toEqual({ total: 3, recent: 1 });
-    expect(accounts.counts(30)).toEqual({ total: 3, recent: 2 });
     const days = accounts.createdByDay(30);
     expect(days).toHaveLength(30);
     expect(days[0]).toEqual({ day: '2026-09-10', count: 0 });
@@ -148,7 +146,9 @@ describe('the statistics of the accounts', () => {
   });
 
   test('count 0 when there are no accounts', () => {
-    expect(accounts.counts(7)).toEqual({ total: 0, recent: 0 });
+    expect(accounts.count()).toBe(0);
+    expect(accounts.activeWithin(7)).toBe(0);
+    expect(accounts.createdByDay(7).map(({ count }) => count)).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
 
   test('refuse a window of activity longer than logins are kept', () => {

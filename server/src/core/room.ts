@@ -118,8 +118,9 @@ export const MAX_GUESTS = 500;
 // the limit of the log itself, on which the room closes (socket.ts).
 export const MAX_LOGGED_PER_MEMBER = 200;
 
-// How the server calls a guest, by their number, where it says something of them itself, as the
-// status page does of a report: the client has words of its own for it, in either language.
+// How the server calls a guest, by their number, where it says something of them itself, as
+// `admin.cjs reports list` does of a report: the client has words of its own for it, in either
+// language.
 export const guestLabel = (guest: number): string => `Guest ${guest}`;
 
 // One removal: until when the member must wait, whether they stay out for good, as from a room

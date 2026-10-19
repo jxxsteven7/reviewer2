@@ -1,17 +1,18 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Rooms } from './core/rooms';
-import {
-  collectStats,
-  History,
-  HISTORY_MS,
-  STATS_LOG_ALWAYS_MS,
-  STATS_LOG_MS,
-  statsLog,
-  watchStats,
-  type Stats,
-} from './stats';
+import type { ConnectionInfo } from './core/socket';
+import { collectStats, STATS_LOG_ALWAYS_MS, STATS_LOG_MS, statsLog, watchStats, type Stats } from './stats';
 
 const noRooms = { all: () => [] } as unknown as Rooms;
+
+// A connection that is in no room and logged in to no account: those count for nothing here.
+const connection = (transport: string, country: string, latency: number | null): ConnectionInfo => ({
+  transport,
+  country,
+  latency,
+  account: null,
+  room: null,
+});
 
 function stats(changes: Partial<Stats> = {}): Stats {
   return {
@@ -33,13 +34,13 @@ function stats(changes: Partial<Stats> = {}): Stats {
 describe('collectStats', () => {
   test('counts connections by transport and by country, with the median latency of each country', () => {
     const result = collectStats('v1', noRooms, [
-      { transport: 'websocket', country: 'CN', latency: 300 },
-      { transport: 'websocket', country: 'SG', latency: 40 },
-      { transport: 'polling', country: 'CN', latency: 100 },
-      { transport: 'websocket', country: 'CN', latency: null },
-      { transport: 'websocket', country: 'CN', latency: 120 },
-      { transport: 'polling', country: 'XX', latency: null },
-      { transport: 'websocket', country: 'SG', latency: 61 },
+      connection('websocket', 'CN', 300),
+      connection('websocket', 'SG', 40),
+      connection('polling', 'CN', 100),
+      connection('websocket', 'CN', null),
+      connection('websocket', 'CN', 120),
+      connection('polling', 'XX', null),
+      connection('websocket', 'SG', 61),
     ]);
     expect(result.version).toBe('v1');
     expect(result.connections).toEqual({ websocket: 5, polling: 2 });
@@ -53,8 +54,8 @@ describe('collectStats', () => {
 
   test('puts countries with as many connections in alphabetical order', () => {
     const result = collectStats('v1', noRooms, [
-      { transport: 'websocket', country: 'SG', latency: null },
-      { transport: 'websocket', country: 'MY', latency: null },
+      connection('websocket', 'SG', null),
+      connection('websocket', 'MY', null),
     ]);
     expect(result.countries.map(({ country }) => country)).toEqual(['MY', 'SG']);
   });
@@ -123,48 +124,21 @@ describe('the stats line', () => {
   });
 });
 
-describe('History', () => {
-  test('keeps the players online and the rooms of each sample, as far back as its span', () => {
-    let at = 0;
-    const history = new History({ span: 2, now: () => at });
-    for (at = 1; at <= 5; at += 1) history.add(stats({ players: { online: at, offline: 0 } }));
-    expect(history.samples()).toEqual([
-      { at: 3, players: 3, rooms: 3 },
-      { at: 4, players: 4, rooms: 3 },
-      { at: 5, players: 5, rooms: 3 },
-    ]);
-    expect(history.now()).toBe(6);
-  });
-
-  test('goes back 24 hours, on a clock that only runs forward', () => {
-    const history = new History();
-    expect(history.span).toBe(HISTORY_MS);
-    expect(HISTORY_MS).toBe(24 * 60 * 60_000);
-    const before = performance.now();
-    const now = history.now();
-    expect(now).toBeGreaterThanOrEqual(before);
-    expect(now).toBeLessThanOrEqual(performance.now());
-  });
-});
-
 describe('watchStats', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  test('writes a line every 5 minutes when something changed, and samples every 30 seconds', () => {
+  test('writes a line every 5 minutes when something changed', () => {
     vi.useFakeTimers();
     const log = vi.fn();
-    const history = new History();
     let current = stats();
-    const stop = watchStats(() => current, log, history);
+    const stop = watchStats(() => current, log);
 
     vi.advanceTimersByTime(STATS_LOG_MS - 1);
     expect(log).not.toHaveBeenCalled();
-    expect(history.samples()).toHaveLength(9);
     vi.advanceTimersByTime(1);
     expect(log).toHaveBeenCalledTimes(1);
-    expect(history.samples()).toHaveLength(10);
 
     vi.advanceTimersByTime(STATS_LOG_MS);
     expect(log).toHaveBeenCalledTimes(1);
@@ -176,25 +150,13 @@ describe('watchStats', () => {
     current = stats();
     vi.advanceTimersByTime(STATS_LOG_MS);
     expect(log).toHaveBeenCalledTimes(2);
-    expect(history.samples()).toHaveLength(30);
   });
 
-  test('takes other times when it is given them', () => {
-    vi.useFakeTimers();
-    const log = vi.fn();
-    const history = new History();
-    const stop = watchStats(() => stats(), log, history, { logMs: 1_000, sampleMs: 100 });
-    vi.advanceTimersByTime(1_000);
-    stop();
-    expect(log).toHaveBeenCalledTimes(1);
-    expect(history.samples()).toHaveLength(10);
-  });
-
-  test('takes no samples without a history to keep them', () => {
+  test('takes another time when it is given one', () => {
     vi.useFakeTimers();
     const log = vi.fn();
     const collect = vi.fn(() => stats());
-    const stop = watchStats(collect, log, null, { logMs: 1_000, sampleMs: 100 });
+    const stop = watchStats(collect, log, { logMs: 1_000 });
     vi.advanceTimersByTime(1_000);
     stop();
     expect(collect).toHaveBeenCalledTimes(1);
@@ -204,18 +166,15 @@ describe('watchStats', () => {
   test('logs what counting throws and goes on, rather than end the process', () => {
     vi.useFakeTimers();
     const log = vi.fn();
-    const history = new History();
     let broken = true;
     const collect = () => {
       if (broken) throw new Error('EMFILE: too many open files, uv_resident_set_memory');
       return stats();
     };
-    const stop = watchStats(collect, log, history, { logMs: 100, sampleMs: 50 });
+    const stop = watchStats(collect, log, { logMs: 100 });
     vi.advanceTimersByTime(100);
     const message = 'EMFILE: too many open files, uv_resident_set_memory';
-    expect(log).toHaveBeenCalledWith('error', { where: 'sample', message });
-    expect(log).toHaveBeenCalledWith('error', { where: 'stats', message });
-    expect(history.samples()).toHaveLength(0);
+    expect(log).toHaveBeenCalledExactlyOnceWith('error', { where: 'stats', message });
     broken = false;
     log.mockClear();
     vi.advanceTimersByTime(100);
@@ -224,6 +183,5 @@ describe('watchStats', () => {
       'stats',
       expect.objectContaining({ players: { online: 7, offline: 1 } }),
     );
-    expect(history.samples()).toHaveLength(2);
   });
 });

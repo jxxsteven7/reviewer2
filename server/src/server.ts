@@ -19,6 +19,7 @@ import {
 } from './core/socket';
 import type { WordLibrary } from './core/words';
 import { createRequestHandler } from './http';
+import { collectLive, type Live } from './live';
 import { log as defaultLog } from './log';
 import { collectStats, type Stats } from './stats';
 import type { ContributionStore } from './store/contributions';
@@ -33,8 +34,10 @@ export interface AppServer {
   io: Server;
   rooms: Rooms;
   sockets: RoomSockets;
-  // The numbers for the `stats` log line and the status page (stats.ts).
+  // The numbers for the `stats` log line and /status.json (stats.ts).
   stats(): Stats;
+  // Who is connected and who is in each room this moment, for /live.json (live.ts).
+  live(): Live;
   // Tells everyone that the server is restarting, waits until they have been sent it, and closes.
   stop(graceMs?: number): Promise<void>;
   // Closes at once, and drops whatever a connection hasn't been sent yet.
@@ -175,5 +178,6 @@ export function createAppServer(options: AppOptions): AppServer {
     await close();
   };
   const stats = () => collectStats(options.version, rooms, sockets.connections(), sockets.agents());
-  return { http, io, rooms, sockets, stats, stop, close };
+  const live = () => collectLive(rooms, sockets.connections(), now);
+  return { http, io, rooms, sockets, stats, live, stop, close };
 }
