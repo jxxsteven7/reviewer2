@@ -1,5 +1,8 @@
 import { defaultSettings, restoreSettings, type Language } from '@reviewer2/shared';
 import type { Component } from 'vue';
+import type { GuideChapter } from '../core/guide/chapters';
+import type { ShownRoom } from '../core/room';
+import * as keywordsGuide from './keywords/guide';
 import KeywordsGame from './keywords/KeywordsGame.vue';
 import KeywordsLobby from './keywords/KeywordsLobby.vue';
 import KeywordsScreen from './keywords/KeywordsScreen.vue';
@@ -14,7 +17,9 @@ import SettingsForm from './keywords/SettingsForm.vue';
 // for the settings that the form starts with in a room's language: the defaults, or those of the
 // creator's last room, which was in the language `from`, if known, as far as they still will do.
 // The home page shows the rules beside the game's name, as a `link` with the `defaults`, for the
-// settings and the language given.
+// settings and the language given. The game's chapters of the tutorial come before the site's
+// (core/guide/chapters.ts), whose chapter on the waiting room shows the first game's, as the game's
+// `Lobby` scene draws it, and whose chapter on rooms shares the game's invented `room`.
 export interface GameScreens {
   Lobby: Component;
   Game: Component;
@@ -24,6 +29,11 @@ export interface GameScreens {
   Rules: Component;
   defaultSettings(language: Language): object;
   restoreSettings(saved: unknown, language: Language, from?: Language | null): object;
+  guide: {
+    chapters: Omit<GuideChapter, 'game'>[];
+    Lobby: Component;
+    room(t: (key: string) => string, language: Language): ShownRoom;
+  };
 }
 
 export const games: Record<string, GameScreens> = {
@@ -36,5 +46,6 @@ export const games: Record<string, GameScreens> = {
     Rules: RulesSheet,
     defaultSettings,
     restoreSettings,
+    guide: keywordsGuide,
   },
 };

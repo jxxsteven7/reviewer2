@@ -193,6 +193,33 @@ describe('practicing with Reviewer 1', () => {
     expect(summary(sheet)).toBe('General');
   });
 
+  test('opens at once with who plays and the role that the tutorial chose, and keeps them only once the player starts', async () => {
+    writeStored('r2.practiceRole', 'captain');
+    const wrapper = mount(PracticeRoom, {
+      attachTo: document.body,
+      props: { preset: { who: 'me', role: 'guesser' } },
+      global: { plugins: [i18n] },
+    });
+    await flushPromises();
+    const sheet = document.querySelector<HTMLElement>('[role=dialog]');
+    if (!sheet) throw new Error('no sheet');
+    expect(sheet.querySelector<HTMLInputElement>('.who-plays input[value="me"]')?.checked).toBe(true);
+    expect(checkedRole(sheet)).toBe('guesser');
+    expect(readStored('r2.practiceRole')).toBe('captain');
+    wrapper.unmount();
+    document.body.innerHTML = '';
+
+    mount(PracticeRoom, {
+      attachTo: document.body,
+      props: { preset: { who: 'friends' } },
+      global: { plugins: [i18n] },
+    });
+    await flushPromises();
+    const withFriends = document.querySelector<HTMLElement>('[role=dialog]');
+    expect(withFriends?.querySelector<HTMLInputElement>('.who-plays input[value="friends"]')?.checked).toBe(true);
+    expect(withFriends?.querySelector('.roles')).toBeNull();
+  });
+
   test('works without storage, and starts nothing until a list is chosen', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied');

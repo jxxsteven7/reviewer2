@@ -1422,5 +1422,381 @@
     "recordsTitle": "Game records",
     "guestNotice": "Games are recorded, the group chat included, to train AI players and for research; nothing published carries names.",
     "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
+  },
+  "guide": {
+    "title": "Tutorial",
+    "intro": "Read the part you need, and pick up where you left off. Your progress stays on this device.",
+    "resume": "Continue",
+    "resumeAt": "{chapter} · step {step} of {total}",
+    "sections": {
+      "game": "How to play {game}",
+      "site": "Using the site"
+    },
+    "state": {
+      "steps": "{count} steps",
+      "at": "At step {step}",
+      "done": "Done"
+    },
+    "contents": "Contents",
+    "exit": "Leave the tutorial",
+    "progress": "Step {step} of {total}",
+    "numbered": "{number}. {title}",
+    "stepList": "Steps of this chapter",
+    "back": "Back",
+    "next": "Next",
+    "end": {
+      "play": "Play a real game with Reviewer\u00a01",
+      "nextChapter": "Next: {chapter}",
+      "tryIt": "Try it",
+      "contents": "Back to contents"
+    },
+    "entry": {
+      "title": "Tutorial",
+      "hint": "Walk through a game as a student and as the PI; leave any time",
+      "link": "Tutorial"
+    },
+    "rulesLink": "New to it? Try the tutorial ›",
+    "chapters": {
+      "rules": {
+        "title": "The rules in brief",
+        "about": "The goal, roles, a turn, revealing, clues, time, the end",
+        "steps": {
+          "1": {
+            "title": "The goal",
+            "body": "In short: the first group to reveal all its keywords wins."
+          },
+          "2": {
+            "title": "Roles",
+            "body": "PIs see the colors and only give clues; students don't, and do the revealing."
+          },
+          "3": {
+            "title": "A turn",
+            "body": "The PI gives a word and a number; the students reveal cards one at a time."
+          },
+          "4": {
+            "title": "Revealing",
+            "body": "Right: go on. Wrong: the turn passes. Reviewer\u00a02: you lose."
+          },
+          "5": {
+            "title": "Clues",
+            "body": "Not a word on the board, a part of one, or the same word in the other language."
+          },
+          "6": {
+            "title": "Time",
+            "body": "Clues and guesses have time limits; when time runs out, the turn is over."
+          },
+          "7": {
+            "title": "The end",
+            "body": "Once all your cards are revealed you win, even if the others revealed the last one. Rooms can change these rules: see \"Room settings\"."
+          }
+        }
+      },
+      "student": {
+        "title": "Playing a student",
+        "about": "Read the PI's clue and reveal cards with your group",
+        "steps": {
+          "1": {
+            "title": "You're a student",
+            "body": "You're a student in the red group, and only the PI sees the colors. Red has 9 cards, blue 8: the first group to reveal all its own wins. The strip at the top is red: it's your group's turn. Wait for your PI's clue."
+          },
+          "2": {
+            "title": "The clue",
+            "body": "The clue is \"Astronomy, 3\": three of red's cards have to do with astronomy. You may go on as long as you're right; the number is only a hint."
+          },
+          "3": {
+            "title": "Choose a card",
+            "body": "Which card fits best? Tap \"Black hole\" to choose it. Your group sees your choice; if you're unsure, talk it over in the group chat."
+          },
+          "4": {
+            "title": "Reveal it",
+            "body": "Once you're sure, tap \"Reveal\". There's no taking it back."
+          },
+          "5": {
+            "title": "Right!",
+            "body": "Black hole is red! Right guesses let you go on: tap \"Telescope\"."
+          },
+          "6": {
+            "title": "One more",
+            "body": "Telescope is right too. For the third you chose \"Dark matter\": tap \"Reveal\"."
+          },
+          "7": {
+            "title": "An irrelevant paper",
+            "body": "Dark matter is an irrelevant paper: it counts for nobody, but your turn is over and blue plays, so the strip at the top turns white again."
+          },
+          "8": {
+            "title": "The other group's turn",
+            "body": "Blue is guessing \"Statistics, 2\". Meanwhile, hold a card down to mark it for your group, such as \"P-value\" as theirs."
+          },
+          "9": {
+            "title": "They got one wrong",
+            "body": "Blue revealed \"Galaxy\", a red card: it counts for you, and blue's turn is over."
+          },
+          "10": {
+            "title": "Quit while ahead",
+            "body": "The clue is \"Biology, 3\" and you have two right. Unsure of a third? Tap \"End the turn\" rather than risk it."
+          },
+          "11": {
+            "title": "Reviewer\u00a02",
+            "body": "Blue revealed \"Deadline\", which was Reviewer\u00a02: the group that reveals it is rejected on the spot, so red is accepted! You can't see colors, so think before every reveal."
+          },
+          "12": {
+            "title": "Looking back",
+            "body": "Two ways to win: reveal all your cards first, or have the others reveal Reviewer\u00a02. After every game, the clue log shows the cards the PI meant with each clue."
+          }
+        }
+      },
+      "pi": {
+        "title": "Playing the PI",
+        "about": "See the colors, give one word and a number",
+        "steps": {
+          "1": {
+            "title": "You see the colors",
+            "body": "You're the red group's PI. Cards tagged \"Red\" are your group's, \"Blue\" the other group's, \"Irrelevant\" are irrelevant papers, and \"R2\" is Reviewer\u00a02. Students see only the words."
+          },
+          "2": {
+            "title": "Mark the cards you mean",
+            "body": "Tap cards to circle the ones your clue means, and the number follows. The circles stay hidden until the game ends. Black hole and Telescope are circled: tap \"Galaxy\" too."
+          },
+          "3": {
+            "title": "No words from the board",
+            "body": "A clue can't be a word on the board or a part of one. \"Galaxy\" is refused: try another."
+          },
+          "4": {
+            "title": "Give the clue",
+            "body": "Make it \"Astronomy\": it fits all three. Tap \"Give the clue\"."
+          },
+          "5": {
+            "title": "Watch them guess",
+            "body": "Once the clue is out, you only watch: no talking, no gestures. You see which card your students choose, and you can read the group chat but not write in it."
+          },
+          "6": {
+            "title": "Prepare the next one",
+            "body": "During the other group's turn you can draft your next clue. Only you see it, and you give it once it's your turn."
+          },
+          "7": {
+            "title": "The clock",
+            "body": "You have 2 minutes for the first clue and 90 seconds for each later one; the clock turns red when it's your move. Run out and the turn passes to the other group, and you lose 5 points."
+          },
+          "8": {
+            "title": "The end",
+            "body": "When the game ends, the clue log shows the cards you circled with each clue and how many your students found."
+          }
+        }
+      },
+      "extras": {
+        "title": "More in a game",
+        "about": "Group chat, marks, reactions, extensions, pausing, replays",
+        "steps": {
+          "1": {
+            "title": "Group chat",
+            "body": "Students talk it over in the group chat, which only their group sees. The PI can read it but not write: the clue is all a PI may say."
+          },
+          "2": {
+            "title": "Marks",
+            "body": "Hold a card down (or right-click it) for its menu: ours, theirs or R2?. Pick the same again to clear it; on a computer, keys 1, 2 and 3 work too."
+          },
+          "3": {
+            "title": "Reactions",
+            "body": "Tap \"React\" to send a quick reaction that everyone in the room and every big screen sees and hears, once every 10 seconds. PIs can't react while students guess. Too noisy? Mute the sounds in the room menu."
+          },
+          "4": {
+            "title": "Time and extensions",
+            "body": "The clock at the top shows the time left in this phase. If the room allows extensions, each group may once a game ask for 30 seconds more."
+          },
+          "5": {
+            "title": "Pausing and dropping out",
+            "body": "The chair can pause at any time. If you drop out, refresh or open the link again to get your seat back; in a room with Reviewer\u00a01, an AI plays for you if you're gone for 20 seconds in your turn."
+          },
+          "6": {
+            "title": "Review and replay",
+            "body": "After a game, \"Review the game\" opens its replay, and your group can keep talking it over until the next game. With an account you can watch it again later from your record."
+          }
+        }
+      },
+      "settings": {
+        "title": "Room settings",
+        "about": "Guessing, clue checks, time limits, word lists",
+        "steps": {
+          "1": {
+            "title": "Guessing",
+            "body": "\"Free\": students go on as long as they're right, and the PI's number is only a hint. \"Standard\": at most the number plus one. Free is the default."
+          },
+          "2": {
+            "title": "Clue check",
+            "body": "\"Strict\" refuses a clue too close to a word on the board, such as one sharing a character with it; \"Loose\" only warns. Strict is the default."
+          },
+          "3": {
+            "title": "Clue length",
+            "body": "A Chinese room allows 4 characters by default, two letters or digits counting as one; an English room allows one word."
+          },
+          "4": {
+            "title": "Time limits and extensions",
+            "body": "By default: 120 seconds for the first clue, 90 for each later one and 120 for guessing; 0 means no limit. Extensions are off by default."
+          },
+          "5": {
+            "title": "Word lists and your own words",
+            "body": "Choose the word lists when you make a room, or let each game draw them anew. In a private room, the chair can add their own words at the chair's desk in the waiting room."
+          }
+        }
+      },
+      "account": {
+        "title": "Your account and page",
+        "about": "Signing up, your avatar, what your page shows",
+        "steps": {
+          "1": {
+            "title": "Registering",
+            "body": "Registering takes only a username and a password, no email. An account lets you make public rooms, play with Reviewer\u00a01, add friends and earn ranks."
+          },
+          "2": {
+            "title": "Avatar and name",
+            "body": "On your account page, upload a picture and drag it into the circle for your avatar; you can rename yourself there too."
+          },
+          "3": {
+            "title": "Your public page",
+            "body": "Anyone can open your public page and see your username, avatar, rank and titles. Whether it shows your record and feedback contributions, and what link and one-line bio it has, is up to you."
+          },
+          "4": {
+            "title": "Email and password",
+            "body": "Add an email address, so that a forgotten password can be reset."
+          }
+        }
+      },
+      "rooms": {
+        "title": "Rooms and invitations",
+        "about": "The choices for a new room, and inviting friends",
+        "steps": {
+          "1": {
+            "title": "Language and word lists",
+            "body": "Tap \"New room\", then choose the language, which the cards follow too, and at least one word list."
+          },
+          "2": {
+            "title": "Ordinary room or match",
+            "body": "An ordinary room plays as many games as you like; a match plays a set number, scores everyone and ranks them at the end."
+          },
+          "3": {
+            "title": "Public or private",
+            "body": "Private: only those with the number or the link get in. Public: listed on the home page, for anyone with an account to join."
+          },
+          "4": {
+            "title": "Play or watch",
+            "body": "\"Play\" gives you a seat as you come in; \"Watch\" just watches. You can change later."
+          },
+          "5": {
+            "title": "Share the room",
+            "body": "A room's number looks like R2-K7QX. Share it, copy the link or show the QR code; friends can also type the number on the home page. \"Big screen\" puts the game on a big screen."
+          },
+          "6": {
+            "title": "Invite friends",
+            "body": "With an account, \"Invite friends\" calls your friends straight in, for 10 minutes; friends can also ask to join your room from \"Friends playing\" on the home page."
+          }
+        }
+      },
+      "lobby": {
+        "title": "The waiting room",
+        "about": "Seats, starting, the chair's desk, Reviewer\u00a01 in empty seats",
+        "steps": {
+          "1": {
+            "title": "Taking a seat",
+            "body": "Each group has one PI and any number of students. Tap \"Be the PI\" or \"Join as a student\", or \"Watch\"."
+          },
+          "2": {
+            "title": "Starting",
+            "body": "Once both groups have an online PI and at least one student, the chair can tap \"Start\", or \"Shuffle groups\" first."
+          },
+          "3": {
+            "title": "The chair's desk",
+            "body": "At the chair's desk the chair changes the word lists and the rules, and in a private room adds their own words. The chair can also hand the role to someone else."
+          },
+          "4": {
+            "title": "Not enough people?",
+            "body": "On the home page, \"Play with Reviewer\u00a01\" with \"With friends\" opens a room where Reviewer\u00a01 can take the seats nobody takes."
+          }
+        }
+      },
+      "more": {
+        "title": "Friends, ranks, titles, streaks",
+        "about": "What they are and where to find them",
+        "steps": {
+          "1": {
+            "title": "Friends",
+            "body": "On your account page, find people by username or page link and send a request; you can give friends a note only you see. In a room, tap a player to add them too."
+          },
+          "2": {
+            "title": "Academic ranks",
+            "body": "Every game you finish in a seat while logged in earns points, from \"Kindergartner\" all the way to \"Reviewer\u00a02\". Games with an AI earn none."
+          },
+          "3": {
+            "title": "Titles and streaks",
+            "body": "Special games earn titles, such as \"Heavenly Hand\" or \"Deadline Hero\", and three wins in a row make \"3 Submissions, 3 Acceptances\". Tap a title to see how it's earned."
+          },
+          "4": {
+            "title": "Friend titles",
+            "body": "After 3 games with the same friend you may earn a friend title, such as \"Co-First Author\", that only you see."
+          }
+        }
+      },
+      "feedback": {
+        "title": "Giving feedback",
+        "about": "Where to tell us an idea or a problem",
+        "steps": {
+          "1": {
+            "title": "Sending feedback",
+            "body": "There's \"Feedback\" at the bottom of the home page and \"Send feedback\" in a room's menu: choose what it's about (an idea, a new game, a bug or the word lists), write it, and leave a contact if you like."
+          },
+          "2": {
+            "title": "Once adopted",
+            "body": "Adopted feedback is listed under \"Feedback contributions\" on the home page, by name or anonymously, as you chose."
+          }
+        }
+      }
+    },
+    "demo": {
+      "me": "Mira",
+      "friends": {
+        "ava": "Ava",
+        "theo": "Theo",
+        "lin": "Lin"
+      },
+      "words": {
+        "0": "Black hole",
+        "1": "Coffee",
+        "2": "Gene",
+        "3": "Variance",
+        "4": "Journal",
+        "5": "Telescope",
+        "6": "Gradient",
+        "7": "Deadline",
+        "8": "Cell",
+        "9": "Group meeting",
+        "10": "Sample",
+        "11": "Dark matter",
+        "12": "Galaxy",
+        "13": "Overfitting",
+        "14": "Abstract",
+        "15": "All-nighter",
+        "16": "Virus",
+        "17": "Hypothesis",
+        "18": "Peer review",
+        "19": "Loss function",
+        "20": "Patent",
+        "21": "Protein",
+        "22": "P-value",
+        "23": "Neural network",
+        "24": "Citation"
+      },
+      "clues": {
+        "astro": "Astronomy",
+        "stats": "Statistics",
+        "bio": "Biology",
+        "crunch": "Crunch"
+      },
+      "chat": {
+        "1": "Black hole and Telescope for sure",
+        "2": "And the third? Dark matter or Galaxy?",
+        "3": "Galaxy, I think. Dark matter is a stretch"
+      },
+      "bio": "Stars by day, papers by night.",
+      "contribution": "Filter the clue log by group"
+    }
   }
 }

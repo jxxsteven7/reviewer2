@@ -37,12 +37,16 @@ import { useBusy } from '../useBusy';
 // list; the lists fold into one line, which names them, so that the whole sheet fits on a phone's
 // screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't
 // answer, the button says so and can't be pressed; on a server without an agent, there is no
-// button at all.
+// button at all. The tutorial may lead here with who plays, and the role, chosen as a chapter
+// taught them (`preset`), and the sheet then opens with them; they are kept, as any are, only once
+// the player starts.
 const { t, locale } = useI18n();
 // The first game, whose practice rooms these are.
 const GAME = 'keywords';
 // Who plays: the player alone, with Reviewer 1 in the other seats, or the player with friends.
 const WHO = ['me', 'friends'] as const;
+type Who = (typeof WHO)[number];
+const props = defineProps<{ preset?: { who: Who; role?: PracticeRole } | null }>();
 
 const router = useRouter();
 const id = useId();
@@ -53,7 +57,7 @@ const lastFields = (): string[] | null => {
   const kept = lastPractice(GAME)?.fields;
   return kept && kept.length > 0 ? kept : storedFields();
 };
-const who = ref<(typeof WHO)[number]>('me');
+const who = ref<Who>('me');
 const role = ref<PracticeRole>(lastRole());
 const chosen = ref<string[]>([]);
 const formError = ref<string | undefined>();
@@ -96,15 +100,21 @@ const seats = computed(() => {
 
 const ready = computed(() => account.summary !== null && !offline.value && chosen.value.length > 0);
 
-function show() {
+function show(preset?: { who: Who; role?: PracticeRole }) {
   formError.value = undefined;
-  who.value = 'me';
-  role.value = lastRole();
+  who.value = preset?.who ?? 'me';
+  role.value = preset?.role ?? lastRole();
   if (fields.value) chosen.value = keptFields(lastFields() ?? DEFAULT_FIELDS, usable.value);
   open.value = true;
   loadFields();
   checkAgents();
 }
+
+watch(
+  () => props.preset,
+  (preset) => preset && show(preset),
+  { immediate: true },
+);
 
 async function start() {
   if (!ready.value) return;
@@ -134,7 +144,7 @@ async function start() {
 
 <template>
   <div v-if="offered" class="practice">
-    <button type="button" class="entry press" :disabled="offline" @click="show">
+    <button type="button" class="entry press" :disabled="offline" @click="show()">
       <PlayerAvatar :name="persona" agent size="medium" />
       <span class="text">
         <span class="main">{{ t('home.practice.entry') }}</span>

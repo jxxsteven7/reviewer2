@@ -2,8 +2,10 @@
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { nextTick } from 'vue';
+import { account, loadAccount } from '../account';
 import { i18n, setLanguage, storedLanguage } from '../i18n';
 import HomeView from './HomeView.vue';
+import PracticeRoom from './PracticeRoom.vue';
 
 vi.mock('../socket', () => ({
   connect: vi.fn(),
@@ -17,11 +19,12 @@ vi.mock('../../games', async () => {
   const RulesSheet = (await import('../../games/keywords/RulesSheet.vue')).default;
   return { games: { keywords: { Rules: RulesSheet, defaultSettings } } };
 });
-vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false } }));
+vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false }, loadAccount: vi.fn() }));
 vi.mock('../friends', () => ({ askToJoin: vi.fn(), friendsVersion: { value: 0 } }));
 // The address that the page opens at, which a test may give a query.
-const router = vi.hoisted(() => ({ route: { query: {} as Record<string, string> }, replace: vi.fn() }));
+const router = vi.hoisted(() => ({ route: { path: '/', query: {} as Record<string, string> }, replace: vi.fn() }));
 vi.mock('vue-router', () => ({
+  RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
   useRoute: () => router.route,
   useRouter: () => ({ push: vi.fn(), replace: router.replace }),
 }));
@@ -142,5 +145,74 @@ describe('the home page in a language', () => {
     expect(i18n.global.locale.value).toBe('en');
     expect(router.replace).not.toHaveBeenCalled();
     wrapper.unmount();
+  });
+});
+
+// The way into the tutorial in the first game's card, and the places that the tutorial leads to.
+describe('the way into the tutorial', () => {
+  beforeEach(() => setLanguage('en', { remember: true }));
+  afterEach(() => {
+    Object.assign(account, { loaded: true, summary: null });
+    router.route.query = {};
+    router.replace.mockClear();
+    document.body.innerHTML = '';
+  });
+  const mountHome = () =>
+    mount(HomeView, { attachTo: document.body, global: { plugins: [i18n], stubs: [...stubs, 'PracticeRoom'] } });
+
+  test('is a green sticker above the button for a new room, for a guest', () => {
+    const wrapper = mountHome();
+    const entry = wrapper.get('.entry .guide-entry');
+    expect(entry.attributes('href')).toBe('/guide');
+    expect(entry.text()).toContain('Tutorial');
+    expect(wrapper.find('.guide-link').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  test('is a small word beside the rules for an account that has played the game, which the page asks for again', () => {
+    Object.assign(account, { summary: { username: 'Ann', played: ['keywords'] } });
+    const wrapper = mountHome();
+    expect(wrapper.find('.guide-entry').exists()).toBe(false);
+    expect(wrapper.get('.entry .title .guide-link').attributes('href')).toBe('/guide');
+    expect(loadAccount).toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  test('is the sticker for an account that has played no game of it yet, and nothing until the page knows who it is', () => {
+    Object.assign(account, { summary: { username: 'Ann', played: [] } });
+    const played = mountHome();
+    expect(played.find('.guide-entry').exists()).toBe(true);
+    played.unmount();
+    Object.assign(account, { loaded: false, summary: null });
+    const unknown = mountHome();
+    expect(unknown.find('.guide-entry').exists()).toBe(false);
+    expect(unknown.find('.guide-link').exists()).toBe(false);
+    unknown.unmount();
+  });
+
+  test('leads to the room setup open, without the sticker, and drops that from the address', async () => {
+    router.route.query = { create: '1' };
+    const wrapper = mountHome();
+    await nextTick();
+    expect(wrapper.find('create-room-stub').exists()).toBe(true);
+    expect(wrapper.find('.guide-entry').exists()).toBe(false);
+    expect(router.replace).toHaveBeenCalledWith({ query: {} });
+    wrapper.unmount();
+  });
+
+  test('leads to the practice sheet with who plays and the role chosen, or neither for anything else', () => {
+    router.route.query = { practice: 'guesser' };
+    const alone = mountHome();
+    expect(alone.getComponent(PracticeRoom).props('preset')).toEqual({ who: 'me', role: 'guesser' });
+    expect(router.replace).toHaveBeenCalledWith({ query: {} });
+    alone.unmount();
+    router.route.query = { practice: 'friends' };
+    const friends = mountHome();
+    expect(friends.getComponent(PracticeRoom).props('preset')).toEqual({ who: 'friends' });
+    friends.unmount();
+    router.route.query = { practice: 'chair' };
+    const neither = mountHome();
+    expect(neither.getComponent(PracticeRoom).props('preset')).toBeNull();
+    neither.unmount();
   });
 });

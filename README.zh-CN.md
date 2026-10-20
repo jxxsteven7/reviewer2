@@ -26,6 +26,7 @@
 - 账号可选：头像、战绩、好友和好友称号、学术头衔和公开主页；见[隐私](#隐私)
 - 比赛：连打几局计分，并授予称号
 - 公开房间：用账号和陌生人一起玩，可以举报不守规矩的玩家
+- 新手教程，分章节，哪里不会看哪里：一步步带你当一回学生、当一回导师，手指告诉你点哪里；也讲网站怎么用，从开房间到提建议；看到哪儿只记在你自己的设备上
 - AI 玩家（内测中）：一号审稿人可以当一组的导师或学生，给真人出主意，也能替掉线的玩家打完他的回合，还有自己的主页，是 0 号玩家；有账号的人可以在首页和它一起玩：一个人玩，其余三个座位由它坐满；叫上朋友，没人坐的座位由它来坐；见[隐私](#隐私)
 
 ## 隐私
@@ -111,4 +112,4 @@ Reviewer 2 免费、无广告。如果你喜欢，可以在首页底部用微信
 
 代码使用 [MIT 协议](LICENSE)，`shared/src/han-variants.ts` 除外：它由 OpenCC 的数据生成，仍按 [Apache License 2.0](shared/LICENSE-OpenCC) 授权。`words/` 里的词库使用 [CC BY-SA 4.0](words/LICENSE)，`words/dictionary/han-glosses.json`（词库里汉字的英文释义，由 [CC-CEDICT](https://www.mdbg.net/chinese/dictionary?page=cc-cedict) 生成）也一样。
 
-<!-- readme-sync: 482e42b05e679de8f364562fe7a78bf99b17461fcda271888c4fe0606e6aa10d -->
+<!-- readme-sync: 98d4561dcd84dd730b9a5135957ce0f615d7a114de69830a5dd69816870df6f3 -->

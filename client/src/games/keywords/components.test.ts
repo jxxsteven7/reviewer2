@@ -18,6 +18,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { computed, defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { bubbles } from '../../core/emotes';
 import { knowAliases } from '../../core/names';
 import type { ShownRoom } from '../../core/room';
@@ -70,7 +71,10 @@ vi.mock('../../core/socket', async () => {
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 // The sheet is teleported to the page's body; rendering it in place keeps it inside the wrapper.
-const global = () => ({ plugins: [i18n()], stubs: { teleport: true } });
+// A router, for the rules' way to the tutorial, at the page that a test doesn't need.
+const router = () =>
+  createRouter({ history: createMemoryHistory(), routes: [{ path: '/:any(.*)*', component: { render: () => null } }] });
+const global = () => ({ plugins: [i18n(), router()], stubs: { teleport: true } });
 
 const seats: Record<string, Seat> = {
   ann: { team: 'red', role: 'captain' },
@@ -1545,6 +1549,24 @@ describe('RulesSheet', () => {
   const EXTENSION = 'Each group may once a game ask for 30 seconds more for the phase it is in.';
   const PAUSE =
     'The chair can pause the game at any time. The board is hidden until the chair resumes it, and the clock goes on from where it stopped.';
+
+  test('ends with the way to the tutorial, which a room opens in a new tab, so that the game goes on', async () => {
+    const home = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
+    await home.get('button').trigger('click');
+    const link = home.get('.guide-link');
+    expect(link.text()).toContain('New to it? Try the tutorial');
+    expect(link.attributes('href')).toBe('/guide');
+    expect(link.attributes('target')).toBeUndefined();
+    const inRoom = router();
+    await inRoom.push('/room/ABCD');
+    const room = mount(RulesSheet, {
+      props: { settings: STANDARD, language: 'en' },
+      global: { plugins: [i18n(), inRoom], stubs: { teleport: true } },
+    });
+    await room.get('button').trigger('click');
+    expect(room.get('.guide-link').attributes('target')).toBe('_blank');
+    expect(room.get('.guide-link').attributes('rel')).toBe('noopener');
+  });
 
   test('says which avatars can be tapped, with the roles', async () => {
     const wrapper = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
