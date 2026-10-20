@@ -357,7 +357,7 @@ async function logOut() {
 }
 
 /* "Rename" follows the username at its bottom right, after its last word: small and quiet, on the
-   name's baseline, and reaching 44 px high to the finger (docs/design.md) without making the line
+   name's baseline, and reaching 44 px high to the finger (docs/rules/display.md) without making the line
    taller. */
 .who .name-line {
   display: block;

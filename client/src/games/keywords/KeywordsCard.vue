@@ -367,7 +367,7 @@ const ariaLabel = computed(() =>
 }
 
 /* The avatars of the students who chose the card hang on its top right corner, without the shadow
-   of an avatar that a tap opens (docs/design.md): a tap on them chooses the card. */
+   of an avatar that a tap opens (docs/rules/display.md): a tap on them chooses the card. */
 .choosers {
   position: absolute;
   top: calc(var(--corner-up) * -1);

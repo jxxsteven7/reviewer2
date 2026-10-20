@@ -2,8 +2,8 @@
    values from. The interface looks like a party game: a yellow table, white stickers with a thick
    ink outline and a hard shadow, and big round corners. Components never write a value of their
    own; they only use these variables, so that another look, or a dark one, is another block that
-   redefines them and nothing else. docs/design.md explains the choices and the contrast of each
-   pair of colors. */
+   redefines them and nothing else. docs/design.md lists them; docs/rules/display.md says how to
+   use them, and the contrast of each pair of colors. */
 :root {
   /* The table, the stickers on it and their quiet areas; the ink, and the text on ink. */
   --bg: #ffd23f;

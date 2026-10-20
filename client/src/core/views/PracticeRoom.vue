@@ -263,7 +263,7 @@ async function start() {
   touch-action: manipulation;
 }
 
-/* Reviewer 1's avatar wears the hard shadow of what a tap opens (docs/design.md), as the button
+/* Reviewer 1's avatar wears the hard shadow of what a tap opens (docs/rules/display.md), as the button
    does, unless the button can't be pressed. */
 .entry :deep(.avatar) {
   box-shadow: var(--shadow-1);

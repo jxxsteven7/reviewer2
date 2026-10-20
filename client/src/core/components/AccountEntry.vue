@@ -67,7 +67,7 @@ const { t } = useI18n();
 }
 
 /* The avatar leads to the account page, so it wears the hard shadow of what a tap opens
-   (docs/design.md), and moves as a sticker does (`press-part` in base.css). */
+   (docs/rules/display.md), and moves as a sticker does (`press-part` in base.css). */
 .avatar-link :deep(.avatar) {
   box-shadow: var(--shadow-1);
 }

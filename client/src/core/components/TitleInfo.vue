@@ -7,7 +7,7 @@ import UiSheet from './UiSheet.vue';
 
 // A title that a tap explains (titles.ts, docs/architecture.md#titles): the title as its place
 // shows it, in the slot, or else its name, as a button that opens a sheet with the name, what the
-// title is and how it is won. Its place gives it its look (docs/design.md): a pill, a badge or a
+// title is and how it is won. Its place gives it its look (docs/rules/display.md): a pill, a badge or a
 // tag has the small hard shadow and the press of a button, which its place adds with `press
 // press-small`; a title in text, which its place marks `word`, takes the color of its news, blue
 // for good and red for bad (`good`, `bad`); and every title that isn't a pill darkens under a

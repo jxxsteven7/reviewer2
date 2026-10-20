@@ -472,7 +472,7 @@ ol {
 }
 
 /* The build's version, a link off the site to the history up to it, grey as the issue numbers of
-   the contributions are (docs/design.md), with the arrow after it (LinkArrow.vue). Like the
+   the contributions are (docs/rules/display.md), with the arrow after it (LinkArrow.vue). Like the
    buttons beside it, its box centers a line laid out in the words' font, so that its digits, in
    the numbers' font, stand on the words' baseline on every system, where a line of their own font
    would stand higher or lower from one system to another. In Chinese it stands a pixel higher,
