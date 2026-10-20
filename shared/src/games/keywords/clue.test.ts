@@ -772,6 +772,33 @@ describe('a clue of Latin letters that a word on the board has, in a Chinese roo
     }
   });
 
+  test('counts the letters of each piece, and those that the word written solid starts with, not those across a space or a hyphen', () => {
+    // Letters in no one piece are read no more together than they are written.
+    for (const [clue, word] of [
+      ['low', 'Hello World'],
+      ['if', 'Wi-Fi'],
+      ['rt', 'CAR-T'],
+      ['nb', 'Western blot'],
+    ] as const) {
+      expect(zhStrict(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [] });
+      expect(zhLoose(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [] });
+    }
+    // The start of the word written solid counts, as it does in an English room, and so does any
+    // piece, a lone letter included.
+    for (const [clue, word] of [
+      ['pval', 'P-value'],
+      ['hellow', 'Hello World'],
+      ['orld', 'Hello World'],
+      ['n', 'Best-of-N'],
+    ] as const) {
+      expect(zhStrict(clue, [card(word)]).conflict, clue).toEqual(letters(word));
+      expect(zhLoose(clue, [card(word)]).similar, clue).toEqual([letters(word)]);
+    }
+    // A piece itself is the same word, and a small word of a compound is no piece.
+    expect(zhStrict('fi', [card('Wi-Fi')]).conflict).toEqual({ card: 0, text: 'Wi-Fi', kind: 'same' });
+    expect(zhStrict('of', [card('Best-of-N')])).toEqual({ problem: null, conflict: null, similar: [] });
+  });
+
   test('is not a clue with digits or Chinese characters, which the other rules judge as before', () => {
     expect(zhStrict('s1', [card('ETS')])).toEqual({ problem: null, conflict: null, similar: [] });
     expect(zhStrict('3', [card('p53')]).conflict).toEqual({ card: 0, text: 'p53', kind: 'character' });

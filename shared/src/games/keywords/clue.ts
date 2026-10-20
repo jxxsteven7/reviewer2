@@ -359,23 +359,29 @@ function contains(clue: Word, word: Word): boolean {
   return inner.some((text) => clue.key !== text && clue.key.includes(text));
 }
 
-// The clue is Latin letters alone that the word, or one of its pieces, a lone letter included,
-// starts with and goes on from: "mode" for "Model", "s" for "SEI", "p" for "P-value". A clue that
-// is the word or the piece itself repeats it.
+// The clue is Latin letters alone, however few.
+const lettersAlone = (clue: Word): boolean => clue.key !== '' && LATIN_ONLY.test(clue.key);
+
+// The clue is Latin letters alone that the word, written solid, or one of its pieces, a lone
+// letter included, starts with and goes on from: "mode" for "Model", "s" for "SEI", "p" and
+// "pval" for "P-value". A clue that is the word or the piece itself repeats it.
 function startsWord(clue: Word, word: Word): boolean {
-  if (clue.key === '' || !LATIN_ONLY.test(clue.key)) return false;
+  if (!lettersAlone(clue)) return false;
   return [word.key, ...word.pieces].some(
     (text) => LATIN_ONLY.test(text) && text.length > clue.key.length && text.startsWith(clue.key),
   );
 }
 
-// The clue is Latin letters alone that the word, or one of its pieces, a lone letter included,
-// has in a row anywhere: "s" or "ts" for "ETS", "ai" for "Email", "s" for "S" followed by the
-// character for a wave. A clue that is the word or a part of it repeats it, which refuses it
-// first; a lone letter is no part (wordOf()), so "s" beside that wave is found here.
+// The clue is Latin letters alone that one of the word's pieces, a lone letter included, has in
+// a row anywhere, or that the word starts with (startsWord()): "s" or "ts" for "ETS", "ai" for
+// "Email", "s" for "S" followed by the character for a wave, "pval" for "P-value". Letters that
+// run across a space or a hyphen are in no piece, and give the word away no more than they are
+// read together: "low" is fine beside "Hello World". A clue that is the word or a part of it
+// repeats it, which refuses it first; a lone letter is no part (wordOf()), so "s" beside that
+// wave is found here.
 function inLatin(clue: Word, word: Word): boolean {
-  if (clue.key === '' || !LATIN_ONLY.test(clue.key)) return false;
-  return [word.key, ...word.pieces].some((text) => LATIN_ONLY.test(text) && text.includes(clue.key));
+  if (!lettersAlone(clue)) return false;
+  return startsWord(clue, word) || word.pieces.some((piece) => LATIN_ONLY.test(piece) && piece.includes(clue.key));
 }
 
 // What the clue does to one card that is still on the board: what refuses it in any case, what
