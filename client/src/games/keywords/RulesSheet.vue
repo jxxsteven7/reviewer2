@@ -2,14 +2,16 @@
 import type { KeywordsSettings, Language } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { RouterLink, useRoute } from 'vue-router';
+import { GUIDE_PATH } from '../../core/guide/progress';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
+import { rulesSections } from './rules';
 import SettingsSummary from './SettingsSummary.vue';
 
-// "How to play", in the rules' own sections, as this room plays them: its guess rule, its clue
-// rule, its time limits and its extensions, with all of its settings at the top, and at the end what
-// becomes of the record of the game (docs/architecture.md#game-records), which guests read here. A
-// Chinese room also asks for no clue that sounds like a word on the board, which no program checks.
+// "How to play", in the rules' own sections (rules.ts), as this room plays them, with all of its
+// settings at the top, and at the end the way to the tutorial, for a player who would rather be
+// shown: in a room it opens in a tab of its own, so that the game goes on in this one.
 //
 // In a room it opens from a quiet button. On the home page it opens from a `link`, the small word
 // "Rules" beside the game's name, with the `defaults`, as a new room has them, and a word that each
@@ -27,39 +29,9 @@ const props = withDefaults(
 const { t } = useI18n();
 const open = ref(false);
 
-// What time does in this room: a line for the clues and one for the guesses, for the phases that
-// have a limit, or one line when none has.
-const time = computed(() => {
-  const { firstClueTime, clueTime, guessTime, extensions } = props.settings;
-  const limited = firstClueTime > 0 || clueTime > 0 || guessTime > 0;
-  const lines = [
-    ...(firstClueTime > 0 || clueTime > 0 ? [t('rules.timeClue')] : []),
-    ...(guessTime > 0 ? [t('rules.timeGuess')] : []),
-    ...(limited && extensions ? [t('rules.extension')] : []),
-  ];
-  return [...(lines.length > 0 ? [t('rules.time'), ...lines] : [t('rules.noTime')]), t('rules.pause')];
-});
-const sections = computed(() => [
-  { title: t('rules.goalTitle'), text: [t('rules.goal')] },
-  { title: t('rules.rolesTitle'), text: [t('rules.roles'), t('rules.avatars')] },
-  { title: t('rules.turnTitle'), text: [t(`rules.turn.${props.settings.guessRule}`)] },
-  { title: t('rules.revealTitle'), text: [t('rules.reveal'), t('rules.marks')] },
-  {
-    title: t('rules.clueTitle'),
-    text: [
-      t(`rules.clue.${props.language}`, { count: props.settings.clueLength }, props.settings.clueLength),
-      t('rules.clueCommon'),
-      t('rules.clueCharacter'),
-      ...(props.language === 'zh' ? [t('rules.clueSound')] : []),
-      t('rules.clueQuiet'),
-      t('rules.clueTargets'),
-      t(`rules.clueRule.${props.settings.clueRule}`),
-    ],
-  },
-  { title: t('rules.timeTitle'), text: time.value },
-  { title: t('rules.endTitle'), text: [t('rules.end')] },
-  { title: t('privacy.recordsTitle'), text: [t('privacy.records')] },
-]);
+const sections = computed(() => rulesSections(t, props.settings, props.language));
+const route = useRoute();
+const inRoom = computed(() => route.path.startsWith('/room/'));
 </script>
 
 <template>
@@ -78,6 +50,14 @@ const sections = computed(() => [
         <h3 class="section-title">{{ section.title }}</h3>
         <p v-for="line in section.text" :key="line">{{ line }}</p>
       </section>
+      <RouterLink
+        class="guide-link text-link"
+        :to="GUIDE_PATH"
+        :target="inRoom ? '_blank' : undefined"
+        :rel="inRoom ? 'noopener' : undefined"
+        @click="open = false"
+        >{{ t('guide.rulesLink') }}</RouterLink
+      >
     </div>
   </UiSheet>
 </template>
@@ -100,6 +80,11 @@ const sections = computed(() => [
 
 .summary {
   margin-top: var(--space-2);
+}
+
+.guide-link {
+  align-self: flex-start;
+  font-weight: var(--weight-bold);
 }
 
 .rules .defaults {

@@ -18,6 +18,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { computed, defineComponent, h, nextTick } from 'vue';
 import { createI18n } from 'vue-i18n';
+import { createMemoryHistory, createRouter } from 'vue-router';
 import { bubbles } from '../../core/emotes';
 import { knowAliases } from '../../core/names';
 import type { ShownRoom } from '../../core/room';
@@ -70,7 +71,10 @@ vi.mock('../../core/socket', async () => {
 
 const i18n = () => createI18n({ legacy: false, locale: 'en', messages: { en } });
 // The sheet is teleported to the page's body; rendering it in place keeps it inside the wrapper.
-const global = () => ({ plugins: [i18n()], stubs: { teleport: true } });
+// A router, for the rules' way to the tutorial, at the page that a test doesn't need.
+const router = () =>
+  createRouter({ history: createMemoryHistory(), routes: [{ path: '/:any(.*)*', component: { render: () => null } }] });
+const global = () => ({ plugins: [i18n(), router()], stubs: { teleport: true } });
 
 const seats: Record<string, Seat> = {
   ann: { team: 'red', role: 'captain' },
@@ -194,6 +198,24 @@ describe('GroupChat', () => {
     expect(turns[1]?.text()).toContain('You');
     expect(turns[1]?.text()).toContain('Cat');
     expect(wrapper.find('.badge').exists()).toBe(false);
+  });
+
+  // The panel counts every message as read as it comes; in the tutorial, it keeps nothing of it.
+  test('keeps the last message read in a real game, and nothing of an invented one', async () => {
+    const view = room('bob', messages);
+    const panel = mount(GroupChat, { props: { room: view, draft: '', sending: false, panel: true }, global: global() });
+    await flushPromises();
+    expect(readStored('r2.chatSeen')).toBe('[["g1",3]]');
+    panel.unmount();
+    localStorage.clear();
+    const demo = mount(GroupChat, {
+      props: { room: view, draft: '', sending: false, panel: true, demo: true },
+      global: global(),
+    });
+    await flushPromises();
+    expect(demo.findAll('.message')).toHaveLength(3);
+    expect(readStored('r2.chatSeen')).toBeNull();
+    demo.unmount();
   });
 
   // The room names a friend by the viewer's name for them, with the username kept beside (room.ts):
@@ -1027,6 +1049,30 @@ describe('TurnStrip', () => {
     expect(timed.get('.clock').attributes('aria-label')).toBe('42 seconds left');
   });
 
+  // The strip takes the tint of the viewer's group while it is their group's turn, in either phase;
+  // its clock is red only while the viewer has to act.
+  test("takes the viewer's group's tint on its turn, and has a red clock only on the viewer's move", async () => {
+    const timed = { ...game, clock: { left: 42_000, total: 90_000 } };
+    const strip = (seat: Seat | undefined, view: KeywordsView = timed) =>
+      mount(TurnStrip, { props: { game: view, guessRule: 'free', seat }, global: global() });
+    const guessing = strip(seats.bob);
+    expect(guessing.get('.strip').classes()).toContain('ours');
+    expect(guessing.get('.clock').classes()).toContain('mine');
+    const thinking = strip(seats.bob, { ...timed, phase: 'clue' });
+    expect(thinking.get('.strip').classes()).toContain('ours');
+    expect(thinking.get('.clock').classes()).not.toContain('mine');
+    const pi = strip(seats.ann);
+    expect(pi.get('.strip').classes()).toContain('ours');
+    expect(pi.get('.clock').classes()).not.toContain('mine');
+    const theirs = strip(seats.bob, { ...timed, team: 'blue' });
+    expect(theirs.get('.strip').classes()).not.toContain('ours');
+    expect(theirs.get('.clock').classes()).not.toContain('mine');
+    for (const other of [strip(seats.eve), strip(undefined)]) {
+      expect(other.get('.strip').classes()).not.toContain('ours');
+      expect(other.get('.clock').classes()).not.toContain('mine');
+    }
+  });
+
   test('keeps the clock still while the game is paused, as on a big screen', async () => {
     vi.useFakeTimers();
     try {
@@ -1040,6 +1086,34 @@ describe('TurnStrip', () => {
       vi.advanceTimersByTime(5_000);
       await flushPromises();
       expect(paused.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // In the tutorial, the strip shows an invented game: the tab's title stays the page's, and the
+  // clock stands at what the step gives.
+  test("in the tutorial leaves the tab's title alone, and keeps its clock standing", async () => {
+    vi.useFakeTimers();
+    try {
+      const timed = { ...game, clock: { left: 42_000, total: 90_000 } };
+      const real = mount(TurnStrip, { props: { game: timed, guessRule: 'free', seat: seats.bob }, global: global() });
+      await nextTick();
+      expect(document.title).toBe('Your turn!');
+      real.unmount();
+      await nextTick();
+      const demo = mount(TurnStrip, {
+        props: { game: timed, guessRule: 'free', seat: seats.bob, demo: true },
+        global: global(),
+      });
+      await nextTick();
+      expect(document.title).not.toBe('Your turn!');
+      expect(demo.get('.phase').text()).toBe('Your turn to guess!');
+      expect(demo.get('.clock').classes()).toContain('mine');
+      vi.advanceTimersByTime(5_000);
+      await flushPromises();
+      expect(demo.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+      demo.unmount();
     } finally {
       vi.useRealTimers();
     }
@@ -1294,15 +1368,17 @@ describe('ClockBar', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  test('counts down from what the server said, turns red for the last 10 seconds, and stops at zero', async () => {
+  test("counts down from what the server said, is red only on the viewer's move, and stops at zero", async () => {
     const wrapper = clockBar(12_000);
     expect(wrapper.get('.seconds').text()).toBe('0:12');
     expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0.2)');
-    expect(wrapper.classes()).not.toContain('urgent');
-    vi.advanceTimersByTime(2_000);
+    expect(wrapper.classes()).not.toContain('mine');
+    vi.advanceTimersByTime(5_000);
     await flushPromises();
-    expect(wrapper.get('.seconds').text()).toBe('0:10');
-    expect(wrapper.classes()).toContain('urgent');
+    expect(wrapper.get('.seconds').text()).toBe('0:07');
+    expect(wrapper.classes()).not.toContain('mine');
+    await wrapper.setProps({ mine: true });
+    expect(wrapper.classes()).toContain('mine');
     vi.advanceTimersByTime(30_000);
     await flushPromises();
     expect(wrapper.get('.seconds').text()).toBe('0:00');
@@ -1519,6 +1595,24 @@ describe('RulesSheet', () => {
   const EXTENSION = 'Each group may once a game ask for 30 seconds more for the phase it is in.';
   const PAUSE =
     'The chair can pause the game at any time. The board is hidden until the chair resumes it, and the clock goes on from where it stopped.';
+
+  test('ends with the way to the tutorial, which a room opens in a new tab, so that the game goes on', async () => {
+    const home = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
+    await home.get('button').trigger('click');
+    const link = home.get('.guide-link');
+    expect(link.text()).toContain('New to it? Try the tutorial');
+    expect(link.attributes('href')).toBe('/guide');
+    expect(link.attributes('target')).toBeUndefined();
+    const inRoom = router();
+    await inRoom.push('/room/ABCD');
+    const room = mount(RulesSheet, {
+      props: { settings: STANDARD, language: 'en' },
+      global: { plugins: [i18n(), inRoom], stubs: { teleport: true } },
+    });
+    await room.get('button').trigger('click');
+    expect(room.get('.guide-link').attributes('target')).toBe('_blank');
+    expect(room.get('.guide-link').attributes('rel')).toBe('noopener');
+  });
 
   test('says which avatars can be tapped, with the roles', async () => {
     const wrapper = mount(RulesSheet, { props: { settings: STANDARD, language: 'en' }, global: global() });
@@ -2908,17 +3002,17 @@ describe('KeywordsGame', () => {
     // With the clock, the chair's button to pause or resume comes first, then the reaction button,
     // which is at the end of the bar for everyone.
     expect(chair.find('.sticky-clock [role="timer"]').exists()).toBe(true);
-    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Resume the game', 'React']);
+    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Resume', 'React']);
     await chair.get('.paused button').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     send.mockClear();
-    expect(chair.get('.sticky-clock .pause').text()).toBe('Resume the game');
+    expect(chair.get('.sticky-clock .pause').text()).toBe('Resume');
     await chair.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
-    expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause the game');
-    expect(playing.get('.sticky-clock .pause').text()).toBe('Pause the game');
-    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Pause the game', 'React']);
+    expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause');
+    expect(playing.get('.sticky-clock .pause').text()).toBe('Pause');
+    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Pause', 'React']);
     await playing.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
   });
@@ -2937,7 +3031,7 @@ describe('KeywordsGame', () => {
         .get('.strip + .sticky-clock')
         .findAll('button')
         .map((button) => button.text()),
-    ).toEqual(['Pause the game', 'React']);
+    ).toEqual(['Pause', 'React']);
     await chair.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
     const student = mount(KeywordsGame, { props: { room: untimed('bob') }, global: global() });

@@ -188,7 +188,9 @@ export interface ProfileSettings {
 // (contributions.ts). `profile` is what the owner put on the public profile, with `banned` for
 // an account that the operator has barred from writing a link or a bio there. `likes` is how many
 // accounts like the profile, and `requests` how many friend requests wait for the owner's answer
-// (friends.ts). `roomSetup` is how the account last set up a room and a practice room.
+// (friends.ts). `roomSetup` is how the account last set up a room and a practice room. `played`
+// names the games that the account has finished at least one game of in a seat, practice games
+// included, by the game's ID, from which the home page tells whether to offer the game's tutorial.
 export interface AccountSummary {
   id: number;
   handle: string;
@@ -204,6 +206,7 @@ export interface AccountSummary {
   likes: number;
   requests: number;
   roomSetup: RoomSetup;
+  played: string[];
 }
 
 // How an account last set up a room and a practice room of each game (docs/architecture.md#accounts),

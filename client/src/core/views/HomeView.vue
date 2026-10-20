@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { BOARD_SIZE, isLanguage, REPOSITORY_URL } from '@reviewer2/shared';
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import tipCode from '../../assets/wechat-tip.jpg';
 import AccountEntry from '../components/AccountEntry.vue';
 import AcknowledgmentsList from '../components/AcknowledgmentsList.vue';
@@ -15,11 +15,15 @@ import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { games } from '../../games';
+import { account, loadAccount } from '../account';
+import { GUIDE_PATH } from '../guide/progress';
 import { siteAddress, usePageHead } from '../head';
 import { setLanguage, storedLanguage, useLanguage } from '../i18n';
 import { homeIn, LANGUAGE_QUERY } from '../site';
+import { PRACTICE_ROLES } from '../practice';
 import BackToRoom from './BackToRoom.vue';
 import CreateRoom from './CreateRoom.vue';
+import GuideEntry from './GuideEntry.vue';
 import JoinRoom from './JoinRoom.vue';
 import LanguageGate from './LanguageGate.vue';
 import FriendsPlaying from './FriendsPlaying.vue';
@@ -39,6 +43,15 @@ import PublicRooms from './PublicRooms.vue';
 // gave it but for its metadata: WeChat reads it when a player presses and holds it, which a smaller
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
 // sponsors: by a name, or "list me", in the tip's message.
+//
+// The first game's card leads into the tutorial (docs/architecture.md#the-tutorial): a guest, and an
+// account that hasn't played the game, get the tutorial's green sticker above the button for a new
+// room, and an account that has played it a small "Tutorial" beside the rules instead, once the
+// page knows which it is. The account is asked for again whenever the page opens, so that a player
+// back from their first game finds the small word at once. The tutorial's last steps lead here with
+// the room setup open (?create=1), or the practice sheet open with who plays and the role chosen
+// (?practice=friends, or a role), which the address then drops, and the sheet takes once: it
+// doesn't open again when the room setup, which stands in its place, is closed.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const versionUrl = `${REPOSITORY_URL}/commits/${__APP_COMMIT__ ?? 'main'}`;
@@ -49,18 +62,34 @@ const route = useRoute();
 const router = useRouter();
 const asked = route.query[LANGUAGE_QUERY];
 const linked = typeof asked === 'string' && isLanguage(asked) ? asked : null;
-if (linked) {
-  setLanguage(linked);
+if (linked) setLanguage(linked);
+const askedRole = PRACTICE_ROLES.find((role) => role === route.query.practice);
+const practice = ref(
+  route.query.practice === 'friends'
+    ? { who: 'friends' as const }
+    : askedRole
+      ? { who: 'me' as const, role: askedRole }
+      : null,
+);
+const creating = ref(route.query.create === '1');
+if (linked || 'practice' in route.query || 'create' in route.query) {
   const query = { ...route.query };
-  delete query[LANGUAGE_QUERY];
+  for (const key of [LANGUAGE_QUERY, 'practice', 'create']) delete query[key];
   void router.replace({ query });
 }
 const chosen = ref(linked !== null || storedLanguage() !== null);
 // The rules of the first game, beside its name, as a new room in the page's language has them.
 const keywords = games.keywords;
 const language = useLanguage();
-const creating = ref(false);
 const tipping = ref(false);
+const played = computed(() => (account.loaded ? (account.summary?.played.includes('keywords') ?? false) : null));
+// The room setup that the tutorial opened comes into sight, below the masthead, once the router has
+// scrolled the page to its top.
+const firstGame = ref<HTMLElement | null>(null);
+onMounted(() => {
+  if (account.loaded) void loadAccount();
+  if (creating.value) requestAnimationFrame(() => firstGame.value?.scrollIntoView({ block: 'start' }));
+});
 
 const forthcoming = ['impostor', 'titles', 'abstracts'];
 
@@ -122,7 +151,7 @@ usePageHead(() =>
 
       <section class="contents">
         <ol>
-          <li class="entry">
+          <li ref="firstGame" class="entry">
             <div class="line">
               <span class="title"
                 >{{ t('home.games.keywords.name')
@@ -133,14 +162,18 @@ usePageHead(() =>
                   defaults
                   :settings="keywords.defaultSettings(language)"
                   :language="language"
-              /></span>
+                /><RouterLink v-if="played" class="guide-link" :to="GUIDE_PATH">{{
+                  t('guide.entry.link')
+                }}</RouterLink></span
+              >
               <UiButton v-if="!creating" variant="primary" size="large" @click="creating = true">
                 {{ t('home.newRoom') }}
               </UiButton>
             </div>
             <p class="summary">{{ t('home.games.keywords.summary') }}</p>
             <p class="meta">{{ t('home.players') }}</p>
-            <PracticeRoom v-if="!creating" />
+            <GuideEntry v-if="!creating && played === false" />
+            <PracticeRoom v-if="!creating" :preset="practice" @taken="practice = null" />
             <CreateRoom v-if="creating" game="keywords" :words-needed="BOARD_SIZE" @cancel="creating = false" />
           </li>
           <li v-for="game in forthcoming" :key="game" class="entry forthcoming">
@@ -288,10 +321,12 @@ ol {
 .entry:not(.forthcoming) {
   display: grid;
   width: 100%;
+  scroll-margin-top: calc(var(--masthead-height) + var(--space-3));
   margin-bottom: var(--space-3);
   grid-template-areas:
     'title meta'
     'summary summary'
+    'guide guide'
     'button button'
     'create create';
   grid-template-columns: 1fr auto;
@@ -316,6 +351,32 @@ ol {
 .entry:not(.forthcoming) > :deep(.create),
 .entry:not(.forthcoming) > :deep(.practice) {
   grid-area: create;
+}
+
+.entry:not(.forthcoming) > :deep(.guide-entry) {
+  grid-area: guide;
+}
+
+/* "Tutorial" follows "Rules" beside the game's name, as small and underlined, with a box that
+   reaches 44 px high out of sight. */
+.guide-link {
+  position: relative;
+  margin-left: var(--space-3);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+
+.guide-link::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) -8px;
 }
 
 .title {

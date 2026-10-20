@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AccountPage from './core/views/AccountPage.vue';
 import ConfirmEmail from './core/views/ConfirmEmail.vue';
 import ForgotPassword from './core/views/ForgotPassword.vue';
+import GuidePage from './core/views/GuidePage.vue';
 import HomeView from './core/views/HomeView.vue';
 import NotFound from './core/views/NotFound.vue';
 import ProfilePage from './core/views/ProfilePage.vue';
@@ -12,10 +13,15 @@ import ScreenPage from './core/views/ScreenPage.vue';
 
 // Views are imported statically, so the whole app is one bundle: a tab left open across a
 // deploy can't then ask for a lazily loaded chunk that the new build no longer has.
-// A page opens at its top, and the browser's back and forward return to where it was.
+// A page opens at its top, and the browser's back and forward return to where it was. A step of the
+// tutorial leaves the page where it is for the next step of the same chapter, whose scene brings what
+// it is about into view itself (core/guide/spot.ts).
 export const router = createRouter({
   history: createWebHistory(),
-  scrollBehavior: (_to, _from, saved) => saved ?? { top: 0 },
+  scrollBehavior: (to, from, saved) => {
+    const sameChapter = to.name === 'guide' && from.name === 'guide' && to.params.chapter === from.params.chapter;
+    return sameChapter && to.params.chapter ? false : (saved ?? { top: 0 });
+  },
   routes: [
     { path: '/', name: 'home', component: HomeView },
     { path: '/account', name: 'account', component: AccountPage },
@@ -25,6 +31,8 @@ export const router = createRouter({
     { path: '/account/confirm', name: 'confirm', component: ConfirmEmail },
     // A player's public page (docs/architecture.md#public-profiles).
     { path: `${PROFILE_PATH}:handle`, name: 'profile', component: ProfilePage, props: true },
+    // The tutorial (docs/architecture.md#the-tutorial): its contents, or a chapter at one of its steps.
+    { path: '/guide/:chapter?/:step?', name: 'guide', component: GuidePage },
     { path: '/room/:code', name: 'room', component: RoomPage, props: true },
     { path: '/room/:code/screen', name: 'screen', component: ScreenPage, props: true },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound },

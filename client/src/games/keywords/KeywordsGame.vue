@@ -455,7 +455,13 @@ const status = computed(() => {
       clock-apart
     />
     <div ref="clockBar" class="sticky-clock" :class="{ 'below-banner': reconnecting, stuck }">
-      <ClockBar v-if="game.clock && !game.result" :clock="game.clock" :period="periodOf(game)" :frozen="paused" />
+      <ClockBar
+        v-if="game.clock && !game.result"
+        :clock="game.clock"
+        :period="periodOf(game)"
+        :frozen="paused"
+        :mine="canClue || canGuess"
+      />
       <UiButton
         v-if="isChair && !game.result"
         class="pause"

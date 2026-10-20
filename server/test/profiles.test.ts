@@ -38,6 +38,7 @@ describe('a public profile', () => {
       profile: { link: null, bio: null, showRecord: true, showThanks: true, banned: false },
       likes: 0,
       requests: 0,
+      played: [],
     });
     const guest = new Browser(server.url);
     expect(await guest.request(`/api/profile/${ann.handle}`)).toMatchObject({

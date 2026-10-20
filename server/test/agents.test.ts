@@ -734,6 +734,8 @@ describe('a game that an AI played in', () => {
       .all(account?.id ?? 0);
     expect(records).toEqual([{ points: 0, won: 1 }]);
     expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
+    // A game with AI players counts as one the account has played, for the home page's tutorial.
+    expect((await browser.account())?.played).toEqual(['keywords']);
     const [row] = kept();
     const log = JSON.parse(row?.log ?? '{}') as { agents: Record<string, string> };
     expect(Object.values(log.agents)).toEqual(['reviewer1', 'reviewer1']);

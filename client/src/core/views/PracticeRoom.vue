@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BOARD_SIZE, type Language } from '@reviewer2/shared';
-import { computed, ref, useId, watch } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { account } from '../account';
@@ -37,12 +37,19 @@ import { useBusy } from '../useBusy';
 // list; the lists fold into one line, which names them, so that the whole sheet fits on a phone's
 // screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't
 // answer, the button says so and can't be pressed; on a server without an agent, there is no
-// button at all.
+// button at all. The tutorial may lead here with who plays, and the role, chosen as a chapter
+// taught them (`preset`): once the server has said that the AI players answer, the sheet opens
+// with them, and they are kept, as any are, only once the player starts; while the AI players are
+// offline, the button, which says so, comes into sight instead. Either way the page is told that
+// the preset was `taken`, so that it offers it once.
 const { t, locale } = useI18n();
 // The first game, whose practice rooms these are.
 const GAME = 'keywords';
 // Who plays: the player alone, with Reviewer 1 in the other seats, or the player with friends.
 const WHO = ['me', 'friends'] as const;
+type Who = (typeof WHO)[number];
+const props = defineProps<{ preset?: { who: Who; role?: PracticeRole } | null }>();
+const emit = defineEmits<{ taken: [] }>();
 
 const router = useRouter();
 const id = useId();
@@ -53,7 +60,7 @@ const lastFields = (): string[] | null => {
   const kept = lastPractice(GAME)?.fields;
   return kept && kept.length > 0 ? kept : storedFields();
 };
-const who = ref<(typeof WHO)[number]>('me');
+const who = ref<Who>('me');
 const role = ref<PracticeRole>(lastRole());
 const chosen = ref<string[]>([]);
 const formError = ref<string | undefined>();
@@ -96,15 +103,31 @@ const seats = computed(() => {
 
 const ready = computed(() => account.summary !== null && !offline.value && chosen.value.length > 0);
 
-function show() {
+function show(preset?: { who: Who; role?: PracticeRole }) {
   formError.value = undefined;
-  who.value = 'me';
-  role.value = lastRole();
+  who.value = preset?.who ?? 'me';
+  role.value = preset?.role ?? lastRole();
   if (fields.value) chosen.value = keptFields(lastFields() ?? DEFAULT_FIELDS, usable.value);
   open.value = true;
   loadFields();
   checkAgents();
 }
+
+// The button comes into sight a frame after the page has drawn: the router scrolls a page it opens
+// to its top once the page has drawn, which would undo an earlier scroll, as it would the room
+// setup's (HomeView.vue).
+const entry = ref<HTMLElement | null>(null);
+const showEntry = () => nextTick(() => requestAnimationFrame(() => entry.value?.scrollIntoView({ block: 'center' })));
+watch(
+  [() => props.preset, agents],
+  ([preset, status]) => {
+    if (!preset || status === 'unknown') return;
+    if (status === 'up') show(preset);
+    else if (status === 'down') void showEntry();
+    emit('taken');
+  },
+  { immediate: true },
+);
 
 async function start() {
   if (!ready.value) return;
@@ -134,7 +157,7 @@ async function start() {
 
 <template>
   <div v-if="offered" class="practice">
-    <button type="button" class="entry press" :disabled="offline" @click="show">
+    <button ref="entry" type="button" class="entry press" :disabled="offline" @click="show()">
       <PlayerAvatar :name="persona" agent size="medium" />
       <span class="text">
         <span class="main">{{ t('home.practice.entry') }}</span>

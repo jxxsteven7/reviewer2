@@ -26,6 +26,7 @@ Two research groups, Red and Blue, face off over 25 academic terms. Each group's
 - Optional accounts: an avatar, a record of games, friends and friend titles, an academic rank and a public page; see [Privacy](#privacy)
 - Matches: several scored games in a row, with titles
 - Public rooms: play with strangers, with an account, and report players who misbehave
+- A tutorial for newcomers, in chapters to read in any order: each game step by step, as a student and as the PI, with a finger on what to tap, and the site, from making a room to sending feedback; how far you have read stays on your device
 - AI players, being tried out: Reviewer 1 can play a group's PI or student, advise people, and play the turn of a player who has gone offline, and has a page of its own as player number 0; anyone with an account can play with it from the home page, alone, where it takes the three other seats, or with friends, where it takes the seats nobody takes; see [Privacy](#privacy)
 
 ## Privacy
