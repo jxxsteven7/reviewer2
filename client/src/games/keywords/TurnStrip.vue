@@ -23,6 +23,9 @@ import GroupBars, { type Group } from './GroupBars.vue';
 // player sees at a glance that the game waits for their side; the clock is red only while they
 // themselves have to act (ClockBar.vue).
 //
+// In the tutorial (`demo`), where the game is invented, the strip leaves the tab's title alone,
+// and its clock stands at what the step gives, since no server will end the phase.
+//
 // Under it, the two groups' bars (GroupBars.vue).
 const props = withDefaults(
   defineProps<{
@@ -32,8 +35,9 @@ const props = withDefaults(
     clockApart?: boolean;
     groups?: Group[];
     me?: string | null;
+    demo?: boolean;
   }>(),
-  { seat: null, clockApart: false, groups: () => [], me: null },
+  { seat: null, clockApart: false, groups: () => [], me: null, demo: false },
 );
 const { t } = useI18n();
 
@@ -61,7 +65,7 @@ const count = computed(() => {
   return value === 'unlimited' ? '\u221e' : String(value ?? '');
 });
 
-useUrgentTitle(() => (banner.value?.urgent ? t('banner.tabTitle') : null));
+useUrgentTitle(() => (banner.value?.urgent && !props.demo ? t('banner.tabTitle') : null));
 </script>
 
 <template>
@@ -88,7 +92,7 @@ useUrgentTitle(() => (banner.value?.urgent ? t('banner.tabTitle') : null));
       v-if="game.clock && !clockApart"
       :clock="game.clock"
       :period="periodOf(game)"
-      :frozen="game.paused"
+      :frozen="game.paused || demo"
       :mine="banner?.urgent"
     />
     <GroupBars :groups="groups" :remaining="game.remaining" :me="me" />

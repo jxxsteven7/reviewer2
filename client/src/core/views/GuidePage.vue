@@ -9,8 +9,9 @@ import PageMasthead from '../components/PageMasthead.vue';
 import PageTitle from '../components/PageTitle.vue';
 import SendFeedback from '../components/SendFeedback.vue';
 import UiButton from '../components/UiButton.vue';
-import { chapterById, chapters, type GuideChapter, type TryPlace } from '../guide/chapters';
-import { GUIDE_PATH, guidePath, keepProgress, readProgress } from '../guide/progress';
+import { chapterById, chapters, type ChapterEnd, type GuideChapter, type TryPlace } from '../guide/chapters';
+import { GUIDE_PATH, guidePath, keepProgress, readProgress, type ChapterProgress } from '../guide/progress';
+import { WIDE } from '../guide/spot';
 import { pageTitle, usePageHead } from '../head';
 import { agents, checkAgents } from '../practice';
 import { useMediaQuery } from '../useMediaQuery';
@@ -34,7 +35,7 @@ import { useMediaQuery } from '../useMediaQuery';
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
-const wide = useMediaQuery('(min-width: 64rem)');
+const wide = useMediaQuery(WIDE);
 checkAgents();
 
 const chapter = computed(() => {
@@ -76,7 +77,8 @@ const back = () => step.value > 1 && go(step.value - 1);
 const next = () => step.value < total.value && go(step.value + 1);
 
 // The contents: the game's chapters under the game's name, then the site's, each with how far this
-// browser has read it, and the chapter read last, if it was left halfway.
+// browser has read it, and the chapter read last, if it was left halfway. A step kept beyond a
+// chapter's steps, by a browser that read a longer chapter once, counts as the chapter read.
 const progress = ref(readProgress());
 watch(chapter, (current) => current === null && (progress.value = readProgress()));
 const sections = computed(() => [
@@ -87,29 +89,35 @@ const sections = computed(() => [
   })),
   { key: 'site', title: t('guide.sections.site'), chapters: chapters.filter((each) => each.game === null) },
 ]);
+const readOf = (each: GuideChapter): ChapterProgress | undefined => {
+  const at = progress.value.chapters[each.id];
+  return typeof at === 'number' && at >= each.steps ? 'done' : at;
+};
 const resume = computed(() => {
-  const id = progress.value.last;
-  const at = id === null ? undefined : progress.value.chapters[id];
-  const found = id === null ? null : chapterById(id);
-  return found && typeof at === 'number' ? { chapter: found, step: Math.min(at, found.steps) } : null;
+  const found = progress.value.last === null ? null : chapterById(progress.value.last);
+  const at = found ? readOf(found) : undefined;
+  return found && typeof at === 'number' ? { chapter: found, step: at } : null;
 });
 const stateOf = (each: GuideChapter) => {
-  const at = progress.value.chapters[each.id];
+  const at = readOf(each);
   if (at === 'done') return { kind: 'done', text: t('guide.state.done') };
   if (typeof at === 'number') return { kind: 'at', text: t('guide.state.at', { step: at }) };
   return { kind: 'new', text: t('guide.state.steps', { count: each.steps }) };
 };
 
-// What the last step leads on to. A chapter that ends in a real game leads on to the next chapter
-// on a server without AI players, where the home page offers no practice room.
+// What the last step leads on to. A chapter that ends in a real game, or at the practice sheet,
+// leads on to the next chapter on a server without AI players, where the home page offers no
+// practice room.
 const nextChapter = computed(() => {
   const at = chapters.findIndex((each) => each.id === chapter.value?.id);
   return chapters[at + 1] ?? null;
 });
+const needsAgents = (end: ChapterEnd) => 'play' in end || ('try' in end && end.try === 'friends');
 const ending = computed(() => {
   const end = chapter.value?.end;
   if (!end) return null;
-  if ('play' in end && agents.value !== 'none') return { kind: 'play' as const, role: end.play };
+  if (needsAgents(end) && agents.value === 'none') return { kind: 'next' as const };
+  if ('play' in end) return { kind: 'play' as const, role: end.play };
   if ('try' in end) return { kind: 'try' as const, place: end.try };
   return { kind: 'next' as const };
 });
@@ -135,12 +143,14 @@ const finishText = computed(() => {
 });
 
 // The arrow keys go back and on, and Escape to the contents, unless the reader is typing, as a PI
-// writes a clue, or a panel is open over the page.
+// writes a clue, a panel or a menu is open over the page, as the game's menu of marks is, or
+// something else on the page has taken the key already.
 function onKey(event: KeyboardEvent) {
-  if (!chapter.value || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (!chapter.value || event.defaultPrevented) return;
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
   const target = event.target instanceof HTMLElement ? event.target : null;
   if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
-  if (document.querySelector('[role="dialog"]')) return;
+  if (document.querySelector('[role="dialog"], [role="menu"]')) return;
   if (event.key === 'ArrowLeft') back();
   else if (event.key === 'ArrowRight') next();
   else if (event.key === 'Escape') void router.push(GUIDE_PATH);
@@ -529,10 +539,20 @@ usePageHead(() => ({
   text-align: center;
 }
 
+/* The way back to the contents at a chapter's end, small, with a box that reaches 44 px high out
+   of sight, below the buttons. */
 .to-contents-end {
+  position: relative;
   align-self: center;
+  margin-top: var(--space-1);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
+}
+
+.to-contents-end::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 22px) -8px;
 }
 
 /* Room below the scene, so that what the finger is at can come up above the coach card, and the

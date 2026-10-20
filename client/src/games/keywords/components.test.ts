@@ -1072,6 +1072,34 @@ describe('TurnStrip', () => {
       vi.useRealTimers();
     }
   });
+
+  // In the tutorial, the strip shows an invented game: the tab's title stays the page's, and the
+  // clock stands at what the step gives.
+  test("in the tutorial leaves the tab's title alone, and keeps its clock standing", async () => {
+    vi.useFakeTimers();
+    try {
+      const timed = { ...game, clock: { left: 42_000, total: 90_000 } };
+      const real = mount(TurnStrip, { props: { game: timed, guessRule: 'free', seat: seats.bob }, global: global() });
+      await nextTick();
+      expect(document.title).toBe('Your turn!');
+      real.unmount();
+      await nextTick();
+      const demo = mount(TurnStrip, {
+        props: { game: timed, guessRule: 'free', seat: seats.bob, demo: true },
+        global: global(),
+      });
+      await nextTick();
+      expect(document.title).not.toBe('Your turn!');
+      expect(demo.get('.phase').text()).toBe('Your turn to guess!');
+      expect(demo.get('.clock').classes()).toContain('mine');
+      vi.advanceTimersByTime(5_000);
+      await flushPromises();
+      expect(demo.get('.clock').attributes('aria-label')).toBe('42 seconds left');
+      demo.unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('KeywordsBoard', () => {

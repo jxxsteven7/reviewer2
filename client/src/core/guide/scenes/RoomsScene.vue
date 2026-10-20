@@ -10,9 +10,10 @@ import CreateRoom from '../../views/CreateRoom.vue';
 import { useSpot, type SpotTarget } from '../spot';
 import ScenePart from './ScenePart.vue';
 
-// A step of "Rooms and invitations": the room setup of the first game, as the home page opens it,
-// and the ways to share an invented room and to invite friends to it, as its waiting room has them.
-// Only to look at: nothing in it is sent.
+// A step of "Rooms and invitations": the room setup of the first game, as the home page opens it
+// for the first time, at its defaults rather than from the reader's last room, and the ways to
+// share an invented room and to invite friends to it, as its waiting room has them. Only to look
+// at: nothing in it is sent.
 const props = defineProps<{ chapter: string; step: number }>();
 const { t, locale } = useI18n();
 const [game] = Object.keys(games);
@@ -34,7 +35,7 @@ useSpot(root, () => SPOTS[props.step] ?? null);
 <template>
   <div ref="root" class="rooms-scene" inert>
     <ScenePart v-if="step < 5 && game">
-      <CreateRoom :game="game" :words-needed="BOARD_SIZE" />
+      <CreateRoom :game="game" :words-needed="BOARD_SIZE" fresh />
     </ScenePart>
     <ScenePart v-else-if="room">
       <ManuscriptId :code="room.code" />

@@ -26,6 +26,7 @@ vi.mock('../guide/chapters', async () => {
   const chapters = [
     { id: 'student', game: 'keywords', steps: 3, scene: Scene, end: { play: 'guesser' } },
     { id: 'settings', game: 'keywords', steps: 2, scene: Scene, end: { next: true } },
+    { id: 'lobby', game: null, steps: 2, scene: Scene, end: { try: 'friends' } },
     { id: 'feedback', game: null, steps: 2, scene: Scene, end: { try: 'feedback' } },
   ];
   return { chapters, chapterById: (id: string) => chapters.find((chapter) => chapter.id === id) ?? null };
@@ -78,9 +79,15 @@ describe('the contents', () => {
     expect(chapters.map((chapter) => chapter.get('.main').text())).toEqual([
       'Playing a student',
       'Room settings',
+      'The waiting room',
       'Giving feedback',
     ]);
-    expect(chapters.map((chapter) => chapter.get('.state').text())).toEqual(['3 steps', '2 steps', '2 steps']);
+    expect(chapters.map((chapter) => chapter.get('.state').text())).toEqual([
+      '3 steps',
+      '2 steps',
+      '2 steps',
+      '2 steps',
+    ]);
     expect(chapters[1]?.attributes('href')).toBe('/guide/settings/1');
     expect(wrapper.find('.resume').exists()).toBe(false);
     wrapper.unmount();
@@ -94,6 +101,20 @@ describe('the contents', () => {
     expect(wrapper.get('.resume .sub').text()).toBe('Playing a student \u00b7 step 2 of 3');
     expect(wrapper.findAll('.chapter .state').map((state) => state.text())).toEqual([
       'At step 2',
+      '2 steps',
+      '2 steps',
+      '2 steps',
+    ]);
+    wrapper.unmount();
+  });
+
+  test('count a step kept beyond a chapter, from when the chapter was longer, as the chapter read', async () => {
+    localStorage.setItem('r2.guide', JSON.stringify({ chapters: { student: 7, settings: 1 }, last: 'student' }));
+    const { wrapper } = await opened('/guide');
+    expect(wrapper.find('.resume').exists()).toBe(false);
+    expect(wrapper.findAll('.chapter .state').map((state) => state.text())).toEqual([
+      'Done',
+      'At step 1',
       '2 steps',
       '2 steps',
     ]);
@@ -132,17 +153,29 @@ describe('a chapter', () => {
     wrapper.unmount();
   });
 
-  test('leaves the keys to a field that is being typed in, and to a panel that is open', async () => {
+  test('leaves the keys to a field that is being typed in, to a panel or a menu that is open, and to what took them', async () => {
     const { wrapper, router } = await opened('/guide/student/2');
     const field = document.createElement('input');
     document.body.append(field);
     await press('ArrowRight', field);
     expect(router.currentRoute.value.fullPath).toBe('/guide/student/2');
-    const panel = document.createElement('div');
-    panel.setAttribute('role', 'dialog');
-    document.body.append(panel);
-    await press('ArrowRight');
+    // Something on the page, such as the game's menu of marks, closes on Escape and says so.
+    const taken = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    taken.preventDefault();
+    window.dispatchEvent(taken);
+    await flushPromises();
     expect(router.currentRoute.value.fullPath).toBe('/guide/student/2');
+    for (const role of ['dialog', 'menu']) {
+      const over = document.createElement('div');
+      over.setAttribute('role', role);
+      document.body.append(over);
+      await press('ArrowRight');
+      await press('Escape');
+      expect(router.currentRoute.value.fullPath).toBe('/guide/student/2');
+      over.remove();
+    }
+    await press('ArrowRight');
+    expect(router.currentRoute.value.fullPath).toBe('/guide/student/3');
     wrapper.unmount();
   });
 
@@ -176,6 +209,25 @@ describe('a chapter', () => {
     await next?.trigger('click');
     await flushPromises();
     expect(alone.router.currentRoute.value.fullPath).toBe('/guide/settings/1');
+    alone.wrapper.unmount();
+  });
+
+  test('on the waiting room leads to the practice sheet for a room with friends, or without AI players on', async () => {
+    const { wrapper, router } = await opened('/guide/lobby/2');
+    const finish = () => wrapper.findAll('.nav button')[1];
+    expect(finish()?.text()).toBe('Try it');
+    await finish()?.trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe('/?practice=friends');
+    wrapper.unmount();
+
+    agents.value = 'none';
+    const alone = await opened('/guide/lobby/2');
+    const next = alone.wrapper.findAll('.nav button')[1];
+    expect(next?.text()).toBe('Next: Giving feedback');
+    await next?.trigger('click');
+    await flushPromises();
+    expect(alone.router.currentRoute.value.fullPath).toBe('/guide/feedback/1');
     alone.wrapper.unmount();
   });
 

@@ -200,11 +200,21 @@ describe('the way into the tutorial', () => {
     wrapper.unmount();
   });
 
-  test('leads to the practice sheet with who plays and the role chosen, or neither for anything else', () => {
+  test('leads to the practice sheet with who plays and the role chosen, or neither for anything else', async () => {
     router.route.query = { practice: 'guesser' };
     const alone = mountHome();
     expect(alone.getComponent(PracticeRoom).props('preset')).toEqual({ who: 'me', role: 'guesser' });
     expect(router.replace).toHaveBeenCalledWith({ query: {} });
+    // The sheet takes them once: back from the room setup, which stands in its place meanwhile, it
+    // has none to open with.
+    alone.getComponent(PracticeRoom).vm.$emit('taken');
+    await nextTick();
+    expect(alone.getComponent(PracticeRoom).props('preset')).toBeNull();
+    await alone.get('.entry .button.primary').trigger('click');
+    expect(alone.find('create-room-stub').exists()).toBe(true);
+    alone.getComponent({ name: 'CreateRoom' }).vm.$emit('cancel');
+    await nextTick();
+    expect(alone.getComponent(PracticeRoom).props('preset')).toBeNull();
     alone.unmount();
     router.route.query = { practice: 'friends' };
     const friends = mountHome();

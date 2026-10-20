@@ -29,7 +29,8 @@ import UiSheet from './UiSheet.vue';
 
 // "Send feedback", for the footer of the home page and of a room, and its panel
 // (docs/architecture.md); a page may give the button a label of its own, such as one with a
-// drawing, and a look of its own, as the tutorial's last step on feedback has it, a main action. The text, the contact and the name for the feedback contributions are checked by the
+// drawing, and a look of its own, such as the main action that ends the tutorial's chapter on
+// feedback. The text, the contact and the name for the feedback contributions are checked by the
 // rules that the server applies (shared/src/feedback.ts), and go as those rules clean them: what
 // the player pasted may hold characters that JSON writes out at six bytes each, and the message has
 // to stay under the server's 16 KB. The panel says that what is written may become a public GitHub

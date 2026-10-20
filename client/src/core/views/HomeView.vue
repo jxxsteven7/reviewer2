@@ -50,7 +50,8 @@ import PublicRooms from './PublicRooms.vue';
 // page knows which it is. The account is asked for again whenever the page opens, so that a player
 // back from their first game finds the small word at once. The tutorial's last steps lead here with
 // the room setup open (?create=1), or the practice sheet open with who plays and the role chosen
-// (?practice=friends, or a role), which the address then drops.
+// (?practice=friends, or a role), which the address then drops, and the sheet takes once: it
+// doesn't open again when the room setup, which stands in its place, is closed.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const versionUrl = `${REPOSITORY_URL}/commits/${__APP_COMMIT__ ?? 'main'}`;
@@ -63,12 +64,13 @@ const asked = route.query[LANGUAGE_QUERY];
 const linked = typeof asked === 'string' && isLanguage(asked) ? asked : null;
 if (linked) setLanguage(linked);
 const askedRole = PRACTICE_ROLES.find((role) => role === route.query.practice);
-const practice =
+const practice = ref(
   route.query.practice === 'friends'
     ? { who: 'friends' as const }
     : askedRole
       ? { who: 'me' as const, role: askedRole }
-      : null;
+      : null,
+);
 const creating = ref(route.query.create === '1');
 if (linked || 'practice' in route.query || 'create' in route.query) {
   const query = { ...route.query };
@@ -171,7 +173,7 @@ usePageHead(() =>
             <p class="summary">{{ t('home.games.keywords.summary') }}</p>
             <p class="meta">{{ t('home.players') }}</p>
             <GuideEntry v-if="!creating && played === false" />
-            <PracticeRoom v-if="!creating" :preset="practice" />
+            <PracticeRoom v-if="!creating" :preset="practice" @taken="practice = null" />
             <CreateRoom v-if="creating" game="keywords" :words-needed="BOARD_SIZE" @cancel="creating = false" />
           </li>
           <li v-for="game in forthcoming" :key="game" class="entry forthcoming">

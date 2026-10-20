@@ -168,6 +168,35 @@ describe('the room setup', () => {
     });
   });
 
+  test('starts afresh, from the defaults with the general list, whatever the last room was, when asked to', async () => {
+    writeStored(
+      'r2.roomSetup',
+      JSON.stringify({
+        keywords: {
+          fields: ['ml'],
+          randomFields: true,
+          match: { games: 5, teams: 'switch', grouping: 'random' },
+          public: true,
+          play: false,
+        },
+      }),
+    );
+    const wrapper = mount(CreateRoom, {
+      props: { game: 'keywords', wordsNeeded: 25, fresh: true },
+      global: { plugins: [i18n] },
+    });
+    expect(box(wrapper, 0).element.checked).toBe(true);
+    expect(box(wrapper, 1).element.checked).toBe(false);
+    expect(wrapper.get('.field-fold .summary').text()).toBe('General');
+    expect(wrapper.find('.match-form').exists()).toBe(false);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    const payload = socket.send.mock.calls[0]?.[1];
+    expect(payload).toMatchObject({ fields: ['general'], play: true });
+    expect(payload).not.toHaveProperty('match');
+    expect(payload).not.toHaveProperty('randomFields');
+  });
+
   test('leaves a last room kept before rooms were kept by game behind, and writes this one in its place', async () => {
     writeStored(
       'r2.roomSetup',

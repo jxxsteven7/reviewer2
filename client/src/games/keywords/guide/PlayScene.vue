@@ -84,7 +84,7 @@ function onGive() {
 <template>
   <div ref="root" class="play-scene" @click.capture="onClick">
     <DecisionLetter v-if="game.result" :game="game" side="red" :is-chair="false" compact />
-    <TurnStrip v-else :game="game" :guess-rule="settings.guessRule" :seat="seat" :groups="groups" :me="ME" />
+    <TurnStrip v-else :game="game" :guess-rule="settings.guessRule" :seat="seat" :groups="groups" :me="ME" demo />
     <ClueLog v-if="scene.panel === 'log'" :game="game" />
     <KeywordsBoard
       v-else

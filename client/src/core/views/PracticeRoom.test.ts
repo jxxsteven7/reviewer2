@@ -195,6 +195,7 @@ describe('practicing with Reviewer 1', () => {
 
   test('opens at once with who plays and the role that the tutorial chose, and keeps them only once the player starts', async () => {
     writeStored('r2.practiceRole', 'captain');
+    agents.value = 'up';
     const wrapper = mount(PracticeRoom, {
       attachTo: document.body,
       props: { preset: { who: 'me', role: 'guesser' } },
@@ -206,10 +207,11 @@ describe('practicing with Reviewer 1', () => {
     expect(sheet.querySelector<HTMLInputElement>('.who-plays input[value="me"]')?.checked).toBe(true);
     expect(checkedRole(sheet)).toBe('guesser');
     expect(readStored('r2.practiceRole')).toBe('captain');
+    expect(wrapper.emitted('taken')).toHaveLength(1);
     wrapper.unmount();
     document.body.innerHTML = '';
 
-    mount(PracticeRoom, {
+    const friends = mount(PracticeRoom, {
       attachTo: document.body,
       props: { preset: { who: 'friends' } },
       global: { plugins: [i18n] },
@@ -218,6 +220,40 @@ describe('practicing with Reviewer 1', () => {
     const withFriends = document.querySelector<HTMLElement>('[role=dialog]');
     expect(withFriends?.querySelector<HTMLInputElement>('.who-plays input[value="friends"]')?.checked).toBe(true);
     expect(withFriends?.querySelector('.roles')).toBeNull();
+    friends.unmount();
+  });
+
+  test("opens with the tutorial's choice once the AI players answer, and brings its button into sight while they are offline", async () => {
+    const mounted = () =>
+      mount(PracticeRoom, {
+        attachTo: document.body,
+        props: { preset: { who: 'me', role: 'guesser' } },
+        global: { plugins: [i18n] },
+      });
+    // Until the server has answered, nothing opens and the choice is kept.
+    socket.send.mockImplementation(() => new Promise(() => {}));
+    const waiting = mounted();
+    await flushPromises();
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    expect(waiting.emitted('taken')).toBeUndefined();
+    agents.value = 'up';
+    await flushPromises();
+    expect(checkedRole(document.querySelector<HTMLElement>('[role=dialog]') as HTMLElement)).toBe('guesser');
+    expect(waiting.emitted('taken')).toHaveLength(1);
+    waiting.unmount();
+    document.body.innerHTML = '';
+
+    agents.value = 'down';
+    const shown = vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {});
+    const offline = mounted();
+    await flushPromises();
+    expect(document.querySelector('[role=dialog]')).toBeNull();
+    expect(offline.get('button.entry').attributes('disabled')).toBeDefined();
+    expect(shown).toHaveBeenCalledWith({ block: 'center' });
+    expect(shown.mock.instances[0]).toBe(offline.get('button.entry').element);
+    expect(offline.emitted('taken')).toHaveLength(1);
+    shown.mockRestore();
+    offline.unmount();
   });
 
   test('works without storage, and starts nothing until a list is chosen', async () => {

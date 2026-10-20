@@ -83,7 +83,7 @@ useSpot(root, () => SPOTS[props.step] ?? null);
     <GroupChat v-if="step === 1" :room="room" :sending="false" draft="" panel />
 
     <template v-else-if="step === 2">
-      <TurnStrip :game="marking" :guess-rule="settings.guessRule" :seat="seat" :groups="groups" :me="ME" />
+      <TurnStrip :game="marking" :guess-rule="settings.guessRule" :seat="seat" :groups="groups" :me="ME" demo />
       <KeywordsBoard
         :cards="marking.cards"
         :selectable="false"
@@ -96,9 +96,17 @@ useSpot(root, () => SPOTS[props.step] ?? null);
     </template>
 
     <template v-else-if="step < 6">
-      <TurnStrip :game="guessing" :guess-rule="settings.guessRule" :seat="seat" :groups="groups" :me="ME" clock-apart />
+      <TurnStrip
+        :game="guessing"
+        :guess-rule="settings.guessRule"
+        :seat="seat"
+        :groups="groups"
+        :me="ME"
+        clock-apart
+        demo
+      />
       <div class="bar">
-        <ClockBar v-if="guessing.clock" :clock="guessing.clock" :period="periodOf(guessing)" mine />
+        <ClockBar v-if="guessing.clock" :clock="guessing.clock" :period="periodOf(guessing)" frozen mine />
         <UiButton class="pause" size="small">{{ t('game.pause') }}</UiButton>
         <EmoteButton />
       </div>

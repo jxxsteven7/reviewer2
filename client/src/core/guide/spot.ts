@@ -64,13 +64,19 @@ export function useSpot(root: Ref<HTMLElement | null>, target: () => SpotTarget 
   });
 }
 
+// The width from which the coach card stands beside the scene, in a column of its own, rather
+// than at the bottom of the screen, over it (GuidePage.vue).
+export const WIDE = '(min-width: 64rem)';
+
 // Scrolls the page so that the part stands in the middle of what the chapter's bar at the top and
-// the coach card at the bottom leave of the screen, as a phone shows them; on a wider screen the
-// coach card is beside the scene, and the part stands in the middle of what is under the bar.
+// the coach card at the bottom leave of the screen, as a phone shows them, however tall the card
+// is; on a wider screen the coach card is beside the scene, and the part stands in the middle of
+// what is under the bar.
 function bringIntoView(el: Element): void {
   const top = document.querySelector('.guide-bar')?.getBoundingClientRect().bottom ?? 0;
-  const coach = document.querySelector('.guide-coach')?.getBoundingClientRect();
-  const bottom = coach && coach.top > window.innerHeight / 2 ? coach.top : window.innerHeight;
+  const wide = window.matchMedia?.(WIDE).matches ?? false;
+  const coach = wide ? null : document.querySelector('.guide-coach')?.getBoundingClientRect();
+  const bottom = coach ? coach.top : window.innerHeight;
   const rect = el.getBoundingClientRect();
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   window.scrollTo({

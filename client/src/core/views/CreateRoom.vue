@@ -13,6 +13,7 @@ import UiButton from '../components/UiButton.vue';
 import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
+import { DEFAULT_FIELDS } from '../practice';
 import { keepRoomSetup, keptFields, keptMatch, lastRoom } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
@@ -26,14 +27,15 @@ import { useBusy } from '../useBusy';
 // is told in a line that the games are recorded, which an account agreed to as it registered
 // (privacy.guestNotice). The setup starts from the last one (roomSetup.ts), as far as it still
 // holds: lists that the language has too few words in drop out, a setting that no longer will do
-// is the game's default, and a guest's room is private.
-const props = defineProps<{ game: string; wordsNeeded: number }>();
+// is the game's default, and a guest's room is private. A `fresh` setup, as the tutorial shows
+// one, starts from the defaults instead, with the general list, whatever the last room was.
+const props = withDefaults(defineProps<{ game: string; wordsNeeded: number; fresh?: boolean }>(), { fresh: false });
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
 const router = useRouter();
 
-const last = lastRoom(props.game);
-const chosen = ref<string[]>(keptFields(last?.fields));
+const last = props.fresh ? null : lastRoom(props.game);
+const chosen = ref<string[]>(props.fresh ? [...DEFAULT_FIELDS] : keptFields(last?.fields));
 const randomFields = ref(last?.randomFields === true);
 const play = ref(typeof last?.play === 'boolean' ? last.play : true);
 // What the server had against the form.

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BOARD_SIZE, type Language } from '@reviewer2/shared';
-import { computed, ref, useId, watch } from 'vue';
+import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { account } from '../account';
@@ -38,8 +38,10 @@ import { useBusy } from '../useBusy';
 // screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't
 // answer, the button says so and can't be pressed; on a server without an agent, there is no
 // button at all. The tutorial may lead here with who plays, and the role, chosen as a chapter
-// taught them (`preset`), and the sheet then opens with them; they are kept, as any are, only once
-// the player starts.
+// taught them (`preset`): once the server has said that the AI players answer, the sheet opens
+// with them, and they are kept, as any are, only once the player starts; while the AI players are
+// offline, the button, which says so, comes into sight instead. Either way the page is told that
+// the preset was `taken`, so that it offers it once.
 const { t, locale } = useI18n();
 // The first game, whose practice rooms these are.
 const GAME = 'keywords';
@@ -47,6 +49,7 @@ const GAME = 'keywords';
 const WHO = ['me', 'friends'] as const;
 type Who = (typeof WHO)[number];
 const props = defineProps<{ preset?: { who: Who; role?: PracticeRole } | null }>();
+const emit = defineEmits<{ taken: [] }>();
 
 const router = useRouter();
 const id = useId();
@@ -110,9 +113,15 @@ function show(preset?: { who: Who; role?: PracticeRole }) {
   checkAgents();
 }
 
+const entry = ref<HTMLElement | null>(null);
 watch(
-  () => props.preset,
-  (preset) => preset && show(preset),
+  [() => props.preset, agents],
+  ([preset, status]) => {
+    if (!preset || status === 'unknown') return;
+    if (status === 'up') show(preset);
+    else if (status === 'down') void nextTick(() => entry.value?.scrollIntoView({ block: 'center' }));
+    emit('taken');
+  },
   { immediate: true },
 );
 
@@ -144,7 +153,7 @@ async function start() {
 
 <template>
   <div v-if="offered" class="practice">
-    <button type="button" class="entry press" :disabled="offline" @click="show()">
+    <button ref="entry" type="button" class="entry press" :disabled="offline" @click="show()">
       <PlayerAvatar :name="persona" agent size="medium" />
       <span class="text">
         <span class="main">{{ t('home.practice.entry') }}</span>
