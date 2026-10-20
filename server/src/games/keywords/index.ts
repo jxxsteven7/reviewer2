@@ -283,8 +283,9 @@ const mayEmote = (data: KeywordsData, playerId: string, ctx: Pick<GameContext, '
 // for each missed deadline, and boards on which no row or column is all one group's cards; version
 // 5 the opening record from a first clue of 4 or more, which brings the PI no point and which the
 // heavenly hand outdoes, the instant desk reject and the fall at the first hurdle, the PI's deadline
-// hero for a clue followed to the letter, and no clue that a Latin word on the board starts with.
-export const RULES_VERSION = 5;
+// hero for a clue followed to the letter, and no clue that a Latin word on the board starts with;
+// version 6, in a Chinese room, no clue of letters that a Latin word on the board has anywhere.
+export const RULES_VERSION = 6;
 
 const actions: { [M in KeywordsMessage]: Action<M> } = {
   'keywords:seat': (data, ctx, playerId, seat) => sit(data, ctx, playerId, seat),

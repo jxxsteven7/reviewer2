@@ -864,6 +864,35 @@ describe('CluePanel', () => {
     );
   });
 
+  test("names a word on the board that has a clue's letters: anywhere in a Chinese room, at the start in an English one", async () => {
+    const cards = [
+      { word: 'ETS', revealed: false },
+      { word: 'Earth', revealed: false },
+    ];
+    const chinese = panel({ ...STANDARD, clueLength: 4 }, 'zh');
+    await chinese.setProps({ game: { ...chinese.props('game'), cards } });
+    await chinese.get('input').setValue('ts');
+    expect(chinese.get('.problem').text()).toBe(
+      "\u201cETS\u201d on the board contains this clue. This room's clue check doesn't allow it.",
+    );
+    const loose = panel({ ...STANDARD, clueLength: 4, clueRule: 'loose' }, 'zh');
+    await loose.setProps({ game: { ...loose.props('game'), cards } });
+    await loose.get('input').setValue('ts');
+    expect(loose.find('.problem').exists()).toBe(false);
+    expect(loose.get('.warning').text()).toBe(
+      "A word still on the board contains this clue: \u201cETS\u201d. It may give that word away, so it's your call.",
+    );
+    const english = panel();
+    await english.setProps({ game: { ...english.props('game'), cards } });
+    await english.get('input').setValue('ear');
+    expect(english.get('.problem').text()).toBe(
+      "\u201cEarth\u201d on the board starts with this clue. This room's clue check doesn't allow it.",
+    );
+    await english.get('input').setValue('art');
+    expect(english.find('.problem').exists()).toBe(false);
+    expect(english.find('.warning').exists()).toBe(false);
+  });
+
   test('asks the PI loudly to mark the cards the clue is for, and counts and names them once marked', async () => {
     const wrapper = panel();
     await wrapper.setProps({ team: 'red' });
@@ -1654,13 +1683,23 @@ describe('RulesSheet', () => {
     expect(sound(zh)).toHaveLength(1);
     expect(sound(zh)[0]).toContain('\u9e21\u97f3 (j\u012by\u012bn) for \u57fa\u56e0');
     // Right after the lines on what a clue can't be.
-    expect(zh.indexOf(sound(zh)[0] as string)).toBe(3);
+    expect(zh.indexOf(sound(zh)[0] as string)).toBe(4);
     expect(sound(await clueLines('en'))).toEqual([]);
     for (const lines of [zh, await clueLines('en')]) {
       expect(lines).toContain(
         "While the students guess, neither group's PI may send a quick reaction, nor may anyone who has been a PI in this game.",
       );
     }
+  });
+
+  test("says how a clue's letters count in the room's language: anywhere in a Chinese room, at the start in an English one", async () => {
+    const letters = (lines: string[]) => lines.filter((line) => line.startsWith('A clue of letters alone'));
+    expect(letters(await clueLines('zh'))).toEqual([
+      'A clue of letters alone gives away a Latin word on the board that has its letters in a row, capitals or not, at its start, in its middle or at its end, even a single letter: s and ts beside ETS, ai beside Email, s beside S\u6ce2.',
+    ]);
+    expect(letters(await clueLines('en'))).toEqual([
+      "A clue of letters alone gives away a word on the board that starts with it, even a single letter: mode and m beside Model. Letters in the middle of a word don't count: art beside Earth is fine.",
+    ]);
   });
 
   test('opens from a small word on the home page, with the defaults and a word that rooms may change them', async () => {

@@ -123,6 +123,7 @@ const RUNS_INTO: Record<ClueMatch['kind'], string> = {
   similar: 'is too close to',
   inside: 'contains',
   prefix: 'starts like',
+  letters: 'spells part of',
 };
 
 function why({ candidate, conflict }: Judged, max: number): string {
