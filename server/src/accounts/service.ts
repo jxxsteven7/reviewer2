@@ -215,6 +215,7 @@ export class Accounts {
       likes: this.likes.count(account.id),
       requests: this.friends.store.counts(account.id).incoming,
       roomSetup: this.roomSetupOf(account.id),
+      played: this.records.played(account.id),
     };
   }
 

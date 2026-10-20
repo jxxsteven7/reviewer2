@@ -120,6 +120,7 @@ export class RecordStore {
   readonly #totals: StatementSync;
   readonly #roles: StatementSync;
   readonly #points: StatementSync;
+  readonly #played: StatementSync;
   readonly #recent: StatementSync;
   readonly #insertMatch: StatementSync;
   readonly #matchCount: StatementSync;
@@ -153,6 +154,7 @@ export class RecordStore {
         'WHERE account_id = ? GROUP BY role',
     );
     this.#points = db.prepare('SELECT coalesce(sum(points), 0) AS points FROM game_records WHERE account_id = ?');
+    this.#played = db.prepare('SELECT DISTINCT game FROM game_records WHERE account_id = ? ORDER BY game');
     // With each game, what the record of the game says of it: when it ended, who won, which game
     // of a match it was and whether an AI played in it. Every game on the record finished and is
     // kept with its log, so each has a replay to watch.
@@ -223,6 +225,11 @@ export class RecordStore {
   // The points of every game on the account's record, from which its rank is told (ranks.ts).
   points(accountId: number): number {
     return (this.#points.get(accountId) as { points: number }).points;
+  }
+
+  // The games that the account has finished at least one game of, by the game's ID.
+  played(accountId: number): string[] {
+    return (this.#played.all(accountId) as { game: string }[]).map(({ game }) => game);
   }
 
   // Keeps the match, and says whether it was new.

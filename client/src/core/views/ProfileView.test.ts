@@ -27,6 +27,7 @@ const summary: AccountSummary = {
   likes: 0,
   requests: 0,
   roomSetup: {},
+  played: [],
 };
 
 const mountPage = () =>
