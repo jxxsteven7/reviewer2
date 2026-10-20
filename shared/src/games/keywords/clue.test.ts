@@ -586,11 +586,11 @@ describe('the strict and the loose clue rules', () => {
     expect(zhStrict('Pythonic', [card('Python')]).conflict).toEqual(inside('Python'));
     expect(zhStrict('metadata', [card('Big data')]).conflict).toEqual(inside('Big data'));
     expect(zhLoose('metadata', [card('Big data')]).similar).toEqual([inside('Big data')]);
-    // Shorter words are left alone, and so are clues inside a word; a clue that a word starts with
-    // is the prefix rule's.
+    // Shorter words are left alone; a clue inside a Latin word on the board is for the rule of
+    // letters (below).
     expect(zhStrict('email', [card('AI')]).problem).toBeNull();
     expect(zhStrict('datum', [card('Dat')]).problem).toBeNull();
-    expect(zhStrict('data', [card('Datacenter')]).conflict).toEqual({ card: 0, text: 'Datacenter', kind: 'prefix' });
+    expect(zhStrict('data', [card('Datacenter')]).conflict).toEqual({ card: 0, text: 'Datacenter', kind: 'letters' });
   });
 
   test('is a warning under both rules in an English room, where every card is Latin', () => {
@@ -657,14 +657,12 @@ describe('the strict and the loose clue rules', () => {
   });
 });
 
-describe('a clue that a word on the board starts with', () => {
+describe('a clue that a word on the board starts with, in an English room', () => {
   const card = (word: string, more: { translations?: string[] } = {}) => ({ word, revealed: false, ...more });
   const strict = (clue: string, cards: ReturnType<typeof card>[]) =>
     checkClue(clue, cards, { words: 1, length: null, strict: true });
   const loose = (clue: string, cards: ReturnType<typeof card>[]) =>
     checkClue(clue, cards, { words: 1, length: null, strict: false });
-  const zhStrict = (clue: string, cards: ReturnType<typeof card>[]) =>
-    checkClue(clue, cards, { words: 1, length: 10, strict: true });
   const prefix = (text: string) => ({ card: 0, text, kind: 'prefix' });
 
   test('is refused under the strict rule and a warning under the loose one, however short the clue', () => {
@@ -673,6 +671,7 @@ describe('a clue that a word on the board starts with', () => {
       ['S', 'SEI\u819c'],
       ['p', 'P-value'],
       ['mode', 'Model'],
+      ['ear', 'Earth'],
       ['data', 'Datacenter'],
       ['sci', 'Data science'],
       ['u', 'U-Net'],
@@ -684,13 +683,21 @@ describe('a clue that a word on the board starts with', () => {
       });
       expect(loose(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [prefix(word)] });
     }
-    expect(zhStrict('s', [card('SEI\u819c')]).conflict).toEqual(prefix('SEI\u819c'));
   });
 
   test('is not a clue inside a word, a word of other letters, or the word itself', () => {
-    expect(strict('ai', [card('Email')]).problem).toBeNull();
-    expect(strict('ai', [card('Email')]).similar).toEqual([]);
-    expect(strict('center', [card('Datacenter')]).problem).toBeNull();
+    // English words hide inside each other everywhere, so the letters inside a word count in a
+    // Chinese room alone (below).
+    for (const [clue, word] of [
+      ['ai', 'Email'],
+      ['art', 'Earth'],
+      ['center', 'Datacenter'],
+    ] as const) {
+      expect(strict(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [] });
+    }
+    // Nor does a lone letter of a word with digits besides, as "s" of "5S", which is no start of
+    // a longer piece.
+    expect(strict('s', [card('5S')])).toEqual({ problem: null, conflict: null, similar: [] });
     // Digits and Chinese characters in the clue are not Latin letters alone.
     expect(strict('s1', [card('S2 cells')]).conflict).toBeNull();
     expect(strict(NOTICE, [card(ATTENTION)]).conflict).toEqual({ card: 0, text: ATTENTION, kind: 'same' });
@@ -707,6 +714,105 @@ describe('a clue that a word on the board starts with', () => {
         similar: [{ card: 0, text: 'Data', kind: 'prefix' }],
       });
     }
+  });
+});
+
+describe('a clue of Latin letters that a word on the board has, in a Chinese room', () => {
+  const S_WAVE = '\u0053\u6ce2'; // "S wave": the letter S and the character for a wave
+  const WAVE = '\u6ce2';
+  const T_CELL = '\u0054\u7ec6\u80de'; // "T cell"
+  const BISPHENOL_A = '\u53cc\u915a\u0041'; // "bisphenol A"
+  const EMAIL = '\u7535\u5b50\u90ae\u4ef6'; // "email"
+  const card = (word: string, more: { translations?: string[] } = {}) => ({ word, revealed: false, ...more });
+  const zhStrict = (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: 10, strict: true });
+  const zhLoose = (clue: string, cards: ReturnType<typeof card>[]) =>
+    checkClue(clue, cards, { words: 1, length: 10, strict: false });
+  const letters = (text: string) => ({ card: 0, text, kind: 'letters' });
+
+  test('is refused under the strict rule and a warning under the loose one, wherever the letters are and however few', () => {
+    for (const [clue, word] of [
+      ['s', 'ETS'],
+      ['ts', 'ETS'],
+      ['MAI', 'Email'],
+      ['ai', 'Email'],
+      ['S', 'SEI\u819c'],
+      ['data', 'Datacenter'],
+      ['center', 'Datacenter'],
+      ['valu', 'P-value'],
+      ['ence', 'Data science'],
+      // A lone letter of a word that has Chinese characters or digits besides.
+      ['s', S_WAVE],
+      ['t', T_CELL],
+      ['A', BISPHENOL_A],
+      ['s', '5S'],
+    ] as const) {
+      expect(zhStrict(clue, [card(word)]), clue).toEqual({
+        problem: 'clue_on_board',
+        conflict: letters(word),
+        similar: [],
+      });
+      expect(zhLoose(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [letters(word)] });
+    }
+  });
+
+  test('leaves the word itself, or a part of it, to be refused as the same word, under either rule', () => {
+    for (const check of [zhStrict, zhLoose]) {
+      for (const [clue, word] of [
+        ['ets', 'ETS'],
+        ['sei', 'SEI\u819c'],
+        ['value', 'P-value'],
+      ] as const) {
+        expect(check(clue, [card(word)]), clue).toEqual({
+          problem: 'clue_on_board',
+          conflict: { card: 0, text: word, kind: 'same' },
+          similar: [],
+        });
+      }
+    }
+  });
+
+  test('counts the letters of each piece, and those that the word written solid starts with, not those across a space or a hyphen', () => {
+    // Letters in no one piece are read no more together than they are written.
+    for (const [clue, word] of [
+      ['low', 'Hello World'],
+      ['if', 'Wi-Fi'],
+      ['rt', 'CAR-T'],
+      ['nb', 'Western blot'],
+    ] as const) {
+      expect(zhStrict(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [] });
+      expect(zhLoose(clue, [card(word)]), clue).toEqual({ problem: null, conflict: null, similar: [] });
+    }
+    // The start of the word written solid counts, as it does in an English room, and so does any
+    // piece, a lone letter included.
+    for (const [clue, word] of [
+      ['pval', 'P-value'],
+      ['hellow', 'Hello World'],
+      ['orld', 'Hello World'],
+      ['n', 'Best-of-N'],
+    ] as const) {
+      expect(zhStrict(clue, [card(word)]).conflict, clue).toEqual(letters(word));
+      expect(zhLoose(clue, [card(word)]).similar, clue).toEqual([letters(word)]);
+    }
+    // A piece itself is the same word, and a small word of a compound is no piece.
+    expect(zhStrict('fi', [card('Wi-Fi')]).conflict).toEqual({ card: 0, text: 'Wi-Fi', kind: 'same' });
+    expect(zhStrict('of', [card('Best-of-N')])).toEqual({ problem: null, conflict: null, similar: [] });
+  });
+
+  test('is not a clue with digits or Chinese characters, which the other rules judge as before', () => {
+    expect(zhStrict('s1', [card('ETS')])).toEqual({ problem: null, conflict: null, similar: [] });
+    expect(zhStrict('3', [card('p53')]).conflict).toEqual({ card: 0, text: 'p53', kind: 'character' });
+    expect(zhStrict(WAVE, [card(S_WAVE)]).conflict).toEqual({ card: 0, text: S_WAVE, kind: 'same' });
+  });
+
+  test("goes by the start alone for a card's term in another language", () => {
+    const email = [card(EMAIL, { translations: ['Email'] })];
+    expect(zhStrict('ai', email)).toEqual({ problem: null, conflict: null, similar: [] });
+    expect(zhStrict('ema', email)).toEqual({
+      problem: null,
+      conflict: null,
+      similar: [{ card: 0, text: 'Email', kind: 'prefix' }],
+    });
   });
 });
 

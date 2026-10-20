@@ -2,9 +2,10 @@ import type { KeywordsSettings, Language } from '@reviewer2/shared';
 
 // The sections of "How to play" (RulesSheet.vue) as a room with these settings plays the game: its
 // guess rule, its clue rule, its time limits and its extensions, and at the end what becomes of the
-// record of the game (docs/architecture.md#game-records), which guests read here. A Chinese room
-// also asks for no clue that sounds like a word on the board, which no program checks. The
-// tutorial shows them one at a time (guide/RulesScene.vue).
+// record of the game (docs/architecture.md#game-records), which guests read here. The letters of a
+// clue count wherever a Latin word on the board has them in a Chinese room, and at its start in an
+// English one. A Chinese room also asks for no clue that sounds like a word on the board, which no
+// program checks. The tutorial shows them one at a time (guide/RulesScene.vue).
 type Translate = (key: string, named?: Record<string, unknown>, plural?: number) => string;
 
 export interface RulesSection {
@@ -34,6 +35,7 @@ export function rulesSections(t: Translate, settings: KeywordsSettings, language
         t(`rules.clue.${language}`, { count: settings.clueLength }, settings.clueLength),
         t('rules.clueCommon'),
         t('rules.clueCharacter'),
+        t(`rules.clueLetters.${language}`),
         ...(language === 'zh' ? [t('rules.clueSound')] : []),
         t('rules.clueQuiet'),
         t('rules.clueTargets'),
