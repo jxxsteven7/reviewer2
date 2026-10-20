@@ -200,6 +200,24 @@ describe('GroupChat', () => {
     expect(wrapper.find('.badge').exists()).toBe(false);
   });
 
+  // The panel counts every message as read as it comes; in the tutorial, it keeps nothing of it.
+  test('keeps the last message read in a real game, and nothing of an invented one', async () => {
+    const view = room('bob', messages);
+    const panel = mount(GroupChat, { props: { room: view, draft: '', sending: false, panel: true }, global: global() });
+    await flushPromises();
+    expect(readStored('r2.chatSeen')).toBe('[["g1",3]]');
+    panel.unmount();
+    localStorage.clear();
+    const demo = mount(GroupChat, {
+      props: { room: view, draft: '', sending: false, panel: true, demo: true },
+      global: global(),
+    });
+    await flushPromises();
+    expect(demo.findAll('.message')).toHaveLength(3);
+    expect(readStored('r2.chatSeen')).toBeNull();
+    demo.unmount();
+  });
+
   // The room names a friend by the viewer's name for them, with the username kept beside (room.ts):
   // a message says the name, and its avatar is still the username's.
   test("names a friend by the viewer's name for them, and draws the avatar from the username", async () => {

@@ -18,9 +18,12 @@ import { useKeywords } from './useKeywords';
 // nothing at all. The line a student is writing, `draft`, and its sending are the page's
 // (useChatLine.ts), so that they outlive the sheet, which throws the thread away as it closes, and
 // the panel, which gives way to the button as the page narrows: this component only shows the line
-// and asks the page to send it.
-const props = withDefaults(defineProps<{ room: RoomView; panel?: boolean; sending: boolean }>(), {
+// and asks the page to send it. In the tutorial (`demo`), the chat is an invented game's, and
+// what the viewer read of it isn't kept: the list of the last message read in each game is the
+// browser's, for real games, and holds only a few.
+const props = withDefaults(defineProps<{ room: RoomView; panel?: boolean; sending: boolean; demo?: boolean }>(), {
   panel: false,
+  demo: false,
 });
 const draft = defineModel<string>('draft', { required: true });
 const emit = defineEmits<{ send: [] }>();
@@ -49,7 +52,7 @@ watch(
   ([isShowing, last]) => {
     if (!isShowing || !game.value || last <= seen.value) return;
     seen.value = last;
-    markSeen(game.value.gameId, last);
+    if (!props.demo) markSeen(game.value.gameId, last);
   },
   { immediate: true },
 );

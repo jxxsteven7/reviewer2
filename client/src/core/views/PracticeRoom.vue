@@ -113,13 +113,17 @@ function show(preset?: { who: Who; role?: PracticeRole }) {
   checkAgents();
 }
 
+// The button comes into sight a frame after the page has drawn: the router scrolls a page it opens
+// to its top once the page has drawn, which would undo an earlier scroll, as it would the room
+// setup's (HomeView.vue).
 const entry = ref<HTMLElement | null>(null);
+const showEntry = () => nextTick(() => requestAnimationFrame(() => entry.value?.scrollIntoView({ block: 'center' })));
 watch(
   [() => props.preset, agents],
   ([preset, status]) => {
     if (!preset || status === 'unknown') return;
     if (status === 'up') show(preset);
-    else if (status === 'down') void nextTick(() => entry.value?.scrollIntoView({ block: 'center' }));
+    else if (status === 'down') void showEntry();
     emit('taken');
   },
   { immediate: true },

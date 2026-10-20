@@ -80,7 +80,7 @@ useSpot(root, () => SPOTS[props.step] ?? null);
 
 <template>
   <div ref="root" class="extras-scene" inert>
-    <GroupChat v-if="step === 1" :room="room" :sending="false" draft="" panel />
+    <GroupChat v-if="step === 1" :room="room" :sending="false" draft="" panel demo />
 
     <template v-else-if="step === 2">
       <TurnStrip :game="marking" :guess-rule="settings.guessRule" :seat="seat" :groups="groups" :me="ME" demo />

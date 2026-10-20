@@ -13,10 +13,12 @@ import { CARDS, demoOf, ME, piStep, studentStep } from './demo';
 
 // A step of "Playing a student" or "Playing the PI" (demo.ts): the game's own strip, board and play
 // area, from the invented game, as the reader's seat in the red group sees it. Nothing in it acts
-// on its own: a tap on what the finger is at takes the reader to the next step, and a tap anywhere
-// else does nothing, so that nothing is ever sent. Only the clue may be typed, and its checks are
-// the game's own. Where the finger holds a card down, the card's menu of marks is the game's own
-// too, and a tap on the card marks it as the other group's; the mark stays for the steps after.
+// on its own: every tap is caught on its way in, and only one on what the finger is at takes the
+// reader to the next step, so that nothing is ever sent. Only the clue may be typed, and its checks
+// are the game's own; the clue panel never submits, since the enter key ends in a click on its
+// button, which is caught like any other, and goes on when the finger is at that button. Where the
+// finger holds a card down, the card's menu of marks is the game's own too, and a tap on the card
+// marks it as the other group's; the mark stays for the steps after.
 const props = defineProps<{ chapter: string; step: number }>();
 const emit = defineEmits<{ next: [] }>();
 const { t, locale } = useI18n();
@@ -75,10 +77,6 @@ function onClick(event: MouseEvent) {
   if (current.finger === 'hold') mark(CARDS.pValue, 'theirs');
   else emit('next');
 }
-
-function onGive() {
-  if (scene.value.spot?.selector.includes('.clue-panel')) emit('next');
-}
 </script>
 
 <template>
@@ -116,7 +114,6 @@ function onGive() {
         :targets="scene.targets"
         :can-give="scene.panel === 'clue'"
         team="red"
-        @give="onGive"
       />
     </div>
   </div>

@@ -85,8 +85,10 @@ describe.each(['en', 'zh'] as const)('the scenes of the tutorial, in %s', (langu
           expect(spot.value?.finger, `${id} ${step}`).toBe(finger);
           expect(wrapper.element.contains(spot.value?.el ?? null), `${id} ${step}`).toBe(true);
         }
-        // The tutorial's game is invented: it is nobody's turn.
+        // The tutorial's game is invented: it is nobody's turn, and nothing of it is kept, as the
+        // group chat keeps what was read in a real game.
         expect(document.title, `${id} ${step}`).toBe('Reviewer 2');
+        expect(localStorage.length, `${id} ${step}`).toBe(0);
         wrapper.unmount();
         expect(spot.value).toBeNull();
       }

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { expect, newPlayer, redWins, register, seatTable, TEXT, test } from './helpers';
+import { expect, newPlayer, redWins, register, roomMenu, seatTable, TEXT, test } from './helpers';
 
 // The tutorial end to end (docs/architecture.md#the-tutorial): a guest finds it on the home page
 // and reads a game's chapter from its first step to its last, by its buttons, the arrow keys and the
@@ -157,7 +157,9 @@ test('the finger stands still where the device asks for less motion', async ({ b
 });
 
 // An account that has played no game of the first game finds the tutorial's sticker in the
-// game's card, and once it has finished a game, the small word beside the rules in its place.
+// game's card, and once it has finished a game, the small word beside the rules in its place: at
+// once, as it comes back to the home page by the room's own way out, without a reload, since the
+// page asks for the account again as it opens.
 test("an account that has finished a game finds the small word beside the rules in the sticker's place", async ({
   browser,
 }) => {
@@ -171,7 +173,9 @@ test("an account that has finished a game finds the small word beside the rules 
   });
   await redWins(table, 'en');
   const ann = table.captains.red;
-  await ann.goto('/');
+  await (await roomMenu(ann)).getByRole('button', { name: TEXT.en.room.leave }).click();
+  await ann.getByRole('dialog', { name: TEXT.en.room.leave }).getByRole('button', { name: TEXT.en.room.leave }).click();
+  await ann.waitForURL(/\/$/);
   await expect(ann.locator('.entry .title .guide-link')).toHaveText(TEXT.en.guide.entry.link);
   await expect(ann.locator('.guide-entry')).toHaveCount(0);
 });

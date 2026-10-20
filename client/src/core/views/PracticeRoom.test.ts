@@ -249,6 +249,10 @@ describe('practicing with Reviewer 1', () => {
     await flushPromises();
     expect(document.querySelector('[role=dialog]')).toBeNull();
     expect(offline.get('button.entry').attributes('disabled')).toBeDefined();
+    // Not before the page has drawn, when the router scrolls the page to its top, but a frame
+    // later.
+    expect(shown).not.toHaveBeenCalled();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     expect(shown).toHaveBeenCalledWith({ block: 'center' });
     expect(shown.mock.instances[0]).toBe(offline.get('button.entry').element);
     expect(offline.emitted('taken')).toHaveLength(1);
