@@ -18,6 +18,7 @@ function stats(changes: Partial<Stats> = {}): Stats {
   return {
     version: 'test',
     uptime: 60,
+    busy: false,
     memory: { rss: 80 * 2 ** 20, heapUsed: 20 * 2 ** 20, limit: null },
     rooms: { lobby: 1, playing: 2, ended: 0 },
     players: { online: 7, offline: 1 },

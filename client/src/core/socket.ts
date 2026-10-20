@@ -21,9 +21,23 @@ export const socket = io({
   auth: (callback) => callback({ ...handshake, ...(storedToken() ? { token: storedToken() } : {}) }),
 });
 
+// Why the server turned the page's last try away, if it did: as too busy, or for the connections
+// that its address has open already (docs/architecture.md#limits-and-housekeeping).
+export type Refusal = 'server_busy' | 'too_many_connections';
+
 // `connects` counts the connections the page has made, so that what comes with a new one, such as
 // the snapshot that catches a page up after a locked screen, can be told from what happens live.
-export const connection = reactive({ connected: false, everConnected: false, connects: 0 });
+export const connection = reactive({
+  connected: false,
+  everConnected: false,
+  connects: 0,
+  refusal: null as Refusal | null,
+});
+
+// How long a page that the server turned away waits before it tries again, and as long again at
+// most on top, so that the pages turned away together don't all come back together.
+export const BUSY_RETRY_MS = 30_000;
+let retry: ReturnType<typeof setTimeout> | undefined;
 
 // Whether the page has lost its connection and is getting it back. A room's page then shows the
 // "Reconnecting..." banner (ConnectionBanner), and what sticks to the top of the screen keeps
@@ -34,7 +48,34 @@ socket.on('connect', () => {
   connection.connected = true;
   connection.everConnected = true;
   connection.connects += 1;
+  connection.refusal = null;
+  clearTimeout(retry);
 });
+
+// The server turns a connection away before it is made: a busy one turns away a page that doesn't
+// come back to a room, with `server_busy`, and Engine.IO turns away an address that has too many
+// connections open, with 403, which nothing else it refuses gets (server/src/server.ts). The page
+// says which, as it shows any other error, once until it gets in; answers whatever it is asked to
+// send with the same; and tries again by itself in a while. Socket.IO doesn't try again after the
+// first refusal, and would every few seconds after the second, so the page stops it. Any other
+// failure is Socket.IO's to try again, and the page is offline.
+socket.on('connect_error', (error: Error & { description?: unknown }) => {
+  clearTimeout(retry);
+  const refusal = refusalOf(error);
+  if (refusal === null) {
+    connection.refusal = null;
+    return;
+  }
+  if (refusal === 'too_many_connections') socket.disconnect();
+  if (connection.refusal !== refusal) toastError(refusal);
+  connection.refusal = refusal;
+  retry = setTimeout(connect, BUSY_RETRY_MS * (1 + Math.random()));
+});
+
+function refusalOf(error: Error & { description?: unknown }): Refusal | null {
+  if (error.message === 'server_busy') return 'server_busy';
+  return error.description === 403 ? 'too_many_connections' : null;
+}
 
 socket.on('disconnect', () => {
   connection.connected = false;
@@ -92,9 +133,10 @@ export function reconnect(): void {
 }
 
 // Sends a message and waits for the server's answer. Offline or unanswered messages fail at once
-// rather than wait in a queue.
+// rather than wait in a queue, with the server's refusal rather than `offline` while it turns the
+// page away.
 export async function send<Data extends object = object>(event: string, payload: object = {}): Promise<Ack<Data>> {
-  if (!socket.connected) return { ok: false, error: 'offline' };
+  if (!socket.connected) return { ok: false, error: connection.refusal ?? 'offline' };
   try {
     return (await socket.timeout(5000).emitWithAck(event, payload)) as Ack<Data>;
   } catch {

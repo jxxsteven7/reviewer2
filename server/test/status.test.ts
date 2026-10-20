@@ -201,6 +201,7 @@ describe('the status server', () => {
     expect(memory.rss).toBeTypeOf('number');
     expect(counts).toEqual({
       version: 'test',
+      busy: false,
       rooms: { lobby: 0, playing: 0, ended: 0 },
       players: { online: 0, offline: 0 },
       agents: null,

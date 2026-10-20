@@ -14,6 +14,7 @@ import type { z } from 'zod';
 import { methodAllowed } from '../http';
 import { clientIp } from '../core/clientIp';
 import type { KeptReplay } from '../core/game';
+import type { Limit, Refusals } from '../core/refusals';
 import { AVATAR_CONTENT_TYPES, AVATAR_FILE } from './avatars';
 import { clearedCookie, fromThisSite, loginCookie, readLoginCookie } from './cookies';
 import type { AccountFailure, AccountResult, Accounts, Login } from './service';
@@ -46,6 +47,8 @@ export interface AccountApiOptions {
   // over plain HTTP (COOKIE_SECURE=0).
   secureCookies: boolean;
   trustProxy: boolean;
+  // What the limits turned away, for the log's line of the minute.
+  refusals: Refusals;
   log: Log;
 }
 
@@ -81,14 +84,30 @@ const STATUS: Partial<Record<AccountFailure, number>> = {
   internal: 500,
 };
 
+// The limit that each refusal with 429 comes from (limits.ts), which the log's line of the minute
+// names (core/refusals.ts).
+const LIMITS: Partial<Record<AccountFailure, Limit>> = {
+  rate_limited: 'requests',
+  register_limited: 'registrations',
+  login_limited: 'passwords',
+  email_limited: 'mails',
+  avatar_limited: 'avatars',
+  like_limited: 'likes',
+};
+
 interface Answer {
   status: number;
   body: object;
   cookie?: string;
+  // The limit that refused the request, if one did.
+  limit?: Limit;
 }
 
 const ok = (body: object = {}, cookie?: string): Answer => ({ status: 200, body: { ok: true, ...body }, cookie });
-const failure = (error: AccountFailure): Answer => ({ status: STATUS[error] ?? 400, body: { ok: false, error } });
+const failure = (error: AccountFailure): Answer => {
+  const limit = LIMITS[error];
+  return { status: STATUS[error] ?? 400, body: { ok: false, error }, ...(limit && { limit }) };
+};
 const fromResult = (result: AccountResult, cookie?: string): Answer =>
   result.ok ? ok({}, cookie) : failure(result.error);
 
@@ -126,6 +145,7 @@ export function createAccountApi({
   accounts,
   secureCookies,
   trustProxy,
+  refusals,
   log,
   agentsLive,
   showReplay = () => null,
@@ -310,10 +330,15 @@ export function createAccountApi({
       return;
     }
     const ip = clientIp(req.socket.remoteAddress, req.headers, trustProxy);
+    // An answer from one of the limits counts towards the log's line of the minute.
+    const answer = (reply: Answer) => {
+      if (reply.limit) refusals.add(reply.limit, ip);
+      send(res, reply);
+    };
     let body: unknown;
     if (route.method === 'POST') {
       if (!fromThisSite(req.headers)) return send(res, failure('bad_origin'));
-      if (!accounts.counters.requests.allowed(ip)) return send(res, failure('rate_limited'));
+      if (!accounts.counters.requests.allowed(ip)) return answer(failure('rate_limited'));
       accounts.counters.requests.add(ip);
       if (!(route.image ? isImage(req) : isJson(req))) {
         return send(res, { status: 415, body: { ok: false, error: 'bad_request' } });
@@ -331,7 +356,7 @@ export function createAccountApi({
     }
     const login = accounts.login(readLoginCookie(req.headers, secureCookies));
     if (route.login && !login) return send(res, failure('not_logged_in'));
-    send(res, await route.handle({ ip, login, body, param } as Request<never>));
+    answer(await route.handle({ ip, login, body, param } as Request<never>));
   }
 
   function send(res: ServerResponse, { status, body, cookie }: Answer): void {

@@ -23,6 +23,7 @@ vi.mock('./socket', () => mock);
 import { i18n } from './i18n';
 import { knowAliases } from './names';
 import { closeRoom, closeRoomPage, entry, leaveRoom, openRoom, room, submitChoice } from './room';
+import { clearMemory, readStored } from './storage';
 
 const emit = (event: string, payload?: unknown) => mock.handlers.get(event)?.(payload);
 const fail = (error: string, extra: object = {}): Ack => ({ ok: false, error, ...extra });
@@ -57,7 +58,10 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
 beforeEach(() => {
   mock.send.mockReset();
   mock.reconnect.mockReset();
+  mock.setHandshake.mockClear();
   mock.socket.connected = true;
+  localStorage.clear();
+  clearMemory();
   closeRoomPage();
   emit('disconnect'); // the connection forgets its snapshots
 });
@@ -251,6 +255,52 @@ describe('the room page', () => {
     await submitChoice(true);
     expect(entry.status).toBe('failed');
     expect(entry.error).toBe('invitation_expired');
+  });
+
+  test("remembers a screen's room by its ID, which a reloaded screen comes back by, and lets a stale one go", async () => {
+    mock.send.mockImplementation(async () => {
+      emit('room:state', view('K7QX', 'room-a', null));
+      return ok('K7QX', 'room-a');
+    });
+    openRoom('K7QX', { screen: true });
+    await flushPromises();
+    expect(entry.status).toBe('in');
+    expect(mock.setHandshake).toHaveBeenLastCalledWith({ watch: 'K7QX', roomId: 'room-a' });
+    expect(readStored('r2.screen')).toBe('{"code":"K7QX","roomId":"room-a"}');
+
+    // The page is reloaded: its handshake carries the ID it remembered, and it asks by the code
+    // alone, as the ID may be a room's that the code has gone from since.
+    closeRoomPage();
+    emit('disconnect');
+    let answer!: (reply: Ack) => void;
+    mock.send.mockReturnValueOnce(new Promise<Ack>((resolve) => (answer = resolve)));
+    openRoom('K7QX', { screen: true });
+    expect(mock.setHandshake).toHaveBeenLastCalledWith({ watch: 'K7QX', roomId: 'room-a' });
+    expect(mock.send).toHaveBeenLastCalledWith('room:watch', { code: 'K7QX' });
+    // Which it has: the server says so of the handshake, and the page waits on for its answer.
+    emit('room:closed', { reason: 'expired' });
+    expect(entry.status).toBe('joining');
+    expect(mock.setHandshake).toHaveBeenLastCalledWith({ watch: 'K7QX' });
+    expect(readStored('r2.screen')).toBeNull();
+    emit('room:state', view('K7QX', 'room-b', null));
+    answer(ok('K7QX', 'room-b'));
+    await flushPromises();
+    expect(entry.status).toBe('in');
+    expect(room.value?.roomId).toBe('room-b');
+    expect(readStored('r2.screen')).toBe('{"code":"K7QX","roomId":"room-b"}');
+
+    // A room that has closed is forgotten, and a player's page remembers nothing.
+    emit('room:closed', { reason: 'closed' });
+    expect(entry.status).toBe('closed');
+    expect(readStored('r2.screen')).toBeNull();
+    closeRoomPage();
+    mock.send.mockImplementation(async () => {
+      emit('room:state', view('K7QX', 'room-b', 'ann'));
+      return ok('K7QX', 'room-b');
+    });
+    openRoom('K7QX');
+    await flushPromises();
+    expect(readStored('r2.screen')).toBeNull();
   });
 
   test('ignores the snapshots and the closing of a room the page has left', async () => {

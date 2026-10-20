@@ -6,6 +6,7 @@ import { RouterLink } from 'vue-router';
 import { account } from '../account';
 import AvatarButton from '../components/AvatarButton.vue';
 import UiButton from '../components/UiButton.vue';
+import { unconnected } from '../errors';
 import { askToJoin, friendsVersion } from '../friends';
 import { connect, send, socket } from '../socket';
 import { useBusy } from '../useBusy';
@@ -29,7 +30,7 @@ async function load() {
   const reply = await send<{ rooms: FriendRoomView[] }>('friends:rooms');
   if (turn !== asked) return;
   if (reply.ok) rooms.value = reply.rooms;
-  else if (reply.error === 'offline') connect();
+  else if (unconnected(reply.error)) connect();
 }
 
 const refresh = () => {

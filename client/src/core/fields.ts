@@ -1,5 +1,6 @@
 import type { FieldInfo } from '@reviewer2/shared';
 import { shallowRef } from 'vue';
+import { unconnected } from './errors';
 import { onceConnected, send } from './socket';
 
 // The word lists on the server, with how many terms each has in each language, for setting up a
@@ -24,7 +25,7 @@ async function ask(): Promise<void> {
   if (reply.ok) {
     fields.value = reply.fields;
     asking = false;
-  } else if (reply.error === 'offline') {
+  } else if (unconnected(reply.error)) {
     onceConnected(() => void ask());
   } else {
     setTimeout(() => void ask(), RETRY_MS);

@@ -27,6 +27,7 @@ export const ROOM_ERRORS = [
   'custom_words_private',
   'no_words',
   'too_many_rooms',
+  'server_busy',
   'room_not_found',
   'room_full',
   'room_crowded',

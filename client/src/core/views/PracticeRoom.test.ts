@@ -13,6 +13,7 @@ const socket = vi.hoisted(() => ({
   replies: {} as Record<string, object>,
   send: vi.fn<(event: string, payload?: object) => Promise<object>>(),
   onceConnected: (run: () => void) => run(),
+  connection: { refusal: null },
 }));
 vi.mock('../socket', () => socket);
 vi.mock('../fields', async () => {

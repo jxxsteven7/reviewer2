@@ -9,7 +9,12 @@ import { agents } from '../practice';
 import { clearMemory } from '../storage';
 import GuidePage from './GuidePage.vue';
 
-vi.mock('../socket', () => ({ connect: vi.fn(), send: vi.fn(), onceConnected: vi.fn() }));
+vi.mock('../socket', () => ({
+  connect: vi.fn(),
+  send: vi.fn(),
+  onceConnected: vi.fn(),
+  connection: { refusal: null },
+}));
 vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false }, loadAccount: vi.fn() }));
 vi.mock('../../games', () => ({ games: { keywords: {} } }));
 // Three chapters of the real ones, with a scene that says where it is and goes on when tapped.

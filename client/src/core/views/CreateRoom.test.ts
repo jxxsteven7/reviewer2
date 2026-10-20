@@ -13,6 +13,7 @@ const socket = vi.hoisted(() => ({
   send: vi.fn<
     (event: string, payload?: object) => Promise<{ ok: true; code: string } | { ok: false; error: string }>
   >(),
+  connection: { refusal: null as string | null },
 }));
 vi.mock('../socket', () => socket);
 
@@ -45,6 +46,7 @@ beforeEach(() => {
   signedIn.account.summary = null;
   setLanguage('en', { remember: false });
   fields.value = FIELDS;
+  socket.connection.refusal = null;
   socket.send.mockReset();
   socket.send.mockResolvedValue({ ok: true, code: 'ABCD' });
   push.mockReset();
@@ -195,6 +197,17 @@ describe('the room setup', () => {
     expect(payload).toMatchObject({ fields: ['general'], play: true });
     expect(payload).not.toHaveProperty('match');
     expect(payload).not.toHaveProperty('randomFields');
+  });
+
+  test('says in place of the word lists that the server turned the page away, while it has', async () => {
+    fields.value = null;
+    let wrapper = await opened();
+    expect(wrapper.get('.field-fold .summary').text()).toBe('Loading the word lists...');
+    socket.connection.refusal = 'server_busy';
+    wrapper = await opened();
+    expect(wrapper.get('.field-fold .summary').text()).toBe('The server is a little busy. Come back in a few minutes.');
+    expect(wrapper.get('.field-fold .hint').text()).toBe('The server is a little busy. Come back in a few minutes.');
+    expect(submit(wrapper).attributes('disabled')).toBeDefined();
   });
 
   test('leaves a last room kept before rooms were kept by game behind, and writes this one in its place', async () => {
