@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// The avatar of a contribution from GitHub (docs/design.md, ContributionsList.vue): GitHub's own
+// The avatar of a contribution from GitHub (docs/rules/display.md, ContributionsList.vue): GitHub's own
 // mark, the Invertocat, in white on an ink disc, in the circle with the ink outline that every
 // avatar has, in place of a player's picture or initial. The mark is GitHub's, used as GitHub
 // allows, as a button that leads to a page on GitHub, and bundled here, never loaded from GitHub

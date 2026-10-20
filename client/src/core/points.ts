@@ -1,4 +1,4 @@
-// Points as the interface shows them (docs/design.md#matches): with a real minus sign, never a
+// Points as the interface shows them (docs/rules/display.md#type-numbers-and-text): with a real minus sign, never a
 // hyphen, and, for the points of one game, with their sign, or a dash where there are none.
 export const points = (total: number): string => (total < 0 ? `\u2212${-total}` : String(total));
 

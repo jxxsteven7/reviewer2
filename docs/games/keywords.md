@@ -149,7 +149,7 @@ The record of a game ([../architecture.md](../architecture.md#game-records)) log
 | While paused | No cards at all | As before | Write to the group |
 | After the game | Every color | As before, no marks | Review the game; write to the group, PI included, for whoever played for it |
 
-Every avatar with a shadow opens something, as the rules sheet says: the player's panel in a room, or a replay's in a replay ([../design.md](../design.md#rules)).
+Every avatar with a shadow opens something, as the rules sheet says: the player's panel in a room, or a replay's in a replay ([../rules/display.md](../rules/display.md#avatars)).
 
 `view.ts` is the only way game state leaves the server to players, by the seat the viewer is in right now. Outside a captain's view an unrevealed card has no `color` key at all; there is no `chat` key outside the groups, no `selections` key outside the group whose turn it is, and no `marks` key outside a group's guessers and captain, or after the game; and before the game is over, no clue on record has `targets`, in any view. Translations, forms and pinyin go to everyone; the `glosses` of a card to the captains alone, while the game is on and the card is face down.
 

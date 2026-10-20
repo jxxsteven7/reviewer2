@@ -28,7 +28,7 @@ import { useVisualViewport } from '../useVisualViewport';
 // as the close button has its cross after it, which takes the viewer back to the sheet it was
 // opened from. That sheet, right under it, needs no showing meanwhile: it is hidden, scrim and all,
 // out of reach of the keys and of assistive technology, and comes back as it was, where it was
-// scrolled to, once the viewer goes back (docs/design.md). The sheet with the way back slides up
+// scrolled to, once the viewer goes back (docs/rules/display.md). The sheet with the way back slides up
 // from the bottom on a phone, and rises a little into place as a dialog, while the one under it
 // fades out; going back, it slides down again while the one under it fades in.
 //

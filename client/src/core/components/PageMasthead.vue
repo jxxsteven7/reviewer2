@@ -13,7 +13,7 @@ import SiteWordmark from './SiteWordmark.vue';
 // The wordmark stands in the same place on every page. A page with a way `back` to the page before,
 // as the account page and a player's page, has it on the bar of its title (PageTitle.vue), which
 // takes the top of the screen when there is a page before, and the masthead then scrolls away: a
-// page keeps one bar at the top (docs/design.md).
+// page keeps one bar at the top (docs/rules/display.md).
 const props = withDefaults(defineProps<{ compact?: boolean; pinned?: boolean; back?: boolean }>(), {
   compact: false,
   pinned: false,

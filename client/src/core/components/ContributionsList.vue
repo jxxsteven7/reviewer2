@@ -196,7 +196,7 @@ const CONTRIBUTORS_URL = `${REPOSITORY_URL}/graphs/contributors`;
 }
 
 /* An issue's author on GitHub: GitHub's mark hangs where an account's avatar does, and the username
-   is a link that leads off the site, in the deep blue that reads on the beige row (docs/design.md),
+   is a link that leads off the site, in the deep blue that reads on the beige row (docs/rules/display.md),
    with the arrow after it (LinkArrow.vue): under a pointer an underline sweeps in under the
    username alone and the arrow moves out; pressed, the underline is there at once and the arrow
    further out, and both ease back after. A username too long for the line wraps at its hyphens,

@@ -17,4 +17,5 @@ Rules for AI coding assistants. Codex reads this file itself; Claude Code loads 
 - **Get reviewed, never merge.** Review your own changes, push the branch, open a PR, and stop for human review. Your own review is not the required one.
 - **Write in English**, everything in the repository. If you change one README, update the other and run `node scripts/check-readme-sync.mjs --update`.
 - **Show visual changes first.** Before changing how anything players see looks or moves, show a maintainer screenshots, and short videos for motion, at phone and computer width, in both languages, with invented data; build what they choose, and put the final screenshots, at phone width, in both languages, with invented data, in the PR (`docs/rules/git.md`).
+- **Keep one look.** Before changing anything players see, read `docs/rules/display.md` and follow it: every page and game looks and works as one. A new kind of element, or a new look for one, gets its rule there in the same PR.
 - **Follow the hard constraints** in `docs/rules/constraints.md`. Above all, never write the name of the board game the first game is based on, or how the project's own servers are run.
