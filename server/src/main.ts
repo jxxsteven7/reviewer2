@@ -260,12 +260,16 @@ export async function main({
     // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs,
     // and forgets the counts of the limits whose time has run out; writes what the limits turned
     // away in the minute, and notices that the server is no longer busy, should nobody have come
-    // to ask since the load came down.
+    // to ask since the load came down. None of it may end the process when it fails.
     setInterval(() => {
-      server.sockets.sweep();
-      accounts.counters.prune();
-      server.refusals.flush();
-      server.busy.check();
+      try {
+        server.sockets.sweep();
+        accounts.counters.prune();
+        server.refusals.flush();
+        server.busy.check();
+      } catch (error) {
+        log('error', { where: 'minute', message: describe(error) });
+      }
     }, 60_000),
     // Every hour, the contacts that have been kept for 90 days are cleared, the feedback that has
     // been in the trash for 30 days is purged, the logins and the links in mails that have ended

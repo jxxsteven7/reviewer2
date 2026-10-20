@@ -1,6 +1,14 @@
 import { totalmem } from 'node:os';
 import { describe, expect, test, vi } from 'vitest';
-import { AddressConnections, BusyGauge, memoryInUse, memoryLimit, type Load } from './load';
+import {
+  AddressConnections,
+  BusyGauge,
+  defaultBusyMemory,
+  heapLimit,
+  memoryInUse,
+  memoryLimit,
+  type Load,
+} from './load';
 
 describe('the connections of each address', () => {
   test('admit up to the most an address may have open, each address on its own', () => {
@@ -91,15 +99,52 @@ describe('a busy server', () => {
     expect(log).toHaveBeenCalledTimes(3);
   });
 
+  test("keeps its last answer while the load can't be read, which the log says once", () => {
+    const load: Load = { connections: 101, memory: 100 * MB };
+    let readable = true;
+    const log = vi.fn();
+    const busy = new BusyGauge(
+      { connections: 100, memory: 1000 * MB },
+      () => {
+        if (!readable) throw new Error('EMFILE: too many open files');
+        return { ...load };
+      },
+      log,
+    );
+    expect(busy.check()).toBe(true);
+    readable = false;
+    expect(busy.check()).toBe(true);
+    expect(busy.check()).toBe(true);
+    expect(log).toHaveBeenLastCalledWith('error', { where: 'busy', message: 'EMFILE: too many open files' });
+    // Read again, the load counts again; unreadable again, the log says so again.
+    readable = true;
+    load.connections = 0;
+    expect(busy.check()).toBe(false);
+    readable = false;
+    expect(busy.check()).toBe(false);
+    expect(log.mock.calls.map(([event]) => event)).toEqual(['busy_started', 'error', 'busy_ended', 'error']);
+  });
+
   test("by default, counts against the system's limit on the process's memory, or else the machine's", () => {
     const limit = memoryLimit();
     expect(limit).toBeGreaterThan(0);
     expect(limit).toBeLessThanOrEqual(totalmem());
   });
 
+  test('is busy by default at 90% of the memory the process may use, or of the heap limit if that is less', () => {
+    const GB = 2 ** 30;
+    expect(defaultBusyMemory(16 * GB, 4 * GB)).toBe(Math.round(0.9 * 4 * GB));
+    expect(defaultBusyMemory(512 * MB, 4 * GB)).toBe(Math.round(0.9 * 512 * MB));
+    expect(heapLimit()).toBeGreaterThan(0);
+    expect(defaultBusyMemory()).toBeLessThanOrEqual(0.9 * Math.min(memoryLimit(), heapLimit()));
+  });
+
   test('judges the memory by what is in use, which comes down again, not by the resident memory', () => {
     const inUse = memoryInUse();
     expect(inUse).toBeGreaterThan(0);
     expect(inUse).toBeLessThan(process.memoryUsage.rss());
+    // As Node counts it, give or take what was allocated between the two readings.
+    const { heapUsed, external } = process.memoryUsage();
+    expect(Math.abs(inUse - (heapUsed + external))).toBeLessThan(MB);
   });
 });

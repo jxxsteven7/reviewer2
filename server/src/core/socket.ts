@@ -8,7 +8,6 @@ import {
   checkReport,
   INVITE_COOLDOWN_MS,
   JOIN_ASKS_PER_HOUR,
-  MAX_SCREENS,
   type Ack,
   type ClosedReason,
   type DuoPart,
@@ -139,6 +138,10 @@ interface Connection {
   screen: boolean;
   bucket: TokenBucket;
 }
+
+// Who a connection is, as far as a room cares: its keys and its account, which are settled in the
+// handshake (identify), before the connection is one.
+type Identity = Pick<Connection, 'key' | 'guestKey' | 'account'>;
 
 // What the status port is told about one connection: how it is carried, the country it comes from,
 // and in how many milliseconds its last heartbeat came back, if one has, which /status.json counts
@@ -609,19 +612,35 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   function watch(socket: Socket, room: Room): Reply {
     const conn = connection(socket);
     if (conn.room !== room || !conn.screen) {
-      const kept = [conn.key, conn.guestKey].find((key) => room.screenKept(key));
-      const refusal = kept ? removalOf(room, conn) : admission(room, conn);
-      if (refusal) return refusal;
-      if (room.public && !kept && !room.memberByKey(conn.key)) return fail('not_member');
-      const key = kept ?? conn.key;
-      if (room.screensFull(key)) return fail('screens_full');
+      const admitted = screenAdmission(room, conn);
+      if (!admitted.ok) return admitted;
       release(socket);
-      closeFor(room.addScreen(socket.id, key), 'left');
+      const replaced = room.addScreen(socket.id, admitted.key);
+      closeFor(replaced, 'left');
+      // A busy server keeps no connection that is in no room (returning): those that this screen
+      // took the place of are closed, told so first.
+      if (replaced.length > 0 && busy.check()) disconnectAll(replaced);
       Object.assign(conn, { room, screen: true });
       // Everyone sees how many screens there are, and this one gets its first view.
       broadcast(room);
     }
     return ok({ code: room.code, roomId: room.id });
+  }
+
+  // Whether a connection may put up a screen in a room, as watch() does, with the key that the
+  // screen is known by, or why not. A busy server asks the same of a handshake that brings a
+  // screen back, so that it lets through no connection that would be in no room (returning).
+  function screenAdmission(room: Room, who: Identity): { ok: true; key: string } | Refusal {
+    const kept = [who.key, who.guestKey].find((key) => room.screenKept(key));
+    const refusal = kept ? removalOf(room, who) : admission(room, who);
+    if (refusal) return refusal;
+    if (room.public && !kept && !room.memberByKey(who.key)) return fail('not_member');
+    const key = kept ?? who.key;
+    return room.screensFull(key) ? fail('screens_full') : { ok: true, key };
+  }
+
+  function disconnectAll(socketIds: Iterable<string>): void {
+    for (const id of socketIds) io.sockets.sockets.get(id)?.disconnect(true);
   }
 
   // Finds the room that belongs to a code, for someone who wants in. Every way into a room comes
@@ -688,12 +707,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // room's name theirs and the seat taken by themselves. The name becomes the username, unless
   // someone else in the room has it. Only a guest's seat is adopted, and only while the account has
   // no seat of its own here. Returns the member, or undefined when there was nothing to adopt.
-  function adoptGuest(room: Room, conn: Connection): Member | undefined {
-    const guest = guestSeat(room, conn);
-    const account = guest && conn.account ? accounts?.store.byId(conn.account.id) : undefined;
-    if (!guest || !account) return undefined;
-    room.adopt(guest.id, conn.key, account.username, memberAccount(account));
+  function adoptGuest(room: Room, who: Identity): Member | undefined {
+    const found = adoptable(room, who);
+    if (!found) return undefined;
+    const { guest, account } = found;
+    room.adopt(guest.id, who.key, account.username, memberAccount(account));
     return guest;
+  }
+
+  // The guest seat that adoptGuest would make the account's, with the account as it is now, or
+  // undefined when there is none, or no such account any more.
+  function adoptable(room: Room, who: Identity): { guest: Member; account: Account } | undefined {
+    const guest = guestSeat(room, who);
+    const account = guest && who.account ? accounts?.store.byId(who.account.id) : undefined;
+    return guest && account ? { guest, account } : undefined;
   }
 
   // What a room keeps of a member's account: which it is, its handle, its avatar and its rank.
@@ -709,33 +736,33 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // The seat that the browser of a logged-in connection took as a guest, if its account may have
   // it (adoptGuest).
-  function guestSeat(room: Room, conn: Connection): Member | undefined {
-    if (!accounts || !conn.account || conn.guestKey === conn.key) return undefined;
-    const guest = room.memberByKey(conn.guestKey);
+  function guestSeat(room: Room, who: Identity): Member | undefined {
+    if (!accounts || !who.account || who.guestKey === who.key) return undefined;
+    const guest = room.memberByKey(who.guestKey);
     // An account the chair removed, or one that may not be in a public room, gets no seat this
     // way either; room:join tells it why.
-    return guest && !guest.account && !admission(room, conn) ? guest : undefined;
+    return guest && !guest.account && !admission(room, who) ? guest : undefined;
   }
 
   // Why a connection may not come into a room anew, as a member or as a screen, before anything
   // else is asked of it: the chair removed it, by either of its keys, or the room is public and
   // it has no account that may be in one. Null when it may. Every way in but a member's return
   // to their seat goes through here, so that the rule is the same for all of them.
-  function admission(room: Room, conn: Connection): Refusal | null {
-    return removalOf(room, conn) ?? (room.public ? publicRefusal(conn) : null);
+  function admission(room: Room, who: Identity): Refusal | null {
+    return removalOf(room, who) ?? (room.public ? publicRefusal(who) : null);
   }
 
   // The chair's removal of whoever has either of the connection's keys, as a refusal.
-  function removalOf(room: Room, conn: Connection): Refusal | null {
-    const removal = room.removal(conn.key, conn.guestKey);
+  function removalOf(room: Room, who: Identity): Refusal | null {
+    const removal = room.removal(who.key, who.guestKey);
     return removal ? fail(removal) : null;
   }
 
   // Why a connection may not create or join a public room, make its room one, or put up a screen
   // in one: it has no account, or the operator has barred its account from public rooms. Null
   // when it may.
-  function publicRefusal(conn: Connection): Refusal | null {
-    const account = conn.account && accounts?.store.byId(conn.account.id);
+  function publicRefusal(who: Identity): Refusal | null {
+    const account = who.account && accounts?.store.byId(who.account.id);
     if (!account) return fail('account_required');
     return account.publicBarred ? fail('public_barred') : null;
   }
@@ -991,19 +1018,45 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       ? accounts.login(readLoginCookie(socket.handshake.headers, options.cookieSecure ?? true))
       : null;
 
-  // Whether a handshake brings a member back to their seat, or a screen back to its room, as
-  // comeBack() would: by the browser's token or the account it is logged in to, and a screen by
-  // the room ID it was sent. While the server is busy this is the only way in, so it takes no
-  // more connections than a member or a room's screens could need (BUSY_MEMBER_CONNECTIONS).
-  function returning(socket: Socket): boolean {
+  // Who a connection is, from its handshake: the account it is logged in to, if any, and its keys,
+  // its account's and the one its browser has as a guest, from its token. A browser that comes
+  // without a token, or with something that can't be one, is given one. A browser that is logged
+  // in is its account, on every device; the token waits for it to log out.
+  function identify(socket: Socket): Identity & {
+    auth: z.infer<typeof HANDSHAKE>;
+    login: ReturnType<typeof loginOf>;
+    issued: string | null;
+  } {
     const auth = HANDSHAKE.parse(socket.handshake.auth);
+    const issued = isToken(auth.token) ? null : newToken();
+    const login = loginOf(socket);
+    const guestKey = memberKey(issued ?? (auth.token as string));
+    return {
+      auth,
+      login,
+      issued,
+      key: login ? accountKey(login.account.id) : guestKey,
+      guestKey,
+      account: login && { id: login.account.id, session: hex(login.hash) },
+    };
+  }
+
+  // Settled once, by the middleware, for the connection handler that follows it.
+  const identified = new WeakMap<Socket, ReturnType<typeof identify>>();
+  // The connections that a busy server let through as coming back to a room (returning).
+  const admittedBusy = new WeakSet<Socket>();
+
+  // Whether a handshake brings a member back to their seat, or a screen back to its room, as
+  // comeBack() would: to the seat that the connection would take, its account's or the one its
+  // browser took as a guest, and a screen where the room would put one up for it, by the room ID
+  // it was sent. While the server is busy this is the only way in, so it takes no more connections
+  // than a member or a room's screens could need (BUSY_MEMBER_CONNECTIONS, Room.screensFull).
+  function returning(auth: z.infer<typeof HANDSHAKE>, who: Identity): boolean {
     const code = auth.watch ?? auth.code;
     const room = code === undefined ? undefined : rooms.find(code);
     if (!room || (auth.roomId !== undefined && room.id !== auth.roomId)) return false;
-    if (auth.watch !== undefined) return auth.roomId !== undefined && room.screens.size < MAX_SCREENS;
-    const byToken = isToken(auth.token) ? room.memberByKey(memberKey(auth.token)) : undefined;
-    const login = byToken ? null : loginOf(socket);
-    const member = byToken ?? (login ? room.memberByKey(accountKey(login.account.id)) : undefined);
+    if (auth.watch !== undefined) return auth.roomId !== undefined && screenAdmission(room, who).ok;
+    const member = room.memberByKey(who.key) ?? adoptable(room, who)?.guest;
     return member !== undefined && member.sockets.size < BUSY_MEMBER_CONNECTIONS;
   }
 
@@ -1012,12 +1065,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // locked, gets back in. Anyone else is told `server_busy` before the connection is made, and the
   // page says to come back in a few minutes.
   io.use((socket, next) => {
-    if (!busy.check() || returning(socket)) {
-      next();
-      return;
+    const who = identify(socket);
+    identified.set(socket, who);
+    if (busy.check()) {
+      if (!returning(who.auth, who)) {
+        refusals.add(
+          'busy_connections',
+          clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy),
+        );
+        next(new Error('server_busy'));
+        return;
+      }
+      admittedBusy.add(socket);
     }
-    refusals.add('busy_connections', clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy));
-    next(new Error('server_busy'));
+    next();
   });
 
   // Behind a reverse proxy every connection comes from the proxy's address, and then all players
@@ -1029,17 +1090,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       forwardedIgnored = true;
       log('forwarded_address_ignored', { hint: 'behind a reverse proxy, set TRUST_PROXY=1' });
     }
-    const auth = HANDSHAKE.parse(socket.handshake.auth);
-    // A browser that comes without a token, or with something that can't be one, is given one.
-    const issued = isToken(auth.token) ? null : newToken();
-    // A browser that is logged in is its account, on every device; the token waits for it to log
-    // out.
-    const login = loginOf(socket);
-    const guestKey = memberKey(issued ?? (auth.token as string));
+    const who = identified.get(socket) ?? identify(socket);
+    identified.delete(socket);
+    const { auth, login, issued } = who;
     const conn: Connection = {
-      key: login ? accountKey(login.account.id) : guestKey,
-      guestKey,
-      account: login && { id: login.account.id, session: hex(login.hash) },
+      key: who.key,
+      guestKey: who.guestKey,
+      account: who.account,
       ip: clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy),
       country: clientCountry(socket.handshake.headers, options.trustProxy),
       room: null,
@@ -1632,6 +1689,14 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         release(socket);
       }),
     );
+
+    // A busy server let this connection through as coming back to a room (returning), and the
+    // room had no place for it after all, having changed since the handshake was looked at: it is
+    // closed, as it would have been turned away, and its page comes back by a new handshake.
+    if (admittedBusy.has(socket) && conn.room === null) {
+      refusals.add('busy_connections', conn.ip);
+      socket.disconnect(true);
+    }
   });
 
   // What the account API can't do itself, since only the socket layer knows the connections.

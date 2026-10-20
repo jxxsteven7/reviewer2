@@ -12,10 +12,11 @@ import {
   AddressConnections,
   BusyGauge,
   DEFAULT_BUSY_CONNECTIONS,
-  DEFAULT_BUSY_MEMORY_SHARE,
   DEFAULT_CONNECTIONS_PER_ADDRESS,
+  defaultBusyMemory,
+  heapLimit,
+  megabytes,
   memoryInUse,
-  memoryLimit,
 } from './core/load';
 import { cryptoRng, type Rng } from './core/random';
 import { Refusals } from './core/refusals';
@@ -159,6 +160,16 @@ export function createAppServer(options: AppOptions): AppServer {
   if (connectionsPerAddress > DEFAULT_CONNECTIONS_PER_ADDRESS) {
     log('connections_per_address_raised', { connectionsPerAddress, default: DEFAULT_CONNECTIONS_PER_ADDRESS });
   }
+  // The memory in use hardly ever gets past the heap's limit (core/load.ts): the heap runs out
+  // first, and the process with it, so a BUSY_MEMORY_MB above it would hardly ever make the server
+  // busy.
+  if (busyMemoryMb !== null && busyMemoryMb * 2 ** 20 > heapLimit()) {
+    log('busy_memory_above_heap_limit', {
+      busyMemoryMb,
+      heapLimitMb: megabytes(heapLimit()),
+      hint: 'lower BUSY_MEMORY_MB, or raise the heap limit with --max-old-space-size',
+    });
+  }
   const trustProxy = options.trustProxy ?? false;
   const cookieSecure = options.cookieSecure ?? true;
   const { accounts } = options;
@@ -225,7 +236,7 @@ export function createAppServer(options: AppOptions): AppServer {
   const busy = new BusyGauge(
     {
       connections: busyConnections,
-      memory: busyMemoryMb === null ? Math.round(DEFAULT_BUSY_MEMORY_SHARE * memoryLimit()) : busyMemoryMb * 2 ** 20,
+      memory: busyMemoryMb === null ? defaultBusyMemory() : busyMemoryMb * 2 ** 20,
     },
     () => ({ connections: io.engine.clientsCount, memory: memory() }),
     log,

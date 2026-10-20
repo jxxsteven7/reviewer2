@@ -3,9 +3,9 @@ import { MAX_SCREENS } from '@reviewer2/shared';
 import { io, type ManagerOptions, type SocketOptions } from 'socket.io-client';
 import { afterEach, describe, expect, test } from 'vitest';
 import { memberKey } from '../src/core/identity';
-import { BUSY_MEMBER_CONNECTIONS, DEFAULT_CONNECTIONS_PER_ADDRESS } from '../src/core/load';
+import { BUSY_MEMBER_CONNECTIONS, DEFAULT_CONNECTIONS_PER_ADDRESS, heapLimit, megabytes } from '../src/core/load';
 import { MAX_LOGGED_PER_MEMBER } from '../src/core/room';
-import { Browser, createRoom, startServer, TestClient, until, type TestServer } from './helpers';
+import { Browser, createRoom, loggedIn, startServer, TestClient, until, type TestServer } from './helpers';
 
 // What one address, and everyone at once, may take of the server (core/load.ts): the connections
 // one address may have open, what a busy server turns away and lets through, the log's line of the
@@ -190,6 +190,85 @@ describe('a busy server', () => {
     await until(() => open() === 2, 'the connections to close');
     await connect();
     expect(lines('busy_ended')).toMatchObject([{ connections: 3, busyConnections: 4 }]);
+  });
+
+  test('lets a member back to the seat their connection would take, on no more connections than that', async () => {
+    let memory = 50 * MB;
+    server = await startServer({ busyMemoryMb: 100, memory: () => memory });
+    const { chair, code, roomId } = await createRoom(server.url);
+    clients.push(chair);
+    // Ann's phone, logged in, took a seat; her computer took one as a guest before she logged in
+    // there too. The seat her computer comes back to is her account's, which her phone has.
+    const ann = await loggedIn(server.url, 'ann');
+    const phone = await ann.connect();
+    clients.push(phone);
+    expect(await phone.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+    const computer = await connect();
+    expect(await computer.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+    const { token } = computer;
+    computer.close();
+    memory = 100 * MB;
+    const asAnn = { extraHeaders: { origin: server.url, cookie: ann.cookie } };
+    for (let i = 1; i < BUSY_MEMBER_CONNECTIONS; i += 1) {
+      const back = await connect({ token, code, roomId }, asAnn);
+      await back.waitFor((state) => state.code === code && state.me !== null);
+    }
+    // The guest seat that the token names has no connection, and brings none more in.
+    expect((await refused({ token, code, roomId }, asAnn)).message).toBe('server_busy');
+  });
+
+  test('lets a screen back where the room would put one up, and closes the one it takes the place of', async () => {
+    let memory = 50 * MB;
+    server = await startServer({ busyMemoryMb: 100, memory: () => memory });
+    const ann = await loggedIn(server.url, 'ann');
+    const { chair, code, roomId } = await createRoom(server.url, {}, ann);
+    clients.push(chair);
+    expect(await chair.send('room:public', { public: true })).toEqual({ ok: true });
+    const asAnn = { extraHeaders: { origin: server.url, cookie: ann.cookie } };
+    const first = await connect({ watch: code, roomId }, asAnn);
+    await first.waitFor((state) => state.code === code && state.screens === 1);
+    memory = 100 * MB;
+    // A public room's screens are its members' (watch): the room's ID alone makes nobody one.
+    expect((await refused({ watch: code, roomId })).message).toBe('server_busy');
+    // Ann's screen comes back in place of the one she had up, whose connection goes with it.
+    const second = await connect({ watch: code, roomId }, asAnn);
+    await second.waitFor((state) => state.code === code && state.screens === 1);
+    await until(() => !first.socket.connected, "the replaced screen's connection to close");
+    expect(first.closed).toEqual(['left']);
+    await until(() => open() === 2, 'the closed connections to be gone');
+  });
+
+  test("goes on while the memory can't be read, which the log says once", async () => {
+    let readable = true;
+    server = await startServer({
+      busyMemoryMb: 100,
+      memory: () => {
+        if (!readable) throw new Error('EMFILE: too many open files');
+        return 50 * MB;
+      },
+    });
+    await connect();
+    readable = false;
+    // The handshake is answered, rather than ending the process.
+    await connect();
+    await connect();
+    expect(server.app.stats().busy).toBe(false);
+    expect(lines('error')).toEqual([{ where: 'busy', message: 'EMFILE: too many open files' }]);
+  });
+
+  test('says when BUSY_MEMORY_MB is above the heap limit, which the memory in use hardly ever reaches', async () => {
+    const heapLimitMb = megabytes(heapLimit());
+    server = await startServer({ busyMemoryMb: heapLimitMb + 1 });
+    expect(lines('busy_memory_above_heap_limit')).toEqual([
+      {
+        busyMemoryMb: heapLimitMb + 1,
+        heapLimitMb,
+        hint: 'lower BUSY_MEMORY_MB, or raise the heap limit with --max-old-space-size',
+      },
+    ]);
+    await server.close();
+    server = await startServer();
+    expect(lines('busy_memory_above_heap_limit')).toEqual([]);
   });
 });
 

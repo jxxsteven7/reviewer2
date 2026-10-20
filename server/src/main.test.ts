@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { LIST_API, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { until } from '../test/helpers';
-import { memoryLimit } from './core/load';
+import { defaultBusyMemory } from './core/load';
 import { main, type MainOptions, type Running } from './main';
 import { DATABASE_FILE, openDatabase, SNAPSHOT_DIR } from './store/database';
 import { MIGRATIONS } from './store/migrations';
@@ -106,12 +106,9 @@ describe('starting', () => {
     expect(logged('listening')).toMatchObject({ connectionsPerAddress: 7, busyConnections: 50, busyMemoryMb: 4096 });
   });
 
-  test('is busy by default with 10,000 connections, or 90% of the memory it may use', async () => {
+  test('is busy by default with 10,000 connections, or 90% of the memory it can have in use', async () => {
     const started = (await start()) as Running;
-    expect(started.server.busy.limits).toEqual({
-      connections: 10_000,
-      memory: Math.round(0.9 * memoryLimit()),
-    });
+    expect(started.server.busy.limits).toEqual({ connections: 10_000, memory: defaultBusyMemory() });
     expect(logged('listening')).toMatchObject({ connectionsPerAddress: 100, busyConnections: 10_000 });
   });
 
