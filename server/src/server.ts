@@ -14,6 +14,7 @@ import {
   DEFAULT_BUSY_CONNECTIONS,
   DEFAULT_BUSY_MEMORY_SHARE,
   DEFAULT_CONNECTIONS_PER_ADDRESS,
+  memoryInUse,
   memoryLimit,
 } from './core/load';
 import { cryptoRng, type Rng } from './core/random';
@@ -121,7 +122,8 @@ export interface AppOptions
   limits?: RoomLimits;
   socketLimits?: SocketLimits;
   httpLimits?: Partial<HttpLimits>;
-  // The process's resident memory in bytes, which the server reads to know whether it is busy.
+  // The memory the process has in use, in bytes, which the server reads to know whether it is busy
+  // (memoryInUse in core/load.ts).
   memory?: () => number;
   log?: (event: string, fields?: Record<string, unknown>) => void;
 }
@@ -153,6 +155,9 @@ export function createAppServer(options: AppOptions): AppServer {
   }
   if (feedbackPerWindow > DEFAULT_SOCKET_LIMITS.feedbackPerWindow) {
     log('feedback_limit_raised', { feedbackPerWindow, default: DEFAULT_SOCKET_LIMITS.feedbackPerWindow });
+  }
+  if (connectionsPerAddress > DEFAULT_CONNECTIONS_PER_ADDRESS) {
+    log('connections_per_address_raised', { connectionsPerAddress, default: DEFAULT_CONNECTIONS_PER_ADDRESS });
   }
   const trustProxy = options.trustProxy ?? false;
   const cookieSecure = options.cookieSecure ?? true;
@@ -196,7 +201,9 @@ export function createAppServer(options: AppOptions): AppServer {
     maxHttpBufferSize: 16 * 1024,
     // One address may have so many connections open at once. Engine.IO asks before it opens any,
     // over long polling or a WebSocket, and answers one that is refused with 403, before Socket.IO
-    // or a room hears of it. The page tries again as after any connection that failed.
+    // or a room hears of it. Nothing else that Engine.IO refuses gets 403, so the page knows this
+    // refusal by its status alone (client/src/core/socket.ts), says that the network has too many
+    // connections open, and tries again in a while.
     allowRequest: (req, callback) => {
       const address = addressOf(req);
       if (perAddress.admits(address)) {
@@ -214,7 +221,7 @@ export function createAppServer(options: AppOptions): AppServer {
   });
   // Every connection that Engine.IO has open counts towards being busy, those that have yet to
   // come to Socket.IO or were turned away from it included, since each costs as much.
-  const memory = options.memory ?? (() => process.memoryUsage.rss());
+  const memory = options.memory ?? memoryInUse;
   const busy = new BusyGauge(
     {
       connections: busyConnections,

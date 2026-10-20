@@ -16,8 +16,13 @@ export const DEFAULT_BUSY_MEMORY_SHARE = 0.9;
 // A busy server stays busy until both the connections and the memory are below this share of what
 // made it busy, so that a load right at the line doesn't turn it on and off with every connection.
 export const RECOVERY_SHARE = 0.9;
+// While the server is busy, a member comes back to their seat on this many connections at most, a
+// phone and a computer and one whose end hasn't been noticed yet, and a screen comes back to its
+// room while the room has fewer screens than it may have (MAX_SCREENS). Past that, a seat's token
+// would let whoever holds it open as many connections as they like through a busy server.
+export const BUSY_MEMBER_CONNECTIONS = 3;
 
-const megabytes = (bytes: number) => Math.round(bytes / 2 ** 20);
+export const megabytes = (bytes: number): number => Math.round(bytes / 2 ** 20);
 
 // The memory that the process may use, in bytes: the limit that the system sets for it, such as a
 // cgroup's memory limit, or else the machine's memory. Without a limit, Node reports a number far
@@ -25,6 +30,16 @@ const megabytes = (bytes: number) => Math.round(bytes / 2 ** 20);
 export function memoryLimit(): number {
   const limit = process.constrainedMemory();
   return limit > 0 && limit < totalmem() ? limit : totalmem();
+}
+
+// The memory that the process has in use, in bytes: its heap, and what Node holds outside it,
+// such as buffers. The resident memory that /status.json shows (stats.ts) counts as well what V8
+// has freed but keeps for what it allocates next, which it hardly ever gives back to the system: a
+// server judged by that would stay busy for good after one spike, since what it has in use could
+// come down to nothing and the resident memory would stay where the spike left it.
+export function memoryInUse(): number {
+  const { heapUsed, external } = process.memoryUsage();
+  return heapUsed + external;
 }
 
 // The connections that each address has open, which Engine.IO's handshake asks before it opens
@@ -37,38 +52,33 @@ export class AddressConnections {
 
   // Whether the address may open one more.
   admits(address: string): boolean {
-    return this.count(address) < this.max;
-  }
-
-  count(address: string): number {
-    return this.#open.get(address) ?? 0;
+    return this.#count(address) < this.max;
   }
 
   opened(address: string): void {
-    this.#open.set(address, this.count(address) + 1);
+    this.#open.set(address, this.#count(address) + 1);
   }
 
   closed(address: string): void {
-    const left = this.count(address) - 1;
+    const left = this.#count(address) - 1;
     if (left > 0) this.#open.set(address, left);
     else this.#open.delete(address);
   }
 
-  // How many addresses have a connection open.
-  get addresses(): number {
-    return this.#open.size;
+  #count(address: string): number {
+    return this.#open.get(address) ?? 0;
   }
 }
 
 export interface BusyLimits {
-  // More connections than this, or this much memory in bytes, make the server busy.
+  // More connections than this, or this much memory in use, in bytes, make the server busy.
   connections: number;
   memory: number;
 }
 
 export interface Load {
   connections: number;
-  // The process's resident memory, in bytes, as /status.json gives it (stats.ts).
+  // The memory in use, in bytes (memoryInUse).
   memory: number;
 }
 
@@ -83,10 +93,6 @@ export class BusyGauge {
     private readonly read: () => Load,
     private readonly log: Log,
   ) {}
-
-  get busy(): boolean {
-    return this.#busy;
-  }
 
   check(): boolean {
     const load = this.read();

@@ -2,6 +2,8 @@
 import { drawFields, type FieldInfo, type Language } from '@reviewer2/shared';
 import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { errorKey } from '../errors';
+import { connection } from '../socket';
 import { useFold } from '../useFold';
 import FieldPicker from './FieldPicker.vue';
 
@@ -25,6 +27,10 @@ const fold = useFold();
 
 const usable = computed(() => (props.fields ?? []).filter((field) => field.counts[props.language] >= props.needed));
 
+// While the lists are on their way, or while they aren't coming because the server turned the page
+// away (socket.ts), which is then said in their place.
+const waiting = computed(() => t(connection.refusal ? errorKey(connection.refusal) : 'create.loadingFields'));
+
 watch(
   () => props.fields !== null,
   (loaded) => {
@@ -36,7 +42,7 @@ watch(
 // The chosen lists in a line, in the order of the lists: one or two by name, more as the first two
 // and how many there are beyond those.
 const summary = computed(() => {
-  if (!props.fields) return t('create.loadingFields');
+  if (!props.fields) return waiting.value;
   if (random.value) return t('create.fieldsEachSummary');
   const names = props.fields.filter((field) => chosen.value.includes(field.id)).map(({ name }) => name[props.language]);
   const [first, second] = names;
@@ -67,7 +73,7 @@ const chooseAtRandom = () => {
     </button>
     <Transition :css="false" v-bind="fold">
       <div v-show="open" :id="`${id}-lists`" class="lists">
-        <p v-if="!fields" class="hint">{{ t('create.loadingFields') }}</p>
+        <p v-if="!fields" class="hint">{{ waiting }}</p>
         <template v-else-if="usable.length">
           <label v-if="eachGame" class="each">
             <input v-model="random" type="checkbox" />

@@ -8,6 +8,7 @@ import {
   checkReport,
   INVITE_COOLDOWN_MS,
   JOIN_ASKS_PER_HOUR,
+  MAX_SCREENS,
   type Ack,
   type ClosedReason,
   type DuoPart,
@@ -40,7 +41,7 @@ import type { GameModule, Viewer } from './game';
 import { accountKey, isToken, memberKey, newToken } from './identity';
 import { Invitations, type Invitation } from './invitations';
 import { JoinAsks, type JoinAsk } from './joinAsks';
-import type { BusyGauge } from './load';
+import { BUSY_MEMBER_CONNECTIONS, type BusyGauge } from './load';
 import { TokenBucket, WindowCounter } from './rateLimit';
 import type { Limit, Refusals } from './refusals';
 import type { Member, MemberAccount, Room } from './room';
@@ -259,10 +260,29 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     });
   }
 
-  // A refusal by one of the limits, which counts towards the log's line of the minute.
+  // The limit that a refusal comes from, by its error code, which respond() counts towards the
+  // log's line of the minute (refusals.ts). `rate_limited` is what a room answers a member who has
+  // flooded the log of its game (MAX_LOGGED_PER_MEMBER in room.ts); the two limits per address that
+  // answer it too, rooms created and codes tried, count themselves as they refuse (limited), as
+  // does the bucket of a connection's messages, which refuses before any handler runs.
+  const LIMITS: Partial<Record<string, Limit>> = {
+    rate_limited: 'game_log',
+    server_busy: 'busy_rooms',
+    feedback_limited: 'feedback',
+    report_limited: 'reports',
+    friend_find_limited: 'friend_searches',
+    friend_limited: 'friend_requests',
+    join_ask_limited: 'join_asks',
+  };
+  const countedAlready = new WeakSet<Refusal>();
+
+  // A refusal by one of the limits that answer `rate_limited`, counted as it is made, since
+  // respond() couldn't tell which of them it was.
   function limited(limit: Limit, conn: Connection, error: Parameters<typeof fail>[0]): Refusal {
     refusals.add(limit, conn.ip);
-    return fail(error);
+    const refusal = fail(error);
+    countedAlready.add(refusal);
+    return refusal;
   }
 
   // Runs what no message is waiting for: a handshake, a disconnect, the sweep. They call the
@@ -618,20 +638,20 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // - whoever gives its room ID. That takes having been sent it, and a wrong one finds nothing
   //   whatever the code, so such a lookup tells nobody anything about codes;
   // - whoever comes to a public room, whose code the list gives to anyone (meta:rooms).
-  function lookup(conn: Connection, code: string, roomId?: string): Room | 'room_not_found' | 'rate_limited' {
+  function lookup(conn: Connection, code: string, roomId?: string): Room | Refusal {
     const room = rooms.find(code);
-    if (roomId !== undefined) return room?.id === roomId ? room : 'room_not_found';
+    if (roomId !== undefined) return room?.id === roomId ? room : fail('room_not_found');
     if (room && (conn.room === room || room.memberByKey(conn.key) || guestSeat(room, conn) || room.public)) {
       return room;
     }
-    if (!failedLookups.allowed(conn.ip)) {
-      refusals.add('codes', conn.ip);
-      return 'rate_limited';
-    }
+    if (!failedLookups.allowed(conn.ip)) return limited('codes', conn, 'rate_limited');
     if (room) return room;
     failedLookups.add(conn.ip);
-    return 'room_not_found';
+    return fail('room_not_found');
   }
+
+  // Whether a lookup came to a refusal rather than a room.
+  const refused = (found: Room | Refusal): found is Refusal => 'ok' in found;
 
   // Brings a connection back to the room that its handshake names, before any of its messages
   // run, so that a message that waited out the disconnect doesn't arrive in a room that has
@@ -833,17 +853,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // The room that an invitation lets a connection into: the invitation's, while it stands, or else
   // the room by the code, where the connection has a seat already, having come in before. Otherwise
   // why not: there is no such invitation for this account, or it has lapsed.
-  function invited(
-    conn: Connection,
-    id: string,
-    code: string | undefined,
-    roomId: string | undefined,
-  ): Room | 'invitation_expired' {
+  function invited(conn: Connection, id: string, code: string | undefined, roomId: string | undefined): Room | Refusal {
     const invitation = conn.account ? invitations.find(id, conn.account.id) : undefined;
     if (invitation) return invitation.room;
     const room = code === undefined ? undefined : rooms.find(code);
-    if (!room || (roomId !== undefined && room.id !== roomId)) return 'invitation_expired';
-    return (room.memberByKey(conn.key) ?? guestSeat(room, conn)) ? room : 'invitation_expired';
+    if (!room || (roomId !== undefined && room.id !== roomId)) return fail('invitation_expired');
+    return (room.memberByKey(conn.key) ?? guestSeat(room, conn)) ? room : fail('invitation_expired');
   }
 
   function membership(socket: Socket): { room: Room; member: Member } | null {
@@ -866,6 +881,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     } catch (error) {
       report(error, 'message');
       answer = fail('internal');
+    }
+    if (!answer.ok && !countedAlready.has(answer)) {
+      const limit = LIMITS[answer.error];
+      if (limit) refusals.add(limit, connection(socket).ip);
     }
     try {
       reply(answer);
@@ -974,16 +993,18 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   // Whether a handshake brings a member back to their seat, or a screen back to its room, as
   // comeBack() would: by the browser's token or the account it is logged in to, and a screen by
-  // the room ID it was sent.
+  // the room ID it was sent. While the server is busy this is the only way in, so it takes no
+  // more connections than a member or a room's screens could need (BUSY_MEMBER_CONNECTIONS).
   function returning(socket: Socket): boolean {
     const auth = HANDSHAKE.parse(socket.handshake.auth);
     const code = auth.watch ?? auth.code;
     const room = code === undefined ? undefined : rooms.find(code);
     if (!room || (auth.roomId !== undefined && room.id !== auth.roomId)) return false;
-    if (auth.watch !== undefined) return auth.roomId !== undefined;
-    const login = loginOf(socket);
-    const keys = [isToken(auth.token) ? memberKey(auth.token) : null, login && accountKey(login.account.id)];
-    return keys.some((key) => key !== null && room.memberByKey(key) !== undefined);
+    if (auth.watch !== undefined) return auth.roomId !== undefined && room.screens.size < MAX_SCREENS;
+    const byToken = isToken(auth.token) ? room.memberByKey(memberKey(auth.token)) : undefined;
+    const login = byToken ? null : loginOf(socket);
+    const member = byToken ?? (login ? room.memberByKey(accountKey(login.account.id)) : undefined);
+    return member !== undefined && member.sockets.size < BUSY_MEMBER_CONNECTIONS;
   }
 
   // A busy server (load.ts) takes no new connection but one that comes back to a room, so that
@@ -1108,7 +1129,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (linkProfile === true && !signed && named.credit === null) return fail('feedback_unsigned');
       const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, signed ? account.id : null]);
       if (feedbackSeen.has(key)) return ok();
-      if (!feedbackSent.allowed(conn.ip)) return limited('feedback', conn, 'feedback_limited');
+      if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
       const full = feedback.full();
       if (full) {
         if (!feedbackFullLogged) log('feedback_full', { reason: full });
@@ -1143,7 +1164,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'room:create', (message) => {
       const { game, language, fields, randomFields, settings, play, match, public: listed, practice } = message;
       // A busy server makes no new rooms, and the attempt costs the address nothing.
-      if (busy.check()) return limited('busy_rooms', conn, 'server_busy');
+      if (busy.check()) return fail('server_busy');
       if (!creations.allowed(conn.ip)) return limited('rooms', conn, 'rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
@@ -1229,7 +1250,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         invitation === undefined
           ? lookup(conn, code as string, roomId ?? undefined)
           : invited(conn, invitation, code, roomId ?? undefined);
-      if (typeof room === 'string') return fail(room);
+      if (refused(room)) return room;
       const member = room.memberByKey(conn.key) ?? adoptGuest(room, conn);
       if (member) {
         enter(socket, room, member);
@@ -1253,7 +1274,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
     on(handlers, 'room:watch', ({ code, roomId }) => {
       const room = lookup(conn, code, roomId ?? undefined);
-      return typeof room === 'string' ? fail(room) : watch(socket, room);
+      return refused(room) ? room : watch(socket, room);
     });
 
     on(handlers, 'room:leave', () => {
@@ -1311,7 +1332,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (note.problem) return fail(note.problem);
       if (room.reported(member.key, reported.key)) return ok();
       const key = String(member.account.id);
-      if (!reportsSent.allowed(key)) return limited('reports', conn, 'report_limited');
+      if (!reportsSent.allowed(key)) return fail('report_limited');
       const id = feedback.report({
         reporterId: member.account.id,
         reportedId: reported.account?.id ?? null,
@@ -1426,9 +1447,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'friends:find', ({ username }) => {
       const me = accountOf(conn);
       if (!me.ok) return me;
-      if (!(accounts as Accounts).friends.takeFind(me.account.id)) {
-        return limited('friend_searches', conn, 'friend_find_limited');
-      }
+      if (!(accounts as Accounts).friends.takeFind(me.account.id)) return fail('friend_find_limited');
       const target = (accounts as Accounts).byName(username);
       if (!target) return fail('no_such_account');
       return ok({ handle: target.handle, username: target.username });
@@ -1455,15 +1474,13 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (!other) return fail('no_such_player');
         target = other.account ? accounts?.store.byId(other.account.id) : undefined;
       } else if (username !== undefined) {
-        if (!friends.take(me.account.id)) return limited('friend_requests', conn, 'friend_limited');
+        if (!friends.take(me.account.id)) return fail('friend_limited');
         target = (accounts as Accounts).byName(username);
       } else {
         return fail('bad_request');
       }
       if (!target) return fail('no_such_account');
-      if (playerId !== undefined && !friends.take(me.account.id)) {
-        return limited('friend_requests', conn, 'friend_limited');
-      }
+      if (playerId !== undefined && !friends.take(me.account.id)) return fail('friend_limited');
       const result = friends.request(me.account.id, target.id, note);
       if (!result.ok) {
         if (playerId !== undefined) friends.refund(me.account.id);
@@ -1576,7 +1593,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const removal = room.removal(accountKey(me.account.id));
       if (removal) return fail(removal);
       if (asks.between(me.account.id, friend.id)) return fail('join_ask_pending');
-      if (!asking.take(String(me.account.id))) return limited('join_asks', conn, 'join_ask_limited');
+      if (!asking.take(String(me.account.id))) return fail('join_ask_limited');
       const ask = asks.create(room, me.account.id, friend.id, member.key);
       tellAccount(friend.id, 'friends:asked', askView(ask));
       tellAccount(me.account.id, 'friends:changed');

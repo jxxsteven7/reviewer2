@@ -11,6 +11,7 @@ import {
 import { reactive, shallowRef, watch } from 'vue';
 import { i18n } from './i18n';
 import { friendAliases, nameOf, type Named } from './names';
+import { forgetScreenRoom, storedScreenRoom, storeScreenRoom } from './session';
 import { connect, reconnect, send, setHandshake, socket } from './socket';
 
 // The room this page shows, as the server last described it, and how far the page has got in
@@ -106,7 +107,9 @@ watch([i18n.global.locale, friendAliases], () => {
 });
 
 // The page is in the room. The invitation, if one brought it, has done its work: from here on the
-// page comes back as a member, by the code and the room's ID.
+// page comes back as a member, by the code and the room's ID. A screen's page remembers the ID
+// (session.ts), so that reloaded it comes back by it too: a busy server takes a screen back only
+// so (docs/architecture.md#limits-and-housekeeping).
 function show(view: RoomView): void {
   shown = view;
   room.value = named(view);
@@ -115,6 +118,7 @@ function show(view: RoomView): void {
     wanted.roomId = view.roomId;
     delete wanted.invitation;
   }
+  if (view.me === null) storeScreenRoom(view.code, view.roomId);
   setHandshake(view.me === null ? { watch: view.code, roomId: view.roomId } : { code: view.code, roomId: view.roomId });
 }
 
@@ -135,6 +139,14 @@ socket.on('room:closed', ({ reason }: { reason: ClosedReason }) => {
   const closed = latest;
   latest = null;
   if (!wanted || (closed && !isWanted(closed))) return;
+  if (wanted.screen) forgetScreenRoom(wanted.code);
+  // The room's ID that a screen's page remembered from before it was reloaded belongs to a room
+  // that the code has gone from since; the page has only remembered it, not seen the room. Its
+  // room:watch by the code alone is on its way, and the handshake drops the ID.
+  if (reason === 'expired' && wanted.roomId === undefined) {
+    setHandshake({ watch: wanted.code });
+    return;
+  }
   wanted = null;
   room.value = null;
   setHandshake({});
@@ -183,6 +195,7 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
       break;
     case 'offline':
     case 'server_busy':
+    case 'too_many_connections':
       break; // the next connection asks again
     case 'timeout':
       // The server didn't answer in time. A fresh connection asks again, as after a ping that goes
@@ -208,7 +221,10 @@ export function openRoom(
   wanted = { code, screen, ...(invitation === undefined ? {} : { invitation }) };
   room.value = null;
   Object.assign(entry, { status: 'connecting', language: null, closed: null, error: null });
-  setHandshake(screen ? { watch: code } : { code });
+  // A screen reloaded comes back by the room's ID it remembered (show), which is asked for by the
+  // code alone all the same, since the ID may be a room's that the code has gone from.
+  const remembered = screen ? storedScreenRoom(code) : null;
+  setHandshake(screen ? { watch: code, ...(remembered === null ? {} : { roomId: remembered }) } : { code });
   // This connection may be in the room already, as a player or as a screen, whichever the page is.
   if (latest && isWanted(latest)) show(latest);
   if (socket.connected) void ask();

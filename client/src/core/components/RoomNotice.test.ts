@@ -24,10 +24,15 @@ const room = vi.hoisted(() => ({
   entry: { status: 'failed', language: null, closed: null, error: 'account_required' as string | null },
 }));
 vi.mock('../room', () => room);
+// The connection, which the server may have turned away.
+const socket = vi.hoisted(() => ({ connection: { refusal: null as string | null } }));
+vi.mock('../socket', () => socket);
 
 beforeEach(() => {
   setLanguage('en', { remember: false });
+  room.entry.status = 'failed';
   room.entry.error = 'account_required';
+  socket.connection.refusal = null;
 });
 
 // The places the notice links to, for a room page at `path` with the code in it as `code`.
@@ -51,5 +56,16 @@ describe('the notice of a room the page is not in', () => {
   test('has only the way home for any other refusal', () => {
     room.entry.error = 'removed';
     expect(links('/room/K7QX', 'K7QX')).toEqual(['/']);
+  });
+
+  test('says that the room is opening, or that the server turned the page away, while it waits', () => {
+    room.entry.status = 'connecting';
+    page.route = { path: '/room/K7QX', params: { code: 'K7QX' } };
+    const text = () => mount(RoomNotice, { global: { plugins: [i18n] } }).text();
+    expect(text()).toBe('Opening the room...');
+    socket.connection.refusal = 'server_busy';
+    expect(text()).toBe('The server is a little busy. Come back in a few minutes.');
+    socket.connection.refusal = 'too_many_connections';
+    expect(text()).toContain('Too many connections');
   });
 });

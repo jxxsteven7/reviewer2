@@ -1,6 +1,6 @@
 import { totalmem } from 'node:os';
 import type { RoomPhase } from '@reviewer2/shared';
-import { memoryLimit } from './core/load';
+import { megabytes, memoryLimit } from './core/load';
 import type { Rooms } from './core/rooms';
 import type { ConnectionInfo } from './core/socket';
 
@@ -92,8 +92,6 @@ function median(values: number[]): number | null {
     ? (sorted[middle] as number)
     : Math.round(((sorted[middle - 1] as number) + (sorted[middle] as number)) / 2);
 }
-
-export const megabytes = (bytes: number) => Math.round(bytes / 2 ** 20);
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 

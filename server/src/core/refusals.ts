@@ -11,12 +11,14 @@ type Log = (event: string, fields?: Record<string, unknown>) => void;
 // The limits, by what they count: the messages of one connection; per address, rooms created,
 // codes that belong to no room, feedback, requests to the account API, accounts created, wrong
 // passwords, mails and open connections; per account, reports, searches for a friend by username,
-// friend requests, requests to be let into a friend's room, avatars and likes; and what the server
-// turns away while it is busy (load.ts), new connections and new rooms. The cooldowns between two
-// reactions and between two invitations to the same friend are no limit against abuse, and count
-// for nothing here.
+// friend requests, requests to be let into a friend's room, avatars and likes; per member of a
+// room, what they add to the log of its game (MAX_LOGGED_PER_MEMBER in room.ts); and what the
+// server turns away while it is busy (load.ts), new connections and new rooms. The cooldowns
+// between two reactions and between two invitations to the same friend are no limit against
+// abuse, and count for nothing here.
 export type Limit =
   | 'messages'
+  | 'game_log'
   | 'rooms'
   | 'codes'
   | 'feedback'

@@ -13,7 +13,7 @@ import { spot, type FingerKind } from './spot';
 // finger without a word.
 
 // The page is connected, and the server's word lists have come.
-const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true, connects: 1 } }));
+const page = vi.hoisted(() => ({ connection: { connected: true, everConnected: true, connects: 1, refusal: null } }));
 vi.mock('../socket', async () => {
   const { computed, reactive } = await import('vue');
   page.connection = reactive(page.connection);

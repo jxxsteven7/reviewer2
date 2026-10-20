@@ -1,6 +1,10 @@
 import { connect as connectTcp } from 'node:net';
+import { MAX_SCREENS } from '@reviewer2/shared';
 import { io, type ManagerOptions, type SocketOptions } from 'socket.io-client';
 import { afterEach, describe, expect, test } from 'vitest';
+import { memberKey } from '../src/core/identity';
+import { BUSY_MEMBER_CONNECTIONS, DEFAULT_CONNECTIONS_PER_ADDRESS } from '../src/core/load';
+import { MAX_LOGGED_PER_MEMBER } from '../src/core/room';
 import { Browser, createRoom, startServer, TestClient, until, type TestServer } from './helpers';
 
 // What one address, and everyone at once, may take of the server (core/load.ts): the connections
@@ -67,6 +71,17 @@ describe('the connections of one address', () => {
     expect(third.status).toBe(403);
     expect(await third.json()).toMatchObject({ message: 'too_many_connections' });
     await expect(refused({}, { transports: ['polling'] })).resolves.toBeInstanceOf(Error);
+  });
+
+  test('may be raised, which the server says, since a higher limit protects less', async () => {
+    server = await startServer({ connectionsPerAddress: DEFAULT_CONNECTIONS_PER_ADDRESS });
+    expect(lines('connections_per_address_raised')).toEqual([]);
+    await server.close();
+    const raised = DEFAULT_CONNECTIONS_PER_ADDRESS + 1;
+    server = await startServer({ connectionsPerAddress: raised });
+    expect(lines('connections_per_address_raised')).toEqual([
+      { connectionsPerAddress: raised, default: DEFAULT_CONNECTIONS_PER_ADDRESS },
+    ]);
   });
 
   test('are counted for each address behind a reverse proxy', async () => {
@@ -137,6 +152,35 @@ describe('a busy server', () => {
     expect(server.app.stats().busy).toBe(false);
   });
 
+  test('lets a member back on a few connections, and a screen while the room has room for one', async () => {
+    let memory = 50 * MB;
+    server = await startServer({ busyMemoryMb: 100, memory: () => memory });
+    const { chair, code, roomId } = await createRoom(server.url);
+    clients.push(chair);
+    memory = 100 * MB;
+    // The chair's phone and computer come back; whoever has the token besides gets no further.
+    for (let i = 1; i < BUSY_MEMBER_CONNECTIONS; i += 1) {
+      const back = await connect({ token: chair.token, code, roomId });
+      await back.waitFor((state) => state.code === code && state.me !== null);
+    }
+    expect((await refused({ token: chair.token, code, roomId })).message).toBe('server_busy');
+    // Once one of them has gone, the seat has room again.
+    const seat = () => server.app.rooms.find(code)?.memberByKey(memberKey(chair.token));
+    chair.close();
+    await until(() => seat()?.sockets.size === BUSY_MEMBER_CONNECTIONS - 1, 'the connection to close');
+    const back = await connect({ token: chair.token, code, roomId });
+    await back.waitFor((state) => state.code === code && state.me !== null);
+
+    // The room's screens come back while the room may have another; a sixth isn't one of them.
+    for (let i = 0; i < MAX_SCREENS; i += 1) {
+      const screen = await connect({ watch: code, roomId });
+      await screen.waitFor((state) => state.code === code && state.screens === i + 1);
+    }
+    expect((await refused({ watch: code, roomId })).message).toBe('server_busy');
+    server.app.refusals.flush();
+    expect(lines('limited')).toEqual([{ level: 'warn', limit: 'busy_connections', count: 2, addresses: 1 }]);
+  });
+
   test('is busy with more connections than BUSY_CONNECTIONS, and takes newcomers again well below it', async () => {
     server = await startServer({ busyConnections: 4 });
     const four = [await connect(), await connect(), await connect(), await connect()];
@@ -176,6 +220,24 @@ describe("the limits' line of the minute", () => {
     // The next minute starts anew.
     server.app.refusals.flush();
     expect(lines('limited')).toHaveLength(3);
+  });
+
+  test('counts a member whom the log of their game takes no more from', async () => {
+    server = await startServer({ socketLimits: { messagesPerSecond: 1000, messageBurst: 1000 } });
+    const { chair, code } = await createRoom(server.url, { play: true });
+    clients.push(chair);
+    const other = await connect();
+    expect(await other.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+    await chair.waitFor((state) => state.players.length === 2);
+    expect(await chair.send('room:start', { round: 0 })).toMatchObject({ ok: true });
+    await chair.waitFor((state) => state.phase === 'playing');
+    for (let press = 0; press < MAX_LOGGED_PER_MEMBER; press += 1) {
+      expect(await chair.send('test:press')).toMatchObject({ ok: true });
+    }
+    expect(await chair.send('test:press')).toEqual({ ok: false, error: 'rate_limited' });
+    expect(await chair.send('test:press')).toEqual({ ok: false, error: 'rate_limited' });
+    server.app.refusals.flush();
+    expect(lines('limited')).toEqual([{ level: 'warn', limit: 'game_log', count: 2, addresses: 1 }]);
   });
 });
 

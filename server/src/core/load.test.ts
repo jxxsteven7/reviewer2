@@ -1,6 +1,6 @@
 import { totalmem } from 'node:os';
 import { describe, expect, test, vi } from 'vitest';
-import { AddressConnections, BusyGauge, memoryLimit, type Load } from './load';
+import { AddressConnections, BusyGauge, memoryInUse, memoryLimit, type Load } from './load';
 
 describe('the connections of each address', () => {
   test('admit up to the most an address may have open, each address on its own', () => {
@@ -15,16 +15,18 @@ describe('the connections of each address', () => {
     expect(open.admits('203.0.113.9')).toBe(true);
   });
 
-  test('forget an address once its last connection has closed', () => {
-    const open = new AddressConnections(100);
+  test('count a connection until it closes, and no further', () => {
+    const open = new AddressConnections(5);
     for (let i = 0; i < 5; i += 1) open.opened('203.0.113.9');
-    open.opened('198.51.100.7');
-    expect(open.addresses).toBe(2);
+    expect(open.admits('203.0.113.9')).toBe(false);
     for (let i = 0; i < 5; i += 1) open.closed('203.0.113.9');
-    expect(open.count('203.0.113.9')).toBe(0);
-    expect(open.addresses).toBe(1);
-    open.closed('198.51.100.7');
-    expect(open.addresses).toBe(0);
+    // Closed as often as opened, the address is as new: a close that was counted twice would
+    // have left it room for a sixth connection.
+    for (let i = 0; i < 5; i += 1) {
+      expect(open.admits('203.0.113.9')).toBe(true);
+      open.opened('203.0.113.9');
+    }
+    expect(open.admits('203.0.113.9')).toBe(false);
   });
 });
 
@@ -44,7 +46,6 @@ describe('a busy server', () => {
     load.connections = 101;
     expect(busy.check()).toBe(true);
     expect(busy.check()).toBe(true);
-    expect(busy.busy).toBe(true);
     expect(log).toHaveBeenCalledExactlyOnceWith('busy_started', {
       level: 'warn',
       connections: 101,
@@ -94,5 +95,11 @@ describe('a busy server', () => {
     const limit = memoryLimit();
     expect(limit).toBeGreaterThan(0);
     expect(limit).toBeLessThanOrEqual(totalmem());
+  });
+
+  test('judges the memory by what is in use, which comes down again, not by the resident memory', () => {
+    const inUse = memoryInUse();
+    expect(inUse).toBeGreaterThan(0);
+    expect(inUse).toBeLessThan(process.memoryUsage.rss());
   });
 });
