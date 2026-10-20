@@ -328,7 +328,7 @@ watch(
 }
 
 /* The link is one line of small text in the link blue, not bold, with an arrow after it
-   (LinkArrow.vue), which says that it leads off the site (docs/design.md): under a pointer an
+   (LinkArrow.vue), which says that it leads off the site (docs/rules/display.md): under a pointer an
    underline sweeps in under the address alone and the arrow moves out; pressed, the underline is
    there at once, the arrow further out and the link a pixel lower, and both ease back after.
    Padding that the margins take back makes it 44px tall to tap, as the buttons are, without

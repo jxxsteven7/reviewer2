@@ -475,7 +475,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
   vertical-align: middle;
 }
 
-/* The chair's tag is a sticker to tap, 44 px high to the finger (docs/design.md): white while the
+/* The chair's tag is a sticker to tap, 44 px high to the finger (docs/rules/display.md): white while the
    room is private, when it lifts and presses as a sticker does (`press-part` in base.css), and ink
    and flat once it is listed, as the others see it. */
 .visibility {

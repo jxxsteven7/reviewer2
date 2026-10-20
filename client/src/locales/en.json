@@ -389,6 +389,8 @@
     "insideWarning": "This clue contains a word still on the board: {words}. It may give that word away, so it's your call.",
     "prefixOnBoard": "{word} on the board starts with this clue. This room's clue check doesn't allow it.",
     "prefixWarning": "A word still on the board starts with this clue: {words}. It may give that word away, so it's your call.",
+    "lettersOnBoard": "{word} on the board contains this clue. This room's clue check doesn't allow it.",
+    "lettersWarning": "A word still on the board contains this clue: {words}. It may give that word away, so it's your call.",
     "gestures": {
       "choose": "Tap: choose · hold: mark · or keys 1, 2, 3",
       "mark": "Hold a card to mark it · or keys 1, 2, 3",
@@ -660,8 +662,8 @@
       "loose": "Loose"
     },
     "clueHint": {
-      "strict": "Refuses the other forms of a word on the board that the word lists give, clues with a Chinese character in common with one, and, in a Chinese room, clues that contain one.",
-      "loose": "Other forms of a word on the board that the word lists give, Chinese characters in common with one, and clues that contain one only bring a warning, and the PI decides."
+      "strict": "Refuses the other forms of a word on the board that the word lists give, clues with a Chinese character in common with one, clues of letters alone that a Latin word on the board has in a row (in an English room, only at its start), and, in a Chinese room, clues that contain one.",
+      "loose": "Other forms of a word on the board that the word lists give, Chinese characters in common with one, letters that a Latin word on the board has in a row (in an English room, only at its start), and clues that contain one only bring a warning, and the PI decides."
     },
     "clueLength": {
       "zh": "Characters in a clue",
@@ -986,12 +988,16 @@
     },
     "clueCommon": "It can't be a word on the board, a part of one, or the card's term in the other language. The PI says nothing else and makes no gestures.",
     "clueCharacter": "A number is the same character however it is written: 6, 六 and six. So are the English of a character and its pinyin, of three letters or more: ball and qiu are the same character as 球. With 大 on the board, big and great count as 大 too.",
+    "clueLetters": {
+      "zh": "A clue of letters alone gives away a Latin word on the board that has its letters in a row, capitals or not, at its start, in its middle or at its end, even a single letter: s and ts beside ETS, ai beside Email, s beside S波.",
+      "en": "A clue of letters alone gives away a word on the board that starts with it, even a single letter: mode and m beside Model. Letters in the middle of a word don't count: art beside Earth is fine."
+    },
     "clueSound": "In a Chinese room, don't give a clue that sounds like a word on the board, such as 鸡音 (jīyīn) for 基因 (jīyīn, gene). The game doesn't check this: it's up to everyone to play fair.",
     "clueQuiet": "While the students guess, neither group's PI may send a quick reaction, nor may anyone who has been a PI in this game.",
     "clueTargets": "When giving a clue, the PI may tap cards to mark the ones it is meant for, and the number follows. Nobody sees the marks during the game; afterwards, the clue log and the replay show them.",
     "clueRule": {
-      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a character in common with one, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
-      "loose": "This room's clue check is loose: other forms of a word on the board, characters in common with one, and clues that contain one only bring a warning, and the PI decides."
+      "strict": "This room's clue check is strict: a clue can't be another form of a word on the board that the word lists give, have a character in common with one, be letters that give one away, or, in a Chinese room, contain one. Other forms, which the check can only guess at, bring a warning, and the PI decides.",
+      "loose": "This room's clue check is loose: other forms of a word on the board, characters in common with one, letters that give one away, and clues that contain one only bring a warning, and the PI decides."
     },
     "timeTitle": "Time",
     "time": "The settings above say how much time each phase has. The bar under the turn shows what is left, and stays at the top of the screen when you scroll down.",

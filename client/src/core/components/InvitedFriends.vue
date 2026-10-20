@@ -143,7 +143,7 @@ const label = computed(() =>
 }
 
 /* The avatars open the sheet to invite friends, so they wear the hard shadow of what a tap opens
-   (docs/design.md), and move as stickers do (`press-part` in base.css). */
+   (docs/rules/display.md), and move as stickers do (`press-part` in base.css). */
 .face :deep(.avatar) {
   box-shadow: var(--shadow-1);
 }

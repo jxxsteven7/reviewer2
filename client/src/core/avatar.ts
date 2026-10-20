@@ -1,7 +1,7 @@
 import { AVATAR_SIZE, AVATAR_TARGET_BYTES, MAX_AVATAR_BYTES, usernameKey } from '@reviewer2/shared';
 import { fnv1a } from './hash';
 
-// Avatars on the page (docs/design.md): always a circle. A player who uploaded none, and every
+// Avatars on the page (docs/rules/display.md): always a circle. A player who uploaded none, and every
 // guest, gets a default one, drawn here from the name: its first character on a color that the
 // name chooses, the same color for the same name everywhere, in any case or width.
 

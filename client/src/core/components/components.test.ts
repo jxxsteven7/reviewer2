@@ -332,7 +332,7 @@ describe('PageMasthead', () => {
   });
 
   // A page with a way back keeps the bar of its title at the top once there is a page to go back
-  // to, and the masthead scrolls away (docs/design.md); otherwise the masthead stays.
+  // to, and the masthead scrolls away (docs/rules/display.md); otherwise the masthead stays.
   test('gives the top to the bar of the title on a page with a page before, and stays otherwise', () => {
     window.history.replaceState({ back: '/' }, '');
     const listened = vi.spyOn(window, 'addEventListener');

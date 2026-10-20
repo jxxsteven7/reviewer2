@@ -20,6 +20,7 @@ These rules apply to everyone: project members, outside contributors and AI codi
 | [docs/rules/review.md](docs/rules/review.md) | How PRs are reviewed, AI-written code, what reviewers check |
 | [docs/rules/constraints.md](docs/rules/constraints.md) | Hard constraints: mainland China, intellectual property, game state, UI, secrets, the live deployment |
 | [docs/rules/language.md](docs/rules/language.md) | English in the repository; keeping the two READMEs in sync |
+| [docs/rules/display.md](docs/rules/display.md) | Consistent display: one look for every page and game, and the rules of what players see |
 | [docs/development.md](docs/development.md) | Running and testing the app on your machine |
 | [words/README.md](words/README.md) | The word library: format, good terms, how to contribute |
 | [docs/maintainers.md](docs/maintainers.md) | For maintainers: the repository's GitHub settings |

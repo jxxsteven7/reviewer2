@@ -8,7 +8,7 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'keywords-4';
+export const PROMPT_VERSION = 'keywords-5';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 

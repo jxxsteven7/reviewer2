@@ -31,7 +31,7 @@ export type TitleRef =
 type Translate = (key: string, named?: Record<string, string | number>) => string;
 
 // The news a title brings, which colors it where it stands in text, blue for good and red for bad
-// (TitleInfo.vue, docs/design.md). A decision takes its group's color instead; the author's badge
+// (TitleInfo.vue, docs/rules/display.md). A decision takes its group's color instead; the author's badge
 // and the AI tag are pills, which have no news; and the titles of two friends, which stand only on
 // pills and in headings, have none yet: some are good news and some, as being rejected together,
 // are not.

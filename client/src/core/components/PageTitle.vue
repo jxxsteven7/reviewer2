@@ -7,7 +7,7 @@ import BackButton, { canGoBack } from './BackButton.vue';
 // screen as the page scrolls, as tall as the masthead and on its yellow, which then scrolls away
 // (PageMasthead.vue, `back`), with the masthead's soft shadow under it once it has reached the top:
 // a page keeps one bar at the top, its own if it has one, and the masthead otherwise
-// (docs/design.md). Without a page before, it scrolls with the page under the masthead that stays.
+// (docs/rules/display.md). Without a page before, it scrolls with the page under the masthead that stays.
 const pinned = canGoBack();
 const bar = ref<HTMLElement | null>(null);
 const stuck = ref(false);

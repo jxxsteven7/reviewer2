@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
-// The rule of docs/design.md for avatars: one that a tap opens something with wears the hard shadow
+// The rule of docs/rules/display.md for avatars: one that a tap opens something with wears the hard shadow
 // of what can be pressed, and one that opens nothing wears none, so that the shadow alone says
 // which can be tapped. The styles are scoped, which the tests' page doesn't apply, so this reads
 // them where they are written: the declarations of a rule, by its selector, in a component's styles.

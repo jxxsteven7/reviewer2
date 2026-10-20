@@ -8,7 +8,7 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   /* Room for the scrollbar whether the page scrolls or not, so that the wordmark is in the same
-     place at the top of every page (docs/design.md), the short home page and the long account
+     place at the top of every page (docs/rules/display.md), the short home page and the long account
      page alike, where the browser's scrollbar takes space. */
   scrollbar-gutter: stable;
 }
@@ -105,7 +105,7 @@ button {
   box-shadow: var(--shadow-2);
 }
 
-/* A sticker that can be pressed (docs/design.md), the same everywhere: on a computer, a hover
+/* A sticker that can be pressed (docs/rules/display.md), the same everywhere: on a computer, a hover
    lifts it a pixel, with its shadow a pixel longer; a press pushes it into its shadow, which goes;
    both ease. `press` is on a sticker that is its own button. Where the button is larger than the
    stickers that move in it, as an avatar's or a stack of avatars, the button is the `press-host`
@@ -154,7 +154,7 @@ button {
   box-shadow: none;
 }
 
-/* A link in text (docs/design.md): the link blue with no underline, deeper when hovered, with an
+/* A link in text (docs/rules/display.md): the link blue with no underline, deeper when hovered, with an
    underline that sweeps in from the left, under every line of a link that wraps; a press shows it
    whole at once, and it eases away after. The focus ring is the page's. On a tinted ground, the
    yellow table or the beige row of a list, where the link blue would fall under 4.5:1, the link

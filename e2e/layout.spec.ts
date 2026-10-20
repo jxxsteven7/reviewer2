@@ -1,6 +1,6 @@
 import { expect, isPhone, newPlayer, register, test, TEXT } from './helpers';
 
-// What stays in its place as the pages change (docs/design.md): the wordmark at the top of every
+// What stays in its place as the pages change (docs/rules/display.md): the wordmark at the top of every
 // page, the short home page and the long account page alike, where a browser draws its scrollbar
 // in the page; and the six blocks of the record, in a line of six where it fits and in four and two
 // where it doesn't, each with its number whole.
