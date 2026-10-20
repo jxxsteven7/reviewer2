@@ -13,16 +13,15 @@ import { connection } from '../../core/socket';
 // How long the current phase has left, as a bar that runs down and the seconds beside it. The
 // server keeps the time and ends the phase (docs/games/keywords.md): every snapshot says how much
 // time was left when it was sent, and the bar counts down from there, from when the snapshot
-// arrived. It never ends anything itself, and stops at zero to wait for the server. The last 10
-// seconds are red. A `frozen` clock, during a pause, stands still at what the server said.
-// `period` names the stretch of time that the clock is for (periodOf).
+// arrived. It never ends anything itself, and stops at zero to wait for the server. It is red while
+// the viewer has to act (`mine`), so that their move stands out, and ink at any other time. A
+// `frozen` clock, during a pause, stands still at what the server said. `period` names the stretch
+// of time that the clock is for (periodOf).
 const props = withDefaults(
-  defineProps<{ clock: NonNullable<KeywordsView['clock']>; period: string; frozen?: boolean }>(),
-  { frozen: false },
+  defineProps<{ clock: NonNullable<KeywordsView['clock']>; period: string; frozen?: boolean; mine?: boolean }>(),
+  { frozen: false, mine: false },
 );
 const { t } = useI18n();
-
-const URGENT_MS = 10_000;
 
 // When the phase ends, by this page's own clock, and how much time is left until then. A snapshot
 // arrives some time after the server sent it, longer when the network is slow, so the end it gives
@@ -75,7 +74,7 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
 </script>
 
 <template>
-  <div class="clock" :class="{ urgent: left <= URGENT_MS }" role="timer" :aria-label="t('game.clock', { seconds })">
+  <div class="clock" :class="{ mine }" role="timer" :aria-label="t('game.clock', { seconds })">
     <div class="track" aria-hidden="true">
       <div class="fill" :style="{ transform: `scaleX(${share})` }"></div>
     </div>
@@ -118,11 +117,11 @@ const share = computed(() => (props.clock.total > 0 ? left.value / props.clock.t
   font-weight: var(--weight-display);
 }
 
-.urgent .fill {
+.mine .fill {
   background: var(--red);
 }
 
-.urgent .seconds {
+.mine .seconds {
   background: var(--red);
   color: var(--on-red);
 }

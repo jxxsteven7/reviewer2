@@ -1027,6 +1027,30 @@ describe('TurnStrip', () => {
     expect(timed.get('.clock').attributes('aria-label')).toBe('42 seconds left');
   });
 
+  // The strip takes the tint of the viewer's group while it is their group's turn, in either phase;
+  // its clock is red only while the viewer has to act.
+  test("takes the viewer's group's tint on its turn, and has a red clock only on the viewer's move", async () => {
+    const timed = { ...game, clock: { left: 42_000, total: 90_000 } };
+    const strip = (seat: Seat | undefined, view: KeywordsView = timed) =>
+      mount(TurnStrip, { props: { game: view, guessRule: 'free', seat }, global: global() });
+    const guessing = strip(seats.bob);
+    expect(guessing.get('.strip').classes()).toContain('ours');
+    expect(guessing.get('.clock').classes()).toContain('mine');
+    const thinking = strip(seats.bob, { ...timed, phase: 'clue' });
+    expect(thinking.get('.strip').classes()).toContain('ours');
+    expect(thinking.get('.clock').classes()).not.toContain('mine');
+    const pi = strip(seats.ann);
+    expect(pi.get('.strip').classes()).toContain('ours');
+    expect(pi.get('.clock').classes()).not.toContain('mine');
+    const theirs = strip(seats.bob, { ...timed, team: 'blue' });
+    expect(theirs.get('.strip').classes()).not.toContain('ours');
+    expect(theirs.get('.clock').classes()).not.toContain('mine');
+    for (const other of [strip(seats.eve), strip(undefined)]) {
+      expect(other.get('.strip').classes()).not.toContain('ours');
+      expect(other.get('.clock').classes()).not.toContain('mine');
+    }
+  });
+
   test('keeps the clock still while the game is paused, as on a big screen', async () => {
     vi.useFakeTimers();
     try {
@@ -1294,15 +1318,17 @@ describe('ClockBar', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  test('counts down from what the server said, turns red for the last 10 seconds, and stops at zero', async () => {
+  test('counts down from what the server said, is red only on the viewer\'s move, and stops at zero', async () => {
     const wrapper = clockBar(12_000);
     expect(wrapper.get('.seconds').text()).toBe('0:12');
     expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0.2)');
-    expect(wrapper.classes()).not.toContain('urgent');
-    vi.advanceTimersByTime(2_000);
+    expect(wrapper.classes()).not.toContain('mine');
+    vi.advanceTimersByTime(5_000);
     await flushPromises();
-    expect(wrapper.get('.seconds').text()).toBe('0:10');
-    expect(wrapper.classes()).toContain('urgent');
+    expect(wrapper.get('.seconds').text()).toBe('0:07');
+    expect(wrapper.classes()).not.toContain('mine');
+    await wrapper.setProps({ mine: true });
+    expect(wrapper.classes()).toContain('mine');
     vi.advanceTimersByTime(30_000);
     await flushPromises();
     expect(wrapper.get('.seconds').text()).toBe('0:00');

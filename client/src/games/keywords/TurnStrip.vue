@@ -19,6 +19,10 @@ import GroupBars, { type Group } from './GroupBars.vue';
 // that waits for someone ends in an ellipsis, which breathes a little, by CSS alone: the words stay
 // as they are. A big screen, which nobody sits at, says what the current group is doing.
 //
+// While it is their group's turn, in either phase, the strip takes their group's tint, so that a
+// player sees at a glance that the game waits for their side; the clock is red only while they
+// themselves have to act (ClockBar.vue).
+//
 // Under it, the two groups' bars (GroupBars.vue).
 const props = withDefaults(
   defineProps<{
@@ -35,6 +39,7 @@ const { t } = useI18n();
 
 const group = computed(() => t(`lobby.group.${props.game.team}`));
 const banner = computed(() => (props.seat ? bannerFor(props.seat, props.game) : null));
+const ours = computed(() => props.seat?.team === props.game.team && props.game.phase !== 'over');
 const who = computed(() => {
   if (!props.seat) return null;
   const { team, role } = props.seat;
@@ -60,7 +65,7 @@ useUrgentTitle(() => (banner.value?.urgent ? t('banner.tabTitle') : null));
 </script>
 
 <template>
-  <section class="strip" :class="game.phase === 'over' ? 'over' : game.team">
+  <section class="strip" :class="[game.phase === 'over' ? 'over' : game.team, { ours }]">
     <!-- The lines are read out as they change; the bars, whose avatars are buttons, aren't. -->
     <div class="lines" aria-live="polite">
       <p v-if="who" class="who" :class="seat?.team ?? 'spectator'">{{ who }}</p>
@@ -79,7 +84,13 @@ useUrgentTitle(() => (banner.value?.urgent ? t('banner.tabTitle') : null));
         </span>
       </p>
     </div>
-    <ClockBar v-if="game.clock && !clockApart" :clock="game.clock" :period="periodOf(game)" :frozen="game.paused" />
+    <ClockBar
+      v-if="game.clock && !clockApart"
+      :clock="game.clock"
+      :period="periodOf(game)"
+      :frozen="game.paused"
+      :mine="banner?.urgent"
+    />
     <GroupBars :groups="groups" :remaining="game.remaining" :me="me" />
   </section>
 </template>
@@ -95,6 +106,14 @@ useUrgentTitle(() => (banner.value?.urgent ? t('banner.tabTitle') : null));
   border-radius: var(--radius-panel);
   background: var(--paper);
   box-shadow: var(--shadow-2);
+}
+
+.strip.ours.red {
+  background: var(--red-tint);
+}
+
+.strip.ours.blue {
+  background: var(--blue-tint);
 }
 
 .lines {
