@@ -1318,7 +1318,7 @@ describe('ClockBar', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  test('counts down from what the server said, is red only on the viewer\'s move, and stops at zero', async () => {
+  test("counts down from what the server said, is red only on the viewer's move, and stops at zero", async () => {
     const wrapper = clockBar(12_000);
     expect(wrapper.get('.seconds').text()).toBe('0:12');
     expect(wrapper.get('.fill').attributes('style')).toContain('scaleX(0.2)');
@@ -2934,17 +2934,17 @@ describe('KeywordsGame', () => {
     // With the clock, the chair's button to pause or resume comes first, then the reaction button,
     // which is at the end of the bar for everyone.
     expect(chair.find('.sticky-clock [role="timer"]').exists()).toBe(true);
-    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Resume the game', 'React']);
+    expect(chair.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Resume', 'React']);
     await chair.get('.paused button').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     send.mockClear();
-    expect(chair.get('.sticky-clock .pause').text()).toBe('Resume the game');
+    expect(chair.get('.sticky-clock .pause').text()).toBe('Resume');
     await chair.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:resume', { gameId: 'g1' });
     const playing = mount(KeywordsGame, { props: { room: room('ann') }, global: global() });
-    expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause the game');
-    expect(playing.get('.sticky-clock .pause').text()).toBe('Pause the game');
-    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Pause the game', 'React']);
+    expect(playing.findAll('.tools button').map((button) => button.text())).not.toContain('Pause');
+    expect(playing.get('.sticky-clock .pause').text()).toBe('Pause');
+    expect(playing.findAll('.sticky-clock button').map((button) => button.text())).toEqual(['Pause', 'React']);
     await playing.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
   });
@@ -2963,7 +2963,7 @@ describe('KeywordsGame', () => {
         .get('.strip + .sticky-clock')
         .findAll('button')
         .map((button) => button.text()),
-    ).toEqual(['Pause the game', 'React']);
+    ).toEqual(['Pause', 'React']);
     await chair.get('.sticky-clock .pause').trigger('click');
     expect(send).toHaveBeenLastCalledWith('keywords:pause', { gameId: 'g1' });
     const student = mount(KeywordsGame, { props: { room: untimed('bob') }, global: global() });
