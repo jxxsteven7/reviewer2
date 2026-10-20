@@ -89,12 +89,18 @@ test('the game starts with what the chair changed at the desk, saved or not', as
 test('the server ends a turn whose time has run out', async ({ browser }) => {
   const table = await seatTable(browser, 'en', undefined, (page) => setSetting(page, settings.firstClueTime, 10));
   const team = await teamOnTurn(table.captains.red);
-  // Ten seconds are the last ten, so the bar is red from the start.
-  for (const page of [table.captains[team], table.guessers.blue, table.screen]) {
-    await expect(page.locator('.clock.urgent')).toBeVisible();
+  const other = otherTeam(team);
+  // The PI on turn, who has to act, has the red clock, and everyone else an ink one; the strip takes
+  // the tint of the group on turn for its own members alone.
+  await expect(table.captains[team].locator('.clock.mine').first()).toBeVisible();
+  for (const page of [table.guessers[team], table.guessers[other], table.spectator, table.screen]) {
+    await expect(page.locator('.clock').first()).toBeVisible();
+    await expect(page.locator('.clock.mine')).toHaveCount(0);
   }
+  await expect(table.guessers[team].locator('.strip')).toHaveClass(/\bours\b/);
+  await expect(table.guessers[other].locator('.strip')).not.toHaveClass(/\bours\b/);
   // The PI gives no clue, and the turn passes to the other group with a note in the log.
-  await expect(table.spectator.locator('.strip')).toHaveClass(new RegExp(`\\b${otherTeam(team)}\\b`), {
+  await expect(table.spectator.locator('.strip')).toHaveClass(new RegExp(`\\b${other}\\b`), {
     timeout: 20_000,
   });
   // Everyone in the room, the PI and the screen included, hears of the missed deadline at once,
@@ -106,8 +112,9 @@ test('the server ends a turn whose time has run out', async ({ browser }) => {
     await expect(call).not.toContainText('\u00d7');
   }
   await expect(await openLog(table.spectator)).toContainText(TEXT.en.game.noClueInTime);
-  // The next clue has the default time, 90 seconds.
-  await expect(table.spectator.locator('.clock')).not.toHaveClass(/urgent/);
+  // The red clock is the other group's PI's now.
+  await expect(table.captains[other].locator('.clock.mine').first()).toBeVisible();
+  await expect(table.captains[team].locator('.clock.mine')).toHaveCount(0);
 });
 
 test('the clock stays at the top of the screen as the page scrolls, under the reconnecting banner', async ({
