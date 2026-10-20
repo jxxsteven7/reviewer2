@@ -28,11 +28,17 @@ export type ClueProblem =
 //   strict rule in a Chinese room, where a Latin word on the board stands out; a warning in an
 //   English room, where "support" would give "Port" away otherwise, and for the card's term in
 //   another language.
-// - 'prefix': it is Latin letters alone, however few, that the card's word or a part of it starts
-//   with, such as "mode" for "Model", "data" for "Datacenter", "sci" for "Data science" or "s" for
-//   "SEI": the first letters of a word give it away. Refused under the strict rule; a warning under
-//   the loose rule, and for the card's term in another language.
-export type ClueMatchKind = 'same' | 'form' | 'character' | 'similar' | 'inside' | 'prefix';
+// - 'prefix': in an English room, it is Latin letters alone, however few, that the card's word or a
+//   part of it starts with, such as "mode" for "Model", "data" for "Datacenter", "sci" for "Data
+//   science" or "s" for "SEI": the first letters of a word give it away, while English words hide
+//   inside each other everywhere, as "art" inside "Earth". Refused under the strict rule; a warning
+//   under the loose rule, and, in either room, for the card's term in another language.
+// - 'letters': in a Chinese room, it is Latin letters alone, however few, that the card's word or a
+//   part of it has in a row anywhere, capitals or not, such as "s" for "ETS", "ai" for "Email" or
+//   "s" for "S" followed by the character for a wave: on a Chinese board a Latin word stands out,
+//   and any of its letters give it away. Refused under the strict rule; a warning under the loose
+//   rule.
+export type ClueMatchKind = 'same' | 'form' | 'character' | 'similar' | 'inside' | 'prefix' | 'letters';
 
 // A card that the clue runs into, with the text that the clue runs into: the card's word, one
 // of its translations or one of its forms.
@@ -363,18 +369,28 @@ function startsWord(clue: Word, word: Word): boolean {
   );
 }
 
+// The clue is Latin letters alone that the word, or one of its pieces, a lone letter included,
+// has in a row anywhere: "s" or "ts" for "ETS", "ai" for "Email", "s" for "S" followed by the
+// character for a wave. A clue that is the word or a part of it repeats it, which refuses it
+// first; a lone letter is no part (wordOf()), so "s" beside that wave is found here.
+function inLatin(clue: Word, word: Word): boolean {
+  if (clue.key === '' || !LATIN_ONLY.test(clue.key)) return false;
+  return [word.key, ...word.pieces].some((text) => LATIN_ONLY.test(text) && text.includes(clue.key));
+}
+
 // What the clue does to one card that is still on the board: what refuses it in any case, what
 // refuses it under the strict rule, and what only brings a warning, each the first that applies.
 // `clues` holds the whole clue and, when it has several words, each of them, so that a word of a
-// clue counts as the clue would. `insideRefused` says whether the strict rule refuses a clue with
-// the card's word inside it, as it does in a Chinese room.
+// clue counts as the clue would. `chinese` says whether the room is a Chinese one, where the strict
+// rule refuses a clue with the card's word inside it, and looks for the letters of a clue anywhere
+// in the card's word rather than at its start.
 interface Verdict {
   refused: ClueMatch | null;
   strict: ClueMatch | null;
   warned: ClueMatch | null;
 }
 
-function judge(clues: readonly Word[], card: ClueCard, index: number, insideRefused: boolean): Verdict {
+function judge(clues: readonly Word[], card: ClueCard, index: number, chinese: boolean): Verdict {
   type Test = (clue: Word, other: Word) => boolean;
   const word = wordOf(card.word);
   const translations = (card.translations ?? []).map((text) => ({ text, word: wordOf(text) }));
@@ -417,9 +433,10 @@ function judge(clues: readonly Word[], card: ClueCard, index: number, insideRefu
     (clues.some((clue) => namesCharacter(clue, glosses, syllables))
       ? { card: index, text: card.word, kind: 'character' as const }
       : null);
+  const letters = chinese ? ofWord(inLatin, 'letters') : ofWord(startsWord, 'prefix');
   const strict =
     form === undefined
-      ? (character ?? ofWord(startsWord, 'prefix') ?? (insideRefused && !similar ? ofWord(contains, 'inside') : null))
+      ? (character ?? letters ?? (chinese && !similar ? ofWord(contains, 'inside') : null))
       : { card: index, text: form, kind: 'form' as const };
   const warned =
     similar ??
@@ -461,12 +478,14 @@ export function checkClue(
 
   const whole = wordOf(text);
   const clues = words.length > 1 ? [whole, ...words.map(wordOf)] : [whole];
-  // In a Chinese room the board is Chinese, so a Latin word on it, such as "Docker", stands out,
-  // and the strict rule refuses a clue that contains one. In an English room every card is Latin,
-  // and that rule would refuse "support" beside "Port", so the clue only gets a warning there.
-  const insideRefused = options.length !== null;
+  // In a Chinese room the board is Chinese, so a Latin word on it, such as "Docker", stands out:
+  // the strict rule refuses a clue that contains one, and a clue of letters that one has anywhere,
+  // such as "s" beside "ETS". In an English room every card is Latin, and those rules would refuse
+  // "support" beside "Port" and "art" beside "Earth", so there a clue that contains a word only
+  // gets a warning, and the letters of a clue only count at the start of a word.
+  const chinese = options.length !== null;
   // A covered word may be said again.
-  const verdicts = board.map((card, index) => (card.revealed ? null : judge(clues, card, index, insideRefused)));
+  const verdicts = board.map((card, index) => (card.revealed ? null : judge(clues, card, index, chinese)));
   const refused = verdicts.find((found) => found?.refused)?.refused;
   if (refused) return verdict('clue_on_board', refused);
   const strict = options.strict ? verdicts.find((found) => found?.strict)?.strict : undefined;
