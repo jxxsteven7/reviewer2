@@ -4,14 +4,14 @@ The interface is a party game on a table: a yellow table, white stickers with a 
 
 ## Tokens
 
-Every color, font, outline, corner, shadow, motion and page width is a variable in `tokens.css`, which components take, never a literal value ([rules/display.md](rules/display.md#one-look)).
+Every color, font, outline, corner, shadow and page width is a variable in `tokens.css`, and so is the motion every page shares, which components take, never a literal value ([rules/display.md](rules/display.md#one-look)).
 
 | Token | Value | Use |
 |---|---|---|
 | `--bg` | `#FFD23F` | The page |
 | `--paper`, `--paper-2` | `#FFFFFF`, `#F4EFE6` | Stickers; quiet and disabled areas |
 | `--ink`, `--ink-2`, `--on-ink` | `#1A1A2E`, `#4B4B60`, `#FFD23F` | Text, outlines, shadows; hints; type on ink |
-| `--bg-tint` | `#FBEFC4` | The table's yellow, faded: the titles of a friend who is offline |
+| `--bg-tint` | `#FBEFC4` | The table's yellow, faded: the word lists chosen in a room's fold, the guest's block in the feedback form |
 | `--online` | `#2FBF71` | The dot of a friend who is online; a friend who is offline has none |
 | `--red`, `--on-red`, `--red-tint`, `--red-deep` | `#F2543D`, ink, `#FFD6CF`, `#B02A1A` | The red group: surface, type on it, tint, red text |
 | `--blue`, `--on-blue`, `--blue-tint`, `--blue-deep` | `#2D5BFF`, white, `#D5DFFF`, `#1F44D6` | The blue group, the same way |

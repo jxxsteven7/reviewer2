@@ -19,9 +19,10 @@
   --link-deep: #005fa8;
   /* A main action: a mint green sticker, on which the ink reads at 9:1 (UiButton.vue). */
   --go: #5fd3a0;
-  /* The table's yellow, faded: the titles of a friend who is offline. */
+  /* The table's yellow, faded: the word lists chosen in a room's fold, the guest's block in the
+     feedback form. */
   --bg-tint: #fbefc4;
-  /* The dot of someone who is online; someone offline has a grey one (--neutral). */
+  /* The dot of a friend who is online; a friend who is offline has none. */
   --online: #2fbf71;
 
   /* The two groups: a surface color, with the text that reads on it, a tint for backgrounds and
@@ -125,7 +126,7 @@
      scrolled under it: a hard one there would look like a line. */
   --shade: rgb(26 26 46 / 18%);
 
-  /* How wide a page gets: forms, the home page, and rooms. */
+  /* How wide a page gets: short pages, as the page not found, the home page, and rooms. */
   --page-narrow: 40rem;
   --page: 64rem;
   --page-wide: 80rem;
