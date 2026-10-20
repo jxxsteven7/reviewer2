@@ -1,5 +1,6 @@
 import type { FriendsView } from '@reviewer2/shared';
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
+import { unconnected } from './errors';
 import { friendsVersion, listFriends } from './friends';
 import { connect, socket } from './socket';
 
@@ -24,7 +25,7 @@ export function useFriendsList(shown: Ref<boolean> = ref(true)) {
     else {
       failed.value = reply.error;
       // The next connection asks again, and is asked for.
-      if (reply.error === 'offline') connect();
+      if (unconnected(reply.error)) connect();
     }
   }
 

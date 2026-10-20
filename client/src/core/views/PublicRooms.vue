@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { RouterLink } from 'vue-router';
 import { account } from '../account';
 import UiButton from '../components/UiButton.vue';
-import { errorKey } from '../errors';
+import { errorKey, unconnected } from '../errors';
 import { fields, loadFields } from '../fields';
 import { onceConnected, send } from '../socket';
 
@@ -34,7 +34,7 @@ async function load() {
   else {
     failed.value = reply.error;
     // The text then says that the page waits for the connection, so it does.
-    if (reply.error === 'offline') waiting = onceConnected(() => void load());
+    if (unconnected(reply.error)) waiting = onceConnected(() => void load());
   }
 }
 

@@ -26,7 +26,7 @@ import { seededRng, type Rng } from '../src/core/random';
 import type { RoomLimits } from '../src/core/rooms';
 import { DEFAULT_SOCKET_LIMITS, type SocketLimits, type Timers } from '../src/core/socket';
 import { WordLibrary, type WordListData } from '../src/core/words';
-import { createAppServer, type AppServer } from '../src/server';
+import { createAppServer, type AppServer, type HttpLimits } from '../src/server';
 import { openDatabase } from '../src/store/database';
 import { ContributionStore } from '../src/store/contributions';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore, type FeedbackLimits } from '../src/store/feedback';
@@ -155,6 +155,13 @@ export async function startServer(
     rng?: Rng;
     // The agent that plays for the AI players.
     agent?: AgentChannel;
+    // The connections one address may have open, and the connections and the memory that make the
+    // server busy, with the memory that the server reads, in bytes.
+    connectionsPerAddress?: number;
+    busyConnections?: number;
+    busyMemoryMb?: number;
+    memory?: () => number;
+    httpLimits?: Partial<HttpLimits>;
   } = {},
 ): Promise<TestServer> {
   let offset = 0;
@@ -205,6 +212,11 @@ export async function startServer(
       socketLimits,
       ...(options.limits ? { limits: options.limits } : {}),
       ...(options.agent ? { agent: options.agent } : {}),
+      ...(options.connectionsPerAddress !== undefined && { connectionsPerAddress: options.connectionsPerAddress }),
+      ...(options.busyConnections !== undefined && { busyConnections: options.busyConnections }),
+      ...(options.busyMemoryMb !== undefined && { busyMemoryMb: options.busyMemoryMb }),
+      ...(options.memory && { memory: options.memory }),
+      ...(options.httpLimits && { httpLimits: options.httpLimits }),
       log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
     });
   } catch (error) {

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { MIN_SECRET_LENGTH } from './accounts/email';
 import { DEFAULT_ACCOUNT_LIMITS } from './accounts/limits';
+import { DEFAULT_BUSY_CONNECTIONS, DEFAULT_CONNECTIONS_PER_ADDRESS } from './core/load';
 import { DEFAULT_SOCKET_LIMITS } from './core/socket';
 import { DEFAULT_FEEDBACK_LIMITS } from './store/feedback';
 
@@ -21,6 +22,11 @@ export interface Config {
   maxFeedback: number;
   // How many accounts one address may create in an hour (docs/architecture.md).
   accountsPerHour: number;
+  // How many connections one address may have open at once, and the connections and the memory, in
+  // megabytes, that make the server busy, or null for the memory's default (core/load.ts).
+  connectionsPerAddress: number;
+  busyConnections: number;
+  busyMemoryMb: number | null;
   // Where the database and its snapshots are kept, or null for a database in memory, which is
   // lost when the server stops (docs/architecture.md).
   dataDir: string | null;
@@ -130,6 +136,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       env.ACCOUNTS_PER_HOUR,
       DEFAULT_ACCOUNT_LIMITS.registrationsPerHour,
     ),
+    connectionsPerAddress: wholeNumber(
+      'MAX_CONNECTIONS_PER_ADDRESS',
+      env.MAX_CONNECTIONS_PER_ADDRESS,
+      DEFAULT_CONNECTIONS_PER_ADDRESS,
+    ),
+    busyConnections: wholeNumber('BUSY_CONNECTIONS', env.BUSY_CONNECTIONS, DEFAULT_BUSY_CONNECTIONS),
+    busyMemoryMb: wholeNumber('BUSY_MEMORY_MB', env.BUSY_MEMORY_MB, null),
     // A relative path is taken from the repository's root, as the defaults above are, wherever the
     // server is started from: `npm run dev` starts it in server/.
     dataDir: env.DATA_DIR?.trim() ? resolve(root, env.DATA_DIR.trim()) : null,

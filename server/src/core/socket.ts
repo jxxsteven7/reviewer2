@@ -40,7 +40,9 @@ import type { GameModule, Viewer } from './game';
 import { accountKey, isToken, memberKey, newToken } from './identity';
 import { Invitations, type Invitation } from './invitations';
 import { JoinAsks, type JoinAsk } from './joinAsks';
+import type { BusyGauge } from './load';
 import { TokenBucket, WindowCounter } from './rateLimit';
+import type { Limit, Refusals } from './refusals';
 import type { Member, MemberAccount, Room } from './room';
 import type { Rooms } from './rooms';
 import type { WordLibrary } from './words';
@@ -74,6 +76,10 @@ export interface SocketOptions {
   version: string;
   trustProxy: boolean;
   limits: SocketLimits;
+  // What the limits turned away, for the log's line of the minute (refusals.ts), and whether the
+  // server is busy (load.ts).
+  refusals: Refusals;
+  busy: Pick<BusyGauge, 'check'>;
   feedback: FeedbackStore;
   // Accounts, and whether their cookie is Secure. Without them, everyone is a guest.
   accounts?: Accounts;
@@ -167,7 +173,7 @@ export interface RoomSockets {
 const hex = (hash: Uint8Array): string => Buffer.from(hash).toString('hex');
 
 export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
-  const { rooms, words, games, now, timers, version, limits, feedback, accounts, log } = options;
+  const { rooms, words, games, now, timers, version, limits, refusals, busy, feedback, accounts, log } = options;
   for (const id of games.keys()) {
     if (OWN_PREFIXES.has(id)) throw new Error(`a game can't be named "${id}", which is a prefix of the room messages`);
   }
@@ -251,6 +257,12 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
       ...fields,
     });
+  }
+
+  // A refusal by one of the limits, which counts towards the log's line of the minute.
+  function limited(limit: Limit, conn: Connection, error: Parameters<typeof fail>[0]): Refusal {
+    refusals.add(limit, conn.ip);
+    return fail(error);
   }
 
   // Runs what no message is waiting for: a handshake, a disconnect, the sweep. They call the
@@ -612,7 +624,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     if (room && (conn.room === room || room.memberByKey(conn.key) || guestSeat(room, conn) || room.public)) {
       return room;
     }
-    if (!failedLookups.allowed(conn.ip)) return 'rate_limited';
+    if (!failedLookups.allowed(conn.ip)) {
+      refusals.add('codes', conn.ip);
+      return 'rate_limited';
+    }
     if (room) return room;
     failedLookups.add(conn.ip);
     return 'room_not_found';
@@ -842,7 +857,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   function respond(socket: Socket, ack: unknown, run: () => Reply): void {
     const reply = typeof ack === 'function' ? (ack as (reply: Reply) => void) : () => {};
     if (!connection(socket).bucket.take()) {
-      reply(fail('rate_limited'));
+      reply(limited('messages', connection(socket), 'rate_limited'));
       return;
     }
     let answer: Reply;
@@ -949,6 +964,41 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
 
   io.engine.on('connection', measureLatency);
 
+  // The login that a connection comes with, if any. Only the site's own pages may use the login
+  // cookie: a page elsewhere that opens a connection here, which the browser would send the cookie
+  // with, gets a guest.
+  const loginOf = (socket: Socket) =>
+    accounts && fromThisSite(socket.handshake.headers)
+      ? accounts.login(readLoginCookie(socket.handshake.headers, options.cookieSecure ?? true))
+      : null;
+
+  // Whether a handshake brings a member back to their seat, or a screen back to its room, as
+  // comeBack() would: by the browser's token or the account it is logged in to, and a screen by
+  // the room ID it was sent.
+  function returning(socket: Socket): boolean {
+    const auth = HANDSHAKE.parse(socket.handshake.auth);
+    const code = auth.watch ?? auth.code;
+    const room = code === undefined ? undefined : rooms.find(code);
+    if (!room || (auth.roomId !== undefined && room.id !== auth.roomId)) return false;
+    if (auth.watch !== undefined) return auth.roomId !== undefined;
+    const login = loginOf(socket);
+    const keys = [isToken(auth.token) ? memberKey(auth.token) : null, login && accountKey(login.account.id)];
+    return keys.some((key) => key !== null && room.memberByKey(key) !== undefined);
+  }
+
+  // A busy server (load.ts) takes no new connection but one that comes back to a room, so that
+  // the games that are on go on, and whoever has dropped out of one, such as when a phone's screen
+  // locked, gets back in. Anyone else is told `server_busy` before the connection is made, and the
+  // page says to come back in a few minutes.
+  io.use((socket, next) => {
+    if (!busy.check() || returning(socket)) {
+      next();
+      return;
+    }
+    refusals.add('busy_connections', clientIp(socket.handshake.address, socket.handshake.headers, options.trustProxy));
+    next(new Error('server_busy'));
+  });
+
   // Behind a reverse proxy every connection comes from the proxy's address, and then all players
   // share the limits of one address. A forwarded address that goes unread is the sign of it.
   let forwardedIgnored = false;
@@ -962,12 +1012,8 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // A browser that comes without a token, or with something that can't be one, is given one.
     const issued = isToken(auth.token) ? null : newToken();
     // A browser that is logged in is its account, on every device; the token waits for it to log
-    // out. Only the site's own pages may use the login cookie: a page elsewhere that opens a
-    // connection here, which the browser would send the cookie with, gets a guest.
-    const login =
-      accounts && fromThisSite(socket.handshake.headers)
-        ? accounts.login(readLoginCookie(socket.handshake.headers, options.cookieSecure ?? true))
-        : null;
+    // out.
+    const login = loginOf(socket);
     const guestKey = memberKey(issued ?? (auth.token as string));
     const conn: Connection = {
       key: login ? accountKey(login.account.id) : guestKey,
@@ -1062,7 +1108,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (linkProfile === true && !signed && named.credit === null) return fail('feedback_unsigned');
       const key = feedbackKey(conn.ip, [kind, checked.text, given.contact, named.credit, signed ? account.id : null]);
       if (feedbackSeen.has(key)) return ok();
-      if (!feedbackSent.allowed(conn.ip)) return fail('feedback_limited');
+      if (!feedbackSent.allowed(conn.ip)) return limited('feedback', conn, 'feedback_limited');
       const full = feedback.full();
       if (full) {
         if (!feedbackFullLogged) log('feedback_full', { reason: full });
@@ -1096,7 +1142,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // creator sits and invites the AI players.
     on(handlers, 'room:create', (message) => {
       const { game, language, fields, randomFields, settings, play, match, public: listed, practice } = message;
-      if (!creations.allowed(conn.ip)) return fail('rate_limited');
+      // A busy server makes no new rooms, and the attempt costs the address nothing.
+      if (busy.check()) return limited('busy_rooms', conn, 'server_busy');
+      if (!creations.allowed(conn.ip)) return limited('rooms', conn, 'rate_limited');
       const module = games.get(game);
       if (!module) return fail('bad_game');
       if (practice && (match || listed || settings !== undefined || randomFields)) return fail('bad_request');
@@ -1263,7 +1311,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       if (note.problem) return fail(note.problem);
       if (room.reported(member.key, reported.key)) return ok();
       const key = String(member.account.id);
-      if (!reportsSent.allowed(key)) return fail('report_limited');
+      if (!reportsSent.allowed(key)) return limited('reports', conn, 'report_limited');
       const id = feedback.report({
         reporterId: member.account.id,
         reportedId: reported.account?.id ?? null,
@@ -1378,7 +1426,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     on(handlers, 'friends:find', ({ username }) => {
       const me = accountOf(conn);
       if (!me.ok) return me;
-      if (!(accounts as Accounts).friends.takeFind(me.account.id)) return fail('friend_find_limited');
+      if (!(accounts as Accounts).friends.takeFind(me.account.id)) {
+        return limited('friend_searches', conn, 'friend_find_limited');
+      }
       const target = (accounts as Accounts).byName(username);
       if (!target) return fail('no_such_account');
       return ok({ handle: target.handle, username: target.username });
@@ -1405,13 +1455,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         if (!other) return fail('no_such_player');
         target = other.account ? accounts?.store.byId(other.account.id) : undefined;
       } else if (username !== undefined) {
-        if (!friends.take(me.account.id)) return fail('friend_limited');
+        if (!friends.take(me.account.id)) return limited('friend_requests', conn, 'friend_limited');
         target = (accounts as Accounts).byName(username);
       } else {
         return fail('bad_request');
       }
       if (!target) return fail('no_such_account');
-      if (playerId !== undefined && !friends.take(me.account.id)) return fail('friend_limited');
+      if (playerId !== undefined && !friends.take(me.account.id)) {
+        return limited('friend_requests', conn, 'friend_limited');
+      }
       const result = friends.request(me.account.id, target.id, note);
       if (!result.ok) {
         if (playerId !== undefined) friends.refund(me.account.id);
@@ -1524,7 +1576,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       const removal = room.removal(accountKey(me.account.id));
       if (removal) return fail(removal);
       if (asks.between(me.account.id, friend.id)) return fail('join_ask_pending');
-      if (!asking.take(String(me.account.id))) return fail('join_ask_limited');
+      if (!asking.take(String(me.account.id))) return limited('join_asks', conn, 'join_ask_limited');
       const ask = asks.create(room, me.account.id, friend.id, member.key);
       tellAccount(friend.id, 'friends:asked', askView(ask));
       tellAccount(me.account.id, 'friends:changed');

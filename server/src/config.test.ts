@@ -147,6 +147,30 @@ describe('ACCOUNTS_PER_HOUR', () => {
   });
 });
 
+describe('MAX_CONNECTIONS_PER_ADDRESS, BUSY_CONNECTIONS and BUSY_MEMORY_MB', () => {
+  test('default to 100, 10,000 and a share of the memory that is worked out at the start', () => {
+    for (const blank of [undefined, '', ' ']) {
+      const config = loadConfig({
+        MAX_CONNECTIONS_PER_ADDRESS: blank,
+        BUSY_CONNECTIONS: blank,
+        BUSY_MEMORY_MB: blank,
+      });
+      expect(config).toMatchObject({ connectionsPerAddress: 100, busyConnections: 10_000, busyMemoryMb: null });
+    }
+  });
+
+  test('are whole numbers from 1 up', () => {
+    expect(
+      loadConfig({ MAX_CONNECTIONS_PER_ADDRESS: '500', BUSY_CONNECTIONS: '2000', BUSY_MEMORY_MB: ' 768 ' }),
+    ).toMatchObject({ connectionsPerAddress: 500, busyConnections: 2000, busyMemoryMb: 768 });
+    for (const name of ['MAX_CONNECTIONS_PER_ADDRESS', 'BUSY_CONNECTIONS', 'BUSY_MEMORY_MB']) {
+      for (const value of ['0', '-1', '1.5', '1e3', 'lots']) {
+        expect(() => loadConfig({ [name]: value })).toThrow(`${name} must be a whole number from 1 up, not "${value}"`);
+      }
+    }
+  });
+});
+
 describe('COOKIE_SECURE', () => {
   test('is on unless it is switched off', () => {
     for (const COOKIE_SECURE of [undefined, '', ' ', '1', 'true', 'yes', 'on']) {

@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { LIST_API, SPONSORS_END, SPONSORS_START } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { until } from '../test/helpers';
+import { memoryLimit } from './core/load';
 import { main, type MainOptions, type Running } from './main';
 import { DATABASE_FILE, openDatabase, SNAPSHOT_DIR } from './store/database';
 import { MIGRATIONS } from './store/migrations';
@@ -93,6 +94,25 @@ describe('starting', () => {
     expect(logged('accounts_per_hour_raised')).toEqual({ accountsPerHour: 100, default: 5 });
     expect(logged('cookies_not_secure')).toEqual({ hint: 'only for plain HTTP, as in development' });
     expect(logged('listening')).toMatchObject({ accountsPerHour: 100, cookieSecure: false, mail: false });
+  });
+
+  test('takes the limits on connections and when it is busy from the environment', async () => {
+    const started = (await start({
+      MAX_CONNECTIONS_PER_ADDRESS: '7',
+      BUSY_CONNECTIONS: '50',
+      BUSY_MEMORY_MB: '4096',
+    })) as Running;
+    expect(started.server.busy.limits).toEqual({ connections: 50, memory: 4096 * 2 ** 20 });
+    expect(logged('listening')).toMatchObject({ connectionsPerAddress: 7, busyConnections: 50, busyMemoryMb: 4096 });
+  });
+
+  test('is busy by default with 10,000 connections, or 90% of the memory it may use', async () => {
+    const started = (await start()) as Running;
+    expect(started.server.busy.limits).toEqual({
+      connections: 10_000,
+      memory: Math.round(0.9 * memoryLimit()),
+    });
+    expect(logged('listening')).toMatchObject({ connectionsPerAddress: 100, busyConnections: 10_000 });
   });
 
   test('keeps as much feedback as MAX_FEEDBACK says', async () => {
@@ -366,6 +386,13 @@ describe('stopping', () => {
     // A second signal changes nothing.
     await started.stop('SIGINT');
     expect(exits).toEqual([0]);
+  });
+
+  test('writes what the limits turned away since the last line of the minute', async () => {
+    const started = (await start()) as Running;
+    started.server.refusals.add('rooms', '203.0.113.9');
+    await started.stop('SIGTERM');
+    expect(logged('limited')).toEqual({ level: 'warn', limit: 'rooms', count: 1, addresses: 1 });
   });
 
   test('ends with 1 when it takes too long', async () => {

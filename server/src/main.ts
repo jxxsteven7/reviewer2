@@ -12,7 +12,7 @@ import { loadWordLibrary } from './core/words';
 import { GAMES } from './games';
 import { log as defaultLog } from './log';
 import { createAppServer, type AppServer } from './server';
-import { watchStats } from './stats';
+import { megabytes, watchStats } from './stats';
 import { createStatusHandler, STATUS_HOST } from './status';
 import { openDatabase, truncateWal } from './store/database';
 import { ContributionStore } from './store/contributions';
@@ -236,6 +236,9 @@ export async function main({
         feedbackPer10Minutes: config.feedbackPerWindow,
         maxFeedback: config.maxFeedback,
         accountsPerHour,
+        connectionsPerAddress: config.connectionsPerAddress,
+        busyConnections: server.busy.limits.connections,
+        busyMemoryMb: megabytes(server.busy.limits.memory),
         cookieSecure: config.cookieSecure,
         // Email for accounts needs both the server's secret and the mailer.
         mail: accounts.mailAvailable,
@@ -254,10 +257,14 @@ export async function main({
 
   const timers = [
     // Closes idle rooms, drops long-gone players from waiting rooms and passes on absent chairs,
-    // and forgets the counts of the limits whose time has run out.
+    // and forgets the counts of the limits whose time has run out; writes what the limits turned
+    // away in the minute, and notices that the server is no longer busy, should nobody have come
+    // to ask since the load came down.
     setInterval(() => {
       server.sockets.sweep();
       accounts.counters.prune();
+      server.refusals.flush();
+      server.busy.check();
     }, 60_000),
     // Every hour, the contacts that have been kept for 90 days are cleared, the feedback that has
     // been in the trash for 30 days is purged, the logins and the links in mails that have ended
@@ -325,6 +332,8 @@ export async function main({
         log('error', { where: 'stop', message: describe(error) });
         code = 1;
       }
+      // What the limits turned away since the last line of the minute.
+      server.refusals.flush();
       try {
         await snapshots?.idle();
         db.close();

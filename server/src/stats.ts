@@ -1,5 +1,6 @@
 import { totalmem } from 'node:os';
 import type { RoomPhase } from '@reviewer2/shared';
+import { memoryLimit } from './core/load';
 import type { Rooms } from './core/rooms';
 import type { ConnectionInfo } from './core/socket';
 
@@ -11,6 +12,8 @@ export interface Stats {
   version: string;
   // Seconds since the process started.
   uptime: number;
+  // Whether the server is busy, and turns newcomers away (core/load.ts).
+  busy: boolean;
   // In bytes. `limit` is the memory that the system allows the process, such as systemd's
   // MemoryMax, or null when it sets none. The system counts the limit against more than `rss`:
   // against every process of the service and the file cache it uses. The cache is given up
@@ -39,10 +42,12 @@ export function collectStats(
   rooms: Rooms,
   connections: readonly ConnectionInfo[],
   agents: { up: boolean; steps: number; failures: number } | null = null,
+  busy = false,
 ): Stats {
   const stats: Stats = {
     version,
     uptime: Math.round(process.uptime()),
+    busy,
     memory: memory(),
     rooms: { lobby: 0, playing: 0, ended: 0 },
     players: { online: 0, offline: 0 },
@@ -75,9 +80,8 @@ export function collectStats(
 
 function memory(): Stats['memory'] {
   const { rss, heapUsed } = process.memoryUsage();
-  // Without a limit, Node reports a number far beyond the memory there is.
-  const limit = process.constrainedMemory();
-  return { rss, heapUsed, limit: limit > 0 && limit < totalmem() ? limit : null };
+  const limit = memoryLimit();
+  return { rss, heapUsed, limit: limit < totalmem() ? limit : null };
 }
 
 function median(values: number[]): number | null {

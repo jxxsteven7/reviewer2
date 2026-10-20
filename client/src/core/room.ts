@@ -182,6 +182,7 @@ async function ask(newcomer?: Newcomer): Promise<Ack> {
       entry.status = 'not_found';
       break;
     case 'offline':
+    case 'server_busy':
       break; // the next connection asks again
     case 'timeout':
       // The server didn't answer in time. A fresh connection asks again, as after a ping that goes
