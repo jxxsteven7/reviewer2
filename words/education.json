@@ -47,12 +47,14 @@
     {
       "id": "deskmate",
       "zh": "同桌",
-      "en": "Deskmate"
+      "en": "Deskmate",
+      "related": ["study-buddy"]
     },
     {
       "id": "class-monitor",
       "zh": "班长",
-      "en": "Class monitor"
+      "en": "Class monitor",
+      "related": ["class-teacher"]
     },
     {
       "id": "parent",
@@ -108,7 +110,8 @@
     {
       "id": "kindergarten",
       "zh": "幼儿园",
-      "en": "Kindergarten"
+      "en": "Kindergarten",
+      "related": ["daycare"]
     },
     {
       "id": "daycare",
@@ -123,7 +126,8 @@
     {
       "id": "middle-school",
       "zh": "初中",
-      "en": "Middle school"
+      "en": "Middle school",
+      "related": ["high-school"]
     },
     {
       "id": "high-school",
@@ -158,7 +162,8 @@
     {
       "id": "trade-school",
       "zh": "技校",
-      "en": "Trade school"
+      "en": "Trade school",
+      "related": ["junior-college"]
     },
     {
       "id": "cram-school",
@@ -168,7 +173,8 @@
     {
       "id": "summer-camp",
       "zh": "夏令营",
-      "en": "Summer camp"
+      "en": "Summer camp",
+      "related": ["study-tour"]
     },
     {
       "id": "homeschooling",
@@ -180,7 +186,8 @@
       "id": "truancy",
       "zh": "逃学",
       "en": "Truancy",
-      "forms": { "en": ["truant"] }
+      "forms": { "en": ["truant"] },
+      "related": ["tardiness"]
     },
     {
       "id": "tardiness",
@@ -218,7 +225,8 @@
     {
       "id": "lesson-plan",
       "zh": "教案",
-      "en": "Lesson plan"
+      "en": "Lesson plan",
+      "related": ["study-plan"]
     },
     {
       "id": "didactics",
@@ -263,7 +271,8 @@
     {
       "id": "schoolbag",
       "zh": "书包",
-      "en": "Schoolbag"
+      "en": "Schoolbag",
+      "related": ["pencil-case"]
     },
     {
       "id": "locker",
@@ -289,7 +298,8 @@
     {
       "id": "yearbook",
       "zh": "毕业纪念册",
-      "en": "Yearbook"
+      "en": "Yearbook",
+      "related": ["class-photo"]
     },
     {
       "id": "home-visit",
@@ -362,7 +372,8 @@
     {
       "id": "placement-test",
       "zh": "分班考试",
-      "en": "Placement test"
+      "en": "Placement test",
+      "related": ["entrance-exam"]
     },
     {
       "id": "entrance-exam",
@@ -372,7 +383,8 @@
     {
       "id": "oral-exam",
       "zh": "口试",
-      "en": "Oral exam"
+      "en": "Oral exam",
+      "related": ["written-exam"]
     },
     {
       "id": "written-exam",
@@ -387,7 +399,8 @@
     {
       "id": "pop-quiz",
       "zh": "随堂测验",
-      "en": "Pop quiz"
+      "en": "Pop quiz",
+      "related": ["spot-check"]
     },
     {
       "id": "test",
@@ -397,7 +410,8 @@
     {
       "id": "short-answer",
       "zh": "简答题",
-      "en": "Short answer"
+      "en": "Short answer",
+      "related": ["essay-question"]
     },
     {
       "id": "essay-question",
@@ -417,7 +431,8 @@
     {
       "id": "raw-score",
       "zh": "原始分",
-      "en": "Raw score"
+      "en": "Raw score",
+      "related": ["standard-score"]
     },
     {
       "id": "standard-score",
@@ -432,7 +447,8 @@
     {
       "id": "test-anxiety",
       "zh": "考试焦虑",
-      "en": "Test anxiety"
+      "en": "Test anxiety",
+      "related": ["math-anxiety"]
     },
     {
       "id": "math-anxiety",
@@ -453,7 +469,8 @@
     {
       "id": "pretest",
       "zh": "前测",
-      "en": "Pretest"
+      "en": "Pretest",
+      "related": ["posttest"]
     },
     {
       "id": "posttest",
@@ -468,7 +485,8 @@
     {
       "id": "ceiling-effect",
       "zh": "天花板效应",
-      "en": "Ceiling effect"
+      "en": "Ceiling effect",
+      "related": ["floor-effect"]
     },
     {
       "id": "floor-effect",
@@ -513,7 +531,8 @@
     {
       "id": "microteaching",
       "zh": "微格教学",
-      "en": "Microteaching"
+      "en": "Microteaching",
+      "related": ["practicum"]
     },
     {
       "id": "practicum",
@@ -529,7 +548,8 @@
     {
       "id": "edutainment",
       "zh": "寓教于乐",
-      "en": "Edutainment"
+      "en": "Edutainment",
+      "related": ["gamification"]
     },
     {
       "id": "gamification",
@@ -571,7 +591,8 @@
     {
       "id": "worked-example",
       "zh": "例题",
-      "en": "Worked example"
+      "en": "Worked example",
+      "related": ["model-essay"]
     },
     {
       "id": "teaching-aid",
@@ -591,7 +612,8 @@
     {
       "id": "picture-book",
       "zh": "绘本",
-      "en": "Picture book"
+      "en": "Picture book",
+      "related": ["graded-reader"]
     },
     {
       "id": "times-table",
@@ -646,7 +668,8 @@
     {
       "id": "preview",
       "zh": "预习",
-      "en": "Preview"
+      "en": "Preview",
+      "related": ["review"]
     },
     {
       "id": "review",
@@ -657,7 +680,8 @@
       "id": "recitation",
       "zh": "背诵",
       "en": "Recitation",
-      "forms": { "en": ["recite"] }
+      "forms": { "en": ["recite"] },
+      "related": ["dictation"]
     },
     {
       "id": "dictation",
@@ -668,13 +692,15 @@
     {
       "id": "reading-aloud",
       "zh": "朗读",
-      "en": "Reading aloud"
+      "en": "Reading aloud",
+      "related": ["silent-reading"]
     },
     {
       "id": "skimming",
       "zh": "略读",
       "en": "Skimming",
-      "forms": { "en": ["skim"] }
+      "forms": { "en": ["skim"] },
+      "related": ["speed-reading"]
     },
     {
       "id": "speed-reading",
@@ -740,7 +766,8 @@
     {
       "id": "waldorf",
       "zh": "华德福",
-      "en": "Waldorf"
+      "en": "Waldorf",
+      "related": ["reggio-emilia"]
     },
     {
       "id": "dalton-plan",
@@ -750,7 +777,8 @@
     {
       "id": "cognitivism",
       "zh": "认知主义",
-      "en": "Cognitivism"
+      "en": "Cognitivism",
+      "related": ["constructivism"]
     },
     {
       "id": "zpd",
@@ -788,7 +816,8 @@
     {
       "id": "testing-effect",
       "zh": "测试效应",
-      "en": "Testing effect"
+      "en": "Testing effect",
+      "related": ["spacing-effect"]
     },
     {
       "id": "spacing-effect",
@@ -803,7 +832,8 @@
     {
       "id": "learning-style",
       "zh": "学习风格",
-      "en": "Learning style"
+      "en": "Learning style",
+      "related": ["teaching-style"]
     },
     {
       "id": "misconception",
@@ -964,7 +994,8 @@
     {
       "id": "grammar-school",
       "zh": "文法学校",
-      "en": "Grammar school"
+      "en": "Grammar school",
+      "related": ["prep-school"]
     },
     {
       "id": "prep-school",
@@ -990,7 +1021,8 @@
       "id": "formative",
       "zh": "形成性评价",
       "en": "Formative",
-      "forms": { "en": ["formative assessment"] }
+      "forms": { "en": ["formative assessment"] },
+      "related": ["summative"]
     },
     {
       "id": "summative",
@@ -1088,7 +1120,8 @@
     {
       "id": "fraternity",
       "zh": "兄弟会",
-      "en": "Fraternity"
+      "en": "Fraternity",
+      "related": ["sorority"]
     },
     {
       "id": "sorority",

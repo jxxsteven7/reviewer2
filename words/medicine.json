@@ -71,7 +71,8 @@
       "id": "mri",
       "zh": "MRI",
       "en": "MRI",
-      "forms": { "zh": ["磁共振成像"], "en": ["magnetic resonance imaging"] }
+      "forms": { "zh": ["磁共振成像"], "en": ["magnetic resonance imaging"] },
+      "related": ["ct"]
     },
     {
       "id": "allergy",
@@ -111,7 +112,8 @@
     {
       "id": "stroke",
       "zh": "中风",
-      "en": "Stroke"
+      "en": "Stroke",
+      "related": ["heart-attack"]
     },
     {
       "id": "icu",
@@ -123,7 +125,8 @@
       "id": "hospital",
       "zh": "医院",
       "en": "Hospital",
-      "forms": { "en": ["hospitalize", "hospitalise", "hospitalization", "hospitalisation"] }
+      "forms": { "en": ["hospitalize", "hospitalise", "hospitalization", "hospitalisation"] },
+      "related": ["clinic"]
     },
     {
       "id": "clinic",
@@ -144,7 +147,8 @@
     {
       "id": "emergency",
       "zh": "急诊",
-      "en": "Emergency"
+      "en": "Emergency",
+      "related": ["outpatient"]
     },
     {
       "id": "outpatient",
@@ -192,7 +196,8 @@
     {
       "id": "doctor",
       "zh": "医生",
-      "en": "Doctor"
+      "en": "Doctor",
+      "related": ["nurse"]
     },
     {
       "id": "nurse",
@@ -230,7 +235,8 @@
     {
       "id": "wheelchair",
       "zh": "轮椅",
-      "en": "Wheelchair"
+      "en": "Wheelchair",
+      "related": ["crutch"]
     },
     {
       "id": "first-aid",
@@ -261,13 +267,15 @@
       "id": "pediatrics",
       "zh": "儿科",
       "en": "Pediatrics",
-      "forms": { "en": ["paediatrics", "pediatrician"] }
+      "forms": { "en": ["paediatrics", "pediatrician"] },
+      "related": ["geriatrics"]
     },
     {
       "id": "obstetrics",
       "zh": "产科",
       "en": "Obstetrics",
-      "forms": { "en": ["obstetrician"] }
+      "forms": { "en": ["obstetrician"] },
+      "related": ["gynecology"]
     },
     {
       "id": "gynecology",
@@ -297,7 +305,8 @@
       "id": "psychiatry",
       "zh": "精神科",
       "en": "Psychiatry",
-      "forms": { "en": ["psychiatrist", "psychiatric"] }
+      "forms": { "en": ["psychiatrist", "psychiatric"] },
+      "related": ["neurology"]
     },
     {
       "id": "neurology",
@@ -350,13 +359,15 @@
       "id": "pharmacology",
       "zh": "药理学",
       "en": "Pharmacology",
-      "forms": { "en": ["pharmacologist", "pharmacological"] }
+      "forms": { "en": ["pharmacologist", "pharmacological"] },
+      "related": ["toxicology"]
     },
     {
       "id": "anatomy",
       "zh": "解剖学",
       "en": "Anatomy",
-      "forms": { "en": ["anatomist", "anatomical"] }
+      "forms": { "en": ["anatomist", "anatomical"] },
+      "related": ["physiology"]
     },
     {
       "id": "physiology",
@@ -395,7 +406,8 @@
     {
       "id": "cupping",
       "zh": "拔罐",
-      "en": "Cupping"
+      "en": "Cupping",
+      "related": ["gua-sha"]
     },
     {
       "id": "ct",
@@ -418,7 +430,8 @@
       "id": "ecg",
       "zh": "心电图",
       "en": "ECG",
-      "forms": { "en": ["EKG", "electrocardiogram", "electrocardiography"] }
+      "forms": { "en": ["EKG", "electrocardiogram", "electrocardiography"] },
+      "related": ["eeg"]
     },
     {
       "id": "eeg",
@@ -558,7 +571,8 @@
       "id": "defibrillator",
       "zh": "除颤仪",
       "en": "Defibrillator",
-      "forms": { "en": ["defibrillate", "defibrillation"] }
+      "forms": { "en": ["defibrillate", "defibrillation"] },
+      "related": ["pacemaker"]
     },
     {
       "id": "ecmo",
@@ -584,7 +598,8 @@
     {
       "id": "hearing-aid",
       "zh": "助听器",
-      "en": "Hearing aid"
+      "en": "Hearing aid",
+      "related": ["eyeglasses"]
     },
     {
       "id": "eyeglasses",
@@ -645,7 +660,8 @@
       "id": "chemotherapy",
       "zh": "化疗",
       "en": "Chemotherapy",
-      "forms": { "en": ["chemo"] }
+      "forms": { "en": ["chemo"] },
+      "related": ["radiotherapy"]
     },
     {
       "id": "radiotherapy",
@@ -704,12 +720,14 @@
     {
       "id": "penicillin",
       "zh": "青霉素",
-      "en": "Penicillin"
+      "en": "Penicillin",
+      "related": ["cephalosporin"]
     },
     {
       "id": "aspirin",
       "zh": "阿司匹林",
-      "en": "Aspirin"
+      "en": "Aspirin",
+      "related": ["ibuprofen"]
     },
     {
       "id": "ibuprofen",
@@ -724,7 +742,8 @@
     {
       "id": "insulin",
       "zh": "胰岛素",
-      "en": "Insulin"
+      "en": "Insulin",
+      "related": ["metformin"]
     },
     {
       "id": "nicotine",
@@ -768,7 +787,8 @@
       "id": "antibody",
       "zh": "抗体",
       "en": "Antibody",
-      "forms": { "en": ["antibodies"] }
+      "forms": { "en": ["antibodies"] },
+      "related": ["antigen"]
     },
     {
       "id": "antigen",
@@ -829,7 +849,8 @@
     {
       "id": "incidence",
       "zh": "发病率",
-      "en": "Incidence"
+      "en": "Incidence",
+      "related": ["prevalence"]
     },
     {
       "id": "prevalence",
@@ -980,7 +1001,8 @@
     {
       "id": "ligament",
       "zh": "韧带",
-      "en": "Ligament"
+      "en": "Ligament",
+      "related": ["tendon"]
     },
     {
       "id": "cartilage",
@@ -1029,7 +1051,8 @@
       "id": "retina",
       "zh": "视网膜",
       "en": "Retina",
-      "forms": { "en": ["retinal"] }
+      "forms": { "en": ["retinal"] },
+      "related": ["cornea"]
     },
     {
       "id": "cornea",
@@ -1040,7 +1063,8 @@
     {
       "id": "pupil",
       "zh": "瞳孔",
-      "en": "Pupil"
+      "en": "Pupil",
+      "related": ["iris"]
     },
     {
       "id": "cochlea",
@@ -1062,7 +1086,8 @@
       "id": "artery",
       "zh": "动脉",
       "en": "Artery",
-      "forms": { "en": ["arterial"] }
+      "forms": { "en": ["arterial"] },
+      "related": ["vein"]
     },
     {
       "id": "vein",
@@ -1117,7 +1142,8 @@
       "id": "fetus",
       "zh": "胎儿",
       "en": "Fetus",
-      "forms": { "en": ["foetus", "fetal", "foetal"] }
+      "forms": { "en": ["foetus", "fetal", "foetal"] },
+      "related": ["newborn"]
     },
     {
       "id": "umbilical-cord",
@@ -1145,7 +1171,8 @@
       "id": "puberty",
       "zh": "青春期",
       "en": "Puberty",
-      "forms": { "en": ["pubertal"] }
+      "forms": { "en": ["pubertal"] },
+      "related": ["menopause"]
     },
     {
       "id": "menopause",
@@ -1162,13 +1189,15 @@
       "id": "fever",
       "zh": "发热",
       "en": "Fever",
-      "forms": { "en": ["feverish"] }
+      "forms": { "en": ["feverish"] },
+      "related": ["chills"]
     },
     {
       "id": "cough",
       "zh": "咳嗽",
       "en": "Cough",
-      "forms": { "en": ["coughing"] }
+      "forms": { "en": ["coughing"] },
+      "related": ["sneeze"]
     },
     {
       "id": "sneeze",
@@ -1197,7 +1226,8 @@
       "id": "vomiting",
       "zh": "呕吐",
       "en": "Vomiting",
-      "forms": { "en": ["vomit"] }
+      "forms": { "en": ["vomit"] },
+      "related": ["nausea"]
     },
     {
       "id": "edema",
@@ -1260,7 +1290,8 @@
       "id": "fracture",
       "zh": "骨折",
       "en": "Fracture",
-      "forms": { "en": ["fractured"] }
+      "forms": { "en": ["fractured"] },
+      "related": ["sprain"]
     },
     {
       "id": "sprain",
@@ -1295,7 +1326,8 @@
       "id": "sunburn",
       "zh": "晒伤",
       "en": "Sunburn",
-      "forms": { "en": ["sunburned", "sunburnt"] }
+      "forms": { "en": ["sunburned", "sunburnt"] },
+      "related": ["frostbite"]
     },
     {
       "id": "frostbite",
@@ -1305,7 +1337,8 @@
     {
       "id": "heatstroke",
       "zh": "中暑",
-      "en": "Heatstroke"
+      "en": "Heatstroke",
+      "related": ["hypothermia"]
     },
     {
       "id": "hypothermia",
@@ -1367,12 +1400,14 @@
     {
       "id": "pneumonia",
       "zh": "肺炎",
-      "en": "Pneumonia"
+      "en": "Pneumonia",
+      "related": ["tuberculosis"]
     },
     {
       "id": "hepatitis",
       "zh": "肝炎",
-      "en": "Hepatitis"
+      "en": "Hepatitis",
+      "related": ["cirrhosis"]
     },
     {
       "id": "tuberculosis",
@@ -1384,22 +1419,26 @@
       "id": "malaria",
       "zh": "疟疾",
       "en": "Malaria",
-      "forms": { "en": ["malarial"] }
+      "forms": { "en": ["malarial"] },
+      "related": ["dengue"]
     },
     {
       "id": "smallpox",
       "zh": "天花",
-      "en": "Smallpox"
+      "en": "Smallpox",
+      "related": ["chickenpox"]
     },
     {
       "id": "chickenpox",
       "zh": "水痘",
-      "en": "Chickenpox"
+      "en": "Chickenpox",
+      "related": ["shingles"]
     },
     {
       "id": "measles",
       "zh": "麻疹",
-      "en": "Measles"
+      "en": "Measles",
+      "related": ["rubella"]
     },
     {
       "id": "mumps",
@@ -1414,7 +1453,8 @@
     {
       "id": "cholera",
       "zh": "霍乱",
-      "en": "Cholera"
+      "en": "Cholera",
+      "related": ["typhoid"]
     },
     {
       "id": "plague",
@@ -1440,7 +1480,8 @@
       "id": "rabies",
       "zh": "狂犬病",
       "en": "Rabies",
-      "forms": { "en": ["rabid"] }
+      "forms": { "en": ["rabid"] },
+      "related": ["tetanus"]
     },
     {
       "id": "tetanus",
@@ -1451,12 +1492,14 @@
       "id": "asthma",
       "zh": "哮喘",
       "en": "Asthma",
-      "forms": { "en": ["asthmatic"] }
+      "forms": { "en": ["asthmatic"] },
+      "related": ["copd"]
     },
     {
       "id": "eczema",
       "zh": "湿疹",
-      "en": "Eczema"
+      "en": "Eczema",
+      "related": ["psoriasis"]
     },
     {
       "id": "acne",
@@ -1467,7 +1510,8 @@
       "id": "myopia",
       "zh": "近视",
       "en": "Myopia",
-      "forms": { "en": ["myopic"] }
+      "forms": { "en": ["myopic"] },
+      "related": ["hyperopia"]
     },
     {
       "id": "astigmatism",
@@ -1478,7 +1522,8 @@
     {
       "id": "cataract",
       "zh": "白内障",
-      "en": "Cataract"
+      "en": "Cataract",
+      "related": ["glaucoma"]
     },
     {
       "id": "glaucoma",
@@ -1494,7 +1539,8 @@
       "id": "hypertension",
       "zh": "高血压",
       "en": "Hypertension",
-      "forms": { "en": ["hypertensive"] }
+      "forms": { "en": ["hypertensive"] },
+      "related": ["diabetes"]
     },
     {
       "id": "diabetes",
@@ -1541,7 +1587,8 @@
       "id": "heart-attack",
       "zh": "心肌梗死",
       "en": "Heart attack",
-      "forms": { "zh": ["心梗"] }
+      "forms": { "zh": ["心梗"] },
+      "related": ["angina"]
     },
     {
       "id": "arrhythmia",
@@ -1553,7 +1600,8 @@
       "id": "thrombus",
       "zh": "血栓",
       "en": "Thrombus",
-      "forms": { "en": ["thrombi", "thrombosis", "thrombotic"] }
+      "forms": { "en": ["thrombi", "thrombosis", "thrombotic"] },
+      "related": ["embolism"]
     },
     {
       "id": "anemia",
@@ -1565,7 +1613,8 @@
       "id": "leukemia",
       "zh": "白血病",
       "en": "Leukemia",
-      "forms": { "en": ["leukaemia"] }
+      "forms": { "en": ["leukaemia"] },
+      "related": ["lymphoma"]
     },
     {
       "id": "cancer",
@@ -1604,7 +1653,8 @@
     {
       "id": "kidney-stone",
       "zh": "肾结石",
-      "en": "Kidney stone"
+      "en": "Kidney stone",
+      "related": ["gallstone"]
     },
     {
       "id": "epilepsy",
@@ -1620,7 +1670,8 @@
     {
       "id": "parkinsons",
       "zh": "帕金森病",
-      "en": "Parkinson's"
+      "en": "Parkinson's",
+      "related": ["alzheimers"]
     },
     {
       "id": "alzheimers",
@@ -1631,7 +1682,8 @@
       "id": "depression",
       "zh": "抑郁症",
       "en": "Depression",
-      "forms": { "en": ["depressive"] }
+      "forms": { "en": ["depressive"] },
+      "related": ["anxiety"]
     },
     {
       "id": "anxiety",
@@ -1673,7 +1725,8 @@
       "id": "esophagus",
       "zh": "食管",
       "en": "Esophagus",
-      "forms": { "en": ["oesophagus", "esophageal"] }
+      "forms": { "en": ["oesophagus", "esophageal"] },
+      "related": ["trachea"]
     },
     {
       "id": "trachea",
@@ -1864,7 +1917,8 @@
     {
       "id": "ovulation",
       "zh": "排卵",
-      "en": "Ovulation"
+      "en": "Ovulation",
+      "related": ["menstruation"]
     },
     {
       "id": "menstruation",
@@ -1924,7 +1978,8 @@
     {
       "id": "benign",
       "zh": "良性",
-      "en": "Benign"
+      "en": "Benign",
+      "related": ["malignant"]
     },
     {
       "id": "malignant",
@@ -1955,7 +2010,8 @@
     {
       "id": "bradycardia",
       "zh": "心动过缓",
-      "en": "Bradycardia"
+      "en": "Bradycardia",
+      "related": ["tachycardia"]
     },
     {
       "id": "tachycardia",
@@ -2007,7 +2063,8 @@
       "id": "diarrhea",
       "zh": "腹泻",
       "en": "Diarrhea",
-      "forms": { "en": ["diarrhoea"] }
+      "forms": { "en": ["diarrhoea"] },
+      "related": ["constipation"]
     },
     {
       "id": "constipation",
@@ -2086,7 +2143,8 @@
     {
       "id": "beriberi",
       "zh": "脚气病",
-      "en": "Beriberi"
+      "en": "Beriberi",
+      "related": ["rickets"]
     },
     {
       "id": "rickets",
@@ -2186,7 +2244,8 @@
     {
       "id": "diphtheria",
       "zh": "白喉",
-      "en": "Diphtheria"
+      "en": "Diphtheria",
+      "related": ["whooping-cough"]
     },
     {
       "id": "whooping-cough",
@@ -2262,7 +2321,8 @@
     {
       "id": "lidocaine",
       "zh": "利多卡因",
-      "en": "Lidocaine"
+      "en": "Lidocaine",
+      "related": ["propofol"]
     },
     {
       "id": "propofol",
@@ -2277,7 +2337,8 @@
     {
       "id": "warfarin",
       "zh": "华法林",
-      "en": "Warfarin"
+      "en": "Warfarin",
+      "related": ["heparin"]
     },
     {
       "id": "heparin",
@@ -2297,7 +2358,8 @@
     {
       "id": "artemisinin",
       "zh": "青蒿素",
-      "en": "Artemisinin"
+      "en": "Artemisinin",
+      "related": ["quinine"]
     },
     {
       "id": "quinine",
@@ -2342,7 +2404,8 @@
     {
       "id": "inhaler",
       "zh": "吸入器",
-      "en": "Inhaler"
+      "en": "Inhaler",
+      "related": ["nebulizer"]
     },
     {
       "id": "nebulizer",
@@ -2492,7 +2555,8 @@
       "id": "gastroscopy",
       "zh": "胃镜",
       "en": "Gastroscopy",
-      "forms": { "en": ["gastroscope"] }
+      "forms": { "en": ["gastroscope"] },
+      "related": ["colonoscopy"]
     },
     {
       "id": "colonoscopy",
@@ -2715,7 +2779,8 @@
     {
       "id": "sensitivity",
       "zh": "灵敏度",
-      "en": "Sensitivity"
+      "en": "Sensitivity",
+      "related": ["specificity"]
     },
     {
       "id": "specificity",

@@ -10,7 +10,8 @@
       "id": "behaviorism",
       "zh": "行为主义",
       "en": "Behaviorism",
-      "forms": { "en": ["behaviourism", "behaviorist", "behaviourist"] }
+      "forms": { "en": ["behaviourism", "behaviorist", "behaviourist"] },
+      "related": ["psychoanalysis"]
     },
     {
       "id": "psychoanalysis",
@@ -32,7 +33,8 @@
       "id": "psychophysics",
       "zh": "心理物理学",
       "en": "Psychophysics",
-      "forms": { "en": ["psychophysical"] }
+      "forms": { "en": ["psychophysical"] },
+      "related": ["psychometrics"]
     },
     {
       "id": "psychometrics",
@@ -70,7 +72,8 @@
     {
       "id": "working-memory",
       "zh": "工作记忆",
-      "en": "Working memory"
+      "en": "Working memory",
+      "related": ["sensory-memory"]
     },
     {
       "id": "sensory-memory",
@@ -111,7 +114,8 @@
     {
       "id": "primacy-effect",
       "zh": "首因效应",
-      "en": "Primacy effect"
+      "en": "Primacy effect",
+      "related": ["recency-effect"]
     },
     {
       "id": "recency-effect",
@@ -172,7 +176,8 @@
     {
       "id": "barnum-effect",
       "zh": "巴纳姆效应",
-      "en": "Barnum effect"
+      "en": "Barnum effect",
+      "related": ["cold-reading"]
     },
     {
       "id": "availability",
@@ -187,7 +192,8 @@
     {
       "id": "linda-problem",
       "zh": "琳达问题",
-      "en": "Linda problem"
+      "en": "Linda problem",
+      "related": ["wason-task"]
     },
     {
       "id": "peak-end-rule",
@@ -202,7 +208,8 @@
     {
       "id": "system-1",
       "zh": "系统1",
-      "en": "System 1"
+      "en": "System 1",
+      "related": ["system-2"]
     },
     {
       "id": "system-2",
@@ -297,7 +304,8 @@
     {
       "id": "dual-task",
       "zh": "双任务",
-      "en": "Dual task"
+      "en": "Dual task",
+      "related": ["task-switching"]
     },
     {
       "id": "mind-wandering",
@@ -307,7 +315,8 @@
     {
       "id": "daydream",
       "zh": "白日梦",
-      "en": "Daydream"
+      "en": "Daydream",
+      "related": ["lucid-dream"]
     },
     {
       "id": "adhd",
@@ -329,7 +338,8 @@
     {
       "id": "webers-law",
       "zh": "韦伯定律",
-      "en": "Weber's law"
+      "en": "Weber's law",
+      "related": ["fechners-law"]
     },
     {
       "id": "fechners-law",
@@ -344,7 +354,8 @@
     {
       "id": "blindsight",
       "zh": "盲视",
-      "en": "Blindsight"
+      "en": "Blindsight",
+      "related": ["blind-spot"]
     },
     {
       "id": "synesthesia",
@@ -397,7 +408,8 @@
     {
       "id": "habituation",
       "zh": "习惯化",
-      "en": "Habituation"
+      "en": "Habituation",
+      "related": ["sensitization"]
     },
     {
       "id": "sensitization",
@@ -408,7 +420,8 @@
     {
       "id": "bottom-up",
       "zh": "自下而上",
-      "en": "Bottom-up"
+      "en": "Bottom-up",
+      "related": ["top-down"]
     },
     {
       "id": "top-down",
@@ -423,7 +436,8 @@
     {
       "id": "saccade",
       "zh": "眼跳",
-      "en": "Saccade"
+      "en": "Saccade",
+      "related": ["fixation"]
     },
     {
       "id": "fixation",
@@ -433,7 +447,8 @@
     {
       "id": "rubins-vase",
       "zh": "鲁宾之杯",
-      "en": "Rubin's vase"
+      "en": "Rubin's vase",
+      "related": ["duck-rabbit"]
     },
     {
       "id": "duck-rabbit",
@@ -443,7 +458,8 @@
     {
       "id": "ames-room",
       "zh": "艾姆斯小屋",
-      "en": "Ames room"
+      "en": "Ames room",
+      "related": ["ponzo-illusion"]
     },
     {
       "id": "ponzo-illusion",
@@ -493,7 +509,8 @@
     {
       "id": "skinner-box",
       "zh": "斯金纳箱",
-      "en": "Skinner box"
+      "en": "Skinner box",
+      "related": ["puzzle-box"]
     },
     {
       "id": "puzzle-box",
@@ -548,7 +565,8 @@
     {
       "id": "frontal-lobe",
       "zh": "额叶",
-      "en": "Frontal lobe"
+      "en": "Frontal lobe",
+      "related": ["temporal-lobe"]
     },
     {
       "id": "temporal-lobe",
@@ -599,7 +617,8 @@
       "id": "fmri",
       "zh": "fMRI",
       "en": "fMRI",
-      "forms": { "zh": ["功能磁共振成像"] }
+      "forms": { "zh": ["功能磁共振成像"] },
+      "related": ["fnirs"]
     },
     {
       "id": "tms",
@@ -668,7 +687,8 @@
     {
       "id": "disgust",
       "zh": "厌恶",
-      "en": "Disgust"
+      "en": "Disgust",
+      "related": ["contempt"]
     },
     {
       "id": "surprise",
@@ -688,7 +708,8 @@
     {
       "id": "shame",
       "zh": "羞耻",
-      "en": "Shame"
+      "en": "Shame",
+      "related": ["guilt"]
     },
     {
       "id": "guilt",
@@ -698,7 +719,8 @@
     {
       "id": "pride",
       "zh": "骄傲",
-      "en": "Pride"
+      "en": "Pride",
+      "related": ["embarrassment"]
     },
     {
       "id": "embarrassment",
@@ -738,7 +760,8 @@
     {
       "id": "worry",
       "zh": "担忧",
-      "en": "Worry"
+      "en": "Worry",
+      "related": ["rumination"]
     },
     {
       "id": "sympathy",
@@ -753,7 +776,8 @@
     {
       "id": "apathy",
       "zh": "情感淡漠",
-      "en": "Apathy"
+      "en": "Apathy",
+      "related": ["anhedonia"]
     },
     {
       "id": "arousal",
@@ -839,7 +863,8 @@
     {
       "id": "ingroup",
       "zh": "内群体",
-      "en": "Ingroup"
+      "en": "Ingroup",
+      "related": ["outgroup"]
     },
     {
       "id": "outgroup",
@@ -854,7 +879,8 @@
     {
       "id": "reciprocity",
       "zh": "互惠",
-      "en": "Reciprocity"
+      "en": "Reciprocity",
+      "related": ["commitment"]
     },
     {
       "id": "belonging",
@@ -949,7 +975,8 @@
     {
       "id": "self-efficacy",
       "zh": "自我效能",
-      "en": "Self-efficacy"
+      "en": "Self-efficacy",
+      "related": ["self-concept"]
     },
     {
       "id": "self-concept",
@@ -975,7 +1002,8 @@
     {
       "id": "agreeableness",
       "zh": "宜人性",
-      "en": "Agreeableness"
+      "en": "Agreeableness",
+      "related": ["openness"]
     },
     {
       "id": "openness",
@@ -1000,12 +1028,14 @@
     {
       "id": "choleric",
       "zh": "胆汁质",
-      "en": "Choleric"
+      "en": "Choleric",
+      "related": ["phlegmatic"]
     },
     {
       "id": "sanguine",
       "zh": "多血质",
-      "en": "Sanguine"
+      "en": "Sanguine",
+      "related": ["melancholic"]
     },
     {
       "id": "phlegmatic",
@@ -1025,7 +1055,8 @@
     {
       "id": "mmpi",
       "zh": "MMPI",
-      "en": "MMPI"
+      "en": "MMPI",
+      "related": ["16pf"]
     },
     {
       "id": "16pf",
@@ -1050,7 +1081,8 @@
     {
       "id": "denial",
       "zh": "否认",
-      "en": "Denial"
+      "en": "Denial",
+      "related": ["sublimation"]
     },
     {
       "id": "sublimation",
@@ -1071,7 +1103,8 @@
     {
       "id": "unconscious",
       "zh": "无意识",
-      "en": "Unconscious"
+      "en": "Unconscious",
+      "related": ["preconscious"]
     },
     {
       "id": "preconscious",
@@ -1086,12 +1119,14 @@
     {
       "id": "inferiority",
       "zh": "自卑",
-      "en": "Inferiority"
+      "en": "Inferiority",
+      "related": ["superiority"]
     },
     {
       "id": "anima",
       "zh": "阿尼玛",
-      "en": "Anima"
+      "en": "Anima",
+      "related": ["animus"]
     },
     {
       "id": "synchronicity",
@@ -1112,7 +1147,8 @@
       "id": "egocentrism",
       "zh": "自我中心",
       "en": "Egocentrism",
-      "forms": { "en": ["egocentric"] }
+      "forms": { "en": ["egocentric"] },
+      "related": ["animism"]
     },
     {
       "id": "animism",
@@ -1123,7 +1159,8 @@
       "id": "assimilation",
       "zh": "同化",
       "en": "Assimilation",
-      "forms": { "en": ["assimilate"] }
+      "forms": { "en": ["assimilate"] },
+      "related": ["accommodation"]
     },
     {
       "id": "accommodation",
@@ -1138,7 +1175,8 @@
     {
       "id": "visual-cliff",
       "zh": "视崖",
-      "en": "Visual cliff"
+      "en": "Visual cliff",
+      "related": ["still-face"]
     },
     {
       "id": "mirror-test",
@@ -1153,13 +1191,15 @@
     {
       "id": "infancy",
       "zh": "婴儿期",
-      "en": "Infancy"
+      "en": "Infancy",
+      "related": ["toddlerhood"]
     },
     {
       "id": "adolescence",
       "zh": "青少年期",
       "en": "Adolescence",
-      "forms": { "en": ["adolescent"] }
+      "forms": { "en": ["adolescent"] },
+      "related": ["childhood"]
     },
     {
       "id": "parenting",
@@ -1184,7 +1224,8 @@
     {
       "id": "twin-study",
       "zh": "双生子研究",
-      "en": "Twin study"
+      "en": "Twin study",
+      "related": ["adoption-study"]
     },
     {
       "id": "adoption-study",
@@ -1294,7 +1335,8 @@
     {
       "id": "psychopy",
       "zh": "PsychoPy",
-      "en": "PsychoPy"
+      "en": "PsychoPy",
+      "related": ["e-prime"]
     },
     {
       "id": "e-prime",
@@ -1381,7 +1423,8 @@
     {
       "id": "social-anxiety",
       "zh": "社交焦虑",
-      "en": "Social anxiety"
+      "en": "Social anxiety",
+      "related": ["agoraphobia"]
     },
     {
       "id": "agoraphobia",
@@ -1391,7 +1434,8 @@
     {
       "id": "anorexia",
       "zh": "厌食症",
-      "en": "Anorexia"
+      "en": "Anorexia",
+      "related": ["bulimia"]
     },
     {
       "id": "bulimia",
@@ -1408,7 +1452,8 @@
       "id": "dyslexia",
       "zh": "阅读障碍",
       "en": "Dyslexia",
-      "forms": { "en": ["dyslexic"] }
+      "forms": { "en": ["dyslexic"] },
+      "related": ["dyscalculia"]
     },
     {
       "id": "agnosia",
@@ -1481,7 +1526,8 @@
     {
       "id": "withdrawal",
       "zh": "戒断",
-      "en": "Withdrawal"
+      "en": "Withdrawal",
+      "related": ["craving"]
     },
     {
       "id": "craving",
@@ -1507,7 +1553,8 @@
     {
       "id": "family-therapy",
       "zh": "家庭治疗",
-      "en": "Family therapy"
+      "en": "Family therapy",
+      "related": ["group-therapy"]
     },
     {
       "id": "group-therapy",
@@ -1542,7 +1589,8 @@
     {
       "id": "confrontation",
       "zh": "面质",
-      "en": "Confrontation"
+      "en": "Confrontation",
+      "related": ["clarification"]
     },
     {
       "id": "adherence",
@@ -1563,7 +1611,8 @@
     {
       "id": "nightmare",
       "zh": "噩梦",
-      "en": "Nightmare"
+      "en": "Nightmare",
+      "related": ["night-terror"]
     },
     {
       "id": "depth-cue",
@@ -1573,7 +1622,8 @@
     {
       "id": "authority",
       "zh": "权威",
-      "en": "Authority"
+      "en": "Authority",
+      "related": ["social-proof"]
     },
     {
       "id": "commitment",
@@ -1609,7 +1659,8 @@
       "id": "pessimism",
       "zh": "悲观",
       "en": "Pessimism",
-      "forms": { "en": ["pessimistic"] }
+      "forms": { "en": ["pessimistic"] },
+      "related": ["optimism"]
     },
     {
       "id": "impulsivity",
@@ -1696,7 +1747,8 @@
     {
       "id": "reappraisal",
       "zh": "认知重评",
-      "en": "Reappraisal"
+      "en": "Reappraisal",
+      "related": ["suppression"]
     },
     {
       "id": "mmse",
@@ -1807,7 +1859,8 @@
     {
       "id": "life-event",
       "zh": "生活事件",
-      "en": "Life event"
+      "en": "Life event",
+      "related": ["daily-hassles"]
     },
     {
       "id": "daily-hassles",
@@ -1817,7 +1870,8 @@
     {
       "id": "minimal-group",
       "zh": "最小群体",
-      "en": "Minimal group"
+      "en": "Minimal group",
+      "related": ["robbers-cave"]
     },
     {
       "id": "passion",
@@ -1918,7 +1972,8 @@
     {
       "id": "ideal-self",
       "zh": "理想自我",
-      "en": "Ideal self"
+      "en": "Ideal self",
+      "related": ["possible-self"]
     },
     {
       "id": "possible-self",
@@ -2159,7 +2214,8 @@
     {
       "id": "hopelessness",
       "zh": "绝望感",
-      "en": "Hopelessness"
+      "en": "Hopelessness",
+      "related": ["helplessness"]
     },
     {
       "id": "core-belief",
@@ -2240,7 +2296,8 @@
     {
       "id": "role-ambiguity",
       "zh": "角色模糊",
-      "en": "Role ambiguity"
+      "en": "Role ambiguity",
+      "related": ["role-conflict"]
     },
     {
       "id": "job-analysis",

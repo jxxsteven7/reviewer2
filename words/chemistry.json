@@ -28,7 +28,8 @@
       "id": "oxidation",
       "zh": "氧化",
       "en": "Oxidation",
-      "forms": { "en": ["oxidize", "oxidise", "oxidized"] }
+      "forms": { "en": ["oxidize", "oxidise", "oxidized"] },
+      "related": ["reduction"]
     },
     {
       "id": "crystal",
@@ -40,18 +41,21 @@
       "id": "acid",
       "zh": "酸",
       "en": "Acid",
-      "forms": { "en": ["acidic", "acidity"] }
+      "forms": { "en": ["acidic", "acidity"] },
+      "related": ["base"]
     },
     {
       "id": "ph",
       "zh": "pH",
-      "en": "pH"
+      "en": "pH",
+      "related": ["pka"]
     },
     {
       "id": "isotope",
       "zh": "同位素",
       "en": "Isotope",
-      "forms": { "en": ["isotopic"] }
+      "forms": { "en": ["isotopic"] },
+      "related": ["allotrope"]
     },
     {
       "id": "titration",
@@ -63,7 +67,8 @@
       "id": "solvent",
       "zh": "溶剂",
       "en": "Solvent",
-      "forms": { "en": ["solvation"] }
+      "forms": { "en": ["solvation"] },
+      "related": ["solute"]
     },
     {
       "id": "graphene",
@@ -101,7 +106,8 @@
     {
       "id": "fume-hood",
       "zh": "通风橱",
-      "en": "Fume hood"
+      "en": "Fume hood",
+      "related": ["glovebox"]
     },
     {
       "id": "ion",
@@ -125,7 +131,8 @@
       "id": "pipette",
       "zh": "移液管",
       "en": "Pipette",
-      "forms": { "en": ["pipet", "pipetting"] }
+      "forms": { "en": ["pipet", "pipetting"] },
+      "related": ["burette"]
     },
     {
       "id": "atom",
@@ -137,7 +144,8 @@
       "id": "element",
       "zh": "元素",
       "en": "Element",
-      "forms": { "en": ["elemental"] }
+      "forms": { "en": ["elemental"] },
+      "related": ["compound"]
     },
     {
       "id": "compound",
@@ -239,7 +247,8 @@
     {
       "id": "noble-gas",
       "zh": "稀有气体",
-      "en": "Noble gas"
+      "en": "Noble gas",
+      "related": ["halogen"]
     },
     {
       "id": "halogen",
@@ -250,7 +259,8 @@
     {
       "id": "alkali-metal",
       "zh": "碱金属",
-      "en": "Alkali metal"
+      "en": "Alkali metal",
+      "related": ["alkaline-earth"]
     },
     {
       "id": "rare-earth",
@@ -278,7 +288,8 @@
       "id": "decomposition",
       "zh": "分解",
       "en": "Decomposition",
-      "forms": { "en": ["decompose", "decomposed"] }
+      "forms": { "en": ["decompose", "decomposed"] },
+      "related": ["synthesis"]
     },
     {
       "id": "synthesis",
@@ -302,7 +313,8 @@
       "id": "covalent-bond",
       "zh": "共价键",
       "en": "Covalent bond",
-      "forms": { "en": ["covalently"] }
+      "forms": { "en": ["covalently"] },
+      "related": ["ionic-bond"]
     },
     {
       "id": "hydrogen-bond",
@@ -381,13 +393,15 @@
     {
       "id": "single-crystal",
       "zh": "单晶",
-      "en": "Single crystal"
+      "en": "Single crystal",
+      "related": ["polycrystal"]
     },
     {
       "id": "hydrogen",
       "zh": "氢",
       "en": "Hydrogen",
-      "forms": { "en": ["hydrogenate", "hydrogenation"] }
+      "forms": { "en": ["hydrogenate", "hydrogenation"] },
+      "related": ["helium"]
     },
     {
       "id": "oxygen",
@@ -410,7 +424,8 @@
     {
       "id": "sodium",
       "zh": "钠",
-      "en": "Sodium"
+      "en": "Sodium",
+      "related": ["potassium"]
     },
     {
       "id": "potassium",
@@ -446,7 +461,8 @@
       "id": "chlorine",
       "zh": "氯",
       "en": "Chlorine",
-      "forms": { "en": ["chlorinate", "chlorination"] }
+      "forms": { "en": ["chlorinate", "chlorination"] },
+      "related": ["fluorine"]
     },
     {
       "id": "sulfur",
@@ -495,7 +511,8 @@
       "id": "gold",
       "zh": "金",
       "en": "Gold",
-      "forms": { "en": ["golden"] }
+      "forms": { "en": ["golden"] },
+      "related": ["silver"]
     },
     {
       "id": "silver",
@@ -521,7 +538,8 @@
     {
       "id": "iodine",
       "zh": "碘",
-      "en": "Iodine"
+      "en": "Iodine",
+      "related": ["bromine"]
     },
     {
       "id": "arsenic",
@@ -551,12 +569,14 @@
     {
       "id": "nitric-acid",
       "zh": "硝酸",
-      "en": "Nitric acid"
+      "en": "Nitric acid",
+      "related": ["sulfuric-acid"]
     },
     {
       "id": "acetic-acid",
       "zh": "醋酸",
-      "en": "Acetic acid"
+      "en": "Acetic acid",
+      "related": ["formic-acid"]
     },
     {
       "id": "aqua-regia",
@@ -601,7 +621,8 @@
     {
       "id": "ammonia",
       "zh": "氨",
-      "en": "Ammonia"
+      "en": "Ammonia",
+      "related": ["ammonium"]
     },
     {
       "id": "ozone",
@@ -634,7 +655,8 @@
     {
       "id": "ethanol",
       "zh": "乙醇",
-      "en": "Ethanol"
+      "en": "Ethanol",
+      "related": ["methanol"]
     },
     {
       "id": "formaldehyde",
@@ -655,12 +677,14 @@
     {
       "id": "baking-soda",
       "zh": "小苏打",
-      "en": "Baking soda"
+      "en": "Baking soda",
+      "related": ["soda-ash"]
     },
     {
       "id": "dry-ice",
       "zh": "干冰",
-      "en": "Dry ice"
+      "en": "Dry ice",
+      "related": ["liquid-nitrogen"]
     },
     {
       "id": "liquid-nitrogen",
@@ -681,7 +705,8 @@
     {
       "id": "coal",
       "zh": "煤",
-      "en": "Coal"
+      "en": "Coal",
+      "related": ["petroleum"]
     },
     {
       "id": "petroleum",
@@ -745,7 +770,8 @@
       "id": "evaporation",
       "zh": "蒸发",
       "en": "Evaporation",
-      "forms": { "en": ["evaporate", "evaporator"] }
+      "forms": { "en": ["evaporate", "evaporator"] },
+      "related": ["condensation"]
     },
     {
       "id": "condensation",
@@ -769,7 +795,8 @@
       "id": "saponification",
       "zh": "皂化",
       "en": "Saponification",
-      "forms": { "en": ["saponify"] }
+      "forms": { "en": ["saponify"] },
+      "related": ["esterification"]
     },
     {
       "id": "substitution",
@@ -816,7 +843,8 @@
       "id": "adsorption",
       "zh": "吸附",
       "en": "Adsorption",
-      "forms": { "en": ["adsorb", "adsorbent", "adsorbed"] }
+      "forms": { "en": ["adsorb", "adsorbent", "adsorbed"] },
+      "related": ["absorption"]
     },
     {
       "id": "absorption",
@@ -844,7 +872,8 @@
     {
       "id": "exothermic",
       "zh": "放热",
-      "en": "Exothermic"
+      "en": "Exothermic",
+      "related": ["endothermic"]
     },
     {
       "id": "endothermic",
@@ -854,7 +883,8 @@
     {
       "id": "organic",
       "zh": "有机",
-      "en": "Organic"
+      "en": "Organic",
+      "related": ["inorganic"]
     },
     {
       "id": "inorganic",
@@ -864,7 +894,8 @@
     {
       "id": "alkane",
       "zh": "烷烃",
-      "en": "Alkane"
+      "en": "Alkane",
+      "related": ["alkene"]
     },
     {
       "id": "alkene",
@@ -874,12 +905,14 @@
     {
       "id": "ester",
       "zh": "酯",
-      "en": "Ester"
+      "en": "Ester",
+      "related": ["ether"]
     },
     {
       "id": "aldehyde",
       "zh": "醛",
-      "en": "Aldehyde"
+      "en": "Aldehyde",
+      "related": ["ketone"]
     },
     {
       "id": "ketone",
@@ -922,7 +955,8 @@
       "id": "nucleophile",
       "zh": "亲核试剂",
       "en": "Nucleophile",
-      "forms": { "en": ["nucleophilic"] }
+      "forms": { "en": ["nucleophilic"] },
+      "related": ["electrophile"]
     },
     {
       "id": "electrophile",
@@ -976,7 +1010,8 @@
       "id": "soap",
       "zh": "肥皂",
       "en": "Soap",
-      "forms": { "en": ["soapy"] }
+      "forms": { "en": ["soapy"] },
+      "related": ["detergent"]
     },
     {
       "id": "surfactant",
@@ -987,7 +1022,8 @@
       "id": "hydrophilic",
       "zh": "亲水",
       "en": "Hydrophilic",
-      "forms": { "en": ["hydrophilicity"] }
+      "forms": { "en": ["hydrophilicity"] },
+      "related": ["hydrophobic"]
     },
     {
       "id": "hydrophobic",
@@ -1013,7 +1049,8 @@
     {
       "id": "melting-point",
       "zh": "熔点",
-      "en": "Melting point"
+      "en": "Melting point",
+      "related": ["boiling-point"]
     },
     {
       "id": "boiling-point",
@@ -1080,7 +1117,8 @@
       "id": "anode",
       "zh": "阳极",
       "en": "Anode",
-      "forms": { "en": ["anodic", "anodize"] }
+      "forms": { "en": ["anodic", "anodize"] },
+      "related": ["cathode"]
     },
     {
       "id": "cathode",
@@ -1096,7 +1134,8 @@
     {
       "id": "fuel-cell",
       "zh": "燃料电池",
-      "en": "Fuel cell"
+      "en": "Fuel cell",
+      "related": ["solar-cell"]
     },
     {
       "id": "solar-cell",
@@ -1118,7 +1157,8 @@
       "id": "mass-spectrometry",
       "zh": "质谱",
       "en": "Mass spectrometry",
-      "forms": { "en": ["mass spectrometer", "mass spec"] }
+      "forms": { "en": ["mass spectrometer", "mass spec"] },
+      "related": ["nmr"]
     },
     {
       "id": "nmr",
@@ -1142,7 +1182,8 @@
       "id": "sem",
       "zh": "扫描电镜",
       "en": "SEM",
-      "forms": { "en": ["scanning electron microscope", "scanning electron microscopy"] }
+      "forms": { "en": ["scanning electron microscope", "scanning electron microscopy"] },
+      "related": ["tem"]
     },
     {
       "id": "tem",
@@ -1175,7 +1216,8 @@
     {
       "id": "beaker",
       "zh": "烧杯",
-      "en": "Beaker"
+      "en": "Beaker",
+      "related": ["conical-flask"]
     },
     {
       "id": "test-tube",
@@ -1246,7 +1288,8 @@
     {
       "id": "ice-bath",
       "zh": "冰浴",
-      "en": "Ice bath"
+      "en": "Ice bath",
+      "related": ["oil-bath"]
     },
     {
       "id": "oil-bath",
@@ -1256,7 +1299,8 @@
     {
       "id": "alcohol-lamp",
       "zh": "酒精灯",
-      "en": "Alcohol lamp"
+      "en": "Alcohol lamp",
+      "related": ["bunsen-burner"]
     },
     {
       "id": "rotary-evaporator",
@@ -1289,7 +1333,8 @@
       "id": "annealing",
       "zh": "退火",
       "en": "Annealing",
-      "forms": { "en": ["anneal", "annealed"] }
+      "forms": { "en": ["anneal", "annealed"] },
+      "related": ["quenching"]
     },
     {
       "id": "quenching",
@@ -1318,7 +1363,8 @@
     {
       "id": "toughness",
       "zh": "韧性",
-      "en": "Toughness"
+      "en": "Toughness",
+      "related": ["hardness"]
     },
     {
       "id": "hardness",
@@ -1345,7 +1391,8 @@
       "id": "graphite",
       "zh": "石墨",
       "en": "Graphite",
-      "forms": { "en": ["graphitic"] }
+      "forms": { "en": ["graphitic"] },
+      "related": ["diamond"]
     },
     {
       "id": "diamond",
@@ -1440,7 +1487,8 @@
     {
       "id": "ceramic",
       "zh": "陶瓷",
-      "en": "Ceramic"
+      "en": "Ceramic",
+      "related": ["glass"]
     },
     {
       "id": "glass",
@@ -1485,7 +1533,8 @@
     {
       "id": "plastic",
       "zh": "塑料",
-      "en": "Plastic"
+      "en": "Plastic",
+      "related": ["rubber"]
     },
     {
       "id": "microplastic",
@@ -1506,7 +1555,8 @@
     {
       "id": "polyethylene",
       "zh": "聚乙烯",
-      "en": "Polyethylene"
+      "en": "Polyethylene",
+      "related": ["polypropylene"]
     },
     {
       "id": "monomer",
@@ -1527,7 +1577,8 @@
     {
       "id": "bronze",
       "zh": "青铜",
-      "en": "Bronze"
+      "en": "Bronze",
+      "related": ["brass"]
     },
     {
       "id": "brass",
@@ -1604,7 +1655,8 @@
       "id": "dye",
       "zh": "染料",
       "en": "Dye",
-      "forms": { "en": ["dyed", "dyeing"] }
+      "forms": { "en": ["dyed", "dyeing"] },
+      "related": ["pigment"]
     },
     {
       "id": "pigment",
@@ -1616,7 +1668,8 @@
       "id": "fertilizer",
       "zh": "化肥",
       "en": "Fertilizer",
-      "forms": { "en": ["fertiliser", "fertilize"] }
+      "forms": { "en": ["fertiliser", "fertilize"] },
+      "related": ["pesticide"]
     },
     {
       "id": "antifreeze",
@@ -1636,7 +1689,8 @@
     {
       "id": "acid-rain",
       "zh": "酸雨",
-      "en": "Acid rain"
+      "en": "Acid rain",
+      "related": ["smog"]
     },
     {
       "id": "greenhouse-gas",
@@ -1651,7 +1705,8 @@
     {
       "id": "hard-water",
       "zh": "硬水",
-      "en": "Hard water"
+      "en": "Hard water",
+      "related": ["heavy-water"]
     },
     {
       "id": "ionic-bond",
@@ -1687,7 +1742,8 @@
       "id": "cation",
       "zh": "阳离子",
       "en": "Cation",
-      "forms": { "en": ["cationic"] }
+      "forms": { "en": ["cationic"] },
+      "related": ["anion"]
     },
     {
       "id": "anion",
@@ -1729,7 +1785,8 @@
       "id": "sulfide",
       "zh": "硫化物",
       "en": "Sulfide",
-      "forms": { "en": ["sulphide"] }
+      "forms": { "en": ["sulphide"] },
+      "related": ["sulfate"]
     },
     {
       "id": "chloride",
@@ -1744,7 +1801,8 @@
     {
       "id": "nitrate",
       "zh": "硝酸盐",
-      "en": "Nitrate"
+      "en": "Nitrate",
+      "related": ["phosphate"]
     },
     {
       "id": "carbonate",
@@ -1797,7 +1855,8 @@
       "id": "lanthanide",
       "zh": "镧系元素",
       "en": "Lanthanide",
-      "forms": { "en": ["lanthanoid"] }
+      "forms": { "en": ["lanthanoid"] },
+      "related": ["actinide"]
     },
     {
       "id": "actinide",
@@ -1958,7 +2017,8 @@
     {
       "id": "hydroxyl",
       "zh": "羟基",
-      "en": "Hydroxyl"
+      "en": "Hydroxyl",
+      "related": ["carbonyl"]
     },
     {
       "id": "carbonyl",
@@ -2019,7 +2079,8 @@
     {
       "id": "ethylene",
       "zh": "乙烯",
-      "en": "Ethylene"
+      "en": "Ethylene",
+      "related": ["acetylene"]
     },
     {
       "id": "acetylene",
@@ -2029,7 +2090,8 @@
     {
       "id": "propane",
       "zh": "丙烷",
-      "en": "Propane"
+      "en": "Propane",
+      "related": ["butane"]
     },
     {
       "id": "butane",
@@ -2208,7 +2270,8 @@
     {
       "id": "thermoplastic",
       "zh": "热塑性",
-      "en": "Thermoplastic"
+      "en": "Thermoplastic",
+      "related": ["thermoset"]
     },
     {
       "id": "thermoset",
@@ -2285,7 +2348,8 @@
       "id": "martensite",
       "zh": "马氏体",
       "en": "Martensite",
-      "forms": { "en": ["martensitic"] }
+      "forms": { "en": ["martensitic"] },
+      "related": ["austenite"]
     },
     {
       "id": "austenite",
@@ -2619,7 +2683,8 @@
     {
       "id": "uranium",
       "zh": "铀",
-      "en": "Uranium"
+      "en": "Uranium",
+      "related": ["plutonium"]
     },
     {
       "id": "plutonium",

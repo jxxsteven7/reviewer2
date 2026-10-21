@@ -22,7 +22,8 @@
       "id": "babylon",
       "zh": "巴比伦",
       "en": "Babylon",
-      "forms": { "en": ["babylonian"] }
+      "forms": { "en": ["babylonian"] },
+      "related": ["assyria"]
     },
     {
       "id": "assyria",
@@ -97,13 +98,15 @@
     {
       "id": "ancient-greece",
       "zh": "古希腊",
-      "en": "Ancient Greece"
+      "en": "Ancient Greece",
+      "related": ["ancient-rome"]
     },
     {
       "id": "athens",
       "zh": "雅典",
       "en": "Athens",
-      "forms": { "en": ["athenian"] }
+      "forms": { "en": ["athenian"] },
+      "related": ["sparta"]
     },
     {
       "id": "sparta",
@@ -120,7 +123,8 @@
       "id": "ostracism",
       "zh": "陶片放逐法",
       "en": "Ostracism",
-      "forms": { "en": ["ostracize", "ostracise"] }
+      "forms": { "en": ["ostracize", "ostracise"] },
+      "related": ["sortition"]
     },
     {
       "id": "sortition",
@@ -143,7 +147,8 @@
       "id": "monarchy",
       "zh": "君主制",
       "en": "Monarchy",
-      "forms": { "en": ["monarch"] }
+      "forms": { "en": ["monarch"] },
+      "related": ["republic"]
     },
     {
       "id": "citizen",
@@ -191,12 +196,14 @@
     {
       "id": "phalanx",
       "zh": "方阵",
-      "en": "Phalanx"
+      "en": "Phalanx",
+      "related": ["legion"]
     },
     {
       "id": "laurel-wreath",
       "zh": "月桂冠",
-      "en": "Laurel wreath"
+      "en": "Laurel wreath",
+      "related": ["olive-branch"]
     },
     {
       "id": "olive-branch",
@@ -223,7 +230,8 @@
       "id": "consul",
       "zh": "执政官",
       "en": "Consul",
-      "forms": { "en": ["consular"] }
+      "forms": { "en": ["consular"] },
+      "related": ["tribune"]
     },
     {
       "id": "tribune",
@@ -248,7 +256,8 @@
     {
       "id": "toga",
       "zh": "托加袍",
-      "en": "Toga"
+      "en": "Toga",
+      "related": ["tunic"]
     },
     {
       "id": "triumphal-arch",
@@ -328,7 +337,8 @@
     {
       "id": "ottoman",
       "zh": "奥斯曼",
-      "en": "Ottoman"
+      "en": "Ottoman",
+      "related": ["mughal"]
     },
     {
       "id": "mughal",
@@ -339,7 +349,8 @@
     {
       "id": "aztec",
       "zh": "阿兹特克",
-      "en": "Aztec"
+      "en": "Aztec",
+      "related": ["inca"]
     },
     {
       "id": "inca",
@@ -382,7 +393,8 @@
       "id": "venice",
       "zh": "威尼斯",
       "en": "Venice",
-      "forms": { "en": ["venetian"] }
+      "forms": { "en": ["venetian"] },
+      "related": ["florence"]
     },
     {
       "id": "hanse",
@@ -410,7 +422,8 @@
     {
       "id": "lord",
       "zh": "领主",
-      "en": "Lord"
+      "en": "Lord",
+      "related": ["vassal"]
     },
     {
       "id": "vassal",
@@ -443,7 +456,8 @@
       "id": "joust",
       "zh": "马上比武",
       "en": "Joust",
-      "forms": { "en": ["jousting"] }
+      "forms": { "en": ["jousting"] },
+      "related": ["duel"]
     },
     {
       "id": "castle",
@@ -453,7 +467,8 @@
     {
       "id": "drawbridge",
       "zh": "吊桥",
-      "en": "Drawbridge"
+      "en": "Drawbridge",
+      "related": ["portcullis"]
     },
     {
       "id": "dungeon",
@@ -489,7 +504,8 @@
     {
       "id": "monk",
       "zh": "修士",
-      "en": "Monk"
+      "en": "Monk",
+      "related": ["nun"]
     },
     {
       "id": "hermit",
@@ -531,7 +547,8 @@
       "id": "scholasticism",
       "zh": "经院哲学",
       "en": "Scholasticism",
-      "forms": { "en": ["scholastic"] }
+      "forms": { "en": ["scholastic"] },
+      "related": ["humanism"]
     },
     {
       "id": "troubadour",
@@ -556,7 +573,8 @@
     {
       "id": "dark-ages",
       "zh": "黑暗时代",
-      "en": "Dark Ages"
+      "en": "Dark Ages",
+      "related": ["golden-age"]
     },
     {
       "id": "divine-right",
@@ -615,7 +633,8 @@
       "id": "duke",
       "zh": "公爵",
       "en": "Duke",
-      "forms": { "en": ["duchy", "duchess"] }
+      "forms": { "en": ["duchy", "duchess"] },
+      "related": ["baron"]
     },
     {
       "id": "baron",
@@ -648,7 +667,8 @@
     {
       "id": "battering-ram",
       "zh": "攻城锤",
-      "en": "Battering ram"
+      "en": "Battering ram",
+      "related": ["catapult"]
     },
     {
       "id": "catapult",
@@ -694,7 +714,8 @@
     {
       "id": "cavalry",
       "zh": "骑兵",
-      "en": "Cavalry"
+      "en": "Cavalry",
+      "related": ["infantry"]
     },
     {
       "id": "infantry",
@@ -734,7 +755,8 @@
     {
       "id": "galley",
       "zh": "桨帆船",
-      "en": "Galley"
+      "en": "Galley",
+      "related": ["galleon"]
     },
     {
       "id": "galleon",
@@ -744,7 +766,8 @@
     {
       "id": "privateer",
       "zh": "私掠船",
-      "en": "Privateer"
+      "en": "Privateer",
+      "related": ["pirate"]
     },
     {
       "id": "pirate",
@@ -760,7 +783,8 @@
     {
       "id": "spice-trade",
       "zh": "香料贸易",
-      "en": "Spice trade"
+      "en": "Spice trade",
+      "related": ["fur-trade"]
     },
     {
       "id": "trade-route",
@@ -810,7 +834,8 @@
     {
       "id": "goldsmith",
       "zh": "金匠",
-      "en": "Goldsmith"
+      "en": "Goldsmith",
+      "related": ["blacksmith"]
     },
     {
       "id": "tax-farming",
@@ -831,7 +856,8 @@
       "id": "mercantilism",
       "zh": "重商主义",
       "en": "Mercantilism",
-      "forms": { "en": ["mercantilist"] }
+      "forms": { "en": ["mercantilist"] },
+      "related": ["physiocracy"]
     },
     {
       "id": "physiocracy",
@@ -847,7 +873,8 @@
     {
       "id": "new-world",
       "zh": "新大陆",
-      "en": "New World"
+      "en": "New World",
+      "related": ["old-world"]
     },
     {
       "id": "old-world",
@@ -872,7 +899,8 @@
     {
       "id": "age-of-sail",
       "zh": "风帆时代",
-      "en": "Age of Sail"
+      "en": "Age of Sail",
+      "related": ["age-of-steam"]
     },
     {
       "id": "scurvy",
@@ -882,7 +910,8 @@
     {
       "id": "el-dorado",
       "zh": "黄金国",
-      "en": "El Dorado"
+      "en": "El Dorado",
+      "related": ["atlantis"]
     },
     {
       "id": "gold-rush",
@@ -907,7 +936,8 @@
     {
       "id": "tavern",
       "zh": "酒馆",
-      "en": "Tavern"
+      "en": "Tavern",
+      "related": ["coffeehouse"]
     },
     {
       "id": "pendulum-clock",
@@ -953,7 +983,8 @@
     {
       "id": "trivium",
       "zh": "三艺",
-      "en": "Trivium"
+      "en": "Trivium",
+      "related": ["quadrivium"]
     },
     {
       "id": "quadrivium",
@@ -1045,7 +1076,8 @@
     {
       "id": "phlogiston",
       "zh": "燃素",
-      "en": "Phlogiston"
+      "en": "Phlogiston",
+      "related": ["caloric"]
     },
     {
       "id": "vitalism",
@@ -1067,7 +1099,8 @@
     {
       "id": "camera-obscura",
       "zh": "暗箱",
-      "en": "Camera obscura"
+      "en": "Camera obscura",
+      "related": ["magic-lantern"]
     },
     {
       "id": "magic-lantern",
@@ -1082,7 +1115,8 @@
     {
       "id": "spinning-jenny",
       "zh": "珍妮纺纱机",
-      "en": "Spinning jenny"
+      "en": "Spinning jenny",
+      "related": ["flying-shuttle"]
     },
     {
       "id": "flying-shuttle",
@@ -1209,7 +1243,8 @@
     {
       "id": "microhistory",
       "zh": "微观史",
-      "en": "Microhistory"
+      "en": "Microhistory",
+      "related": ["big-history"]
     },
     {
       "id": "global-history",
@@ -1281,7 +1316,8 @@
     {
       "id": "memphis",
       "zh": "孟菲斯",
-      "en": "Memphis"
+      "en": "Memphis",
+      "related": ["thebes"]
     },
     {
       "id": "thebes",
@@ -1296,7 +1332,8 @@
     {
       "id": "emperor",
       "zh": "皇帝",
-      "en": "Emperor"
+      "en": "Emperor",
+      "related": ["king"]
     },
     {
       "id": "bishop",
@@ -1342,7 +1379,8 @@
     {
       "id": "memoir",
       "zh": "回忆录",
-      "en": "Memoir"
+      "en": "Memoir",
+      "related": ["biography"]
     },
     {
       "id": "atomism",

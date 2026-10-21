@@ -31,12 +31,14 @@
     {
       "id": "potentiometer",
       "zh": "电位器",
-      "en": "Potentiometer"
+      "en": "Potentiometer",
+      "related": ["encoder"]
     },
     {
       "id": "relay",
       "zh": "继电器",
-      "en": "Relay"
+      "en": "Relay",
+      "related": ["optocoupler"]
     },
     {
       "id": "amplifier",
@@ -48,13 +50,15 @@
       "id": "op-amp",
       "zh": "运算放大器",
       "en": "Op amp",
-      "forms": { "zh": ["运放"], "en": ["operational amplifier"] }
+      "forms": { "zh": ["运放"], "en": ["operational amplifier"] },
+      "related": ["comparator"]
     },
     {
       "id": "rectifier",
       "zh": "整流器",
       "en": "Rectifier",
-      "forms": { "en": ["rectify", "rectification"] }
+      "forms": { "en": ["rectify", "rectification"] },
+      "related": ["inverter"]
     },
     {
       "id": "inverter",
@@ -70,7 +74,8 @@
       "id": "ac",
       "zh": "交流电",
       "en": "AC",
-      "forms": { "en": ["alternating current"] }
+      "forms": { "en": ["alternating current"] },
+      "related": ["dc"]
     },
     {
       "id": "dc",
@@ -81,7 +86,8 @@
     {
       "id": "grounding",
       "zh": "接地",
-      "en": "Grounding"
+      "en": "Grounding",
+      "related": ["shielding"]
     },
     {
       "id": "power-grid",
@@ -111,7 +117,8 @@
     {
       "id": "blackout",
       "zh": "停电",
-      "en": "Blackout"
+      "en": "Blackout",
+      "related": ["surge"]
     },
     {
       "id": "surge",
@@ -192,7 +199,8 @@
       "id": "fpga",
       "zh": "FPGA",
       "en": "FPGA",
-      "forms": { "zh": ["现场可编程门阵列"], "en": ["field-programmable gate array"] }
+      "forms": { "zh": ["现场可编程门阵列"], "en": ["field-programmable gate array"] },
+      "related": ["asic"]
     },
     {
       "id": "embedded",
@@ -230,7 +238,8 @@
     {
       "id": "thermistor",
       "zh": "热敏电阻",
-      "en": "Thermistor"
+      "en": "Thermistor",
+      "related": ["photoresistor"]
     },
     {
       "id": "accelerometer",
@@ -241,7 +250,8 @@
       "id": "microphone",
       "zh": "麦克风",
       "en": "Microphone",
-      "forms": { "en": ["mic"] }
+      "forms": { "en": ["mic"] },
+      "related": ["loudspeaker"]
     },
     {
       "id": "loudspeaker",
@@ -256,7 +266,8 @@
     {
       "id": "waveguide",
       "zh": "波导",
-      "en": "Waveguide"
+      "en": "Waveguide",
+      "related": ["microstrip"]
     },
     {
       "id": "thyristor",
@@ -361,7 +372,8 @@
       "id": "snr",
       "zh": "信噪比",
       "en": "SNR",
-      "forms": { "en": ["signal-to-noise ratio"] }
+      "forms": { "en": ["signal-to-noise ratio"] },
+      "related": ["bit-error-rate"]
     },
     {
       "id": "gain",
@@ -371,12 +383,14 @@
     {
       "id": "feedback",
       "zh": "反馈",
-      "en": "Feedback"
+      "en": "Feedback",
+      "related": ["feedforward"]
     },
     {
       "id": "closed-loop",
       "zh": "闭环",
-      "en": "Closed loop"
+      "en": "Closed loop",
+      "related": ["open-loop"]
     },
     {
       "id": "open-loop",
@@ -391,13 +405,15 @@
     {
       "id": "actuator",
       "zh": "执行器",
-      "en": "Actuator"
+      "en": "Actuator",
+      "related": ["sensor"]
     },
     {
       "id": "pid",
       "zh": "PID",
       "en": "PID",
-      "forms": { "zh": ["比例积分微分"], "en": ["proportional-integral-derivative"] }
+      "forms": { "zh": ["比例积分微分"], "en": ["proportional-integral-derivative"] },
+      "related": ["mpc"]
     },
     {
       "id": "plc",
@@ -428,7 +444,8 @@
     {
       "id": "bode-plot",
       "zh": "伯德图",
-      "en": "Bode plot"
+      "en": "Bode plot",
+      "related": ["nyquist-plot"]
     },
     {
       "id": "root-locus",
@@ -443,7 +460,8 @@
     {
       "id": "thermostat",
       "zh": "恒温器",
-      "en": "Thermostat"
+      "en": "Thermostat",
+      "related": ["governor"]
     },
     {
       "id": "governor",
@@ -474,7 +492,8 @@
     {
       "id": "schematic",
       "zh": "原理图",
-      "en": "Schematic"
+      "en": "Schematic",
+      "related": ["block-diagram"]
     },
     {
       "id": "maintenance",
@@ -495,7 +514,8 @@
     {
       "id": "gear",
       "zh": "齿轮",
-      "en": "Gear"
+      "en": "Gear",
+      "related": ["sprocket"]
     },
     {
       "id": "bearing",
@@ -550,7 +570,8 @@
     {
       "id": "chain",
       "zh": "链条",
-      "en": "Chain"
+      "en": "Chain",
+      "related": ["timing-belt"]
     },
     {
       "id": "screw",
@@ -565,7 +586,8 @@
     {
       "id": "nut",
       "zh": "螺母",
-      "en": "Nut"
+      "en": "Nut",
+      "related": ["washer"]
     },
     {
       "id": "washer",
@@ -580,7 +602,8 @@
     {
       "id": "screwdriver",
       "zh": "螺丝刀",
-      "en": "Screwdriver"
+      "en": "Screwdriver",
+      "related": ["wrench"]
     },
     {
       "id": "wrench",
@@ -595,7 +618,8 @@
     {
       "id": "jack",
       "zh": "千斤顶",
-      "en": "Jack"
+      "en": "Jack",
+      "related": ["winch"]
     },
     {
       "id": "ratchet",
@@ -605,7 +629,8 @@
     {
       "id": "flywheel",
       "zh": "飞轮",
-      "en": "Flywheel"
+      "en": "Flywheel",
+      "related": ["mainspring"]
     },
     {
       "id": "mainspring",
@@ -620,7 +645,8 @@
     {
       "id": "pump",
       "zh": "泵",
-      "en": "Pump"
+      "en": "Pump",
+      "related": ["compressor"]
     },
     {
       "id": "compressor",
@@ -641,12 +667,14 @@
     {
       "id": "engine",
       "zh": "发动机",
-      "en": "Engine"
+      "en": "Engine",
+      "related": ["motor"]
     },
     {
       "id": "steam-engine",
       "zh": "蒸汽机",
-      "en": "Steam engine"
+      "en": "Steam engine",
+      "related": ["diesel-engine"]
     },
     {
       "id": "diesel-engine",
@@ -689,7 +717,8 @@
     {
       "id": "hydraulics",
       "zh": "液压",
-      "en": "Hydraulics"
+      "en": "Hydraulics",
+      "related": ["pneumatics"]
     },
     {
       "id": "pneumatics",
@@ -736,7 +765,8 @@
       "id": "refrigeration",
       "zh": "制冷",
       "en": "Refrigeration",
-      "forms": { "en": ["refrigerant"] }
+      "forms": { "en": ["refrigerant"] },
+      "related": ["ventilation"]
     },
     {
       "id": "hvac",
@@ -783,7 +813,8 @@
     {
       "id": "planetary-gear",
       "zh": "行星齿轮",
-      "en": "Planetary gear"
+      "en": "Planetary gear",
+      "related": ["harmonic-drive"]
     },
     {
       "id": "fixture",
@@ -823,7 +854,8 @@
     {
       "id": "stress",
       "zh": "应力",
-      "en": "Stress"
+      "en": "Stress",
+      "related": ["strain"]
     },
     {
       "id": "strain",
@@ -855,7 +887,8 @@
       "id": "stiffness",
       "zh": "刚度",
       "en": "Stiffness",
-      "forms": { "en": ["stiff"] }
+      "forms": { "en": ["stiff"] },
+      "related": ["strength"]
     },
     {
       "id": "strength",
@@ -907,7 +940,8 @@
     {
       "id": "lathe",
       "zh": "车床",
-      "en": "Lathe"
+      "en": "Lathe",
+      "related": ["drill-press"]
     },
     {
       "id": "cnc",
@@ -929,7 +963,8 @@
     {
       "id": "casting",
       "zh": "铸造",
-      "en": "Casting"
+      "en": "Casting",
+      "related": ["forging"]
     },
     {
       "id": "forging",
@@ -951,7 +986,8 @@
       "id": "extrusion",
       "zh": "挤出",
       "en": "Extrusion",
-      "forms": { "en": ["extrude"] }
+      "forms": { "en": ["extrude"] },
+      "related": ["rolling"]
     },
     {
       "id": "laser-cutting",
@@ -973,7 +1009,8 @@
       "id": "caliper",
       "zh": "卡尺",
       "en": "Caliper",
-      "forms": { "en": ["calliper"] }
+      "forms": { "en": ["calliper"] },
+      "related": ["micrometer"]
     },
     {
       "id": "micrometer",
@@ -989,7 +1026,8 @@
       "id": "cad",
       "zh": "CAD",
       "en": "CAD",
-      "forms": { "zh": ["计算机辅助设计"], "en": ["computer-aided design"] }
+      "forms": { "zh": ["计算机辅助设计"], "en": ["computer-aided design"] },
+      "related": ["cae"]
     },
     {
       "id": "specification",
@@ -1000,7 +1038,8 @@
     {
       "id": "bridge",
       "zh": "桥梁",
-      "en": "Bridge"
+      "en": "Bridge",
+      "related": ["tunnel"]
     },
     {
       "id": "arch-bridge",
@@ -1041,12 +1080,14 @@
     {
       "id": "crane",
       "zh": "起重机",
-      "en": "Crane"
+      "en": "Crane",
+      "related": ["forklift"]
     },
     {
       "id": "excavator",
       "zh": "挖掘机",
-      "en": "Excavator"
+      "en": "Excavator",
+      "related": ["bulldozer"]
     },
     {
       "id": "bulldozer",
@@ -1081,7 +1122,8 @@
     {
       "id": "levee",
       "zh": "堤防",
-      "en": "Levee"
+      "en": "Levee",
+      "related": ["retaining-wall"]
     },
     {
       "id": "floodgate",
@@ -1091,7 +1133,8 @@
     {
       "id": "aqueduct",
       "zh": "渡槽",
-      "en": "Aqueduct"
+      "en": "Aqueduct",
+      "related": ["viaduct"]
     },
     {
       "id": "sewer",
@@ -1118,7 +1161,8 @@
     {
       "id": "interchange",
       "zh": "立交桥",
-      "en": "Interchange"
+      "en": "Interchange",
+      "related": ["roundabout"]
     },
     {
       "id": "subway",
@@ -1209,7 +1253,8 @@
     {
       "id": "zebra-crossing",
       "zh": "斑马线",
-      "en": "Zebra crossing"
+      "en": "Zebra crossing",
+      "related": ["footbridge"]
     },
     {
       "id": "footbridge",
@@ -1254,7 +1299,8 @@
     {
       "id": "lift",
       "zh": "升力",
-      "en": "Lift"
+      "en": "Lift",
+      "related": ["drag"]
     },
     {
       "id": "drag",
@@ -1285,7 +1331,8 @@
       "id": "brake",
       "zh": "刹车",
       "en": "Brake",
-      "forms": { "en": ["braking"] }
+      "forms": { "en": ["braking"] },
+      "related": ["throttle"]
     },
     {
       "id": "steering-wheel",
@@ -1301,7 +1348,8 @@
     {
       "id": "airbag",
       "zh": "安全气囊",
-      "en": "Airbag"
+      "en": "Airbag",
+      "related": ["seat-belt"]
     },
     {
       "id": "seat-belt",
@@ -1321,7 +1369,8 @@
     {
       "id": "odometer",
       "zh": "里程表",
-      "en": "Odometer"
+      "en": "Odometer",
+      "related": ["tachometer"]
     },
     {
       "id": "dashboard",
@@ -1331,7 +1380,8 @@
     {
       "id": "hull",
       "zh": "船体",
-      "en": "Hull"
+      "en": "Hull",
+      "related": ["fuselage"]
     },
     {
       "id": "keel",
@@ -1376,7 +1426,8 @@
     {
       "id": "flap",
       "zh": "襟翼",
-      "en": "Flap"
+      "en": "Flap",
+      "related": ["aileron"]
     },
     {
       "id": "stall",
@@ -1445,7 +1496,8 @@
       "id": "adc",
       "zh": "模数转换器",
       "en": "ADC",
-      "forms": { "en": ["analog-to-digital converter"] }
+      "forms": { "en": ["analog-to-digital converter"] },
+      "related": ["dac"]
     },
     {
       "id": "dac",
@@ -1515,7 +1567,8 @@
     {
       "id": "counter",
       "zh": "计数器",
-      "en": "Counter"
+      "en": "Counter",
+      "related": ["timer"]
     },
     {
       "id": "timer",
@@ -1665,7 +1718,8 @@
     {
       "id": "transmitter",
       "zh": "发射机",
-      "en": "Transmitter"
+      "en": "Transmitter",
+      "related": ["receiver"]
     },
     {
       "id": "receiver",
@@ -1687,7 +1741,8 @@
       "id": "ofdm",
       "zh": "OFDM",
       "en": "OFDM",
-      "forms": { "zh": ["正交频分复用"], "en": ["orthogonal frequency-division multiplexing"] }
+      "forms": { "zh": ["正交频分复用"], "en": ["orthogonal frequency-division multiplexing"] },
+      "related": ["cdma"]
     },
     {
       "id": "beamforming",
@@ -1708,7 +1763,8 @@
       "id": "coaxial-cable",
       "zh": "同轴电缆",
       "en": "Coaxial cable",
-      "forms": { "en": ["coax"] }
+      "forms": { "en": ["coax"] },
+      "related": ["twisted-pair"]
     },
     {
       "id": "twisted-pair",
@@ -1925,7 +1981,8 @@
     {
       "id": "turning",
       "zh": "车削",
-      "en": "Turning"
+      "en": "Turning",
+      "related": ["boring"]
     },
     {
       "id": "boring",
@@ -2003,7 +2060,8 @@
     {
       "id": "control-chart",
       "zh": "控制图",
-      "en": "Control chart"
+      "en": "Control chart",
+      "related": ["pareto-chart"]
     },
     {
       "id": "pareto-chart",
@@ -2096,7 +2154,8 @@
     {
       "id": "autopilot",
       "zh": "自动驾驶仪",
-      "en": "Autopilot"
+      "en": "Autopilot",
+      "related": ["cruise-control"]
     },
     {
       "id": "airship",
@@ -2371,7 +2430,8 @@
     {
       "id": "chamfer",
       "zh": "倒角",
-      "en": "Chamfer"
+      "en": "Chamfer",
+      "related": ["fillet"]
     },
     {
       "id": "fillet",
@@ -2381,7 +2441,8 @@
     {
       "id": "section-view",
       "zh": "剖视图",
-      "en": "Section view"
+      "en": "Section view",
+      "related": ["exploded-view"]
     },
     {
       "id": "exploded-view",
@@ -2391,7 +2452,8 @@
     {
       "id": "mecanum-wheel",
       "zh": "麦克纳姆轮",
-      "en": "Mecanum wheel"
+      "en": "Mecanum wheel",
+      "related": ["omni-wheel"]
     },
     {
       "id": "suction-cup",
@@ -2490,7 +2552,8 @@
     {
       "id": "settling-time",
       "zh": "调节时间",
-      "en": "Settling time"
+      "en": "Settling time",
+      "related": ["rise-time"]
     },
     {
       "id": "decoupling",

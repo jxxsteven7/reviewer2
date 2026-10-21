@@ -9,13 +9,15 @@
     {
       "id": "renaissance",
       "zh": "文艺复兴",
-      "en": "Renaissance"
+      "en": "Renaissance",
+      "related": ["enlightenment"]
     },
     {
       "id": "metaphor",
       "zh": "隐喻",
       "en": "Metaphor",
-      "forms": { "en": ["metaphorical"] }
+      "forms": { "en": ["metaphorical"] },
+      "related": ["simile"]
     },
     {
       "id": "utopia",
@@ -51,7 +53,8 @@
       "id": "existentialism",
       "zh": "存在主义",
       "en": "Existentialism",
-      "forms": { "en": ["existentialist", "existential"] }
+      "forms": { "en": ["existentialist", "existential"] },
+      "related": ["absurdism"]
     },
     {
       "id": "civilization",
@@ -87,7 +90,8 @@
       "id": "hegemony",
       "zh": "霸权",
       "en": "Hegemony",
-      "forms": { "en": ["hegemonic"] }
+      "forms": { "en": ["hegemonic"] },
+      "related": ["soft-power"]
     },
     {
       "id": "silk-road",
@@ -110,7 +114,8 @@
       "id": "anthropology",
       "zh": "人类学",
       "en": "Anthropology",
-      "forms": { "en": ["anthropologist", "anthropological"] }
+      "forms": { "en": ["anthropologist", "anthropological"] },
+      "related": ["sociology"]
     },
     {
       "id": "aesthetics",
@@ -134,7 +139,8 @@
       "id": "epistemology",
       "zh": "认识论",
       "en": "Epistemology",
-      "forms": { "en": ["epistemic", "epistemological"] }
+      "forms": { "en": ["epistemic", "epistemological"] },
+      "related": ["ontology"]
     },
     {
       "id": "metaphysics",
@@ -158,7 +164,8 @@
       "id": "materialism",
       "zh": "唯物主义",
       "en": "Materialism",
-      "forms": { "en": ["materialist"] }
+      "forms": { "en": ["materialist"] },
+      "related": ["idealism"]
     },
     {
       "id": "idealism",
@@ -176,7 +183,8 @@
       "id": "utilitarianism",
       "zh": "功利主义",
       "en": "Utilitarianism",
-      "forms": { "en": ["utilitarian"] }
+      "forms": { "en": ["utilitarian"] },
+      "related": ["deontology"]
     },
     {
       "id": "pragmatism",
@@ -188,7 +196,8 @@
       "id": "rationalism",
       "zh": "理性主义",
       "en": "Rationalism",
-      "forms": { "en": ["rationalist", "rational"] }
+      "forms": { "en": ["rationalist", "rational"] },
+      "related": ["empiricism"]
     },
     {
       "id": "empiricism",
@@ -257,13 +266,15 @@
       "id": "phenomenology",
       "zh": "现象学",
       "en": "Phenomenology",
-      "forms": { "en": ["phenomenological"] }
+      "forms": { "en": ["phenomenological"] },
+      "related": ["hermeneutics"]
     },
     {
       "id": "deconstruction",
       "zh": "解构",
       "en": "Deconstruction",
-      "forms": { "en": ["deconstruct", "deconstructive"] }
+      "forms": { "en": ["deconstruct", "deconstructive"] },
+      "related": ["structuralism"]
     },
     {
       "id": "structuralism",
@@ -275,7 +286,8 @@
       "id": "alienation",
       "zh": "异化",
       "en": "Alienation",
-      "forms": { "en": ["alienate", "alienated"] }
+      "forms": { "en": ["alienate", "alienated"] },
+      "related": ["anomie"]
     },
     {
       "id": "subjectivity",
@@ -311,13 +323,15 @@
       "id": "dualism",
       "zh": "二元论",
       "en": "Dualism",
-      "forms": { "en": ["dualist", "dualistic"] }
+      "forms": { "en": ["dualist", "dualistic"] },
+      "related": ["monism"]
     },
     {
       "id": "cynicism",
       "zh": "犬儒主义",
       "en": "Cynicism",
-      "forms": { "en": ["cynic", "cynical"] }
+      "forms": { "en": ["cynic", "cynical"] },
+      "related": ["stoicism"]
     },
     {
       "id": "stoicism",
@@ -329,7 +343,8 @@
       "id": "hedonism",
       "zh": "享乐主义",
       "en": "Hedonism",
-      "forms": { "en": ["hedonist", "hedonistic"] }
+      "forms": { "en": ["hedonist", "hedonistic"] },
+      "related": ["asceticism"]
     },
     {
       "id": "category",
@@ -355,12 +370,14 @@
     {
       "id": "brain-in-a-vat",
       "zh": "缸中之脑",
-      "en": "Brain in a vat"
+      "en": "Brain in a vat",
+      "related": ["platos-cave"]
     },
     {
       "id": "chinese-room",
       "zh": "中文房间",
-      "en": "Chinese room"
+      "en": "Chinese room",
+      "related": ["marys-room"]
     },
     {
       "id": "leviathan",
@@ -377,7 +394,8 @@
       "id": "confucianism",
       "zh": "儒家",
       "en": "Confucianism",
-      "forms": { "en": ["Confucian"] }
+      "forms": { "en": ["Confucian"] },
+      "related": ["taoism"]
     },
     {
       "id": "taoism",
@@ -394,12 +412,14 @@
       "id": "yin-and-yang",
       "zh": "阴阳",
       "en": "Yin and yang",
-      "forms": { "en": ["yin-yang"] }
+      "forms": { "en": ["yin-yang"] },
+      "related": ["five-elements"]
     },
     {
       "id": "analects",
       "zh": "论语",
-      "en": "Analects"
+      "en": "Analects",
+      "related": ["tao-te-ching"]
     },
     {
       "id": "tao-te-ching",
@@ -422,7 +442,8 @@
     {
       "id": "bronze-age",
       "zh": "青铜时代",
-      "en": "Bronze Age"
+      "en": "Bronze Age",
+      "related": ["stone-age"]
     },
     {
       "id": "stone-age",
@@ -480,7 +501,8 @@
       "id": "hieroglyph",
       "zh": "象形文字",
       "en": "Hieroglyph",
-      "forms": { "en": ["hieroglyphic"] }
+      "forms": { "en": ["hieroglyphic"] },
+      "related": ["cuneiform"]
     },
     {
       "id": "cuneiform",
@@ -545,7 +567,8 @@
       "id": "tribe",
       "zh": "部落",
       "en": "Tribe",
-      "forms": { "en": ["tribal", "tribalism"] }
+      "forms": { "en": ["tribal", "tribalism"] },
+      "related": ["clan"]
     },
     {
       "id": "pompeii",
@@ -567,7 +590,8 @@
       "id": "knight",
       "zh": "骑士",
       "en": "Knight",
-      "forms": { "en": ["knighthood"] }
+      "forms": { "en": ["knighthood"] },
+      "related": ["samurai"]
     },
     {
       "id": "samurai",
@@ -594,13 +618,15 @@
     {
       "id": "epic",
       "zh": "史诗",
-      "en": "Epic"
+      "en": "Epic",
+      "related": ["lyric"]
     },
     {
       "id": "tragedy",
       "zh": "悲剧",
       "en": "Tragedy",
-      "forms": { "en": ["tragic"] }
+      "forms": { "en": ["tragic"] },
+      "related": ["comedy"]
     },
     {
       "id": "comedy",
@@ -623,7 +649,8 @@
     {
       "id": "fable",
       "zh": "寓言",
-      "en": "Fable"
+      "en": "Fable",
+      "related": ["fairy-tale"]
     },
     {
       "id": "fairy-tale",
@@ -634,7 +661,8 @@
       "id": "romanticism",
       "zh": "浪漫主义",
       "en": "Romanticism",
-      "forms": { "en": ["romantic"] }
+      "forms": { "en": ["romantic"] },
+      "related": ["realism"]
     },
     {
       "id": "realism",
@@ -651,13 +679,15 @@
       "id": "villain",
       "zh": "反派",
       "en": "Villain",
-      "forms": { "en": ["villainous", "villainy"] }
+      "forms": { "en": ["villainous", "villainy"] },
+      "related": ["hero"]
     },
     {
       "id": "foreshadowing",
       "zh": "伏笔",
       "en": "Foreshadowing",
-      "forms": { "en": ["foreshadow"] }
+      "forms": { "en": ["foreshadow"] },
+      "related": ["plot-twist"]
     },
     {
       "id": "rhetoric",
@@ -679,7 +709,8 @@
     {
       "id": "sonnet",
       "zh": "十四行诗",
-      "en": "Sonnet"
+      "en": "Sonnet",
+      "related": ["haiku"]
     },
     {
       "id": "prose",
@@ -691,7 +722,8 @@
       "id": "satire",
       "zh": "讽刺",
       "en": "Satire",
-      "forms": { "en": ["satirical", "satirist", "satirize"] }
+      "forms": { "en": ["satirical", "satirist", "satirize"] },
+      "related": ["parody"]
     },
     {
       "id": "allusion",
@@ -749,7 +781,8 @@
       "id": "science-fiction",
       "zh": "科幻",
       "en": "Science fiction",
-      "forms": { "en": ["sci-fi"] }
+      "forms": { "en": ["sci-fi"] },
+      "related": ["fantasy"]
     },
     {
       "id": "translation",
@@ -781,7 +814,8 @@
     {
       "id": "epilogue",
       "zh": "尾声",
-      "en": "Epilogue"
+      "en": "Epilogue",
+      "related": ["prologue"]
     },
     {
       "id": "pen-name",
@@ -797,24 +831,28 @@
     {
       "id": "odyssey",
       "zh": "奥德赛",
-      "en": "Odyssey"
+      "en": "Odyssey",
+      "related": ["iliad"]
     },
     {
       "id": "prometheus",
       "zh": "普罗米修斯",
       "en": "Prometheus",
-      "forms": { "en": ["Promethean"] }
+      "forms": { "en": ["Promethean"] },
+      "related": ["sisyphus"]
     },
     {
       "id": "sphinx",
       "zh": "斯芬克斯",
-      "en": "Sphinx"
+      "en": "Sphinx",
+      "related": ["griffin"]
     },
     {
       "id": "faust",
       "zh": "浮士德",
       "en": "Faust",
-      "forms": { "en": ["Faustian"] }
+      "forms": { "en": ["Faustian"] },
+      "related": ["frankenstein"]
     },
     {
       "id": "hamlet",
@@ -920,7 +958,8 @@
       "id": "idiom",
       "zh": "成语",
       "en": "Idiom",
-      "forms": { "en": ["idiomatic"] }
+      "forms": { "en": ["idiomatic"] },
+      "related": ["proverb"]
     },
     {
       "id": "corpus",
@@ -994,7 +1033,8 @@
       "id": "urbanization",
       "zh": "城市化",
       "en": "Urbanization",
-      "forms": { "en": ["urbanisation", "urbanize"] }
+      "forms": { "en": ["urbanisation", "urbanize"] },
+      "related": ["gentrification"]
     },
     {
       "id": "class",
@@ -1034,7 +1074,8 @@
       "id": "stereotype",
       "zh": "刻板印象",
       "en": "Stereotype",
-      "forms": { "en": ["stereotypical", "stereotyping"] }
+      "forms": { "en": ["stereotypical", "stereotyping"] },
+      "related": ["prejudice"]
     },
     {
       "id": "prejudice",
@@ -1132,7 +1173,8 @@
       "id": "panopticon",
       "zh": "圆形监狱",
       "en": "Panopticon",
-      "forms": { "en": ["panoptic"] }
+      "forms": { "en": ["panoptic"] },
+      "related": ["iron-cage"]
     },
     {
       "id": "nostalgia",
@@ -1250,7 +1292,8 @@
     {
       "id": "clickbait",
       "zh": "标题党",
-      "en": "Clickbait"
+      "en": "Clickbait",
+      "related": ["fake-news"]
     },
     {
       "id": "fake-news",
@@ -1294,7 +1337,8 @@
     {
       "id": "superego",
       "zh": "超我",
-      "en": "Superego"
+      "en": "Superego",
+      "related": ["id"]
     },
     {
       "id": "id",
@@ -1414,7 +1458,8 @@
       "id": "introversion",
       "zh": "内向",
       "en": "Introversion",
-      "forms": { "en": ["introvert", "introverted"] }
+      "forms": { "en": ["introvert", "introverted"] },
+      "related": ["extraversion"]
     },
     {
       "id": "extraversion",
@@ -1570,7 +1615,8 @@
       "id": "impressionism",
       "zh": "印象派",
       "en": "Impressionism",
-      "forms": { "en": ["impressionist"] }
+      "forms": { "en": ["impressionist"] },
+      "related": ["cubism"]
     },
     {
       "id": "cubism",
@@ -1582,7 +1628,8 @@
       "id": "surrealism",
       "zh": "超现实主义",
       "en": "Surrealism",
-      "forms": { "en": ["surrealist", "surreal"] }
+      "forms": { "en": ["surrealist", "surreal"] },
+      "related": ["dadaism"]
     },
     {
       "id": "abstract-art",
@@ -1738,17 +1785,20 @@
     {
       "id": "straw-man",
       "zh": "稻草人谬误",
-      "en": "Straw man"
+      "en": "Straw man",
+      "related": ["red-herring"]
     },
     {
       "id": "slippery-slope",
       "zh": "滑坡谬误",
-      "en": "Slippery slope"
+      "en": "Slippery slope",
+      "related": ["ad-hominem"]
     },
     {
       "id": "liar-paradox",
       "zh": "说谎者悖论",
-      "en": "Liar paradox"
+      "en": "Liar paradox",
+      "related": ["zenos-paradox"]
     },
     {
       "id": "zenos-paradox",
@@ -1853,7 +1903,8 @@
       "id": "reductionism",
       "zh": "还原论",
       "en": "Reductionism",
-      "forms": { "en": ["reductionist", "reductive"] }
+      "forms": { "en": ["reductionist", "reductive"] },
+      "related": ["holism"]
     },
     {
       "id": "holism",
@@ -1992,7 +2043,8 @@
       "id": "karma",
       "zh": "业力",
       "en": "Karma",
-      "forms": { "en": ["karmic"] }
+      "forms": { "en": ["karmic"] },
+      "related": ["samsara"]
     },
     {
       "id": "nirvana",
@@ -2008,7 +2060,8 @@
       "id": "monotheism",
       "zh": "一神教",
       "en": "Monotheism",
-      "forms": { "en": ["monotheistic", "monotheist"] }
+      "forms": { "en": ["monotheistic", "monotheist"] },
+      "related": ["polytheism"]
     },
     {
       "id": "polytheism",
@@ -2026,7 +2079,8 @@
       "id": "atheism",
       "zh": "无神论",
       "en": "Atheism",
-      "forms": { "en": ["atheist", "atheistic"] }
+      "forms": { "en": ["atheist", "atheistic"] },
+      "related": ["agnosticism"]
     },
     {
       "id": "agnosticism",
@@ -2137,7 +2191,8 @@
     {
       "id": "zeus",
       "zh": "宙斯",
-      "en": "Zeus"
+      "en": "Zeus",
+      "related": ["odin"]
     },
     {
       "id": "athena",
@@ -2148,7 +2203,8 @@
       "id": "hercules",
       "zh": "赫拉克勒斯",
       "en": "Hercules",
-      "forms": { "en": ["Heracles"] }
+      "forms": { "en": ["Heracles"] },
+      "related": ["achilles"]
     },
     {
       "id": "achilles",
@@ -2180,7 +2236,8 @@
     {
       "id": "minotaur",
       "zh": "弥诺陶洛斯",
-      "en": "Minotaur"
+      "en": "Minotaur",
+      "related": ["centaur"]
     },
     {
       "id": "trojan-horse",
@@ -2210,7 +2267,8 @@
     {
       "id": "nuwa",
       "zh": "女娲",
-      "en": "Nüwa"
+      "en": "Nüwa",
+      "related": ["pangu"]
     },
     {
       "id": "pangu",
@@ -2225,7 +2283,8 @@
     {
       "id": "monkey-king",
       "zh": "孙悟空",
-      "en": "Monkey King"
+      "en": "Monkey King",
+      "related": ["nezha"]
     },
     {
       "id": "jade-emperor",
@@ -2240,7 +2299,8 @@
     {
       "id": "dragon",
       "zh": "龙",
-      "en": "Dragon"
+      "en": "Dragon",
+      "related": ["phoenix"]
     },
     {
       "id": "phoenix",
@@ -2255,12 +2315,14 @@
     {
       "id": "mermaid",
       "zh": "美人鱼",
-      "en": "Mermaid"
+      "en": "Mermaid",
+      "related": ["siren"]
     },
     {
       "id": "vampire",
       "zh": "吸血鬼",
-      "en": "Vampire"
+      "en": "Vampire",
+      "related": ["werewolf"]
     },
     {
       "id": "werewolf",
@@ -2516,7 +2578,8 @@
       "id": "elegy",
       "zh": "挽歌",
       "en": "Elegy",
-      "forms": { "en": ["elegiac"] }
+      "forms": { "en": ["elegiac"] },
+      "related": ["ode"]
     },
     {
       "id": "ode",
@@ -2532,7 +2595,8 @@
     {
       "id": "cyberpunk",
       "zh": "赛博朋克",
-      "en": "Cyberpunk"
+      "en": "Cyberpunk",
+      "related": ["steampunk"]
     },
     {
       "id": "steampunk",
@@ -2689,7 +2753,8 @@
       "id": "demon",
       "zh": "恶魔",
       "en": "Demon",
-      "forms": { "en": ["demonic"] }
+      "forms": { "en": ["demonic"] },
+      "related": ["angel"]
     },
     {
       "id": "angel",
@@ -2804,7 +2869,8 @@
     {
       "id": "emptiness",
       "zh": "空性",
-      "en": "Emptiness"
+      "en": "Emptiness",
+      "related": ["impermanence"]
     },
     {
       "id": "impermanence",
