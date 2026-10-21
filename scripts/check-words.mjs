@@ -6,7 +6,8 @@
 //   node scripts/check-words.mjs <file>...    only these files
 //
 // Problems fail the check. Warnings point at terms that may not play well, and don't. Information
-// lists the terms that the game keeps off the same board, and needs no fixing.
+// lists the terms that the game keeps off the same board, and needs no fixing. A list that passes
+// is reported with how many terms it has in each language and how many pairs of related terms.
 //
 // Exit codes: 0 pass (perhaps with warnings), 1 problems found, 2 usage or environment error.
 
@@ -26,6 +27,8 @@ export const MIN_TERMS = 25;
 // Chinese term without Chinese characters, such as "GitHub", is measured as an English one.
 export const MAX_LENGTH = { zh: 5, en: 14 };
 export const MAX_DIFFICULTY = 5;
+// "related" pairs close terms. A term may be in this many pairs at most, so that the pairs vary.
+export const MAX_PAIRS = 3;
 
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const LIST_KEYS = new Set(['id', 'name', 'contributors', 'terms']);
@@ -215,19 +218,26 @@ export function compatible(entries, clashes, enough) {
   return taken;
 }
 
+// A term of a list as the clash check sees it in one language: its word in that language, with its
+// translation and its forms.
+function termEntry(term, language) {
+  const other = LANGUAGES.find((each) => each !== language);
+  const forms =
+    term.forms && typeof term.forms === 'object' && !Array.isArray(term.forms)
+      ? LANGUAGES.flatMap((each) => (Array.isArray(term.forms[each]) ? term.forms[each].filter(isText) : []))
+      : [];
+  return clashEntry(term[language], isText(term[other]) ? [term[other]] : [], forms);
+}
+
 // The pairs of terms of a list that clash, in one language, as indexes into `entries`, and the
 // entries: each term that is a word in that language, once, with its translation and its forms.
 // `texts` maps each key to the first term that has it, as checkWordList() finds them.
 function clashesIn(terms, language, texts) {
-  const other = LANGUAGES.find((each) => each !== language);
-  const entries = [...texts.values()].map(({ index, text }) => {
-    const term = terms[index];
-    const forms =
-      term.forms && typeof term.forms === 'object' && !Array.isArray(term.forms)
-        ? LANGUAGES.flatMap((each) => (Array.isArray(term.forms[each]) ? term.forms[each].filter(isText) : []))
-        : [];
-    return { index, text, entry: clashEntry(text, isText(term[other]) ? [term[other]] : [], forms) };
-  });
+  const entries = [...texts.values()].map(({ index, text }) => ({
+    index,
+    text,
+    entry: termEntry(terms[index], language),
+  }));
   const pairs = [];
   for (let a = 0; a < entries.length; a += 1) {
     for (let b = a + 1; b < entries.length; b += 1) {
@@ -237,6 +247,34 @@ function clashesIn(terms, language, texts) {
   return { entries, pairs };
 }
 
+// Problems with a pair of related terms, which `where` writes. In the game that uses them, most
+// players get one term and one or two get the other, in the room's language, so both terms need
+// both languages, and in neither may they give each other away.
+function checkPair(term, other, where) {
+  const problems = [];
+  const name = describe(other.id);
+  for (const [whose, each] of [
+    ['the term', term],
+    [name, other],
+  ]) {
+    const missing = LANGUAGES.filter((language) => !isText(each[language]));
+    if (missing.length > 0) {
+      problems.push(
+        `${where}: "related" pairs it with ${name}, but ${whose} has no ${missing.map(describe).join(' or ')}: both terms of a pair need "zh" and "en"`,
+      );
+    }
+  }
+  for (const language of LANGUAGES) {
+    if (!isText(term[language]) || !isText(other[language])) continue;
+    if (clash(termEntry(term, language), termEntry(other, language))) {
+      problems.push(
+        `${where}: "related" pairs it with ${name}, but "${language}" ${describe(term[language])} and ${describe(other[language])} give each other away`,
+      );
+    }
+  }
+  return problems;
+}
+
 // Problems and warnings for one parsed list. `file` is its file name, such as "ml.json".
 export function checkWordList(data, file) {
   const problems = [];
@@ -244,7 +282,10 @@ export function checkWordList(data, file) {
   // What players might like to know and doesn't need fixing: the terms that can't share a board.
   const infos = [];
   const counts = Object.fromEntries(LANGUAGES.map((language) => [language, 0]));
-  const result = () => ({ problems, warnings, infos, counts });
+  // Each pair of related terms, by the ids of its two terms, and how many pairs each term is in.
+  const pairs = new Set();
+  const inPairs = new Map();
+  const result = () => ({ problems, warnings, infos, counts, pairs: pairs.size });
 
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     problems.push(`${file}: the file must hold one JSON object`);
@@ -333,7 +374,7 @@ export function checkWordList(data, file) {
       if (!Array.isArray(term.related) || !term.related.every((id) => typeof id === 'string' && ID.test(id))) {
         problems.push(`${where}: "related" must be a list of term ids`);
       } else {
-        links.push({ where, id: term.id, related: term.related });
+        links.push({ where, index, id: term.id, related: term.related });
       }
     }
     if (term.note !== undefined) {
@@ -346,14 +387,34 @@ export function checkWordList(data, file) {
   });
 
   // "related" names other terms of this file, and a term may name one further down the list, so
-  // this waits until every id is known.
-  for (const { where, id, related } of links) {
-    for (const other of new Set(related)) {
+  // this waits until every id is known. Each id that it names makes a pair, written only once.
+  for (const { where, index, id, related } of links) {
+    const named = new Set();
+    for (const other of related) {
+      if (named.has(other)) {
+        problems.push(`${where}: "related" names ${describe(other)} twice`);
+        continue;
+      }
+      named.add(other);
+      const pair = [id, other].sort().join(' ');
       if (other === id) {
         problems.push(`${where}: "related" names the term itself`);
       } else if (!ids.has(other)) {
         problems.push(`${where}: "related" names ${describe(other)}, which is not the id of a term in this file`);
+      } else if (pairs.has(pair)) {
+        problems.push(`${where}: "related" names ${describe(other)}, which names this term too: write each pair once`);
+      } else {
+        pairs.add(pair);
+        for (const each of [id, other]) inPairs.set(each, (inPairs.get(each) ?? 0) + 1);
+        problems.push(...checkPair(data.terms[index], data.terms[ids.get(other)], where));
       }
+    }
+  }
+  for (const [id, count] of inPairs) {
+    if (count > MAX_PAIRS) {
+      problems.push(
+        `${file}: terms[${ids.get(id)}] (${id}): is in ${count} pairs of related terms, but a term may be in ${MAX_PAIRS} at most`,
+      );
     }
   }
 
@@ -607,7 +668,8 @@ export function main(argv, wordsDir = join(root, 'words')) {
     for (const message of result.warnings) print('warning', message);
     if (result.problems.length === 0) {
       const counts = LANGUAGES.map((language) => `${result.counts[language]} ${language}`).join(', ');
-      console.log(`check-words: OK ${basename(path)} (${counts})`);
+      const pairs = `${result.pairs} related ${result.pairs === 1 ? 'pair' : 'pairs'}`;
+      console.log(`check-words: OK ${basename(path)} (${counts}, ${pairs})`);
     }
     problems += result.problems.length;
   }

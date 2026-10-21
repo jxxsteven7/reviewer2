@@ -168,12 +168,12 @@ describe('a term', () => {
   });
 
   test('may be related only to other terms of the same file', () => {
-    const related = (...ids) => withTerm({ id: 'rel', en: 'Rel', related: ids }).problems;
+    const related = (...ids) => withTerm({ id: 'rel', zh: ATTENTION, en: 'Rel', related: ids }).problems;
     assert.deepEqual(related('term-1', 'term-2'), []);
     assert.ok(has(related('term-1', 'nope'), /\(rel\): "related" names "nope", which is not the id of a term/));
     assert.ok(has(related('rel'), /\(rel\): "related" names the term itself/));
     // A term may name one that comes after it.
-    const forward = [{ id: 'first', en: 'First', related: ['term-3'] }, ...terms(MIN_TERMS)];
+    const forward = [{ id: 'first', zh: ATTENTION, en: 'First', related: ['term-3'] }, ...terms(MIN_TERMS)];
     assert.deepEqual(check(list({ terms: forward })).problems, []);
   });
 
@@ -370,6 +370,67 @@ describe('terms that give each other away', () => {
   });
 });
 
+describe('related terms', () => {
+  const PRECISION = '\u7cbe\u786e\u7387';
+  const RECALL = '\u53ec\u56de\u7387';
+  const GENE = '\u57fa\u56e0';
+  const GENE_EDITING = '\u57fa\u56e0\u7f16\u8f91';
+  const precision = { id: 'precision', zh: PRECISION, en: 'Precision' };
+  const recall = { id: 'recall', zh: RECALL, en: 'Recall' };
+  const withTerms = (...extra) => check(list({ terms: [...terms(MIN_TERMS), ...extra] }));
+
+  test('make pairs, which are counted', () => {
+    const result = withTerms({ ...precision, related: ['recall'] }, recall);
+    assert.deepEqual(result.problems, []);
+    assert.equal(result.pairs, 1);
+    assert.equal(check(list()).pairs, 0);
+  });
+
+  test('write each pair once', () => {
+    const both = withTerms({ ...precision, related: ['recall'] }, { ...recall, related: ['precision'] });
+    assert.deepEqual(both.problems, [
+      'ml.json: terms[26] (recall): "related" names "precision", which names this term too: write each pair once',
+    ]);
+    assert.equal(both.pairs, 1);
+    const twice = withTerms({ ...precision, related: ['recall', 'recall'] }, recall);
+    assert.deepEqual(twice.problems, ['ml.json: terms[25] (precision): "related" names "recall" twice']);
+  });
+
+  test("don't give each other away, in either language", () => {
+    const gene = { id: 'gene', zh: GENE, en: 'Gene', related: ['gene-editing'] };
+    assert.deepEqual(withTerms(gene, { id: 'gene-editing', zh: GENE_EDITING, en: 'Gene editing' }).problems, [
+      `ml.json: terms[25] (gene): "related" pairs it with "gene-editing", but "zh" "${GENE}" and "${GENE_EDITING}" give each other away`,
+      'ml.json: terms[25] (gene): "related" pairs it with "gene-editing", but "en" "Gene" and "Gene editing" give each other away',
+    ]);
+    // One language is enough, and the forms count, as on a board.
+    const unit = { id: 'unit', zh: PRECISION, en: 'Unit', related: ['gpu'] };
+    const gpu = { id: 'gpu', zh: RECALL, en: 'GPU', forms: { en: ['graphics processing unit'] } };
+    assert.deepEqual(withTerms(unit, gpu).problems, [
+      'ml.json: terms[25] (unit): "related" pairs it with "gpu", but "en" "Unit" and "GPU" give each other away',
+    ]);
+  });
+
+  test('need both terms in Chinese and in English', () => {
+    const englishOnly = withTerms({ id: 'precision', en: 'Precision', related: ['recall'] }, recall);
+    assert.deepEqual(englishOnly.problems, [
+      'ml.json: terms[25] (precision): "related" pairs it with "recall", but the term has no "zh": both terms of a pair need "zh" and "en"',
+    ]);
+    const chineseOnly = withTerms({ ...precision, related: ['recall'] }, { id: 'recall', zh: RECALL });
+    assert.deepEqual(chineseOnly.problems, [
+      'ml.json: terms[25] (precision): "related" pairs it with "recall", but "recall" has no "en": both terms of a pair need "zh" and "en"',
+    ]);
+  });
+
+  test('put a term in 3 pairs at most', () => {
+    const hub = { id: 'hub', zh: PRECISION, en: 'Hub', related: ['term-1', 'term-2', 'term-3'] };
+    assert.deepEqual(withTerms(hub).problems, []);
+    // A pair counts for both of its terms, whichever of them it is written on.
+    assert.deepEqual(withTerms(hub, { ...recall, related: ['hub'] }).problems, [
+      'ml.json: terms[25] (hub): is in 4 pairs of related terms, but a term may be in 3 at most',
+    ]);
+  });
+});
+
 describe('lists together', () => {
   const field = (id, extra) => ({ file: `${id}.json`, data: list({ id, terms: [...terms(MIN_TERMS), ...extra] }) });
 
@@ -479,11 +540,21 @@ describe('command line', () => {
   test('passes good files and fails bad ones', () => {
     const ok = run(good);
     assert.equal(ok.status, 0, ok.stdout);
-    assert.match(ok.stdout, /OK ml\.json \(25 zh, 25 en\)/);
+    assert.match(ok.stdout, /OK ml\.json \(25 zh, 25 en, 0 related pairs\)/);
 
     const failed = run(good, bad);
     assert.equal(failed.status, 1);
     assert.match(failed.stdout, /broken\.json: not valid JSON/);
+  });
+
+  test('counts the pairs of related terms of each list that passes', () => {
+    const paired = join(dir, 'paired.json');
+    const term = { id: 'attention', zh: ATTENTION, en: 'Attention', related: ['term-1'] };
+    writeFileSync(paired, JSON.stringify(list({ id: 'paired', terms: [...terms(MIN_TERMS), term] })));
+    const result = run(good, paired);
+    assert.equal(result.status, 0, result.stdout);
+    assert.match(result.stdout, /^check-words: OK ml\.json \(25 zh, 25 en, 0 related pairs\)$/m);
+    assert.match(result.stdout, /^check-words: OK paired\.json \(26 zh, 26 en, 1 related pair\)$/m);
   });
 
   test("reports a file that it can't read as an error, not as a broken list", () => {
@@ -600,7 +671,10 @@ describe('command line', () => {
     writeFileSync(join(lists, 'nlp.json'), JSON.stringify(list({ id: 'nlp' })));
     writeFileSync(join(lists, 'ml.json'), JSON.stringify(list()));
     assert.equal(main([], lists), 0);
-    assert.deepEqual(printed(), ['check-words: OK ml.json (25 zh, 25 en)', 'check-words: OK nlp.json (25 zh, 25 en)']);
+    assert.deepEqual(printed(), [
+      'check-words: OK ml.json (25 zh, 25 en, 0 related pairs)',
+      'check-words: OK nlp.json (25 zh, 25 en, 0 related pairs)',
+    ]);
 
     log.mock.resetCalls();
     writeFileSync(join(lists, 'cv.json'), JSON.stringify(list()));
