@@ -171,7 +171,7 @@ test('revealing Reviewer 2 rejects the group at once', async ({ browser }) => {
   const team = await teamOnTurn(table.captains.red);
   await giveClue(table.captains[team], 'Danger', 1, 'en');
   await revealByKey(table, team, 'reviewer2');
-  const { verdicts } = TEXT.en.game.letter;
+  const { verdicts } = TEXT.en.games.keywords.letter;
   await expect(table.guessers[team].locator('.letter .verdict')).toHaveText(verdicts.deskReject);
   // The other group still had all its cards to find: an oral.
   await expect(table.guessers[otherTeam(team)].locator('.letter .verdict')).toHaveText(verdicts.oral);
@@ -186,9 +186,9 @@ test('the chair can withdraw a game and play again with the same seats', async (
   await chair.locator('[role=dialog]').getByRole('button', { name: TEXT.en.game.end }).click();
   // One letter for everyone, since nobody won.
   for (const page of [table.spectator, table.guessers.red]) {
-    await expect(page.locator('.letter .verdict')).toHaveText(TEXT.en.game.letter.verdicts.withdrawn);
+    await expect(page.locator('.letter .verdict')).toHaveText(TEXT.en.games.keywords.letter.verdicts.withdrawn);
   }
-  await chair.getByRole('button', { name: TEXT.en.game.letter.again }).click();
+  await chair.getByRole('button', { name: TEXT.en.games.keywords.letter.again }).click();
   await expect(table.guessers.blue.locator('.lobby')).toBeVisible();
   await expect(chair.locator('.start-bar .ready')).toBeVisible();
 });

@@ -243,7 +243,7 @@ test('anyone with an account plays alone with Reviewer 1 from the home page', as
   await expect(pat.locator('.gate, .home').first()).toBeVisible();
   const gate = pat.getByRole('link', { name: new RegExp(`^${text.language.en}`) });
   if (await gate.count()) await gate.click();
-  await pat.locator('button.entry').click();
+  await pat.locator('.entry[data-game="keywords"] button.entry').click();
   const sheet = pat.locator('[role=dialog]');
   await expect(sheet.locator('.group.red')).toContainText(name);
   await expect(sheet.locator('.group.red')).toContainText(text.home.practice.you);
@@ -285,7 +285,7 @@ test('an account opens a room to play with friends and Reviewer 1 from the home 
   await expect(quinn.locator('.gate, .home').first()).toBeVisible();
   const gate = quinn.getByRole('link', { name: new RegExp(`^${text.language.en}`) });
   if (await gate.count()) await gate.click();
-  await quinn.locator('button.entry').click();
+  await quinn.locator('.entry[data-game="keywords"] button.entry').click();
   const sheet = quinn.locator('[role=dialog]');
   await expect(sheet.locator('.seats')).toBeVisible();
   await sheet.getByLabel(text.home.practice.whoChoice.friends).check();

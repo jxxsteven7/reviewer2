@@ -60,7 +60,7 @@ test('the chair starts from a bar that stays in sight, and the game opens at its
   // Alone, the chair reads on the first screen what is still missing, and can't start yet.
   const bar = ann.locator('.start-bar');
   await expect(bar).toBeInViewport();
-  const firstNeed = interpolate(text.lobby.problems.needs_captain, { group: text.lobby.group.red });
+  const firstNeed = interpolate(text.lobby.problems.needs_captain, { group: text.games.keywords.groups.red });
   await expect(bar.locator('.readiness')).toHaveText(firstNeed);
   await expect(ann.locator('.desk .problems li').first()).toHaveText(firstNeed);
   await expect(bar.getByRole('button', { name: text.lobby.start })).toBeDisabled();

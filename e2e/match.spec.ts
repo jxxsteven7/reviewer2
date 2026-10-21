@@ -258,6 +258,6 @@ test('an ordinary room plays as it always did', async ({ browser }) => {
   await playQuickly(pages, 'en', ann);
   await expect(ann.locator('.match-table, .match-results')).toHaveCount(0);
   expect(snapshotsOf(ann).every((state) => state.match === null)).toBe(true);
-  await ann.getByRole('button', { name: text.game.letter.again }).click();
+  await ann.getByRole('button', { name: text.games.keywords.letter.again }).click();
   await expect(ann.locator('.lobby')).toBeVisible();
 });
