@@ -1,5 +1,6 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import type { Language, MatchTitle, RecordResult } from '@reviewer2/shared';
+import { certifiedPlay, type AgentLogData } from '../core/agentLog';
 import type { GameModule, GameOutcome, GameTitle, Recount } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { rankings, titlesFor } from '../core/match';
@@ -98,6 +99,7 @@ interface GameRow {
   setup: string | null;
   log: string;
   language: Language;
+  agentLog: string | null;
   agents: number;
   takeover: number;
   matchId: string | null;
@@ -106,7 +108,7 @@ interface GameRow {
 }
 
 const GAME_COLUMNS =
-  'game_id AS gameId, game, setup, log, language, agents, takeover, ' +
+  'game_id AS gameId, game, setup, log, language, agent_log AS agentLog, agents, takeover, ' +
   'match_id AS matchId, match_game AS matchGame, match_games AS matchGames';
 
 // Counts every kept game of `module` that finished, one at a time, since the logs are most of the
@@ -181,8 +183,9 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
     );
   }
   const keyOf = keyFor(who, log);
-  // A game that an AI played in brings nobody points or titles (docs/architecture.md#ai-players).
-  const agents = row.agents > 0 || row.takeover === 1;
+  // A game that an AI played in brings nobody points or titles, unless every answer the AI gave
+  // came from a certified version (docs/architecture.md#ai-players), as the room decides it.
+  const unscored = (row.agents > 0 || row.takeover === 1) && !certifiedKept(row.agentLog);
   const points = new Map(count.scores.map(({ key, points: won }) => [key, won]));
   const records = new Map<number, CountedRecord>();
   const seats = new Map<string, CountedPlay>();
@@ -198,8 +201,8 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
       place,
       verdict,
       detail: jsonOf(detail),
-      points: agents ? 0 : (points.get(keyOf(playerId)) ?? 0),
-      titles: agents ? [] : titles,
+      points: unscored ? 0 : (points.get(keyOf(playerId)) ?? 0),
+      titles: unscored ? [] : titles,
     });
   }
   const { outcome } = count;
@@ -237,6 +240,18 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
     seats,
     match: { id: row.matchId, game: row.matchGame, games: row.matchGames, points: scored, present, merged, accounts },
   };
+}
+
+// Whether every answer the AI gave in a kept game came from a certified version (certifiedPlay),
+// by the AI's log of it, as the record keeps it. A log that can't be read, which the check of the
+// data reports (check.ts), certifies nothing, and stops no count.
+function certifiedKept(agentLog: string | null): boolean {
+  if (agentLog === null) return false;
+  try {
+    return certifiedPlay(JSON.parse(agentLog) as AgentLogData);
+  } catch {
+    return false;
+  }
 }
 
 // The player IDs in the room when the game ended: those there as it began, and those who came,

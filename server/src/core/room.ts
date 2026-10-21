@@ -23,7 +23,7 @@ import {
   type StreakNotice,
   type Title,
 } from '@reviewer2/shared';
-import { AgentLog, type AgentLogData, type AgentStep } from './agentLog';
+import { AgentLog, certifiedPlay, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
 import type { GameContext, GameModule, GameOutcome, PlayerResult, Viewer } from './game';
 import {
@@ -370,8 +370,16 @@ export class Room {
       agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
       titleCount: (id, title) => this.#titleCountOf(id, title),
-      awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#agentsPlayed,
+      awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#scoresNothing(),
     };
+  }
+
+  // Whether the game brings nobody points, a streak, a title or a friend title
+  // (docs/architecture.md#ai-players): an AI has played in it, as an AI player or for someone who
+  // was offline, and not every answer it gave came from a certified version (certifiedPlay), which
+  // none does yet. During the game, this is as far as the AI has answered.
+  #scoresNothing(): boolean {
+    return this.#agentsPlayed && !certifiedPlay(this.#agentLog?.data() ?? null);
   }
 
   // The account of a member, or of one who has left during the game, or null for a guest.
@@ -382,11 +390,10 @@ export class Room {
 
   // How many times the account of a member, or of one who has left during the game, has won a
   // title. A record that can't be read leaves the count out, as for a guest, and so does a game
-  // that an AI has played in, which awards no title (docs/architecture.md#ai-players): the game
-  // goes on.
+  // that awards no title, as one that an AI has played in (#scoresNothing): the game goes on.
   #titleCountOf(id: string, title: Title): number | null {
     const accountId = this.#accountIdOf(id);
-    if (accountId === null || !this.#titleCount || this.#agentsPlayed) return null;
+    if (accountId === null || !this.#titleCount || this.#scoresNothing()) return null;
     try {
       return this.#titleCount(accountId, title);
     } catch {
@@ -1310,10 +1317,9 @@ export class Room {
 
   // The points of the game that has just ended, by member key, scored as a match scores a game
   // (docs/architecture.md#academic-ranks), or null when the game counts for none: it was withdrawn,
-  // it hasn't ended, an AI played in it (docs/architecture.md#ai-players), or the game can't be
-  // scored at all.
+  // it hasn't ended, an AI played in it (#scoresNothing), or the game can't be scored at all.
   points(): ReadonlyMap<string, number> | null {
-    if (this.#agentsPlayed) return null;
+    if (this.#scoresNothing()) return null;
     const scores = this.phase === 'ended' ? (this.game.match?.score(this.data, this.context) ?? null) : null;
     return scores && new Map(scores.map(({ key, points }) => [key, points]));
   }
@@ -1648,7 +1654,7 @@ export class Room {
     // built when the first viewer asks, with the game's part.
     let points: GamePoints[] | undefined;
     const pointsView = (): GamePoints[] => {
-      if (this.phase !== 'ended' || this.#agentsPlayed) return [];
+      if (this.phase !== 'ended' || this.#scoresNothing()) return [];
       const scores = this.game.match?.score(this.data, context) ?? [];
       return scores.flatMap(({ key, points: total, detail }) => {
         const member = this.memberByKey(key);

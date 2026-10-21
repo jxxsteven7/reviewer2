@@ -7,7 +7,8 @@ import {
   type RoomView,
   type Team,
 } from '@reviewer2/shared';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import type { AgentLogData } from '../src/core/agentLog';
 import { FRESH_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
 import type { GameLogData } from '../src/core/gameLog';
 import { WordLibrary } from '../src/core/words';
@@ -32,6 +33,14 @@ import {
 // what a game with them leaves on the record. The agent plays by a script (ScriptedAgent), and the
 // server's clock moves only when a test moves it, so every pace and every wait is exact.
 
+// The certified versions of the AI, as the room sees them (server/src/core/agentLog.ts): none, as
+// in the code, but in the test that certifies the script.
+const versions = vi.hoisted(() => ({ certified: [] as { prompt: string; model: string }[] }));
+vi.mock('../src/core/agentLog', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../src/core/agentLog')>();
+  return { ...original, certifiedPlay: (log: AgentLogData | null) => original.certifiedPlay(log, versions.certified) };
+});
+
 let server: TestServer;
 let agent: ScriptedAgent;
 let clients: TestClient[];
@@ -45,6 +54,7 @@ beforeEach(async () => {
 afterEach(async () => {
   for (const client of clients) client.close();
   await server.close();
+  versions.certified = [];
 });
 
 // Sixty words of which no two clash, as in keywords.test.ts.
@@ -784,6 +794,32 @@ describe('a game that an AI played in', () => {
     const [after] = kept();
     expect({ ...after, log: null }).toEqual({ ...row, log: null });
     expect(JSON.parse(after?.log ?? '{}')).toEqual({ ...JSON.parse(row?.log ?? '{}'), deleted: [ann.me] });
+  });
+
+  test('brings points once every answer the AI gave came from a certified version', async () => {
+    versions.certified = [{ model: SCRIPT_NOTE.model, prompt: SCRIPT_NOTE.prompt }];
+    // As above: the AI student reveals Reviewer 2 at once, and Ann's group wins.
+    agent.play = (request) => {
+      if (request.kind === 'clue') return scriptedPlay(request);
+      const cards = (server.app.rooms.all()[0]?.data as KeywordsData).game?.cards ?? [];
+      const reviewer2 = cards.findIndex((card) => card.color === 'reviewer2');
+      return { ok: true, kind: 'guess', picks: [reviewer2], reason: 'A hunch.', note: SCRIPT_NOTE };
+    };
+    const { ann, code } = await againstAi();
+    server.advance(CLUE_PACE_MS);
+    await until(() => truth(code).phase === 'guess', 'the clue');
+    await until(() => agent.questions.some((request) => request.kind === 'guess'), 'the guess question');
+    server.advance(GUESS_PACE_MS);
+    const ended = await ann.waitFor((state) => state.phase === 'ended', 'the end');
+    // The snapshot that ends the game carries the points, as for a game without AI players, and
+    // the record keeps Ann's; the record of the game still says that an AI played.
+    const mine = ended.points.find(({ playerId }) => playerId === ann.me);
+    expect(mine?.points).toBeGreaterThan(0);
+    const account = server.accounts.byName('Ann');
+    expect(server.db.prepare('SELECT points FROM game_records WHERE account_id = ?').all(account?.id ?? 0)).toEqual([
+      { points: mine?.points },
+    ]);
+    expect(server.db.prepare('SELECT agents FROM replays').all()).toEqual([{ agents: 2 }]);
   });
 
   test('keeps in the AI log an answer that came too late, and none from the game before', async () => {

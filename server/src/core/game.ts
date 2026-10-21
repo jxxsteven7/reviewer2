@@ -37,11 +37,12 @@ export interface GameContext {
   playerIds(): string[];
   // How many times the account of a player, also of one who has left during the current game, has
   // won a title, as its record has it, or null when there is no count to give: for a guest, who
-  // keeps none, in a game that an AI has played in, which awards none
+  // keeps none, in a game that awards none, as one that an AI has played in
   // (docs/architecture.md#ai-players), and when the record can't be read.
   titleCount(playerId: string, title: Title): number | null;
   // Whether the game's titles go to a player, also to one who has left during the current game:
-  // to one with an account, where the server keeps accounts, in a game that no AI has played in.
+  // to one with an account, where the server keeps accounts, in a game that awards them, which one
+  // that an AI has played in doesn't (docs/architecture.md#ai-players).
   awardsTitles(playerId: string): boolean;
 }
 
@@ -116,9 +117,9 @@ export type GameUpdate<Data> = Ack<{ data: Data }>;
 // each player who did better, so that players level share it; the game's own word for how it went,
 // such as the verdict of a decision letter; what the game counts of their game, if anything, in its
 // own shape (GameShapes.detail), an object, which the record keeps as JSON, such as where their
-// points came from; and the titles that the game brought them, if any. In a game of two sides, the winners have place 1 and the others 2; in one
-// where each plays for themselves, each is their own side; in one that everyone plays together, all
-// are one side, and win or lose together in place 1.
+// points came from; and the titles that the game brought them, if any. In a game of two sides, the
+// winners have place 1 and the others 2; in one where each plays for themselves, each is their own
+// side; in one that everyone plays together, all are one side, and win or lose together in place 1.
 export interface PlayerResult {
   playerId: string;
   side: string;

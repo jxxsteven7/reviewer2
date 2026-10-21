@@ -12,6 +12,30 @@ import type { AgentNote } from '@reviewer2/shared';
 // players fits many times over. Past it, the log keeps no more steps, and says so once.
 export const MAX_AGENT_LOG_BYTES = 64 * 1024;
 
+// The versions of the AI that are certified, each as the version of the prompts and the model, as
+// the agent's note names them (AgentNote). A game that an AI played in, as an AI player or for
+// someone who was offline, brings points, streaks, titles and friend titles only when every answer
+// the AI gave in it came from a certified version (certifiedPlay, docs/architecture.md#ai-players).
+// None is yet, so every such game brings nothing, and is kept whole, with the version of each
+// answer, for the day one is. The room and the recount decide by this alone: the streaks, the
+// friend duos and the records page (store/records.ts), the check of the data (store/check.ts) and
+// the game's score floats (RoomView.agentsPlayed) still take "an AI played" for "brought nothing",
+// which holds while this is empty, so the first version added here changes those too
+// (agentLog.test.ts).
+export const CERTIFIED_AGENTS: readonly { prompt: string; model: string }[] = [];
+
+// Whether a game that an AI played in counts, by the AI's log of it: the AI gave at least one
+// answer, every one came from a certified version, and the log holds them all. A step without an
+// answer, as when the agent was busy or its model failed, played nothing, and says nothing of a
+// version. During a game, this is as far as the AI has answered so far.
+export function certifiedPlay(log: AgentLogData | null, certified = CERTIFIED_AGENTS): boolean {
+  if (log === null || log.truncated) return false;
+  const answers = log.steps.filter((step) => step.answer !== undefined);
+  const byCertified = (note: AgentNote | undefined) =>
+    note !== undefined && certified.some(({ prompt, model }) => note.prompt === prompt && note.model === model);
+  return answers.length > 0 && answers.every(({ note }) => byCertified(note));
+}
+
 // One step: when it was asked for, in milliseconds from the start of the game on the room's clock;
 // the seat, by player ID; the persona that played it, and whether it played for a player who was
 // offline rather than as an AI player of its own; what it was to do, as the game names it (such as

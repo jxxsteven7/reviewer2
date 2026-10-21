@@ -2,6 +2,7 @@
 import {
   ACCOUNT_API,
   emptyAgentCounts,
+  emptyKeywordsFeats,
   type AgentGameCounts,
   type AgentPersona,
   type AgentProfileView,
@@ -61,9 +62,7 @@ const name = computed(() => t(`agents.personas.${props.persona}`));
 // What it has done in the game shown, which is nothing for an AI that has played none of it, and
 // what the game counts of its seats.
 const shown = computed<AgentGameCounts>(() => profile.value?.games[RECORDS_GAME] ?? emptyAgentCounts());
-const feats = computed(
-  () => (shown.value.feats as KeywordsAgentFeats | null) ?? { clues: 0, found: 0, reviewer2: 0, best: null },
-);
+const feats = computed(() => (shown.value.feats as KeywordsAgentFeats | null) ?? emptyKeywordsFeats());
 const blocks = computed<StatBlock[]>(() => {
   if (profile.value === null) return [];
   const { games, seats, wins, roles } = shown.value;

@@ -1,19 +1,28 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { fakeGame } from '../../test/fakeGame';
 import { newReplay } from '../../test/keptGame';
+import type { AgentLogData } from '../core/agentLog';
 import type { GameModule } from '../core/game';
 import type { AgentPlay } from '../core/room';
 import type { GameLogData } from '../core/gameLog';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
-import { RecordStore, ReplayStore, TitleStore } from './records';
+import { RecordStore, ReplayStore, type NewReplay, TitleStore } from './records';
 import { countedUnder, countGames, countMatches, hasGamesOf, keyFor, recountDue, recountRecords } from './recount';
 
 // The records counted again from the record of every game (docs/architecture.md#game-records), with
 // the fake game of the tests, whose recount gives everyone who came to play the game, with the
 // presses in the verdict, a title for whoever said something, and no points.
+
+// The certified versions of the AI, as the recount sees them (core/agentLog.ts): none, as in the
+// code, but in the test that certifies one.
+const versions = vi.hoisted(() => ({ certified: [] as { prompt: string; model: string }[] }));
+vi.mock('../core/agentLog', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../core/agentLog')>();
+  return { ...original, certifiedPlay: (log: AgentLogData | null) => original.certifiedPlay(log, versions.certified) };
+});
 
 let db: DatabaseSync;
 let ann: number;
@@ -33,7 +42,10 @@ beforeEach(async () => {
   cat = create('Cat');
 });
 
-afterEach(() => db.close());
+afterEach(() => {
+  db.close();
+  versions.certified = [];
+});
 
 // A log of the fake game: everyone in `start` as a player, then what happened, then the end.
 const logOf = (gameId: string, players: string[], entries: GameLogData['entries'], more: Partial<GameLogData> = {}) =>
@@ -642,7 +654,7 @@ describe('counting the records again', () => {
 
   // A game in which an AI player sat as `a` and pressed once, and an AI played for Bob, `p2`,
   // offline, with what the fake game counted of them.
-  function keepWithAgents(changes: Partial<AgentPlay>[] = []) {
+  function keepWithAgents(changes: Partial<AgentPlay>[] = [], more: Partial<NewReplay> = {}) {
     const won = { side: 'all', role: 'player', result: 'won' as const, place: 1 };
     const agentPlays: AgentPlay[] = [
       { playerId: 'a', persona: 'reviewer1' as const, takeover: false, accountId: null, ...won, feats: { presses: 1 } },
@@ -660,6 +672,7 @@ describe('counting the records again', () => {
         counts: { accounts: 2, guests: 0, agents: 1 },
         takeover: true,
         agentPlays,
+        ...more,
       }),
     );
     const store = new RecordStore(db);
@@ -676,6 +689,63 @@ describe('counting the records again', () => {
       });
     }
   }
+
+  test('brings points and titles to a game that an AI played in once every answer it gave came from a certified version', () => {
+    const version = { prompt: 'test-1', model: 'script' };
+    const answered = (note: { prompt: string; model: string }): AgentLogData['steps'][number] => ({
+      t: 1,
+      by: 'a',
+      persona: 'reviewer1',
+      kind: 'press',
+      answer: { pressed: true },
+      note: { ...note, ms: 1 },
+    });
+    const agentLog = (...notes: { prompt: string; model: string }[]): AgentLogData => ({
+      v: 1,
+      gameId: 'g1',
+      steps: notes.map(answered),
+    });
+    // Ann said something, and the AI pressed once.
+    keepWithAgents([], {
+      log: logOf(
+        'g1',
+        ['p1', 'p2', 'a'],
+        [
+          { t: 1, by: 'p1', type: 'test:say' },
+          { t: 2, by: 'a', type: 'test:press' },
+        ],
+        { agents: { a: 'reviewer1' } },
+      ),
+      agentLog: agentLog(version),
+    });
+    // No version is certified: the game brings nobody a point under rules that give one for each
+    // press, nor Ann the title for what she said.
+    expect(recountRecords(db, [otherRules])).toMatchObject({ records: 0, titles: 0 });
+    expect(records().map(({ points }) => points)).toEqual([0, 0]);
+    expect(recountRecords(db, [fakeGame])).toMatchObject({ records: 0, titles: 0 });
+    expect(titles()).toEqual([]);
+    // The version the AI answered with is certified: the same game brings each a point for the
+    // press, and Ann her title.
+    versions.certified = [version];
+    expect(recountRecords(db, [otherRules])).toMatchObject({ records: 2, titles: 0 });
+    expect(records().map(({ points }) => points)).toEqual([1, 1]);
+    expect(recountRecords(db, [fakeGame])).toMatchObject({ records: 2, titles: 1 });
+    expect(records().map(({ points }) => points)).toEqual([0, 0]);
+    expect(titles()).toEqual([{ account: ann, title: 'deadline_hero', match: null, game: 'g1', turn: 1 }]);
+    // An answer from another version in the same game takes it all back.
+    db.prepare('UPDATE replays SET agent_log = ? WHERE game_id = ?').run(
+      JSON.stringify(agentLog(version, { ...version, prompt: 'test-2' })),
+      'g1',
+    );
+    expect(recountRecords(db, [otherRules])).toMatchObject({ records: 0, titles: 1 });
+    expect(records().map(({ points }) => points)).toEqual([0, 0]);
+    expect(titles()).toEqual([]);
+    // An AI log that can't be read certifies nothing, and stops no count.
+    db.prepare('UPDATE replays SET agent_log = ? WHERE game_id = ?').run('{"v":1,', 'g1');
+    expect(recountRecords(db, [fakeGame])).toMatchObject({ games: 1, records: 0, titles: 0 });
+    expect(records().map(({ points }) => points)).toEqual([0, 0]);
+    expect(titles()).toEqual([]);
+  });
 
   test('changes how the game came out for each AI seat and each person it played for, and what it counts of a seat', () => {
     keepWithAgents();

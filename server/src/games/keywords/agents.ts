@@ -1,4 +1,11 @@
-import { TEAMS, type AgentAnswer, type AgentGame, type KeywordsAgentFeats, type StartProblem } from '@reviewer2/shared';
+import {
+  emptyKeywordsFeats,
+  TEAMS,
+  type AgentAnswer,
+  type AgentGame,
+  type KeywordsAgentFeats,
+  type StartProblem,
+} from '@reviewer2/shared';
 import { KEYWORDS_MESSAGES } from '@reviewer2/shared/schemas';
 import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
 import type { KeywordsData } from './index';
@@ -16,7 +23,7 @@ import { viewFor } from './view';
 // clue that found the most, and how often it revealed Reviewer 2 as a student. The same is worked
 // out again from the record of the game when the rules change (replay.ts).
 export function featsOf(game: KeywordsState | null, playerId: string): KeywordsAgentFeats {
-  const feats: KeywordsAgentFeats = { clues: 0, found: 0, reviewer2: 0, best: null };
+  const feats = emptyKeywordsFeats();
   for (const record of game?.history ?? []) {
     if (record.captain === playerId && record.word !== null) {
       const found = record.guesses.filter(({ color }) => color === record.team).length;
@@ -35,7 +42,7 @@ export function featsOf(game: KeywordsState | null, playerId: string): KeywordsA
 // ended, for its page (GameModule.agentTotals): the counts added up, and the earliest of the clues
 // that found the most.
 export function totalsOf(seats: readonly unknown[]): KeywordsAgentFeats {
-  const totals: KeywordsAgentFeats = { clues: 0, found: 0, reviewer2: 0, best: null };
+  const totals = emptyKeywordsFeats();
   for (const seat of seats as readonly KeywordsAgentFeats[]) {
     totals.clues += seat.clues;
     totals.found += seat.found;

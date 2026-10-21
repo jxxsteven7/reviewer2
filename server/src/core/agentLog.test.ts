@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { AgentLog, MAX_AGENT_LOG_BYTES } from './agentLog';
+import {
+  AgentLog,
+  CERTIFIED_AGENTS,
+  certifiedPlay,
+  MAX_AGENT_LOG_BYTES,
+  type AgentLogData,
+  type AgentStep,
+} from './agentLog';
 
 describe('the AI log of a game', () => {
   test('keeps each step with its time from the start of the game', () => {
@@ -29,5 +36,59 @@ describe('the AI log of a game', () => {
     const kept = data.steps.length;
     log.add(200, { by: 'p1', persona: 'reviewer1', kind: 'clue' });
     expect(log.data().steps).toHaveLength(kept);
+  });
+});
+
+describe('the certified versions of the AI', () => {
+  const v1 = { prompt: 'keywords-1', model: 'model-a' };
+  const v2 = { prompt: 'keywords-2', model: 'model-a' };
+  const log = (steps: AgentStep[], more: Partial<AgentLogData> = {}): AgentLogData => ({
+    v: 1,
+    gameId: 'game-1',
+    steps,
+    ...more,
+  });
+  // A step with an answer from a version, or from none that the note says, or with no answer.
+  const answered = (version: { prompt: string; model: string } | null, more: Partial<AgentStep> = {}): AgentStep => ({
+    t: 1,
+    by: 'p1',
+    persona: 'reviewer1',
+    kind: 'clue',
+    answer: { word: 'zebra' },
+    ...(version === null ? {} : { note: { ...version, ms: 1 } }),
+    ...more,
+  });
+  const unanswered: AgentStep = { t: 2, by: 'p1', persona: 'reviewer1', kind: 'clue', error: 'busy' };
+
+  test('are none yet, so that a game an AI played in brings nothing', () => {
+    expect(
+      CERTIFIED_AGENTS,
+      'No version of the AI is certified yet. The first one needs more than this list: the streaks ' +
+        '(RecordStore.#results and #agentsIn), the friend duos (DUOS_SQL) and the records page ' +
+        '(RecordStore.#recent, GameRecord.agents) in server/src/store/records.ts, the check of the data ' +
+        '("records of games that an AI played in, with points" in server/src/store/check.ts), the score ' +
+        'floats (RoomView.agentsPlayed) and the docs (docs/architecture.md#ai-players, both READMEs) take ' +
+        '"an AI played" for "brought nothing", and must decide by certifiedPlay() as the room and the ' +
+        'recount do.',
+    ).toEqual([]);
+    expect(certifiedPlay(log([answered(v1)]))).toBe(false);
+  });
+
+  test('let a game count when every answer the AI gave in it came from one of them', () => {
+    expect(certifiedPlay(log([answered(v1), answered(v1, { takeover: true, kind: 'guess' })]), [v1])).toBe(true);
+    expect(certifiedPlay(log([answered(v1), answered(v2)]), [v1, v2])).toBe(true);
+    // An answer from another version, or from a version that the note doesn't say, counts against
+    // the game; one that came too late to be of use is an answer like any other.
+    expect(certifiedPlay(log([answered(v1), answered(v2)]), [v1])).toBe(false);
+    expect(certifiedPlay(log([answered(v1), answered({ ...v1, model: 'model-b' })]), [v1])).toBe(false);
+    expect(certifiedPlay(log([answered(v1), answered(null)]), [v1])).toBe(false);
+    expect(certifiedPlay(log([answered(v1, { late: true })]), [v1])).toBe(true);
+    // A step with no answer played nothing, but the AI must have answered at least once.
+    expect(certifiedPlay(log([answered(v1), unanswered]), [v1])).toBe(true);
+    expect(certifiedPlay(log([unanswered]), [v1])).toBe(false);
+    expect(certifiedPlay(log([]), [v1])).toBe(false);
+    expect(certifiedPlay(null, [v1])).toBe(false);
+    // A log cut short may have lost an answer from another version.
+    expect(certifiedPlay(log([answered(v1)], { truncated: true }), [v1])).toBe(false);
   });
 });

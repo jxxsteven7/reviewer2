@@ -306,3 +306,7 @@ export interface KeywordsAgentFeats {
   reviewer2: number;
   best: { word: string; found: number } | null;
 }
+
+// What the game counts of an AI player that has given no clue and revealed nothing, and of one
+// with no seat to add up.
+export const emptyKeywordsFeats = (): KeywordsAgentFeats => ({ clues: 0, found: 0, reviewer2: 0, best: null });
