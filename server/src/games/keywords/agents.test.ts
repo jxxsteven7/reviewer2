@@ -39,6 +39,7 @@ function context(online = new Set(SEATS.map(([id]) => id))): GameContext {
     awardsTitles: () => false,
     playerIds: () => SEATS.map(([id]) => id),
     hasAccount: () => false,
+    hasField: () => true,
   };
 }
 
@@ -75,7 +76,9 @@ describe('the task of an AI seat', () => {
     const ctx = context();
     const task = agentTask(data(), ctx, 'ai-pi');
     expect(task).toMatchObject({ moment: 'game-1:1:clue', kind: 'clue', advice: false, pace: { first: 3_000 } });
-    expect(task?.question.cards.every((card) => card.color !== undefined)).toBe(true);
+    expect(task?.question.game === 'keywords' && task.question.cards.every((card) => card.color !== undefined)).toBe(
+      true,
+    );
     expect(agentTask(data(gameState({ team: 'blue' })), ctx, 'ai-pi')).toBeNull();
     expect(agentTask(data(gameState({ pause: { left: 1_000 } })), ctx, 'ai-pi')).toBeNull();
     expect(agentTask(data(gameState({ phase: 'over' })), ctx, 'ai-pi')).toBeNull();
@@ -86,7 +89,9 @@ describe('the task of an AI seat', () => {
     const advice = agentTask(data(game), context(), 'ai-student');
     expect(advice).toMatchObject({ moment: 'game-1:1:guess:advise', kind: 'advise', advice: true });
     // A student is told no color of a card that is face down.
-    expect(advice?.question.cards.some((card) => card.color !== undefined)).toBe(false);
+    expect(advice?.question.game === 'keywords' && advice.question.cards.some((card) => card.color !== undefined)).toBe(
+      false,
+    );
     expect(advice?.question).toMatchObject({ kind: 'guess', clue: { word: 'zebra', count: 2 }, guessesLeft: 3 });
     const alone = agentTask(data(game), context(new Set(['ai-pi', 'ai-student', 'bea'])), 'ai-student');
     expect(alone).toMatchObject({ moment: 'game-1:1:guess:play', kind: 'guess', advice: false });

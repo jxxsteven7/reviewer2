@@ -440,7 +440,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   // A captain who leaves frees the seat; the key viewers remember them anyway, the groups remember
   // whom each player has played for, and a deadline missed while the seat stays empty costs them.
-  leave(data, playerId) {
+  leave(data, _ctx, playerId) {
     const seating = removeSeat(data.seating, playerId);
     return {
       ...data,

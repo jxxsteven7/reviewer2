@@ -1,5 +1,5 @@
-import type { AgentPersona } from '../../agent';
 import type { Language } from '../../language';
+import type { ReplayPerson } from '../../replay';
 import type { CardColor, ClueCount, ClueRecord, GameResult, Team } from './types';
 
 // A finished game, to be replayed step by step (ReplayViewer on the client): the board as it was
@@ -30,17 +30,6 @@ export interface KeywordsReplay {
   history: ClueRecord[];
   result: GameResult;
   groups: ReplayGroup[];
-}
-
-// Someone in a replay as it is shown: an account by its username, avatar and handle as they are
-// now, or else as deleted; a guest by their number; an AI player by its persona.
-export interface ReplayPerson {
-  name?: string;
-  avatar?: string;
-  handle?: string;
-  deleted?: true;
-  guest?: number;
-  agent?: AgentPersona;
 }
 
 // A replay as the viewer shows it: the game, and who everyone in it was, by player ID. `me` is the

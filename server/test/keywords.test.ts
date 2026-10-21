@@ -179,6 +179,7 @@ const context = (): GameContext => ({
   agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],
   hasAccount: () => false,
+  hasField: () => true,
   titleCount: () => null,
   awardsTitles: () => false,
 });

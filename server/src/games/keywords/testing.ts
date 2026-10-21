@@ -91,6 +91,7 @@ export function seatedGame() {
     agentOf: () => null,
     playerIds: () => players,
     hasAccount: () => false,
+    hasField: () => true,
     titleCount: () => null,
     awardsTitles: () => false,
   };

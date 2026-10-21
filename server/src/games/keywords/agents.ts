@@ -187,7 +187,7 @@ export function agentMove(
       payload: { ...moment, word: answer.word, count: answer.count, targets: [...answer.targets] },
     };
   }
-  if (game.phase !== 'guess') return null;
+  if (game.phase !== 'guess' || answer.kind !== 'guess') return null;
   const next = answer.picks.find((card) => game.cards[card] && !game.cards[card].revealed);
   if (task.advice) {
     if (next === undefined) return null;

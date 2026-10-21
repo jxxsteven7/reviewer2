@@ -25,6 +25,7 @@ describe('the log of the team word guessing game', () => {
     agentOf: () => null,
     playerIds: () => Object.keys(keys),
     hasAccount: () => false,
+    hasField: () => true,
     titleCount: () => null,
     awardsTitles: () => false,
   });

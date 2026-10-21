@@ -1,6 +1,7 @@
 import {
   MATCH_TITLES,
   type Ack,
+  type ReplayPerson,
   type AgentAnswer,
   type AgentPersona,
   type AgentQuestion,
@@ -42,6 +43,9 @@ export interface GameContext {
   // Whether a member, or one who has left during the current game, is logged in to an account,
   // for what a game allows a member with an account alone.
   hasAccount(playerId: string): boolean;
+  // Whether the word library has a field, for a game whose players name one, as a setter names the
+  // field of their words.
+  hasField(field: string): boolean;
   // How many times the account of a player, also of one who has left during the current game, has
   // won a title, as its record has it, or null when there is no count to give: for a guest, who
   // keeps none, in a game that awards none, as one that an AI has played in
@@ -274,7 +278,7 @@ export interface GameModule<Data = unknown, View = unknown> {
   join(data: Data, ctx: GameContext, playerId: string, play: boolean): Data;
   // A member goes, by themselves or, with `removed`, because the chair removed them, which a game
   // may count against the game, as one that the chair could win by removing others.
-  leave(data: Data, playerId: string, removed?: boolean): Data;
+  leave(data: Data, ctx: GameContext, playerId: string, removed?: boolean): Data;
   // The chair takes a player out of play, for instance to free a seat.
   bench(data: Data, ctx: GameContext, playerId: string): Data;
   // The chair's "shuffle the groups", or whatever the game makes of it.
@@ -445,3 +449,36 @@ export const knownTitles = (games: readonly GameModule[]): Title[] => [
   ...MATCH_TITLES,
   ...games.flatMap(({ titles = [] }) => titles),
 ];
+
+// Who the players of a kept game were, as a replay shows them (docs/architecture.md#replays), by the
+// player IDs given: an account that played in it as it is now, and one deleted since as deleted
+// (the log's `deleted`); an AI player by its persona, and a guest by their number in the room, as
+// the log names them. Someone else, as an account that the log doesn't know any more, is left out.
+export function peopleOf(
+  log: GameLogData,
+  accounts: ReadonlyMap<string, ShownAccount>,
+  ids: Iterable<string>,
+): Record<string, ReplayPerson> {
+  const deleted = new Set(log.deleted);
+  const people: Record<string, ReplayPerson> = {};
+  for (const id of ids) {
+    if (people[id]) continue;
+    const account = accounts.get(id);
+    const agent = log.agents?.[id];
+    const guest = log.guests?.[id];
+    if (account) {
+      people[id] = {
+        name: account.username,
+        ...(account.avatar === null ? {} : { avatar: account.avatar }),
+        handle: account.handle,
+      };
+    } else if (deleted.has(id)) {
+      people[id] = { deleted: true };
+    } else if (agent !== undefined) {
+      people[id] = { agent: agent as AgentPersona };
+    } else if (guest !== undefined) {
+      people[id] = { guest };
+    }
+  }
+  return people;
+}

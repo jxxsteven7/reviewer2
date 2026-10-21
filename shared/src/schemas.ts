@@ -3,6 +3,7 @@ import { HANDLE, MAX_EMAIL_LENGTH } from './accounts';
 import { AGENT_ERRORS, AGENT_PERSONAS } from './agent';
 import { MAX_CUSTOM_INPUT } from './custom';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
+import { IMPOSTOR_AGENT_REPLIES, IMPOSTOR_AGENT_REQUESTS, IMPOSTOR_NOTE } from './games/impostor/schemas';
 import { KEYWORDS_AGENT_REPLIES, KEYWORDS_AGENT_REQUESTS, KEYWORDS_NOTE } from './games/keywords/schemas';
 import { LANGUAGES } from './language';
 import { MATCH_GAMES } from './match';
@@ -197,21 +198,23 @@ export const ACCOUNT_REQUESTS = {
 } as const;
 
 // What the game server and the agent say to each other (agent.ts): a ping, or one of a game's own
-// requests (for the team word guessing game, games/keywords/schemas.ts), whose kinds are each of
-// one game. Each side reads the other's lines with these, and takes nothing that has a field more
+// requests (for the team word guessing game, games/keywords/schemas.ts, and for the hidden word
+// game, games/impostor/schemas.ts), whose kinds are each of one game. Each side reads the other's lines with these, and takes nothing that has a field more
 // or less than it should: the agent plays only with what a seat may see, and the server takes only
 // an answer that it can check.
 export const AGENT_REQUEST = z.discriminatedUnion('kind', [
   z.strictObject({ v: z.literal(1), kind: z.literal('ping') }),
   ...KEYWORDS_AGENT_REQUESTS,
+  ...IMPOSTOR_AGENT_REQUESTS,
 ]);
 
 export const AGENT_REPLY = z.union([
   z.strictObject({ ok: z.literal(true), kind: z.literal('ping'), model: z.string().max(200) }),
   ...KEYWORDS_AGENT_REPLIES,
+  ...IMPOSTOR_AGENT_REPLIES,
   z.strictObject({
     ok: z.literal(false),
     error: z.enum(AGENT_ERRORS),
-    note: z.union([KEYWORDS_NOTE, AGENT_NOTE]).optional(),
+    note: z.union([KEYWORDS_NOTE, IMPOSTOR_NOTE, AGENT_NOTE]).optional(),
   }),
 ]);

@@ -62,6 +62,12 @@ export interface GamePoints {
   detail?: unknown;
 }
 
+// What a player may say of a game that finished normally (docs/architecture.md#ratings), in either
+// game: good, too hard, too easy, or something wrong with it, such as the pair of words or the
+// board. A game names those it takes (GameModule.ratings on the server).
+export const RATINGS = ['good', 'hard', 'easy', 'problem'] as const;
+export type Rating = (typeof RATINGS)[number];
+
 // A question of how a game was (RoomView.rating).
 export interface RatingView {
   options: string[];

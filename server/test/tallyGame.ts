@@ -208,7 +208,7 @@ export const tallyGame: GameModule<TallyData, TallyView> = {
   deadline: () => null,
   tick: (data) => data,
   join: (data, _ctx, id, play) => (play ? { ...data, seats: [...data.seats, id] } : data),
-  leave: (data, id) => unseat(data, id),
+  leave: (data, _ctx, id) => unseat(data, id),
   bench: (data, _ctx, id) => unseat(data, id),
   shuffle: (data) => data,
   canStart: (data, ctx) => data.seats.filter((id) => ctx.isOnline(id)).length >= 2,

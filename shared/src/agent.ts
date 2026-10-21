@@ -1,3 +1,4 @@
+import type { ImpostorAgentReply, ImpostorAgentRequest } from './games/impostor/agent';
 import type { KeywordsAgentReply, KeywordsAgentRequest } from './games/keywords/agent';
 
 // What the game server asks the agent for, and what it answers (docs/architecture.md#the-agent).
@@ -9,8 +10,9 @@ import type { KeywordsAgentReply, KeywordsAgentRequest } from './games/keywords/
 // The agent knows no more than the seat it plays for: the server builds every request from that
 // seat's own view of the game (GameModule.views), so that an AI student is never told the colors
 // that a student can't see. Each game has requests and answers of its own, in its folder (for the
-// team word guessing game, games/keywords/agent.ts), each of a kind that no other game's has, and
-// the agent answers each with the game's own code.
+// team word guessing game, games/keywords/agent.ts, and for the hidden word game,
+// games/impostor/agent.ts), each of a kind that no other game's has and naming its game, and the
+// agent answers each with the game's own code and model.
 
 // The AI players that the agent can play as. Each has its own way of playing, which the agent
 // keeps; the server knows them by these names only, and the interface names them in its locale
@@ -70,7 +72,7 @@ export interface AgentAsked {
   waitMs: number;
 }
 
-export type AgentRequest = { v: 1; kind: 'ping' } | KeywordsAgentRequest;
+export type AgentRequest = { v: 1; kind: 'ping' } | KeywordsAgentRequest | ImpostorAgentRequest;
 
 // A request as a game puts it for one of its seats (GameModule.agentTask on the server), which the
 // server completes with the version, the persona and the wait.
@@ -107,7 +109,10 @@ export type AgentError = (typeof AGENT_ERRORS)[number];
 
 // The answer to a request, in the game's own shape, or why there is none.
 export type AgentReply =
-  { ok: true; kind: 'ping'; model: string } | KeywordsAgentReply | { ok: false; error: AgentError; note?: AgentNote };
+  | { ok: true; kind: 'ping'; model: string }
+  | KeywordsAgentReply
+  | ImpostorAgentReply
+  | { ok: false; error: AgentError; note?: AgentNote };
 
 // An answer to one of a game's requests, as the game turns it into its own messages.
 export type AgentAnswer = Exclude<Extract<AgentReply, { ok: true }>, { kind: 'ping' }>;

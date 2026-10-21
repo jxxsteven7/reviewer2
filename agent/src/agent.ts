@@ -85,6 +85,7 @@ export function createAgent({
         signal: AbortSignal.timeout(Math.max(1, Math.ceil(until - now()))),
         now,
       };
+      if (request.game !== 'keywords') return { ok: false, error: 'bad_request' };
       return request.kind === 'clue' ? await giveClue(request, turn) : await guess(request, turn);
     } finally {
       done();

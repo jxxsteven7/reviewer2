@@ -395,6 +395,7 @@ export class Room {
       agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
       hasAccount: (id) => this.#accountIdOf(id) !== null,
+      hasField: (field) => this.#words.has(field),
       titleCount: (id, title) => this.#titleCountOf(id, title),
       awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#scoresNothing(),
     };
@@ -678,7 +679,7 @@ export class Room {
   drop(id: string, removed = false): string[] {
     const member = this.members.get(id);
     if (!member) return [];
-    const data = this.game.leave(this.data, id, removed);
+    const data = this.game.leave(this.data, this.context, id, removed);
     const over = this.#endsWith(data);
     if (this.phase !== 'lobby') {
       this.#gone.set(id, {

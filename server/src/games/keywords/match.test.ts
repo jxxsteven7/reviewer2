@@ -45,6 +45,7 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     agentOf: () => null,
     playerIds: () => ids,
     hasAccount: () => false,
+    hasField: () => true,
     titleCount: () => null,
     awardsTitles: () => false,
   };
@@ -694,7 +695,7 @@ describe('a match of the game', () => {
     if (!back.ok) throw new Error(back.error);
     expect(missedBy(back.data)).toMatchObject({ points: -5, detail: { role: 'captain', missed: 1 } });
     // So does leaving the room.
-    const gone = keywordsGame.tick(keywordsGame.leave(data, pi), late);
+    const gone = keywordsGame.tick(keywordsGame.leave(data, context([]), pi), late);
     expect(gone.game?.history[0]).toMatchObject({ captain: pi });
     expect(missedBy(gone)).toMatchObject({ points: -5 });
     // Someone who takes the empty seat over pays instead.
@@ -810,7 +811,7 @@ describe('fixed groups', () => {
     expect(seat('bob', blue)).toEqual({ ok: false, error: 'other_team' });
     // Both of blue's players leave: the groups stay as they are, and the chair ends the match early
     // or waits for newcomers.
-    data = keywordsGame.leave(keywordsGame.leave(data, 'cat'), 'dee');
+    data = keywordsGame.leave(keywordsGame.leave(data, context([]), 'cat'), context([]), 'dee');
     expect(seat('bob', bluePI)).toEqual({ ok: false, error: 'other_team' });
     expect(data.match?.locked.get(keyOf('bob'))).toBe('red');
     expect(keywordsGame.views(data, context(ids))({ playerId: 'bob' }).side).toBe('red');
@@ -821,7 +822,7 @@ describe('fixed groups', () => {
     const seat = (data: KeywordsData, wanted: Seat) =>
       keywordsGame.handle(data, context(all), 'eve', 'keywords:seat', wanted);
     // Two against one, once Dee has left: Eve goes to blue, and red is closed to her.
-    let data = keywordsGame.join(keywordsGame.leave(afterFirstGame(), 'dee'), context(all), 'eve', true);
+    let data = keywordsGame.join(keywordsGame.leave(afterFirstGame(), context([]), 'dee'), context(all), 'eve', true);
     expect(seatOf(data.seating, 'eve')).toEqual(blue);
     expect(seat(data, red)).toEqual({ ok: false, error: 'bigger_group' });
     expect(seat(data, bluePI).ok).toBe(true);
@@ -840,7 +841,7 @@ describe('fixed groups', () => {
     // Bob's account played the first game for red and left, and so did both of blue. Bob comes back
     // as a guest, is seated in blue, which is the smaller group now, and logs in: the seat stands.
     let data = afterFirstGame();
-    for (const id of ['bob', 'cat', 'dee']) data = keywordsGame.leave(data, id);
+    for (const id of ['bob', 'cat', 'dee']) data = keywordsGame.leave(data, context([]), id);
     const back = context(['ann', 'eve']);
     data = keywordsGame.join(data, back, 'eve', true);
     expect(seatOf(data.seating, 'eve')).toEqual(blue);

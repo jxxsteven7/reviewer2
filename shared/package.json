@@ -8,7 +8,9 @@
     ".": "./src/index.ts",
     "./schemas": "./src/schemas.ts",
     "./keywords": "./src/games/keywords/index.ts",
-    "./keywords/schemas": "./src/games/keywords/schemas.ts"
+    "./keywords/schemas": "./src/games/keywords/schemas.ts",
+    "./impostor": "./src/games/impostor/index.ts",
+    "./impostor/schemas": "./src/games/impostor/schemas.ts"
   },
   "dependencies": {
     "zod": "^4.6.5"
