@@ -587,7 +587,7 @@ describe('KeywordsLobby, public or private', () => {
 describe('KeywordsLobby in a match', () => {
   const match = (played: number): RoomView['match'] => ({
     id: 'm1',
-    rules: { games: 3, teams: 'fixed', grouping: 'random' },
+    rules: { games: 3, options: { teams: 'fixed', grouping: 'random' } },
     played,
     status: 'on',
     game: played + 1,

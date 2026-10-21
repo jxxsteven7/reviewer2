@@ -33,7 +33,8 @@ export function addAccounts(db: DatabaseSync, now: number): void {
     gameId: 'g1',
     side: 'red',
     role: 'captain',
-    won: true,
+    result: 'won',
+    place: 1,
     verdict: 'oral',
     points: 11,
   });

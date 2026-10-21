@@ -1,9 +1,12 @@
-// Friend duos (docs/architecture.md#friend-duos): what two friends have played together, counted
-// from the games on both their records, and the titles that the friend who stands out in each count
-// holds among an account's friends. Teammates are two accounts on the same side of a game, opponents
-// two on different sides. Every game counts, whichever game it was, in a match or not, from before
-// the two were friends too. The server counts and awards; each account sees only its own friends,
-// and nobody else learns of them.
+import type { RecordResult } from './accounts';
+
+// Friend duos (docs/architecture.md#friend-duos): what two friends have played together in one game,
+// counted from its games on both their records, and the titles that the friend who stands out in
+// each count holds among an account's friends in that game. Teammates are two accounts on the same
+// side of a game, opponents two on different sides, and one beat the other by finishing in a better
+// place. Every game of the game counts, in a match or not, from before the two were friends too; the
+// counts of two games are never added up. The server counts and awards; each account sees only its
+// own friends, and nobody else learns of them.
 
 // The five titles, each held among an account's friends by the friend with the most of one count:
 // the most games won together, the most lost together, the most won against the account, the most
@@ -15,8 +18,9 @@ export type DuoTitle = (typeof DUO_TITLES)[number];
 export const DUO_MIN = 3;
 
 // What an account has played with one friend, from the account's side: games on the same side,
-// won and lost, and games on different sides, all of them, those the account won and those the
-// friend won. In a game of two sides, one of the two always wins.
+// won and lost, and games on different sides, all of them, those the account finished in a better
+// place than the friend and those the friend did. A game drawn together is neither won nor lost
+// together, and opponents level in their place beat neither.
 export interface DuoCounts {
   wonTogether: number;
   lostTogether: number;
@@ -88,13 +92,21 @@ export function duoViews<Friend>(counts: ReadonlyMap<Friend, DuoCounts>): Map<Fr
 // One player's part in a game, as far as duos need it.
 export interface DuoPart {
   side: string;
-  won: boolean;
+  result: RecordResult;
+  place: number;
 }
 
 // What one game adds to an account's counts with a friend who played in it.
 export function duoGame(mine: DuoPart, theirs: DuoPart): DuoCounts {
-  if (mine.side === theirs.side) return { ...NO_GAMES, wonTogether: mine.won ? 1 : 0, lostTogether: mine.won ? 0 : 1 };
-  return { ...NO_GAMES, against: 1, beat: mine.won ? 1 : 0, beaten: theirs.won ? 1 : 0 };
+  if (mine.side === theirs.side) {
+    return { ...NO_GAMES, wonTogether: mine.result === 'won' ? 1 : 0, lostTogether: mine.result === 'lost' ? 1 : 0 };
+  }
+  return {
+    ...NO_GAMES,
+    against: 1,
+    beat: mine.place < theirs.place ? 1 : 0,
+    beaten: theirs.place < mine.place ? 1 : 0,
+  };
 }
 
 // The counts without one game: what they were before it.

@@ -26,7 +26,7 @@ const summary = computed<AccountSummary>(() => ({
   email: 'none',
   points: 0,
   titles: [],
-  streaks: { wins: 0, losses: 0 },
+  streaks: {},
   contributions: [],
   profile: { link: null, bio: t('guide.demo.bio'), showRecord: true, showThanks: true, banned: false },
   likes: 0,

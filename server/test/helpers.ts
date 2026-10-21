@@ -180,8 +180,12 @@ export async function startServer(
   };
   const { db } = await openDatabase(null);
   const feedback = new FeedbackStore(db, undefined, { ...DEFAULT_FEEDBACK_LIMITS, ...options.feedbackLimits });
+  // The games that the server plays, which the accounts add up what AI players did in, as main.ts
+  // does.
+  const games = options.games ?? [fakeGame];
   const accounts = new Accounts({
     db,
+    games,
     now,
     ...(options.clock && { clock: options.clock }),
     log: (event, fields) => logs.push({ event, ...(fields ? { fields } : {}) }),
@@ -200,7 +204,7 @@ export async function startServer(
       publicDir: '/no/front/end',
       version: 'test',
       words: options.words ?? testWords(),
-      games: options.games ?? [fakeGame],
+      games,
       rng: options.rng ?? seededRng(1),
       now,
       timers,

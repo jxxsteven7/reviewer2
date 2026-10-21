@@ -1,4 +1,12 @@
-import type { KeywordsRoomData, KeywordsView, MatchRules, MatchView, RecordsView, Team } from '@reviewer2/shared';
+import type {
+  KeywordsMatchOptions,
+  KeywordsMatchRules,
+  KeywordsRoomData,
+  KeywordsView,
+  MatchView,
+  RecordsView,
+  Team,
+} from '@reviewer2/shared';
 import { afterEach, describe, expect, test } from 'vitest';
 import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';
@@ -59,12 +67,17 @@ async function settle(everyone: TestClient[]) {
 
 const loggedIn = (name: string) => registered(server.url, name);
 
-const RULES: MatchRules = { games: 2, teams: 'switch', grouping: 'random' };
+const RULES: KeywordsMatchRules = { games: 2, options: { teams: 'switch', grouping: 'random' } };
 
 // A match room with Ann in the chair and Bob, Cat and Dan playing. Each of them may be a browser
 // with an account; the others are guests, numbered in the order they came in.
-async function matchRoom(rules: Partial<MatchRules> = {}, accounts: Record<string, Browser> = {}) {
-  const create = { game: 'keywords', language: 'en', fields: ['general'], play: true, match: { ...RULES, ...rules } };
+async function matchRoom(
+  rules: { games?: number } & Partial<KeywordsMatchOptions> = {},
+  accounts: Record<string, Browser> = {},
+) {
+  const { games = RULES.games, ...options } = rules;
+  const match = { games, options: { ...RULES.options, ...options } };
+  const create = { game: 'keywords', language: 'en', fields: ['general'], play: true, match };
   const players: Record<string, TestClient> = {};
   let code = '';
   let guests = 0;
@@ -148,14 +161,16 @@ describe('a match', () => {
   test('is played game by game, scores everyone and ranks them at the end, with titles', async () => {
     server = await startServer({ games: [keywordsGame] });
     const accounts = { Ann: await loggedIn('Ann'), Bob: await loggedIn('Bob') };
-    // Ann won a game of another kind before the match, for her streaks.
+    // Ann won a game of another kind before the match, which her record of the first game keeps
+    // apart, streaks and all.
     keepGame(server.db, 'earlier', { game: 'test' });
     server.accounts.records.add(1, {
       game: 'test',
       gameId: 'earlier',
       side: 'red',
       role: 'guesser',
-      won: true,
+      result: 'won',
+      place: 1,
       verdict: 'v',
       points: 0,
     });
@@ -227,10 +242,10 @@ describe('a match', () => {
 
     // The accounts keep the match and its title, once; guests keep nothing.
     const records = async (browser: Browser) =>
-      (await browser.request('/api/account/records')).body.records as RecordsView;
+      ((await browser.request('/api/account/records')).body.records as RecordsView).keywords;
     for (const name of ['Ann', 'Bob'] as const) {
       const standing = view.standings.find((line) => line.name === name);
-      expect((await records(accounts[name])).matches).toEqual({
+      expect((await records(accounts[name]))?.matches).toEqual({
         played: 1,
         won: standing?.rank === 1 ? 1 : 0,
         recent: [
@@ -248,22 +263,31 @@ describe('a match', () => {
       // The games of the match bring their own titles too: a group that reveals Reviewer 2 in the
       // turn of its first clue falls at the first hurdle.
       const summary = await accounts[name].account();
-      const titles = (summary?.titles ?? []) as { title: string; count: number }[];
+      const titles = (summary?.titles ?? []) as { game: string; title: string; count: number }[];
       expect(titles.filter(({ title }) => title !== 'first_turn_reject')).toEqual(
-        standing?.title ? [{ title: standing.title, count: 1 }] : [],
+        standing?.title ? [{ game: 'keywords', title: standing.title, count: 1 }] : [],
       );
     }
-    // The match's games go on the players' streaks one by one, in a row with the games before the
-    // match (docs/architecture.md#streaks): Ann's streaks are what her record, the game she won
-    // before the match and the two of the match, adds up to, whichever way each game went.
-    const annsRecord = (await records(accounts.Ann)).recent.map(({ won }) => won).reverse();
-    expect(annsRecord).toHaveLength(3);
-    // The games of the match are on the record as its games, apart from the game before it.
-    const anns = await records(accounts.Ann);
-    expect(anns.recent.map(({ match }) => match)).toEqual([{ game: 2, games: 2 }, { game: 1, games: 2 }, null]);
+    // The match's games go on the players' streaks of the game one by one
+    // (docs/architecture.md#streaks): Ann's streaks of the first game are what the two games of the
+    // match add up to, whichever way each went, and the game of another kind that she won before
+    // the match has streaks of its own.
+    const anns = (await records(accounts.Ann)) as RecordsView[string];
+    const annsRecord = anns.recent.map(({ result }) => result === 'won').reverse();
+    expect(annsRecord).toHaveLength(2);
+    // The games of the match are on the record as its games, and the game before it on the record
+    // of its own game.
+    expect(anns.recent.map(({ match }) => match)).toEqual([
+      { game: 2, games: 2 },
+      { game: 1, games: 2 },
+    ]);
     expect(anns).toMatchObject({
+      ordinary: { games: 0, wins: 0 },
+      inMatches: { games: 2, wins: annsRecord.filter(Boolean).length },
+    });
+    expect(((await accounts.Ann.request('/api/account/records')).body.records as RecordsView).test).toMatchObject({
       ordinary: { games: 1, wins: 1 },
-      inMatches: { games: 2, wins: annsRecord.slice(1).filter(Boolean).length },
+      inMatches: { games: 0, wins: 0 },
     });
     const streaks = { wins: 0, losses: 0 };
     let run = { won: true, length: 0 };
@@ -271,7 +295,7 @@ describe('a match', () => {
       run = run.won === won ? { won, length: run.length + 1 } : { won, length: 1 };
       streaks[won ? 'wins' : 'losses'] = Math.max(streaks[won ? 'wins' : 'losses'], run.length);
     }
-    expect(server.accounts.records.streaks(1)).toEqual(streaks);
+    expect(server.accounts.records.streaks(1)).toEqual({ keywords: streaks, test: { wins: 1, losses: 0 } });
     const count = (table: string) => (server.db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }).n;
     expect(count('match_records')).toBe(2);
     const titles = count('titles');
@@ -292,6 +316,13 @@ describe('a match', () => {
       ok: false,
       error: 'stale',
     });
+    // Options of the game that won't do leave the match as it was.
+    const mixed = { games: 1, options: { teams: 'mixed', grouping: 'random' } };
+    expect(await ann.send('room:matchNext', { matchId: view.id, match: mixed })).toEqual({
+      ok: false,
+      error: 'bad_match',
+    });
+    expect(matchOf(ann)).toMatchObject({ id: view.id, status: 'over' });
     await expectOk(ann.send('room:matchNext', { matchId: view.id, match: { ...RULES, games: 1 } }));
     await settle(everyone);
     expect(ann.state?.phase).toBe('lobby');
@@ -504,7 +535,11 @@ describe('a match', () => {
     const standing = standingOf(ann, 'Dana');
     expect(standing?.games).toBe(2);
     const records = (await browser.request('/api/account/records')).body.records as RecordsView;
-    expect(records.matches.recent[0]).toMatchObject({ score: standing?.total, rank: standing?.rank, games: 2 });
+    expect(records.keywords?.matches.recent[0]).toMatchObject({
+      score: standing?.total,
+      rank: standing?.rank,
+      games: 2,
+    });
   });
 
   test("shows the line of a guest who logged in as the account's, also once it has left the room", async () => {
@@ -611,18 +646,32 @@ describe('a room that is not a match', () => {
       { ...RULES, games: 0 },
       { ...RULES, games: 11 },
       { ...RULES, games: 2.5 },
-      { ...RULES, teams: 'mixed' },
-      { games: 2, teams: 'fixed' },
     ]) {
       expect(await client.send('room:create', { ...create, match }), JSON.stringify(match)).toEqual({
         ok: false,
         error: 'bad_request',
       });
     }
+    // The game's own options are the game's to check (MatchHooks.options).
+    for (const match of [
+      { games: 2, options: { teams: 'mixed', grouping: 'random' } },
+      { games: 2, options: { ...RULES.options, extra: true } },
+      { games: 2, teams: 'fixed', grouping: 'random' },
+      { games: 2 },
+    ]) {
+      expect(await client.send('room:create', { ...create, match }), JSON.stringify(match)).toEqual({
+        ok: false,
+        error: 'bad_match',
+      });
+    }
     await server.close();
     server = await startServer();
     const other = track(await TestClient.connect(server.url));
     expect(await other.send('room:create', { ...create, game: 'test', match: RULES })).toEqual({
+      ok: false,
+      error: 'bad_match',
+    });
+    expect(await other.send('room:create', { ...create, game: 'test', match: { games: 2 } })).toEqual({
       ok: false,
       error: 'bad_match',
     });

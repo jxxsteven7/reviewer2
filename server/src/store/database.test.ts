@@ -1238,7 +1238,7 @@ describe('a database in DATA_DIR', () => {
       const won = db
         .prepare('SELECT won FROM game_records WHERE account_id = ? AND agents = 0 ORDER BY id')
         .all(account);
-      const { wins, losses } = streaksOf((won as { won: number }[]).map((row) => row.won === 1));
+      const { wins, losses } = streaksOf((won as { won: number }[]).map((row) => (row.won === 1 ? 'won' : 'lost')));
       return { wins, losses };
     };
     expect(streaks(1)).toEqual({ wins: 2, losses: 1 });
@@ -1742,8 +1742,8 @@ describe('a database in DATA_DIR', () => {
     expect(rows(db)).toEqual(kept);
     expect(db.prepare('SELECT count(*) AS n FROM github_contributions').get()).toEqual({ n: 0 });
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
-    // The schema is that of a new database, to the letter.
-    const fresh = await open(null);
+    // The schema is that of a new database of that release, to the letter.
+    const fresh = await open(null, MIGRATIONS.slice(0, 25));
     const schema = (database: DatabaseSync) =>
       database
         .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
@@ -1782,6 +1782,226 @@ describe('a database in DATA_DIR', () => {
       expect(() => add(values), values).toThrow(/UNIQUE|CHECK|NOT NULL/);
     }
     expect(db.prepare('SELECT count(*) AS n FROM github_contributions').get()).toEqual({ n: 3 });
+  });
+
+  // A database of the twenty-fifth release: Ann, Bob and Cat, with the last setups of their rooms,
+  // Ann's of a match; the one game of a match, which Ann won over Bob; a game that two AI players
+  // played in, one on each side, playing for Bob and for someone who had left by the end, which Ann
+  // won; a game that nobody finished; their titles; the rules that the records were counted under,
+  // and a setting of another kind; and then `changes`. The last record of a game was deleted, so
+  // that its ids go on from beyond the rows there are.
+  async function twentyFifth(changes = '') {
+    const database = await open(dir, MIGRATIONS.slice(0, 25));
+    database.db.exec(`
+      INSERT INTO accounts (id, handle, username, username_key, password, consent_version, consented_at, created_at, room_setup) VALUES
+        (1, 'aaaaaaaaaaaa', 'Ann', 'ann', 'h', 1, 'now', 'now',
+          '{"keywords":{"room":{"language":"en","fields":["general"],"randomFields":false,"match":{"games":3,"teams":"fixed","grouping":"choose"},"public":false,"play":true},"practice":{"role":"captain","fields":["general"]}}}'),
+        (2, 'bbbbbbbbbbbb', 'Bob', 'bob', 'h', 1, 'now', 'now',
+          '{"keywords":{"room":{"language":"zh","fields":["ml"],"randomFields":true,"match":null,"public":true,"play":false}}}'),
+        (3, 'cccccccccccc', 'Cat', 'cat', 'h', 1, 'now', 'now', NULL);
+      INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, rules, words, match_id, match_game, match_games) VALUES
+        ('g1', 'keywords', '2026-10-01T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g1","start":null,"entries":[]}',
+          NULL, 'finished', 'red', 'found', '2026-10-01T00:00:00.000Z', NULL, 2, 0, 0, 0, 1, 0, 'en', '["general"]', 'v', 4, 'w',
+          'm1', 1, 1),
+        ('g2', 'keywords', '2026-10-02T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g2","start":null,"entries":[]}',
+          '{"v":1,"gameId":"g2","steps":[]}', 'finished', 'red', 'found', '2026-10-02T00:00:00.000Z', NULL, 1, 0, 2, 1, 0, 0,
+          'en', '["general"]', 'v', 4, 'w', NULL, NULL, NULL),
+        ('g3', 'keywords', '2026-10-03T00:01:00.000Z', '{"v":2,"game":"keywords","gameId":"g3","start":null,"entries":[]}',
+          NULL, 'abandoned', NULL, NULL, '2026-10-03T00:00:00.000Z', NULL, 1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v', 4, 'w',
+          NULL, NULL, NULL);
+      INSERT INTO game_records (id, account_id, game, game_id, side, role, won, verdict, points) VALUES
+        (1, 1, 'keywords', 'g1', 'red', 'captain', 1, 'oral', 10),
+        (2, 2, 'keywords', 'g1', 'blue', 'captain', 0, 'reject', -3),
+        (4, 1, 'keywords', 'g2', 'red', 'guesser', 1, 'poster', 0),
+        (6, 3, 'keywords', 'g2', 'blue', 'guesser', 0, 'reject', 0);
+      DELETE FROM game_records WHERE id = 6;
+      INSERT INTO match_records (id, account_id, game, match_id, ended_at, games, rank, players, score) VALUES
+        (1, 1, 'keywords', 'm1', 'now', 1, 1, 2, 10),
+        (2, 2, 'keywords', 'm1', 'now', 1, 2, 2, -3);
+      INSERT INTO titles (id, account_id, game, title, match_id, game_id, turn) VALUES
+        (1, 1, 'keywords', 'best_paper', 'm1', NULL, NULL),
+        (2, 2, 'keywords', 'black_hole', 'm1', NULL, NULL),
+        (3, 1, 'keywords', 'opening_record', NULL, 'g1', 1);
+      INSERT INTO game_players (game_id, player_id, game, account_id) VALUES
+        ('g1', 'p1', 'keywords', 1), ('g1', 'p2', 'keywords', 2), ('g2', 'p1', 'keywords', 1);
+      INSERT INTO agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, won, feats) VALUES
+        ('g2', 'a', 'keywords', 'reviewer1', 0, NULL, 'red', 'captain', 1, '{"clues":2,"found":3,"reviewer2":0,"best":null}'),
+        ('g2', 'b', 'keywords', 'reviewer1', 0, NULL, 'blue', 'captain', 0, '{"clues":1,"found":0,"reviewer2":0,"best":null}'),
+        ('g2', 'p2', 'keywords', 'reviewer1', 1, 2, 'blue', 'guesser', 0, NULL),
+        ('g2', 'p3', 'keywords', 'reviewer1', 1, NULL, NULL, NULL, NULL, NULL);
+      INSERT INTO settings (key, value) VALUES
+        ('rules_counted:keywords', '4'), ('rules_counted:test', '7'), ('email_fingerprint_key', 'k');
+      ${changes}
+    `);
+    database.db.close();
+  }
+
+  test('of the twenty-fifth release keeps how each game came out as a result and a place, and the rules of a match with their options', async () => {
+    await twentyFifth();
+    const migrated = await open(dir, MIGRATIONS.slice(0, 26));
+    expect(migrated).toMatchObject({ schema: 26, migratedFrom: 25 });
+    const { db } = migrated;
+    const all = (sql: string) => db.prepare(sql).all();
+    // The schema is that of a new database of that release, to the letter.
+    const fresh = await open(null, MIGRATIONS.slice(0, 26));
+    const schema = (database: DatabaseSync) =>
+      database
+        .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+        .all();
+    expect(schema(db)).toEqual(schema(fresh.db));
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    // Every record keeps its id and everything else it had; one that was won is won in the first
+    // place, one that wasn't lost in the second, and none has a detail until the count of every
+    // game that the server runs as it starts.
+    expect(all('SELECT * FROM game_records ORDER BY id')).toEqual([
+      {
+        id: 1,
+        account_id: 1,
+        game: 'keywords',
+        game_id: 'g1',
+        side: 'red',
+        role: 'captain',
+        result: 'won',
+        place: 1,
+        verdict: 'oral',
+        detail: null,
+        points: 10,
+      },
+      {
+        id: 2,
+        account_id: 2,
+        game: 'keywords',
+        game_id: 'g1',
+        side: 'blue',
+        role: 'captain',
+        result: 'lost',
+        place: 2,
+        verdict: 'reject',
+        detail: null,
+        points: -3,
+      },
+      {
+        id: 4,
+        account_id: 1,
+        game: 'keywords',
+        game_id: 'g2',
+        side: 'red',
+        role: 'guesser',
+        result: 'won',
+        place: 1,
+        verdict: 'poster',
+        detail: null,
+        points: 0,
+      },
+    ]);
+    // So does what each AI did, a person who had no part in the game at its end with neither.
+    expect(
+      all(
+        'SELECT player_id AS player, account_id AS account, side, role, result, place, feats FROM agent_plays ORDER BY player_id',
+      ),
+    ).toEqual([
+      {
+        player: 'a',
+        account: null,
+        side: 'red',
+        role: 'captain',
+        result: 'won',
+        place: 1,
+        feats: '{"clues":2,"found":3,"reviewer2":0,"best":null}',
+      },
+      {
+        player: 'b',
+        account: null,
+        side: 'blue',
+        role: 'captain',
+        result: 'lost',
+        place: 2,
+        feats: '{"clues":1,"found":0,"reviewer2":0,"best":null}',
+      },
+      { player: 'p2', account: 2, side: 'blue', role: 'guesser', result: 'lost', place: 2, feats: null },
+      { player: 'p3', account: null, side: null, role: null, result: null, place: null, feats: null },
+    ]);
+    // The rules of a match keep the number of games, and the first game's options under `options`;
+    // a room without a match, and an account without a room, are left as they were.
+    expect(all('SELECT id, room_setup AS setup FROM accounts ORDER BY id')).toEqual([
+      {
+        id: 1,
+        setup:
+          '{"keywords":{"room":{"language":"en","fields":["general"],"randomFields":false,"match":{"games":3,"options":{"teams":"fixed","grouping":"choose"}},"public":false,"play":true},"practice":{"role":"captain","fields":["general"]}}}',
+      },
+      {
+        id: 2,
+        setup:
+          '{"keywords":{"room":{"language":"zh","fields":["ml"],"randomFields":true,"match":null,"public":true,"play":false}}}',
+      },
+      { id: 3, setup: null },
+    ]);
+    // The rules that the records were counted under are forgotten, and nothing else.
+    expect(all('SELECT key, value FROM settings ORDER BY key')).toEqual([{ key: 'email_fingerprint_key', value: 'k' }]);
+    // The titles, the matches and who played are as they were.
+    expect(all('SELECT id, title, game_id AS gameId FROM titles ORDER BY id')).toEqual([
+      { id: 1, title: 'best_paper', gameId: null },
+      { id: 2, title: 'black_hole', gameId: null },
+      { id: 3, title: 'opening_record', gameId: 'g1' },
+    ]);
+    // The ids of the records go on from where they were.
+    expect(all("SELECT seq FROM sqlite_sequence WHERE name = 'game_records'")).toEqual([{ seq: 6 }]);
+    db.exec(
+      "INSERT INTO game_records (account_id, game, game_id, side, role, result, place, verdict, points) VALUES (2, 'keywords', 'g2', 'blue', 'guesser', 'lost', 2, 'reject', 0)",
+    );
+    expect(all("SELECT id FROM game_records WHERE account_id = 2 AND game_id = 'g2'")).toEqual([{ id: 7 }]);
+    // A result is won, drawn or lost, with a place from 1, and the detail, if any, an object; what an
+    // AI did has a result and a place, or neither.
+    const record = (values: string) =>
+      db.exec(
+        `INSERT INTO game_records (account_id, game, game_id, side, role, result, place, verdict, detail, points) VALUES (${values})`,
+      );
+    record(`3, 'keywords', 'g1', 'red', 'guesser', 'drawn', 1, 'v', '{"found":1}', 0`);
+    for (const values of [
+      `3, 'keywords', 'g2', 'red', 'guesser', 'tied', 1, 'v', NULL, 0`,
+      `3, 'keywords', 'g2', 'red', 'guesser', 'won', 0, 'v', NULL, 0`,
+      `3, 'keywords', 'g2', 'red', 'guesser', 'won', 1, 'v', '[1]', 0`,
+      `3, 'keywords', 'g2', 'red', 'guesser', NULL, 1, 'v', NULL, 0`,
+    ]) {
+      expect(() => record(values), values).toThrow(/CHECK|NOT NULL/);
+    }
+    const play = (values: string) =>
+      db.exec(
+        `INSERT INTO agent_plays (game_id, player_id, game, persona, takeover, side, role, result, place) VALUES ('g2', ${values})`,
+      );
+    play(`'c', 'keywords', 'reviewer1', 0, 'red', 'guesser', 'drawn', 1`);
+    for (const values of [
+      `'d', 'keywords', 'reviewer1', 0, 'red', 'guesser', 'won', NULL`,
+      `'d', 'keywords', 'reviewer1', 0, 'red', 'guesser', NULL, 1`,
+      `'d', 'keywords', 'reviewer1', 0, 'red', 'guesser', 'tied', 1`,
+      `'d', 'keywords', 'reviewer1', 0, 'red', 'guesser', 'won', 0`,
+    ]) {
+      expect(() => play(values), values).toThrow(/CHECK/);
+    }
+    // Everything of an account still goes with it, and of a game with the game.
+    db.exec('DELETE FROM accounts WHERE id = 1');
+    expect(all('SELECT id FROM game_records ORDER BY id')).toEqual([{ id: 2 }, { id: 7 }, { id: 8 }]);
+    expect(all('SELECT id FROM titles')).toEqual([{ id: 2 }]);
+    db.exec("DELETE FROM replays WHERE game_id = 'g2'");
+    expect(all('SELECT count(*) AS n FROM agent_plays')).toEqual([{ n: 0 }]);
+    expect(all('SELECT id FROM game_records ORDER BY id')).toEqual([{ id: 2 }, { id: 8 }]);
+  });
+
+  test('of the twenty-fifth release is left as it was when the last setup of a room is not JSON', async () => {
+    await twentyFifth(`UPDATE accounts SET room_setup = '{"keywords":' WHERE id = 3`);
+    await expect(open(dir, MIGRATIONS.slice(0, 26))).rejects.toThrow(/malformed JSON/);
+    const after = new DatabaseSync(join(dir, DATABASE_FILE));
+    expect(schemaVersion(after)).toBe(25);
+    expect(after.prepare('SELECT id, won FROM game_records ORDER BY id').all()).toEqual([
+      { id: 1, won: 1 },
+      { id: 2, won: 0 },
+      { id: 4, won: 1 },
+    ]);
+    expect(after.prepare("SELECT count(*) AS n FROM settings WHERE key GLOB 'rules_counted:*'").get()).toEqual({
+      n: 2,
+    });
+    after.close();
   });
 
   test('runs a migration with foreign keys off, so that it can rebuild a table that others point at', async () => {

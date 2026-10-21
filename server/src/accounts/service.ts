@@ -17,6 +17,7 @@ import {
   type AccountSummary,
   type AgentPersona,
   type AgentProfileView,
+  type DuoCounts,
   type DuoPart,
   type DuoTitle,
   type DuoView,
@@ -33,7 +34,7 @@ import {
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
-import type { KeptReplay, ShownAccount } from '../core/game';
+import type { GameModule, KeptReplay, ShownAccount } from '../core/game';
 import type { GameLogEntry, MatchNumbers } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
@@ -126,6 +127,10 @@ export interface AccountsOptions {
   // The server's feedback, which an account's page counts the contributions of; without it, as in
   // tests of the accounts alone, the feedback is read from the database here.
   feedback?: FeedbackStore;
+  // The games that the server plays, which add up what they count of the AI players' seats for
+  // their pages (GameModule.agentTotals); without them, as in tests of the accounts alone, those
+  // pages add up nothing of it.
+  games?: readonly GameModule[];
 }
 
 export class Accounts {
@@ -176,7 +181,7 @@ export class Accounts {
     this.mailTokens = new MailTokenStore(options.db, clock);
     this.records = new RecordStore(options.db, clock);
     this.replays = new ReplayStore(options.db, clock);
-    this.agentPlays = new AgentPlayStore(options.db);
+    this.agentPlays = new AgentPlayStore(options.db, new Map((options.games ?? []).map((game) => [game.id, game])));
     this.titles = new TitleStore(options.db);
     this.#feedback = options.feedback ?? new FeedbackStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
@@ -283,22 +288,29 @@ export class Accounts {
   // The page of an AI player (docs/architecture.md#ai-players), with how many of it are in the rooms
   // now, which the rooms count, and, for an account that asks, what it has played with the AI.
   agentProfileOf(persona: AgentPersona, viewer: Account | null, live: AgentProfileView['live']): AgentProfileView {
-    return { persona, number: 0, live, ...this.agentPlays.profile(persona, viewer?.id ?? null) };
+    return { persona, number: 0, live, games: this.agentPlays.profile(persona, viewer?.id ?? null) };
   }
 
   // What the account has played with each of its friends who shares a game with it, by the
-  // friend's account ID, with the titles each holds among them (docs/architecture.md#friend-duos).
-  // Only friends are counted, so a profile's owner who isn't one has nothing here.
-  duosOf(accountId: number): Map<number, DuoView> {
-    return duoViews(this.records.duos(accountId));
+  // friend's account ID, in each game they share, by the game's ID, with the titles each holds
+  // among them in that game (docs/architecture.md#friend-duos). Only friends are counted, so a
+  // profile's owner who isn't one has nothing here.
+  duosOf(accountId: number): Map<number, Record<string, DuoView>> {
+    const duos = new Map<number, Record<string, DuoView>>();
+    for (const [game, counts] of this.records.duos(accountId)) {
+      for (const [friend, view] of duoViews(counts)) duos.set(friend, { ...duos.get(friend), [game]: view });
+    }
+    return duos;
   }
 
-  // The titles that a game which has just ended brought friends who played in it, for one account
-  // that played in it: `players` is everyone whose game went on the record, the account among them,
-  // with their side and whether they won. A friend is told of by their account ID. The counts are
-  // only worked out when a friend of the account played: for most games, nobody did.
+  // The titles that a game of the game `game` which has just ended brought friends who played in
+  // it, for one account that played in it: `players` is everyone whose game went on the record,
+  // the account among them, with their side, how it came out for them and their place. A friend is
+  // told of by their account ID. The counts are only worked out when a friend of the account
+  // played: for most games, nobody did.
   duosBrought(
     accountId: number,
+    game: string,
     players: ReadonlyMap<number, DuoPart>,
   ): { friend: number; title: DuoTitle; count: number }[] {
     const mine = players.get(accountId);
@@ -306,7 +318,7 @@ export class Accounts {
     const friends = this.friends.store;
     if (![...players.keys()].some((other) => other !== accountId && friends.areFriends(accountId, other))) return [];
     // Every friend who played in the game shares it, so has counts.
-    const after = this.records.duos(accountId);
+    const after = this.records.duos(accountId).get(game) ?? new Map<number, DuoCounts>();
     const played = new Map<number, ReturnType<typeof duoGame>>();
     for (const [other, theirs] of players) if (after.has(other)) played.set(other, duoGame(mine, theirs));
     return played.size > 0 ? duoChanges(after, played) : [];
@@ -785,21 +797,22 @@ export class Accounts {
   }
 
   // Keeps a game on an account's record, as the game module described it, with the streak that it
-  // brings the account to and the titles that it brought them (docs/architecture.md#titles), in one
-  // transaction, unless the database is full. Gives the streak back, or null when the game wasn't
-  // kept, as one that was on the record already, whose titles were awarded with it, or one that an
-  // AI played in, which brings none. The record of the game comes first (keepGame): the database
-  // refuses a record of a game that isn't kept.
-  record(accountId: number, record: NewRecord): Streak | null {
+  // brings the account to in its game and the titles that it brought them
+  // (docs/architecture.md#titles), in one transaction, unless the database is full. Gives the
+  // streak back, which is none for a drawn game, or null when the game wasn't kept, as one that was
+  // on the record already, whose titles were awarded with it, or one that an AI played in, which
+  // brings none. The record of the game comes first (keepGame): the database refuses a record of a
+  // game that isn't kept.
+  record(accountId: number, record: NewRecord): { streak: Streak | null } | null {
     if (this.#full() || this.store.byId(accountId) === undefined) return null;
     return this.store.transaction(() => {
-      const streak = this.records.add(accountId, record);
-      if (streak) {
+      const kept = this.records.add(accountId, record);
+      if (kept) {
         for (const { title, turn } of record.titles ?? []) {
           this.titles.awardForGame(accountId, record.game, title, record.gameId, turn);
         }
       }
-      return streak;
+      return kept;
     });
   }
 

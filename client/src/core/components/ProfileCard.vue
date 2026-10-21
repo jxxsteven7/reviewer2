@@ -8,6 +8,7 @@ import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { standingOf } from '../friends';
 import { nameOf, usernameAfter } from '../names';
+import { shownCounts, shownDuo, shownStreaks, shownTitles } from '../records';
 import { useLanguage } from '../i18n';
 import { connect } from '../socket';
 import { streakTitles as titlesOf } from '../streaks';
@@ -103,7 +104,12 @@ const canAct = computed(() => viewer.value !== null && profile.value !== null &&
 const guest = computed(() => account.loaded && viewer.value === null);
 const since = computed(() => (profile.value ? formatDay(profile.value.createdAt, locale.value) : ''));
 const language = useLanguage();
-const streakTitles = computed(() => (profile.value ? titlesOf(t, profile.value.streaks, language.value) : []));
+const streakTitles = computed(() =>
+  profile.value ? titlesOf(t, shownStreaks(profile.value.streaks), language.value) : [],
+);
+// The record of the game shown (records.ts).
+const titles = computed(() => (profile.value ? shownTitles(profile.value.titles) : []));
+const duo = computed(() => (profile.value ? shownDuo(profile.value.duo) : null));
 
 // Likes the profile, or takes the like back. The count and the viewer's like then come from the
 // server, which keeps them, and the button waits for them: a second tap meanwhile would send the
@@ -164,16 +170,16 @@ watch(
       </div>
 
       <TitlePills
-        v-if="profile.titles.length || streakTitles.length || profile.contributions?.length"
-        :titles="profile.titles"
+        v-if="titles.length || streakTitles.length || profile.contributions?.length"
+        :titles="titles"
         :streaks="streakTitles"
         :contributions="profile.contributions"
       />
 
       <template v-if="!brief">
-        <section v-if="profile.duo" class="duo" aria-labelledby="profile-duo">
+        <section v-if="duo" class="duo" aria-labelledby="profile-duo">
           <h3 id="profile-duo">{{ t('playerPage.duo', { name }) }}</h3>
-          <DuoSummary :duo="profile.duo" />
+          <DuoSummary :duo="duo" />
         </section>
 
         <a v-if="profile.link !== null" class="link" :href="profile.link" target="_blank" rel="nofollow ugc noopener">
@@ -182,7 +188,7 @@ watch(
         </a>
         <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
 
-        <RecordStats v-if="profile.record" :counts="profile.record" />
+        <RecordStats v-if="profile.record" :counts="shownCounts(profile.record)" />
 
         <div class="actions">
           <i18n-t keypath="playerPage.likes" tag="span" class="likes num" scope="global">

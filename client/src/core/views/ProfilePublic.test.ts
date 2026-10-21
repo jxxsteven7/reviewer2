@@ -44,7 +44,7 @@ const summary = (
   email: 'none',
   points: 0,
   titles: [],
-  streaks: { wins: 0, losses: 0 },
+  streaks: {},
   contributions: [],
   profile: { link: null, bio: 'Hi', showRecord: false, showThanks: false, banned: false, ...profile },
   likes: 1,

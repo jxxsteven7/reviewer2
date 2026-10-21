@@ -21,7 +21,7 @@ const summary: AccountSummary = {
   email: 'none',
   points: 40,
   titles: [],
-  streaks: { wins: 0, losses: 0 },
+  streaks: {},
   contributions: [],
   profile: { link: null, bio: null, showRecord: false, showThanks: false, banned: false },
   likes: 0,

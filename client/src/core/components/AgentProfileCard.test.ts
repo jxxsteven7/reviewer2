@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { AgentProfileView } from '@reviewer2/shared';
+import type { AgentGameCounts, AgentProfileView, KeywordsAgentFeats } from '@reviewer2/shared';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
@@ -23,22 +23,29 @@ const global = (locale: 'en' | 'zh' = 'en') => ({
   plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })],
 });
 
-const page = (changes: Partial<AgentProfileView> = {}): AgentProfileView => ({
-  persona: 'reviewer1',
-  number: 0,
-  live: { players: 4, rooms: 3 },
-  games: 12,
-  seats: 14,
-  wins: 8,
-  roles: { captain: { seats: 8, wins: 5 }, guesser: { seats: 6, wins: 3 } },
-  clues: 30,
-  found: 37,
-  reviewer2: 2,
-  takeovers: 5,
-  best: { word: 'Zebra', found: 4 },
-  you: null,
-  ...changes,
-});
+// The page, with what it has done in the first game, and its feats there, changed as a test needs.
+type Changes = Partial<Omit<AgentGameCounts, 'feats'> & KeywordsAgentFeats & Pick<AgentProfileView, 'live'>>;
+function page(changes: Changes = {}): AgentProfileView {
+  const {
+    live = { players: 4, rooms: 3 },
+    clues = 30,
+    found = 37,
+    reviewer2 = 2,
+    best = { word: 'Zebra', found: 4 },
+    ...counts
+  } = changes;
+  const keywords: AgentGameCounts = {
+    games: 12,
+    seats: 14,
+    wins: 8,
+    roles: { captain: { seats: 8, wins: 5 }, guesser: { seats: 6, wins: 3 } },
+    takeovers: 5,
+    you: null,
+    ...counts,
+    feats: { clues, found, reviewer2, best } satisfies KeywordsAgentFeats,
+  };
+  return { persona: 'reviewer1', number: 0, live, games: { keywords } };
+}
 
 // A card left mounted would read the page again when the next test signs the browser out.
 enableAutoUnmount(afterEach);

@@ -7,7 +7,8 @@ import type { GameModule } from '../src/core/game';
 // to the spectators, which is a change of seat rather than a move. The game has one setting, a
 // level from 1 to 3. A game that is finished, rather than withdrawn, is won by everyone who came to
 // play, for the records, and brings whoever said something in it the Deadline Hero title, so that
-// the titles of the records can be tested; it scores no points.
+// the titles of the records can be tested; it scores no points. What it counts of an AI player in a
+// seat is the presses of the whole game, which its page adds up.
 
 export interface FakeData {
   joined: string[];
@@ -59,6 +60,8 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 export const fakeGame: GameModule<FakeData, FakeView> = {
   id: 'test',
   rulesVersion: 7,
+  // The one title that it brings, which the first game has too: no other game is played beside it.
+  titles: ['deadline_hero'],
   wordsNeeded: 3,
   create: (language) => ({
     joined: [],
@@ -125,14 +128,18 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
           playerId,
           side: 'all',
           role: 'player',
-          winner: 'all',
-          won: true,
+          result: 'won' as const,
+          place: 1,
           verdict: `pressed ${data.presses}`,
           titles: data.talkers.includes(playerId) ? [{ title: 'deadline_hero' as const, turn: 1 }] : [],
         })),
   // How the game began, for its record: the words. How it came out: everyone won, by finishing.
   setup: (data) => ({ words: data.words }),
   outcome: (data) => (data.withdrawn ? null : { winner: 'all', reason: 'finish' }),
+  agentFeats: (data) => ({ presses: data.presses }),
+  agentTotals: (feats) => ({
+    presses: (feats as { presses: number }[]).reduce((sum, { presses }) => sum + presses, 0),
+  }),
   // A finished game, watched again: how many presses its log has before its end, and the words,
   // which no one but the players should read back from the database. A game that didn't finish has
   // nothing to watch.
@@ -148,7 +155,8 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   participants: (data, ctx) => data.players.map((id) => ctx.keyOf(id)),
   // A kept game counted again (store/recount.ts), as results() counts it: everyone who came to play,
   // as the log seats them, won by finishing, with the presses in the verdict and the title for
-  // whoever said something, and no points. A game that didn't finish counts for nothing.
+  // whoever said something, no points, and the presses for an AI player. A game that didn't finish
+  // counts for nothing.
   recount: ({ log, keyOf }) => {
     const end = log.entries.findIndex(({ type }) => type === 'end');
     if (end === -1 || log.entries[end]?.data !== undefined) return null;
@@ -166,20 +174,25 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
       playerId,
       side: 'all',
       role: 'player',
-      winner: 'all',
-      won: true,
+      result: 'won' as const,
+      place: 1,
       verdict: `pressed ${presses}`,
       titles: talkers.has(playerId) ? [{ title: 'deadline_hero' as const, turn: 1 }] : [],
     }));
-    return { results, scores: players.map((playerId) => ({ key: keyOf(playerId), points: 0, detail: null })) };
+    return {
+      results,
+      scores: players.map((playerId) => ({ key: keyOf(playerId), points: 0, detail: null })),
+      feats: () => ({ presses }),
+    };
   },
   // The shapes of the game's own, for the check of the data: how a game began, its one setting, its
-  // one role, and what it counts of an AI player.
+  // one role, no detail of a record, and what it counts of an AI player.
   shapes: {
     setup: (value) =>
       isObject(value) && Array.isArray(value.words) && value.words.every((word) => typeof word === 'string'),
     settings: (value) => isObject(value) && isLevel(value.level),
     role: (role) => role === 'player',
+    detail: (value) => value === null,
     feats: (value) => isObject(value) && Number.isInteger(value.presses),
   },
   seated: (data, id) => (data.players.includes(id) ? 'player' : 'watcher'),

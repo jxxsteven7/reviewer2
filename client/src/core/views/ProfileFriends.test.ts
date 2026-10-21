@@ -45,13 +45,14 @@ vi.mock('../account', () => signedIn);
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
 // The line keeps each number with its word by no-break spaces; the test reads them as spaces.
 const plain = (text: string) => text.replace(/\u00a0/g, ' ');
+// A friend, and what the account has played with them in the first game, the one the list shows.
 const friend = (username: string, duo: DuoView | null): FriendView => ({
   handle: `${username.toLowerCase()}00000000`.slice(0, 12),
   username,
   avatar: null,
   online: false,
   room: null,
-  duo,
+  duo: duo && { keywords: duo },
 });
 
 // The section with the site's panel of an account beside it (profilePanel.ts), which the search
@@ -255,7 +256,7 @@ describe('the search on the account page', () => {
     rank: 'phd',
     createdAt: '2026-10-01',
     titles: [],
-    streaks: { wins: 0, losses: 0 },
+    streaks: {},
     link: null,
     bio: null,
     record: null,

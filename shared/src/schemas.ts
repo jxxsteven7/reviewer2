@@ -6,7 +6,7 @@ import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
 import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
 import { BOARD_SIZE, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './games/keywords/types';
 import { LANGUAGES } from './language';
-import { MATCH_GAMES, MATCH_GROUPINGS, MATCH_TEAMS } from './match';
+import { MATCH_GAMES } from './match';
 import { EMOTES, MAX_NAME_INPUT } from './protocol';
 
 // The schemas that the server checks every message against (docs/architecture.md). Only the
@@ -34,12 +34,11 @@ const play = z.boolean().optional();
 const none = z.object({});
 // A game's settings, which its module checks (GameModule.configure on the server).
 const settings = z.unknown();
-// The rules of a match (match.ts), which are the room's and not a game's, so they are checked here
-// in full.
+// The rules of a match (match.ts): the number of games, which is the room's and is checked here,
+// and the game's own options, which its module checks (MatchHooks.options on the server).
 const match = z.object({
   games: z.number().int().min(MATCH_GAMES.min).max(MATCH_GAMES.max),
-  teams: z.enum(MATCH_TEAMS),
-  grouping: z.enum(MATCH_GROUPINGS),
+  options: z.unknown().optional(),
 });
 const matchId = z.string().max(64);
 // Who plays in a practice room (docs/architecture.md#practice-rooms): its creator alone, in the

@@ -2,6 +2,7 @@ import type { CardColor, ClueRecord, GameResult, Seat } from '@reviewer2/shared'
 import { describe, expect, test } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { keywordsGame, type KeywordsData } from './index';
+import { startGame } from './seats';
 import type { KeywordsState } from './state';
 import { gameState, LAYOUT, STANDARD } from './testing';
 
@@ -16,32 +17,76 @@ const seats: Record<string, Seat> = {
   eve: { team: null, role: 'spectator' },
 };
 
-// A game that has ended as `result` says, with `found` of the blue cards revealed.
+// Ann came back to the room as `ann-2`, with the same member key.
+const keyOf = (id: string) => (id === 'ann-2' ? 'key-ann' : `key-${id}`);
+
+// A game that has ended as `result` says, with `found` of the blue cards revealed, which everyone
+// in a group played from its start.
 function ended(result: GameResult | null, found = 0): KeywordsData {
   const game = gameState({ phase: 'over', result });
   const cards = game.cards.map((card, index) => ({ ...card, revealed: LAYOUT[index] === 'B' && index < 9 + found }));
   return {
     settings: STANDARD,
-    seating: { seats: new Map(Object.entries(seats)), keyViewers: new Set(), sides: new Map() },
+    seating: startGame({ seats: new Map(Object.entries(seats)), keyViewers: new Set(), sides: new Map() }, keyOf),
     game: { ...game, cards },
     vacated: { red: null, blue: null },
     match: null,
   };
 }
 
-// Ann came back to the room as `ann-2`, with the same member key.
-const keyOf = (id: string) => (id === 'ann-2' ? 'key-ann' : `key-${id}`);
 const results = (data: KeywordsData) => keywordsGame.results?.(data, { keyOf } as GameContext);
 
 describe('the results of a game', () => {
-  test('give everyone in a seat their group, their role, whether they won and their letter', () => {
+  test('give everyone in a seat their group, their role, how the game came out for them, their place and their letter', () => {
     // Red found all its cards while blue had 3 of 8 left: a spotlight for red, a reject for blue.
+    const won = { result: 'won', place: 1, verdict: 'spotlight', titles: [] };
+    const lost = { result: 'lost', place: 2, verdict: 'reject', titles: [] };
     expect(results(ended({ winner: 'red', reason: 'found' }, 5))).toEqual([
-      { playerId: 'ann', side: 'red', role: 'captain', winner: 'red', won: true, verdict: 'spotlight', titles: [] },
-      { playerId: 'bob', side: 'red', role: 'guesser', winner: 'red', won: true, verdict: 'spotlight', titles: [] },
-      { playerId: 'cat', side: 'blue', role: 'captain', winner: 'red', won: false, verdict: 'reject', titles: [] },
-      { playerId: 'dee', side: 'blue', role: 'guesser', winner: 'red', won: false, verdict: 'reject', titles: [] },
+      { playerId: 'ann', side: 'red', role: 'captain', ...won, detail: expect.objectContaining({ role: 'captain' }) },
+      { playerId: 'bob', side: 'red', role: 'guesser', ...won, detail: expect.objectContaining({ role: 'guesser' }) },
+      { playerId: 'cat', side: 'blue', role: 'captain', ...lost, detail: expect.objectContaining({ role: 'captain' }) },
+      { playerId: 'dee', side: 'blue', role: 'guesser', ...lost, detail: expect.objectContaining({ role: 'guesser' }) },
     ]);
+  });
+
+  test('give each player where their points came from, as a match scores the game, under whichever ID they had', () => {
+    const guess = (card: number, color: CardColor) => ({ card, color, player: 'bob', at: 0 });
+    // Red's first clue finds four of its cards, one past the third; blue's PI misses the deadline;
+    // red's next clue finds a blue card and an irrelevant paper, and Ann gives it as ann-2.
+    const history: ClueRecord[] = [
+      {
+        turn: 1,
+        team: 'red',
+        at: 0,
+        word: 'Pair',
+        count: 4,
+        guesses: [guess(0, 'red'), guess(1, 'red'), guess(2, 'red'), guess(3, 'red')],
+        captain: 'ann',
+      },
+      { turn: 2, team: 'blue', at: 0, word: null, count: null, guesses: [], timedOut: true, captain: 'cat' },
+      {
+        turn: 3,
+        team: 'red',
+        at: 0,
+        word: 'Odd',
+        count: 1,
+        guesses: [guess(10, 'blue'), guess(20, 'neutral')],
+        captain: 'ann-2',
+      },
+    ];
+    const data = ended({ winner: 'red', reason: 'found' });
+    const parts = results({ ...data, game: { ...(data.game as KeywordsState), history } });
+    const none = { irrelevant: 0, wrong: 0, reviewer2: 0, bigClues: 0, missed: 0, heavenlyHand: false };
+    const red = { ...none, found: 4, won: true, irrelevant: 1, wrong: 1, openingRecord: true };
+    const blue = { ...none, found: 0, won: false, openingRecord: false };
+    expect(Object.fromEntries((parts ?? []).map(({ playerId, detail }) => [playerId, detail]))).toEqual({
+      ann: { ...red, role: 'captain', bigClues: 1 },
+      bob: { ...red, role: 'guesser' },
+      cat: { ...blue, role: 'captain', missed: 1 },
+      dee: { ...blue, role: 'guesser' },
+    });
+    // In the game's own shape, which the check of the data holds every record against.
+    for (const { detail } of parts ?? []) expect(keywordsGame.shapes?.detail(detail)).toBe(true);
   });
 
   test('desk reject the group that revealed Reviewer 2', () => {
@@ -314,7 +359,7 @@ describe('the titles in the view', () => {
       awardsTitles: (id: string) => id !== 'cat',
     } as unknown as GameContext;
     const view = keywordsGame.views(data, ctx)({ playerId: 'eve' });
-    expect(view.titles).toEqual({ ann: [{ title: 'missed_deadline', count: 2 }] });
+    expect(view.titles).toEqual({ ann: [{ game: 'keywords', title: 'missed_deadline', count: 2 }] });
     expect(keywordsGame.views({ ...data, game: null }, ctx)({ playerId: 'eve' }).titles).toEqual({});
     // A game that the chair withdrew awards none, so the view has none either.
     const withdrawn = {

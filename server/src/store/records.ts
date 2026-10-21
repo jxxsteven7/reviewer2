@@ -1,13 +1,16 @@
 import {
   RECENT_RECORDS,
   TITLES,
-  type AgentProfileView,
+  type AgentGameCounts,
   type BestStreaks,
   type DuoCounts,
+  type GameCounts,
   type GameRecord,
+  type GameRecords,
   type Language,
   type MatchRecord,
   type RecordCounts,
+  type RecordResult,
   type RecordsView,
   type Streak,
   type StreakKind,
@@ -16,7 +19,7 @@ import {
 } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import { markDeleted, type GameEnding, type GameLogData, type GameLogEntry, type MatchNumbers } from '../core/gameLog';
-import type { GameOutcome } from '../core/game';
+import type { GameModule, GameOutcome } from '../core/game';
 import type { AgentPlay } from '../core/room';
 
 // What accounts keep of the games: a row for each game that a player with an account finished in
@@ -33,8 +36,12 @@ import type { AgentPlay } from '../core/room';
 // alone, and what the records can give is never kept beside them: the streaks of wins and of losses
 // that the games make (docs/architecture.md#streaks) and what friends have played together
 // (migration 13, docs/architecture.md#friend-duos) are worked out from the records whenever they
-// are asked for. The points, the verdicts and the titles are counted under the rules of today, and
-// counted again from the record of the game when the rules change (recount.ts).
+// are asked for. The records of two games are never added up: each count is of one game, by the
+// game that each record names, but the points, which make one rank of every game
+// (docs/architecture.md#academic-ranks). How each game came out for each player, their place, the
+// points, the verdicts, what the game counts of each player's game and the titles are counted under
+// the rules of today, and counted again from the record of the game when the rules change
+// (recount.ts).
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
 // points it brought them (migration 8), scored as a match scores a game, and the titles it brought
@@ -45,27 +52,29 @@ export interface NewRecord {
   gameId: string;
   side: string;
   role: string;
-  won: boolean;
+  result: RecordResult;
+  place: number;
   verdict: string;
+  detail?: unknown;
   points: number;
   titles?: readonly { title: Title; turn: number }[];
 }
 
-// What the account has played with each of its friends (shared/src/duos.ts): its records, by
-// their own index, each with the friends' records of the same game. Those are found by the index
-// on the game (migration 13), which the statement names: left to itself, SQLite looks each friend
-// up in every one of the account's games instead, by the unique index on the account and the
-// game, which takes ten times as long with a hundred friends. Teammates were on the same side,
-// opponents on another. A game that an AI played in counts for no friend (migration 15), so that no
-// two friends make titles together against AI players. Exported for the test that reads the query
-// plan.
+// What the account has played with each of its friends in each game (shared/src/duos.ts): its
+// records, by their own index, each with the friends' records of the same game. Those are found by
+// the index on the game (migration 13), which the statement names: left to itself, SQLite looks
+// each friend up in every one of the account's games instead, by the unique index on the account
+// and the game, which takes ten times as long with a hundred friends. Teammates were on the same
+// side, opponents on another, and one beat the other by finishing in a better place. A game that an
+// AI played in counts for no friend (migration 15), so that no two friends make titles together
+// against AI players. Exported for the test that reads the query plan.
 export const DUOS_SQL =
-  'SELECT theirs.account_id AS friend, ' +
-  'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 1) AS wonTogether, ' +
-  'count(*) FILTER (WHERE theirs.side = mine.side AND mine.won = 0) AS lostTogether, ' +
+  'SELECT mine.game, theirs.account_id AS friend, ' +
+  "count(*) FILTER (WHERE theirs.side = mine.side AND mine.result = 'won') AS wonTogether, " +
+  "count(*) FILTER (WHERE theirs.side = mine.side AND mine.result = 'lost') AS lostTogether, " +
   'count(*) FILTER (WHERE theirs.side <> mine.side) AS against, ' +
-  'count(*) FILTER (WHERE theirs.side <> mine.side AND mine.won = 1) AS beat, ' +
-  'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.won = 1) AS beaten ' +
+  'count(*) FILTER (WHERE theirs.side <> mine.side AND mine.place < theirs.place) AS beat, ' +
+  'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.place < mine.place) AS beaten ' +
   'FROM game_records AS mine ' +
   'JOIN replays AS game ON game.game_id = mine.game_id AND game.agents = 0 AND game.takeover = 0 ' +
   'JOIN game_records AS theirs INDEXED BY game_records_game ' +
@@ -73,7 +82,7 @@ export const DUOS_SQL =
   'WHERE mine.account_id = ? AND theirs.account_id IN (' +
   'SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END FROM friendships ' +
   "WHERE status = 'accepted' AND (requester_id = ? OR addressee_id = ?)) " +
-  'GROUP BY theirs.account_id';
+  'GROUP BY mine.game, theirs.account_id';
 
 // One player's part in one match that ran its course. The title it awarded them, if any, goes in
 // the titles (TitleStore.award), not here.
@@ -86,30 +95,38 @@ export interface NewMatchRecord {
   score: number;
 }
 
-// The streaks on a record, counted over its games in the order they were kept, won or lost
+// The streaks on a record, counted over its games in the order they were kept, won, drawn or lost
 // (docs/architecture.md#streaks): the longest run of wins and of losses, and the run that the
 // latest game is part of, which is a record when it is longer than every run of its kind before
-// it, so that the first run of each kind is one. A record without games has no latest run. The
-// games are those that count, which the caller picks: today every game that no AI played in,
-// whichever game it was, and one game's alone whenever the pages come to show that.
-export function streaksOf(won: readonly boolean[]): BestStreaks & { latest: Streak | null } {
+// it, so that the first run of each kind is one. A drawn game ends the run before it and starts
+// none. A record without games, or whose latest game was drawn, has no latest run. The games are
+// those that count, which the caller picks: the games of one game that no AI played in.
+export function streaksOf(results: readonly RecordResult[]): BestStreaks & { latest: Streak | null } {
   const best = { wins: 0, losses: 0 };
   let run = 0;
-  let last: boolean | null = null;
-  for (const result of won) {
-    if (result === last) run += 1;
+  let last: StreakKind | null = null;
+  for (const result of results) {
+    const kind: StreakKind | null = result === 'won' ? 'wins' : result === 'lost' ? 'losses' : null;
+    if (kind !== null && kind === last) run += 1;
     else {
-      if (last !== null) best[last ? 'wins' : 'losses'] = Math.max(best[last ? 'wins' : 'losses'], run);
-      run = 1;
-      last = result;
+      if (last !== null) best[last] = Math.max(best[last], run);
+      run = kind === null ? 0 : 1;
+      last = kind;
     }
   }
   if (last === null) return { ...best, latest: null };
-  const kind: StreakKind = last ? 'wins' : 'losses';
-  const latest = { kind, length: run, record: run > best[kind] };
-  best[kind] = Math.max(best[kind], run);
+  const latest = { kind: last, length: run, record: run > best[last] };
+  best[last] = Math.max(best[last], run);
   return { ...best, latest };
 }
+
+// The counts of one game on a record that has none of it yet.
+const noCounts = (): GameCounts => ({
+  ordinary: { games: 0, wins: 0 },
+  inMatches: { games: 0, wins: 0 },
+  roles: {},
+  matches: { played: 0, won: 0 },
+});
 
 // A record and the record of its game, joined, for the statements that read what the game says of
 // each record: whether an AI played in it, the match it was in, who won and when it ended.
@@ -137,21 +154,22 @@ export class RecordStore {
     // Unlike OR IGNORE, ON CONFLICT passes over that alone, and still refuses a record that the
     // table's checks refuse (migration 22), or one of a game that isn't kept (migration 24).
     this.#insert = db.prepare(
-      'INSERT INTO game_records (account_id, game, game_id, side, role, won, verdict, points) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
+      'INSERT INTO game_records (account_id, game, game_id, side, role, result, place, verdict, detail, points) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
     );
-    // The games outside matches and in them, each with how many were won.
+    // The games of each game outside matches and in them, each with how many were won.
     this.#totals = db.prepare(
-      'SELECT count(*) FILTER (WHERE g.match_id IS NULL) AS ordinaryGames, ' +
-        'count(*) FILTER (WHERE g.match_id IS NULL AND r.won = 1) AS ordinaryWins, ' +
+      'SELECT r.game, count(*) FILTER (WHERE g.match_id IS NULL) AS ordinaryGames, ' +
+        "count(*) FILTER (WHERE g.match_id IS NULL AND r.result = 'won') AS ordinaryWins, " +
         'count(*) FILTER (WHERE g.match_id IS NOT NULL) AS matchGames, ' +
-        'count(*) FILTER (WHERE g.match_id IS NOT NULL AND r.won = 1) AS matchWins ' +
-        `${RECORDS_WITH_GAMES} WHERE r.account_id = ?`,
+        "count(*) FILTER (WHERE g.match_id IS NOT NULL AND r.result = 'won') AS matchWins " +
+        `${RECORDS_WITH_GAMES} WHERE r.account_id = ? GROUP BY r.game`,
     );
-    // The games in each role, with how many were won, counting every game as the totals do.
+    // The games of each game in each of its roles, with how many were won, counting every game as
+    // the totals do.
     this.#roles = db.prepare(
-      'SELECT role, count(*) AS games, count(*) FILTER (WHERE won = 1) AS wins FROM game_records ' +
-        'WHERE account_id = ? GROUP BY role',
+      "SELECT game, role, count(*) AS games, count(*) FILTER (WHERE result = 'won') AS wins FROM game_records " +
+        'WHERE account_id = ? GROUP BY game, role',
     );
     this.#points = db.prepare('SELECT coalesce(sum(points), 0) AS points FROM game_records WHERE account_id = ?');
     this.#played = db.prepare('SELECT DISTINCT game FROM game_records WHERE account_id = ? ORDER BY game');
@@ -159,9 +177,9 @@ export class RecordStore {
     // of a match it was and whether an AI played in it. Every game on the record finished and is
     // kept with its log, so each has a replay to watch.
     this.#recent = db.prepare(
-      'SELECT r.game, r.game_id AS gameId, g.ended_at AS endedAt, r.side, r.role, g.winner, r.won, r.verdict, ' +
-        'g.match_game AS matchGame, g.match_games AS matchGames, (g.agents > 0 OR g.takeover = 1) AS agents ' +
-        `${RECORDS_WITH_GAMES} WHERE r.account_id = ? ORDER BY r.id DESC LIMIT ?`,
+      'SELECT r.game, r.game_id AS gameId, g.ended_at AS endedAt, r.side, r.role, g.winner, r.result, r.place, ' +
+        'r.verdict, g.match_game AS matchGame, g.match_games AS matchGames, (g.agents > 0 OR g.takeover = 1) AS agents ' +
+        `${RECORDS_WITH_GAMES} WHERE r.account_id = ? AND r.game = ? ORDER BY r.id DESC LIMIT ?`,
     );
     // A match is recorded once for each account, as a game is.
     this.#insertMatch = db.prepare(
@@ -170,59 +188,79 @@ export class RecordStore {
     );
     // A match is won by finishing first, alone or level with others.
     this.#matchCount = db.prepare(
-      'SELECT count(*) AS played, count(*) FILTER (WHERE rank = 1) AS won FROM match_records WHERE account_id = ?',
+      'SELECT game, count(*) AS played, count(*) FILTER (WHERE rank = 1) AS won FROM match_records ' +
+        'WHERE account_id = ? GROUP BY game',
     );
     // With the title that the match awarded the account, if any, from the titles (migration 24).
     this.#recentMatches = db.prepare(
       'SELECT m.game, m.ended_at AS endedAt, m.games, m.rank, m.players, m.score, t.title FROM match_records AS m ' +
         'LEFT JOIN titles AS t ON t.account_id = m.account_id AND t.match_id = m.match_id ' +
-        'WHERE m.account_id = ? ORDER BY m.id DESC LIMIT ?',
+        'WHERE m.account_id = ? AND m.game = ? ORDER BY m.id DESC LIMIT ?',
     );
-    // The result of every game on the record that counts for a streak, in the order the games
-    // were kept, which is the order they ended in: a game that an AI played in brings no streak
-    // (migration 15). The streaks are counted from them whenever they are asked for (streaksOf),
-    // which takes a moment for the longest record, and keeps nothing beside the records that could
-    // fall behind them (migration 23).
+    // The result of every game of a game on the record that counts for a streak, in the order the
+    // games were kept, which is the order they ended in: a game that an AI played in brings no
+    // streak (migration 15). The streaks are counted from them whenever they are asked for
+    // (streaksOf), which takes a moment for the longest record, and keeps nothing beside the records
+    // that could fall behind them (migration 23).
     this.#results = db.prepare(
-      `SELECT r.won ${RECORDS_WITH_GAMES} WHERE r.account_id = ? AND g.agents = 0 AND g.takeover = 0 ORDER BY r.id`,
+      `SELECT r.game, r.result ${RECORDS_WITH_GAMES} WHERE r.account_id = ? AND g.agents = 0 AND g.takeover = 0 ` +
+        'ORDER BY r.id',
     );
     this.#duos = db.prepare(DUOS_SQL);
     // Whether an AI played in a kept game, as a player or for someone who was offline.
     this.#agentsIn = db.prepare('SELECT (agents > 0 OR takeover = 1) AS agents FROM replays WHERE game_id = ?');
   }
 
-  // Keeps the record, and the streak that the game brings the account to, or null when the game
-  // was on the record already or an AI played in it, as the record of the game says. The caller
-  // runs it in a transaction (Accounts.record), so that the streak is counted with the record in
-  // place.
-  add(accountId: number, record: NewRecord): Streak | null {
-    const { game, gameId, side, role, won, verdict, points } = record;
-    const { changes } = this.#insert.run(accountId, game, gameId, side, role, won ? 1 : 0, verdict, points);
+  // Keeps the record, with the streak that the game brings the account to in its game, which is
+  // none for a drawn game; or null when the game was on the record already, or an AI played in it,
+  // as the record of the game says, which counts for no streak, title or friend. The caller runs it
+  // in a transaction (Accounts.record), so that the streak is counted with the record in place.
+  add(accountId: number, record: NewRecord): { streak: Streak | null } | null {
+    const { game, gameId, side, role, result, place, verdict, detail, points } = record;
+    const json = detail === undefined || detail === null ? null : JSON.stringify(detail);
+    const { changes } = this.#insert.run(accountId, game, gameId, side, role, result, place, verdict, json, points);
     if (Number(changes) === 0) return null;
     const agents = (this.#agentsIn.get(gameId) as { agents: number } | undefined)?.agents === 1;
-    return agents ? null : this.#streaks(accountId).latest;
+    return agents ? null : { streak: this.#streaks(accountId).get(game)?.latest ?? null };
   }
 
-  // The longest streaks of wins and of losses on the account's record (shared/src/streaks.ts).
-  streaks(accountId: number): BestStreaks {
-    const { wins, losses } = this.#streaks(accountId);
-    return { wins, losses };
+  // The longest streaks of wins and of losses on the account's record of each game it has a game of
+  // that counts for one, by the game's ID (shared/src/streaks.ts).
+  streaks(accountId: number): Record<string, BestStreaks> {
+    const best: Record<string, BestStreaks> = {};
+    for (const [game, { wins, losses }] of this.#streaks(accountId)) best[game] = { wins, losses };
+    return best;
   }
 
-  #streaks(accountId: number): ReturnType<typeof streaksOf> {
-    return streaksOf((this.#results.all(accountId) as { won: number }[]).map(({ won }) => won === 1));
+  #streaks(accountId: number): Map<string, ReturnType<typeof streaksOf>> {
+    const results = new Map<string, RecordResult[]>();
+    for (const { game, result } of this.#results.all(accountId) as { game: string; result: RecordResult }[]) {
+      const games = results.get(game);
+      if (games) games.push(result);
+      else results.set(game, [result]);
+    }
+    return new Map([...results].map(([game, games]) => [game, streaksOf(games)]));
   }
 
-  // What the account has played with each friend who shares a game with it, by the friend's
-  // account ID, from every game on both their records but those that an AI played in
-  // (docs/architecture.md#friend-duos).
-  duos(accountId: number): Map<number, DuoCounts> {
-    type Row = DuoCounts & { friend: number };
-    const rows = this.#duos.all(accountId, accountId, accountId, accountId) as unknown as Row[];
-    return new Map(rows.map(({ friend, ...counts }) => [friend, counts]));
+  // What the account has played in each game with each friend who shares a game of it with them,
+  // by the game's ID and then the friend's account ID, from every game on both their records but
+  // those that an AI played in (docs/architecture.md#friend-duos).
+  duos(accountId: number): Map<string, Map<number, DuoCounts>> {
+    type Row = DuoCounts & { game: string; friend: number };
+    const duos = new Map<string, Map<number, DuoCounts>>();
+    for (const { game, friend, ...counts } of this.#duos.all(
+      accountId,
+      accountId,
+      accountId,
+      accountId,
+    ) as unknown as Row[]) {
+      duos.set(game, (duos.get(game) ?? new Map()).set(friend, counts));
+    }
+    return duos;
   }
 
-  // The points of every game on the account's record, from which its rank is told (ranks.ts).
+  // The points of every game on the account's record, of every game, from which its rank is told
+  // (ranks.ts).
   points(accountId: number): number {
     return (this.#points.get(accountId) as { points: number }).points;
   }
@@ -239,44 +277,47 @@ export class RecordStore {
     return Number(this.#insertMatch.run(accountId, game, matchId, endedAt, games, rank, players, score).changes) > 0;
   }
 
-  // How many games the account has played and won, outside matches and in them, and in each role
-  // of the first game, and how many matches it has finished and won: the counts alone, as a public
-  // profile shows them (docs/architecture.md#public-profiles). Every game counts, whichever game
-  // it was, as the pages show them today; each record names its game, for the day they show each
-  // game's own.
+  // How many games of each game the account has played and won, outside matches and in them, and
+  // in each of the game's roles, and how many matches of it it has finished and won: the counts
+  // alone, as a public profile shows them (docs/architecture.md#public-profiles), by the game's ID.
+  // The counts of two games are never added up.
   counts(accountId: number): RecordCounts {
-    type Totals = { ordinaryGames: number; ordinaryWins: number; matchGames: number; matchWins: number };
-    const totals = this.#totals.get(accountId) as Totals;
-    const roles: RecordCounts['roles'] = { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } };
-    for (const { role, games, wins } of this.#roles.all(accountId) as { role: string; games: number; wins: number }[]) {
-      if (role === 'captain' || role === 'guesser') roles[role] = { games, wins };
+    const counts: RecordCounts = {};
+    const of = (game: string): GameCounts => (counts[game] ??= noCounts());
+    type Totals = { game: string; ordinaryGames: number; ordinaryWins: number; matchGames: number; matchWins: number };
+    for (const totals of this.#totals.all(accountId) as Totals[]) {
+      const game = of(totals.game);
+      game.ordinary = { games: totals.ordinaryGames, wins: totals.ordinaryWins };
+      game.inMatches = { games: totals.matchGames, wins: totals.matchWins };
     }
-    const { played, won } = this.#matchCount.get(accountId) as { played: number; won: number };
-    return {
-      ordinary: { games: totals.ordinaryGames, wins: totals.ordinaryWins },
-      inMatches: { games: totals.matchGames, wins: totals.matchWins },
-      roles,
-      matches: { played, won },
-    };
+    type Role = { game: string; role: string; games: number; wins: number };
+    for (const { game, role, games, wins } of this.#roles.all(accountId) as Role[])
+      of(game).roles[role] = { games, wins };
+    type Matches = { game: string; played: number; won: number };
+    for (const { game, played, won } of this.#matchCount.all(accountId) as Matches[])
+      of(game).matches = { played, won };
+    return counts;
   }
 
-  // The counts, and the latest games and matches.
+  // The counts of each game, and its latest games and matches.
   view(accountId: number, limit = RECENT_RECORDS): RecordsView {
-    const counts = this.counts(accountId);
-    type Row = Omit<GameRecord, 'won' | 'match' | 'agents'> & {
-      won: number;
+    type Row = Omit<GameRecord, 'match' | 'agents'> & {
       agents: number;
       matchGame: number | null;
       matchGames: number | null;
     };
-    const recent = (this.#recent.all(accountId, limit) as Row[]).map(({ matchGame, matchGames, ...row }) => ({
-      ...row,
-      won: row.won === 1,
-      agents: row.agents === 1,
-      match: matchGame === null || matchGames === null ? null : { game: matchGame, games: matchGames },
-    }));
-    const recentMatches = this.#recentMatches.all(accountId, limit) as unknown as MatchRecord[];
-    return { ...counts, recent, matches: { ...counts.matches, recent: recentMatches } };
+    const view: RecordsView = {};
+    for (const [game, counts] of Object.entries(this.counts(accountId))) {
+      const recent = (this.#recent.all(accountId, game, limit) as Row[]).map(({ matchGame, matchGames, ...row }) => ({
+        ...row,
+        agents: row.agents === 1,
+        match: matchGame === null || matchGames === null ? null : { game: matchGame, games: matchGames },
+      }));
+      const recentMatches = this.#recentMatches.all(accountId, game, limit) as unknown as MatchRecord[];
+      const records: GameRecords = { ...counts, recent, matches: { ...counts.matches, recent: recentMatches } };
+      view[game] = records;
+    }
+    return view;
   }
 }
 
@@ -299,7 +340,7 @@ export class TitleStore {
       'INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
     );
     this.#counts = db.prepare(
-      'SELECT title, count(*) AS count FROM titles WHERE account_id = ? GROUP BY title ORDER BY title',
+      'SELECT game, title, count(*) AS count FROM titles WHERE account_id = ? GROUP BY game, title ORDER BY game, title',
     );
     this.#count = db.prepare('SELECT count(*) AS count FROM titles WHERE account_id = ? AND title = ?');
   }
@@ -318,22 +359,24 @@ export class TitleStore {
     return Number(this.#insertForGame.run(accountId, game, title, gameId, turn).changes) > 0;
   }
 
-  // How often the account has been awarded one title.
+  // How often the account has been awarded one title. A game's own titles are of no other game, so
+  // this counts those of its game alone.
   count(accountId: number, title: Title): number {
     return (this.#count.get(accountId, title) as { count: number }).count;
   }
 
-  // How often the account has been awarded each of its titles.
+  // How often the account has been awarded each of its titles in each game, the match's titles of
+  // two games apart.
   counts(accountId: number): TitleCount[] {
-    return (this.#counts.all(accountId) as { title: Title; count: number }[]).map(({ title, count }) => ({
-      title,
-      count,
-    }));
+    return (this.#counts.all(accountId) as { game: string; title: Title; count: number }[]).map(
+      ({ game, title, count }) => ({ game, title, count }),
+    );
   }
 }
 
 // The titles are the code's to check (migration 14), as they are for the whole table: a title that
-// isn't one is a mistake in the code, and is never kept.
+// isn't one is a mistake in the code, and is never kept. Which game's they are, the check of the
+// data checks (check.ts).
 function known(title: Title): void {
   if (!TITLES.includes(title)) throw new Error(`Unknown title: ${String(title)}`);
 }
@@ -425,10 +468,12 @@ export class ReplayStore {
     this.#log = db.prepare('SELECT game, log FROM replays WHERE game_id = ?');
     this.#has = db.prepare('SELECT 1 FROM replays WHERE game_id = ?');
     // The account of a person an AI played for, if it is still there. What the game counts of an
-    // AI player in a seat goes as JSON in the game's own shape (`feats`, migration 23).
+    // AI player in a seat goes as JSON in the game's own shape (`feats`, migration 23). As for the
+    // records, a play is kept once, and never in a form that the table's checks refuse.
     this.#agentPlay = db.prepare(
-      'INSERT OR IGNORE INTO agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, won, ' +
-        'feats) VALUES (?, ?, ?, ?, ?, (SELECT id FROM accounts WHERE id = ?), ?, ?, ?, ?)',
+      'INSERT INTO agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, ' +
+        'result, place, feats) VALUES (?, ?, ?, ?, ?, (SELECT id FROM accounts WHERE id = ?), ?, ?, ?, ?, ?) ' +
+        'ON CONFLICT DO NOTHING',
     );
   }
 
@@ -480,7 +525,8 @@ export class ReplayStore {
         play.accountId,
         play.side,
         play.role,
-        play.won === null ? null : play.won ? 1 : 0,
+        play.result,
+        play.place,
         json(play.feats),
       );
     }
@@ -564,82 +610,100 @@ export class ReplayStore {
 }
 
 // What the AI players have done in the games that finished (agent_plays, migration 15), for the
-// page of each (docs/architecture.md#ai-players), as counts, and what one account has played with
-// it. Who else played with it is never read here. What the game counted of each seat is JSON in
-// the game's own shape (`feats`, migration 23): the counts of the first game (AgentFeats in
-// core/game.ts) are read out of it by their names, and a row of another game, which has none of
-// them, adds nothing to them.
+// page of each (docs/architecture.md#ai-players), as counts of each game, and what one account has
+// played with it. Who else played with it is never read here. What a game counted of each seat is
+// JSON in the game's own shape (`feats`, migration 23), which the game adds up (GameModule.agentTotals,
+// from the games that the server plays): a game that doesn't, or that the server doesn't play,
+// adds up nothing of it.
 export class AgentPlayStore {
   readonly #totals: StatementSync;
   readonly #roles: StatementSync;
-  readonly #best: StatementSync;
+  readonly #feats: StatementSync;
   readonly #takeovers: StatementSync;
   readonly #withYou: StatementSync;
   readonly #forYou: StatementSync;
 
-  constructor(db: DatabaseSync) {
+  constructor(
+    db: DatabaseSync,
+    private readonly games: ReadonlyMap<string, GameModule> = new Map(),
+  ) {
     // A game counts once; the seats it took in them count one by one, each won or not, since the AI
-    // may sit in both groups of one game, as it does in a practice room, where a game won by either
+    // may sit in two groups of one game, as it does in a practice room, where a game won by either
     // of its groups would be won by it.
     this.#totals = db.prepare(
-      'SELECT count(DISTINCT game_id) AS games, count(*) AS seats, count(*) FILTER (WHERE won = 1) AS wins, ' +
-        "coalesce(sum(json_extract(feats, '$.clues')), 0) AS clues, " +
-        "coalesce(sum(json_extract(feats, '$.found')), 0) AS found, " +
-        "coalesce(sum(json_extract(feats, '$.reviewer2')), 0) AS reviewer2 " +
-        'FROM agent_plays WHERE persona = ? AND takeover = 0',
+      "SELECT game, count(DISTINCT game_id) AS games, count(*) AS seats, count(*) FILTER (WHERE result = 'won') AS wins " +
+        'FROM agent_plays WHERE persona = ? AND takeover = 0 GROUP BY game',
     );
     this.#roles = db.prepare(
-      'SELECT role, count(*) AS seats, count(*) FILTER (WHERE won = 1) AS wins ' +
-        'FROM agent_plays WHERE persona = ? AND takeover = 0 GROUP BY role',
+      "SELECT game, role, count(*) AS seats, count(*) FILTER (WHERE result = 'won') AS wins " +
+        'FROM agent_plays WHERE persona = ? AND takeover = 0 GROUP BY game, role',
     );
-    // The earliest of the clues that found the most.
-    this.#best = db.prepare(
-      "SELECT json_extract(feats, '$.best.word') AS word, json_extract(feats, '$.best.found') AS found " +
-        "FROM agent_plays WHERE persona = ? AND takeover = 0 AND json_type(feats, '$.best') = 'object' " +
-        'ORDER BY found DESC, rowid LIMIT 1',
+    // What each game counted of its seats, in the order the games ended.
+    this.#feats = db.prepare(
+      'SELECT feats FROM agent_plays WHERE persona = ? AND game = ? AND takeover = 0 AND feats IS NOT NULL ORDER BY rowid',
     );
     // Games, not people: an AI may play for two people who are offline in one game.
     this.#takeovers = db.prepare(
-      'SELECT count(DISTINCT game_id) AS count FROM agent_plays WHERE persona = ? AND takeover = 1',
+      'SELECT game, count(DISTINCT game_id) AS count FROM agent_plays WHERE persona = ? AND takeover = 1 GROUP BY game',
     );
-    // The account's games with the AI in a seat, by whether it was in the account's group.
+    // The account's games of each game with the AI in a seat, by whether it was on the account's
+    // side, and by who finished in the better place.
     this.#withYou = db.prepare(
-      'SELECT ' +
-        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side = mine.side AND mine.won = 1) AS wonTogether, ' +
-        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side = mine.side AND mine.won = 0) AS lostTogether, ' +
-        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side <> mine.side AND mine.won = 1) AS beat, ' +
-        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side <> mine.side AND mine.won = 0) AS beaten ' +
+      'SELECT mine.game, ' +
+        "count(DISTINCT mine.game_id) FILTER (WHERE ai.side = mine.side AND mine.result = 'won') AS wonTogether, " +
+        "count(DISTINCT mine.game_id) FILTER (WHERE ai.side = mine.side AND mine.result = 'lost') AS lostTogether, " +
+        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side <> mine.side AND mine.place < ai.place) AS beat, ' +
+        'count(DISTINCT mine.game_id) FILTER (WHERE ai.side <> mine.side AND ai.place < mine.place) AS beaten ' +
         'FROM game_records AS mine JOIN agent_plays AS ai ' +
-        'ON ai.game_id = mine.game_id AND ai.persona = ? AND ai.takeover = 0 WHERE mine.account_id = ?',
+        'ON ai.game_id = mine.game_id AND ai.persona = ? AND ai.takeover = 0 WHERE mine.account_id = ? GROUP BY mine.game',
     );
     this.#forYou = db.prepare(
-      'SELECT count(DISTINCT game_id) AS count FROM agent_plays WHERE persona = ? AND takeover = 1 AND account_id = ?',
+      'SELECT game, count(DISTINCT game_id) AS count FROM agent_plays WHERE persona = ? AND takeover = 1 AND account_id = ? ' +
+        'GROUP BY game',
     );
   }
 
-  // What the AI has done, without who played with it, and what it has played with the account, if
-  // one asks.
-  profile(persona: string, accountId: number | null): Omit<AgentProfileView, 'persona' | 'number' | 'live'> {
-    const totals = this.#totals.get(persona) as {
-      games: number;
-      seats: number;
-      wins: number;
-      clues: number;
-      found: number;
-      reviewer2: number;
-    };
-    const roles: AgentProfileView['roles'] = { captain: { seats: 0, wins: 0 }, guesser: { seats: 0, wins: 0 } };
-    for (const { role, seats, wins } of this.#roles.all(persona) as { role: string; seats: number; wins: number }[]) {
-      if (role === 'captain' || role === 'guesser') roles[role] = { seats, wins };
+  // What the AI has done in each game, without who played with it, and what it has played with the
+  // account, if one asks.
+  profile(persona: string, accountId: number | null): Record<string, AgentGameCounts> {
+    const counts: Record<string, AgentGameCounts> = {};
+    const of = (game: string): AgentGameCounts =>
+      (counts[game] ??= {
+        games: 0,
+        seats: 0,
+        wins: 0,
+        roles: {},
+        takeovers: 0,
+        feats: null,
+        you: accountId === null ? null : { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 0, takenOver: 0 },
+      });
+    type Totals = { game: string; games: number; seats: number; wins: number };
+    for (const { game, games, seats, wins } of this.#totals.all(persona) as Totals[]) {
+      Object.assign(of(game), { games, seats, wins });
+      const totals = this.games.get(game)?.agentTotals;
+      if (totals) {
+        const feats = (this.#feats.all(persona, game) as { feats: string }[]).map(
+          ({ feats }) => JSON.parse(feats) as unknown,
+        );
+        of(game).feats = totals(feats);
+      }
     }
-    const best = (this.#best.get(persona) as { word: string; found: number } | undefined) ?? null;
-    const takeovers = (this.#takeovers.get(persona) as { count: number }).count;
-    let you: AgentProfileView['you'] = null;
+    type Role = { game: string; role: string; seats: number; wins: number };
+    for (const { game, role, seats, wins } of this.#roles.all(persona) as Role[])
+      of(game).roles[role] = { seats, wins };
+    for (const { game, count } of this.#takeovers.all(persona) as { game: string; count: number }[]) {
+      of(game).takeovers = count;
+    }
     if (accountId !== null) {
-      const together = this.#withYou.get(persona, accountId) as Omit<NonNullable<AgentProfileView['you']>, 'takenOver'>;
-      const takenOver = (this.#forYou.get(persona, accountId) as { count: number }).count;
-      you = { ...together, takenOver };
+      type Together = Omit<NonNullable<AgentGameCounts['you']>, 'takenOver'> & { game: string };
+      for (const { game, ...together } of this.#withYou.all(persona, accountId) as Together[]) {
+        const you = of(game).you as NonNullable<AgentGameCounts['you']>;
+        Object.assign(you, together);
+      }
+      for (const { game, count } of this.#forYou.all(persona, accountId) as { game: string; count: number }[]) {
+        (of(game).you as NonNullable<AgentGameCounts['you']>).takenOver = count;
+      }
     }
-    return { ...totals, roles, takeovers, best, you };
+    return counts;
   }
 }

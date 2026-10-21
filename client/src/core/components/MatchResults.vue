@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MatchRules } from '@reviewer2/shared';
+import { defaultMatchRules, keywordsMatchRules, type KeywordsMatchRules, type MatchRules } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points } from '../points';
@@ -28,11 +28,13 @@ const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 
 const choosing = ref(false);
-const rules = ref<MatchRules>({ ...match.value.rules });
+// The rules of the match that ended, for the form to start from.
+const played = () => keywordsMatchRules(match.value.rules) ?? defaultMatchRules();
+const rules = ref<KeywordsMatchRules>(played());
 const rulesValid = ref(true);
 
 function chooseAgain() {
-  rules.value = { ...match.value.rules };
+  rules.value = played();
   choosing.value = true;
 }
 

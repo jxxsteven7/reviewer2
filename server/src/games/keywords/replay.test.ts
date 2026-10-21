@@ -440,8 +440,10 @@ describe('the replay of a random game', () => {
         expect(again, `game ${seed}, ${result.playerId}`).toMatchObject({
           side: result.side,
           role: result.role,
-          won: result.won,
+          result: result.result,
+          place: result.place,
           verdict: result.verdict,
+          detail: result.detail,
           titles: result.titles,
         });
         expect(points.get(keyOf(result.playerId)), `game ${seed}, ${result.playerId}`).toBe(live?.get(member.key) ?? 0);

@@ -331,7 +331,8 @@ describe('deleting the account', () => {
       gameId: 'g',
       side: 'red',
       role: 'captain',
-      won: true,
+      result: 'won',
+      place: 1,
       verdict: 'oral',
       points: 11,
     });
@@ -365,14 +366,11 @@ describe('the record of games', () => {
       status: 200,
       body: {
         ok: true,
-        records: {
-          ordinary: { games: 0, wins: 0 },
-          inMatches: { games: 0, wins: 0 },
-          recent: [],
-          matches: { played: 0, won: 0, recent: [] },
-        },
+        records: {},
       },
     });
+    // Of no game yet: each game's record comes with its first game.
+    expect(Object.keys((await browser.request('/api/account/records')).body.records as object)).toEqual([]);
   });
 });
 

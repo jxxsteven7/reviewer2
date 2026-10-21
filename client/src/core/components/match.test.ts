@@ -49,7 +49,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
     me: 'ann',
     match: {
       id: 'm1',
-      rules: { games: 3, teams: 'fixed', grouping: 'random' },
+      rules: { games: 3, options: { teams: 'fixed', grouping: 'random' } },
       played: 1,
       status: 'on',
       game: 1,
@@ -123,8 +123,8 @@ describe('the table of a match', () => {
     const titlesOf = (id: string) =>
       id === 'ann'
         ? [
-            { title: 'deadline_hero' as const, count: 2 },
-            { title: 'opening_record' as const, count: 1 },
+            { game: 'keywords', title: 'deadline_hero' as const, count: 2 },
+            { game: 'keywords', title: 'opening_record' as const, count: 1 },
           ]
         : [];
     const wrapper = mount(MatchTable, { props: { room: room({ standings }), titlesOf }, global: global() });
@@ -242,7 +242,7 @@ describe('the ranking of a match', () => {
     await flushPromises();
     expect(act).toHaveBeenLastCalledWith('room:matchNext', {
       matchId: 'm1',
-      match: { games: 2, teams: 'fixed', grouping: 'random' },
+      match: { games: 2, options: { teams: 'fixed', grouping: 'random' } },
     });
   });
 });

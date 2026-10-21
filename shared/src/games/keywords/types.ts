@@ -294,3 +294,15 @@ export interface KeywordsRoomData {
   // without a game.
   titles: Record<string, TitleCount[]>;
 }
+
+// What the game counts of an AI player in a seat at the end of a game that finished
+// (docs/architecture.md#ai-players): the clues it gave as its group's PI, how many of the group's
+// cards were found in their turns, how often it revealed Reviewer 2 as a student, and the clue that
+// found the most, if any found one. Its page adds them up over its seats, with the earliest of the
+// clues that found the most.
+export interface KeywordsAgentFeats {
+  clues: number;
+  found: number;
+  reviewer2: number;
+  best: { word: string; found: number } | null;
+}

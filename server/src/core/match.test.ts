@@ -1,12 +1,17 @@
 import type { MatchRules } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import type { MatchScore } from './game';
+import { fakeGame, type FakeData } from '../../test/fakeGame';
+import { testWords } from '../../test/helpers';
+import type { MatchHooks, MatchScore } from './game';
 import { Match, rankings, titlesFor, type Present, type Who } from './match';
+import { seededRng } from './random';
+import { Rooms } from './rooms';
 
-// The match itself: totals, places and titles. How a game scores is the game's (see the tests of
-// games/keywords/match.ts); how the room drives a match is in test/match.test.ts.
+// The match itself: totals, places and titles, and the rules that a room takes for one. How a game
+// scores is the game's (see the tests of games/keywords/match.ts); how the room drives a match is in
+// test/match.test.ts.
 
-const RULES: MatchRules = { games: 2, teams: 'switch', grouping: 'random' };
+const RULES: MatchRules = { games: 2 };
 
 // Everyone in `here` is in the room, with an account, their key as their name and as their player
 // ID, and no avatar.
@@ -320,5 +325,76 @@ describe('the table of a match', () => {
     view.rules.games = 9;
     expect(match.view('ended', 'g1', null, here).standings[0]?.detail).toEqual({ value: 2 });
     expect(match.rules.games).toBe(2);
+  });
+});
+
+describe("the rules of a room's match", () => {
+  // The fake game, played as a match by everyone who plays, which scores nothing and remembers the
+  // rules it was given, with the options that `options` takes, if any.
+  function room(options?: MatchHooks<FakeData>['options']) {
+    const given: (MatchRules | null)[] = [];
+    const match: MatchHooks<FakeData> = {
+      setup: (data, _ctx, rules) => {
+        given.push(rules);
+        return data;
+      },
+      score: (data, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
+      lineup: (data) => data.players,
+      ...(options ? { options } : {}),
+    };
+    const rooms = new Rooms(testWords(), seededRng(3), () => 0);
+    const created = rooms.create({
+      game: { ...fakeGame, match },
+      language: 'en',
+      fields: ['general'],
+      key: 'k',
+      play: true,
+    });
+    if (!created.ok) throw new Error(created.error);
+    return { room: created.room, given };
+  }
+
+  test('are refused by a game that plays no match', () => {
+    const rooms = new Rooms(testWords(), seededRng(3), () => 0);
+    const created = rooms.create({ game: fakeGame, language: 'en', fields: ['general'], key: 'k', play: true });
+    if (!created.ok) throw new Error(created.error);
+    expect(created.room.startMatch({ games: 2 })).toEqual({ ok: false, error: 'bad_match' });
+    expect(created.room.match).toBeNull();
+  });
+
+  test('of a game without options of its own are the number of games alone', () => {
+    const { room: plain, given } = room();
+    expect(plain.startMatch({ games: 2, options: {} })).toEqual({ ok: false, error: 'bad_match' });
+    expect(plain.match).toBeNull();
+    expect(plain.startMatch({ games: 2 })).toEqual({ ok: true });
+    expect(given).toEqual([{ games: 2 }]);
+  });
+
+  test("have the game's options as the game takes them, and are refused when it won't, at the start and after a match", () => {
+    // A game whose one option is a level of 1 to 3, which it takes as a number or a numeral.
+    const level = (value: unknown) => {
+      const { level: raw } = (value ?? {}) as { level?: unknown };
+      const number = Number(raw);
+      return Number.isInteger(number) && number >= 1 && number <= 3 ? { level: number } : null;
+    };
+    const { room: levelled, given } = room(level);
+    for (const options of [undefined, null, {}, { level: 4 }]) {
+      expect(levelled.startMatch({ games: 2, options })).toEqual({ ok: false, error: 'bad_match' });
+    }
+    expect(levelled.match).toBeNull();
+    expect(levelled.startMatch({ games: 2, options: { level: '2' } })).toEqual({ ok: true });
+    expect(levelled.match?.rules).toEqual({ games: 2, options: { level: 2 } });
+    // The chair ends the match; the next one is checked the same way, and none is no match at all.
+    const first = levelled.match?.id as string;
+    expect(levelled.endMatch(first)).toEqual({ ok: true });
+    expect(levelled.nextMatch(first, { games: 3, options: { level: 9 } })).toEqual({ ok: false, error: 'bad_match' });
+    expect(levelled.match?.id).toBe(first);
+    expect(levelled.nextMatch(first, { games: 3, options: { level: 3 } })).toEqual({ ok: true });
+    const second = levelled.match?.id as string;
+    expect(levelled.match?.rules).toEqual({ games: 3, options: { level: 3 } });
+    expect(levelled.endMatch(second)).toEqual({ ok: true });
+    expect(levelled.nextMatch(second, null)).toEqual({ ok: true });
+    expect(levelled.match).toBeNull();
+    expect(given).toEqual([{ games: 2, options: { level: 2 } }, { games: 3, options: { level: 3 } }, null]);
   });
 });

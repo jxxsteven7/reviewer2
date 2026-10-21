@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { ACCOUNT_API, type AgentPersona, type AgentProfileView } from '@reviewer2/shared';
+import {
+  ACCOUNT_API,
+  type AgentGameCounts,
+  type AgentPersona,
+  type AgentProfileView,
+  type KeywordsAgentFeats,
+} from '@reviewer2/shared';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { account, request } from '../account';
 import { errorKey } from '../errors';
 import { winRate } from '../rates';
+import { RECORDS_GAME } from '../records';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
 import StatBlocks, { type StatBlock } from './StatBlocks.vue';
 
 // The page of an AI player (docs/architecture.md#ai-players), in the panel that a tap on its
 // avatar opens in a room: player number 0, how many of it are in the rooms right now, and what it
-// has done in the games that finished, as counts: the games, and the share of its seats in them
+// has done in the games of the first game that finished (RECORDS_GAME), as counts: the games, and the share of its seats in them
 // that it won, in all and as a PI and as a student, on blocks as a player's record shows them
 // (StatBlocks.vue), each over how many seats, since in a practice room it sits in both groups of
 // one game; then what its clues found and the rest, line by line; and, for an account, what the
@@ -50,9 +57,26 @@ watch(
 );
 
 const name = computed(() => t(`agents.personas.${props.persona}`));
+// What it has done in the game shown, which is nothing for an AI that has played none of it, and
+// what the game counts of its seats.
+const shown = computed<AgentGameCounts>(
+  () =>
+    profile.value?.games[RECORDS_GAME] ?? {
+      games: 0,
+      seats: 0,
+      wins: 0,
+      roles: {},
+      takeovers: 0,
+      feats: null,
+      you: null,
+    },
+);
+const feats = computed(
+  () => (shown.value.feats as KeywordsAgentFeats | null) ?? { clues: 0, found: 0, reviewer2: 0, best: null },
+);
 const blocks = computed<StatBlock[]>(() => {
   if (profile.value === null) return [];
-  const { games, seats, wins, roles } = profile.value;
+  const { games, seats, wins, roles } = shown.value;
   const rate = (label: string, won: number, over: number): StatBlock => ({
     label: t(`account.profile.recordStats.${label}`),
     value: winRate(won, over, locale.value),
@@ -61,18 +85,18 @@ const blocks = computed<StatBlock[]>(() => {
   return [
     { label: t('account.profile.recordStats.games'), value: String(games) },
     rate('rate', wins, seats),
-    rate('captain', roles.captain.wins, roles.captain.seats),
-    rate('guesser', roles.guesser.wins, roles.guesser.seats),
+    rate('captain', roles.captain?.wins ?? 0, roles.captain?.seats ?? 0),
+    rate('guesser', roles.guesser?.wins ?? 0, roles.guesser?.seats ?? 0),
   ];
 });
 // Cards found per clue, to one decimal place.
 const perClue = computed(() =>
-  profile.value && profile.value.clues > 0
-    ? n(profile.value.found / profile.value.clues, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  feats.value.clues > 0
+    ? n(feats.value.found / feats.value.clues, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
     : null,
 );
 const you = computed(() => {
-  const mine = profile.value?.you;
+  const mine = shown.value.you;
   return mine && Object.values(mine).some((count) => count > 0) ? mine : null;
 });
 </script>
@@ -108,13 +132,13 @@ const you = computed(() => {
         </ul>
       </section>
 
-      <p v-if="profile.games === 0 && profile.takeovers === 0" class="hint">{{ t('agents.profile.none') }}</p>
+      <p v-if="shown.games === 0 && shown.takeovers === 0" class="hint">{{ t('agents.profile.none') }}</p>
       <StatBlocks v-else class="record-stats" :blocks="blocks" />
-      <ul v-if="profile.games > 0 || profile.takeovers > 0" class="stats">
+      <ul v-if="shown.games > 0 || shown.takeovers > 0" class="stats">
         <li v-if="perClue !== null" class="num">{{ t('agents.profile.perClue', { average: perClue }) }}</li>
-        <li v-if="profile.best" class="num">{{ t('agents.profile.best', profile.best, profile.best.found) }}</li>
-        <li class="num">{{ t('agents.profile.reviewer2', { count: profile.reviewer2 }) }}</li>
-        <li class="num">{{ t('agents.profile.takeovers', { count: profile.takeovers }) }}</li>
+        <li v-if="feats.best" class="num">{{ t('agents.profile.best', feats.best, feats.best.found) }}</li>
+        <li class="num">{{ t('agents.profile.reviewer2', { count: feats.reviewer2 }) }}</li>
+        <li class="num">{{ t('agents.profile.takeovers', { count: shown.takeovers }) }}</li>
       </ul>
     </template>
   </div>

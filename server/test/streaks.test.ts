@@ -31,17 +31,20 @@ async function settle(everyone: TestClient[]) {
   for (const client of everyone) await client.waitFor((state) => state.rev >= rev, `rev ${rev}`);
 }
 
-// Earlier games on an account's record, in order: a game lost for each L, won for each W.
+// Earlier games on an account's record, in order: a game of the first game lost for each L, won
+// for each W, and a game of the fake game lost for each l, which is counted apart, and so breaks
+// no streak of the first game.
 function history(accountId: number, pattern: string) {
   [...pattern].forEach((result, i) => {
-    const game = i % 2 === 0 ? 'keywords' : 'test';
+    const game = result === 'l' ? 'test' : 'keywords';
     keepGame(server.db, `earlier-${accountId}-${i}`, { game });
     server.accounts.records.add(accountId, {
       game,
       gameId: `earlier-${accountId}-${i}`,
       side: result === 'W' ? 'red' : 'blue',
       role: 'guesser',
-      won: result === 'W',
+      result: result === 'W' ? 'won' : 'lost',
+      place: result === 'W' ? 1 : 2,
       verdict: 'v',
       points: 0,
     });
@@ -95,9 +98,9 @@ describe('streaks', () => {
     const loser = board(ann).team;
     const winner = loser === 'red' ? 'blue' : 'red';
     const [winningCaptain, winningGuesser, losingCaptain] = winner === 'red' ? [1, 2, 3] : [3, null, 1];
-    history(winningCaptain, 'LWW');
+    history(winningCaptain, 'LWlW');
     if (winningGuesser !== null) history(winningGuesser, 'W');
-    history(losingCaptain, 'LLLLWLL');
+    history(losingCaptain, 'LLLLWLlL');
     const captain = loser === 'red' ? ann : cat;
     const guesser = loser === 'red' ? bob : dan;
     expect(await captain.send('keywords:clue', { ...moment(board(captain)), word: 'Hint', count: 1 })).toEqual({
@@ -120,10 +123,10 @@ describe('streaks', () => {
       );
     }
     const { records } = server.accounts;
-    await until(() => records.streaks(winningCaptain).wins === STREAK_MIN, "the winner's streak");
-    expect(records.streaks(losingCaptain)).toEqual({ wins: 1, losses: 4 });
+    await until(() => records.streaks(winningCaptain).keywords?.wins === STREAK_MIN, "the winner's streak");
+    expect(records.streaks(losingCaptain)).toEqual({ keywords: { wins: 1, losses: 4 }, test: { wins: 0, losses: 1 } });
     const summary = await (browsers[winner === 'red' ? 'Ann' : 'Cat'] as Browser).account();
-    expect(summary?.streaks).toEqual({ wins: STREAK_MIN, losses: 1 });
+    expect(summary?.streaks).toEqual({ keywords: { wins: STREAK_MIN, losses: 1 }, test: { wins: 0, losses: 1 } });
 
     // The waiting room has no streaks, and neither has the next game.
     expect(await ann.send('room:again', { gameId: ann.state?.gameId })).toEqual({ ok: true });
@@ -157,13 +160,13 @@ describe('streaks', () => {
     // Two wins are nobody's business yet.
     expect(await game('test:finish')).toEqual([]);
     expect(await game('test:finish')).toEqual([]);
-    expect(records.streaks(1)).toEqual({ wins: 2, losses: 0 });
+    expect(records.streaks(1)).toEqual({ test: { wins: 2, losses: 0 } });
     // A withdrawn game counts for nothing: it tells of no streak and leaves the record as it was.
     expect(await game('room:end')).toEqual([]);
-    expect(records.streaks(1)).toEqual({ wins: 2, losses: 0 });
-    expect(records.view(1).ordinary.games).toBe(2);
+    expect(records.streaks(1)).toEqual({ test: { wins: 2, losses: 0 } });
+    expect(records.view(1).test?.ordinary.games).toBe(2);
     // The next win makes three, as if the withdrawn game had never been.
     expect(await game('test:finish')).toEqual([{ playerId: ann.me, kind: 'wins', length: STREAK_MIN, record: true }]);
-    expect(records.streaks(1)).toEqual({ wins: STREAK_MIN, losses: 0 });
+    expect(records.streaks(1)).toEqual({ test: { wins: STREAK_MIN, losses: 0 } });
   });
 });

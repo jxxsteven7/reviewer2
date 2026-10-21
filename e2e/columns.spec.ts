@@ -31,7 +31,7 @@ const longName = () => `Bartholomew L${Math.random().toString(36).slice(2, 5).pa
 const withLongName = (name: string) => async (page: Page, seat: string) => {
   if (seat === 'Dan') await register(page, name);
 };
-const asMatch = (page: Page) => chooseMatch(page, 'en', { games: 3, teams: 'fixed', grouping: 'choose' });
+const asMatch = (page: Page) => chooseMatch(page, 'en', { games: 3, options: { teams: 'fixed', grouping: 'choose' } });
 
 async function box(locator: Locator) {
   const found = await locator.boundingBox();

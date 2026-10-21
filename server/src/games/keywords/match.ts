@@ -6,9 +6,9 @@ import {
   pointsFor,
   TEAMS,
   type ClueRecord,
+  type KeywordsMatchRules,
   type KeywordsScoreDetail,
   type Lineup,
-  type MatchRules,
   type Seat,
   type StartProblem,
   type Team,
@@ -22,7 +22,7 @@ import type { KeywordsState } from './state';
 // game to the next, and how each player scores. The room keeps the totals.
 
 export interface MatchSeating {
-  rules: MatchRules;
+  rules: KeywordsMatchRules;
   // In a match whose groups don't change, the group of everyone who has played a scored game in it,
   // by member key.
   locked: ReadonlyMap<string, Team>;
@@ -36,8 +36,8 @@ export interface MatchSeating {
   waiting: ReadonlySet<string>;
 }
 
-export const newMatchSeating = (rules: MatchRules): MatchSeating => ({
-  rules: { ...rules },
+export const newMatchSeating = (rules: KeywordsMatchRules): MatchSeating => ({
+  rules: { ...rules, options: { ...rules.options } },
   locked: new Map(),
   captained: new Map(),
   groups: [],
@@ -48,8 +48,8 @@ export const newMatchSeating = (rules: MatchRules): MatchSeating => ({
 // choose, or drawn, for the first game only, and fixed once it has been scored.
 export function lineupOf(match: MatchSeating | null): Lineup {
   if (!match) return 'free';
-  if (match.rules.teams === 'fixed' && match.locked.size > 0) return 'fixed';
-  return match.rules.grouping === 'random' ? 'draw' : 'free';
+  if (match.rules.options.teams === 'fixed' && match.locked.size > 0) return 'fixed';
+  return match.rules.options.grouping === 'random' ? 'draw' : 'free';
 }
 
 // A drawn game needs a PI and a student online in each group, which four players online make: the
@@ -138,7 +138,7 @@ export function afterScoredGame(match: MatchSeating, seating: Seating): MatchSea
   const captained = new Map(match.captained);
   for (const key of seating.keyViewers) captained.set(key, (captained.get(key) ?? 0) + 1);
   const groups = [...match.groups, new Map(seating.sides)];
-  if (match.rules.teams !== 'fixed') return { ...match, captained, groups };
+  if (match.rules.options.teams !== 'fixed') return { ...match, captained, groups };
   const locked = new Map(match.locked);
   for (const [key, team] of seating.sides) if (!locked.has(key)) locked.set(key, team);
   return { ...match, captained, groups, locked };

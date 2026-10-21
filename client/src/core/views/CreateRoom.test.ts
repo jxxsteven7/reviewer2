@@ -134,7 +134,7 @@ describe('the room setup', () => {
         keywords: {
           fields: ['ml', 'gone'],
           randomFields: false,
-          match: { games: 5, teams: 'switch', grouping: 'random' },
+          match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
           public: true,
           play: false,
         },
@@ -153,7 +153,7 @@ describe('the room setup', () => {
     const payload = socket.send.mock.calls[0]?.[1];
     expect(payload).toMatchObject({
       fields: ['ml'],
-      match: { games: 5, teams: 'switch', grouping: 'random' },
+      match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
       play: false,
     });
     expect(payload).not.toHaveProperty('public');
@@ -162,7 +162,7 @@ describe('the room setup', () => {
         language: 'en',
         fields: ['ml'],
         randomFields: false,
-        match: { games: 5, teams: 'switch', grouping: 'random' },
+        match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
         public: false,
         play: false,
       },
@@ -177,7 +177,7 @@ describe('the room setup', () => {
         keywords: {
           fields: ['ml'],
           randomFields: true,
-          match: { games: 5, teams: 'switch', grouping: 'random' },
+          match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
           public: true,
           play: false,
         },
@@ -354,7 +354,7 @@ describe('the room setup', () => {
     await flushPromises();
     expect(socket.send).toHaveBeenCalledWith(
       'room:create',
-      expect.objectContaining({ match: { games: 5, teams: 'switch', grouping: 'choose' } }),
+      expect.objectContaining({ match: { games: 5, options: { teams: 'switch', grouping: 'choose' } } }),
     );
   });
 

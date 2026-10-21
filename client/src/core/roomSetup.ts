@@ -1,4 +1,4 @@
-import { MATCH_GROUPINGS, MATCH_TEAMS, matchGamesValid, type GameRoomSetup, type MatchRules } from '@reviewer2/shared';
+import type { GameRoomSetup } from '@reviewer2/shared';
 import { account } from './account';
 import { readStored, writeStored } from './storage';
 
@@ -67,13 +67,3 @@ export const keptFields = (fields: unknown, usable?: ReadonlySet<string>): strin
   Array.isArray(fields)
     ? fields.filter((id): id is string => typeof id === 'string' && (usable === undefined || usable.has(id)))
     : [];
-
-// The match rules of a setup, if they still hold.
-export function keptMatch(rules: unknown): MatchRules | null {
-  if (!isObject(rules)) return null;
-  const { games, teams, grouping } = rules;
-  if (!matchGamesValid(games)) return null;
-  const team = MATCH_TEAMS.find((known) => known === teams);
-  const group = MATCH_GROUPINGS.find((known) => known === grouping);
-  return team && group ? { games: games as number, teams: team, grouping: group } : null;
-}

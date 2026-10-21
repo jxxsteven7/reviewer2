@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
+import type { ProfileView } from '@reviewer2/shared';
 import { Browser, startServer, until, type TestServer } from './helpers';
 import { keepGame } from './keptGame';
 
@@ -54,15 +55,11 @@ describe('a public profile', () => {
           // The day of registration, never the time.
           createdAt: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
           titles: [],
-          streaks: { wins: 0, losses: 0 },
+          streaks: {},
           link: null,
           bio: null,
-          record: {
-            ordinary: { games: 0, wins: 0 },
-            inMatches: { games: 0, wins: 0 },
-            roles: { captain: { games: 0, wins: 0 }, guesser: { games: 0, wins: 0 } },
-            matches: { played: 0, won: 0 },
-          },
+          // Shown, and of no game yet.
+          record: {},
           contributions: [],
           likes: 0,
           liked: false,
@@ -70,6 +67,8 @@ describe('a public profile', () => {
         },
       },
     });
+    expect((await profileOf(guest, ann.handle)).profile).toMatchObject({ record: {}, streaks: {} });
+    expect(((await profileOf(guest, ann.handle)).profile as ProfileView).record).toEqual({});
     expect((await profileOf(ann.browser, ann.handle)).profile).toMatchObject({ mine: true, liked: false });
     // The streaks go out with the titles, for the page to name them (docs/architecture.md#streaks).
     for (let i = 0; i < 3; i += 1) {
@@ -79,15 +78,18 @@ describe('a public profile', () => {
         gameId: `earlier-${i}`,
         side: 'red',
         role: 'guesser',
-        won: true,
+        result: 'won',
+        place: 1,
         verdict: 'v',
         points: 0,
       });
     }
+    // Each game's apart, by the game's ID.
     expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
-      streaks: { wins: 3, losses: 0 },
-      record: { ordinary: { games: 3, wins: 3 }, roles: { guesser: { games: 3, wins: 3 } } },
+      streaks: { test: { wins: 3, losses: 0 } },
+      record: { test: { ordinary: { games: 3, wins: 3 }, roles: { guesser: { games: 3, wins: 3 } } } },
     });
+    expect(Object.keys(((await profileOf(guest, ann.handle)).profile as ProfileView).record ?? {})).toEqual(['test']);
     // Nothing of the owner's own page is in it.
     const shown = JSON.stringify((await profileOf(guest, ann.handle)).profile);
     expect(shown).not.toMatch(/email|points|password|requests|T\d\d:\d\d/);
@@ -130,7 +132,7 @@ describe('a public profile', () => {
     expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
       link: 'https://ann.example/me?x=%281%29',
       bio: 'Reviewer of everything',
-      record: { ordinary: { games: 0, wins: 0 }, inMatches: { games: 0, wins: 0 }, matches: { played: 0, won: 0 } },
+      record: {},
       contributions: [],
     });
     // Each is optional, and what won't do is refused with its own answer.
@@ -178,7 +180,7 @@ describe('a public profile', () => {
     expect((await profileOf(guest, ann.handle)).profile).toMatchObject({
       link: null,
       bio: null,
-      record: { ordinary: { games: 0 } },
+      record: {},
     });
     expect(await ann.browser.account()).toMatchObject({ profile: { link: null, bio: null, banned: true } });
     expect(await ann.browser.request('/api/account/profile', settings)).toMatchObject({
