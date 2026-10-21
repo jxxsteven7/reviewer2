@@ -7,8 +7,8 @@ import {
   type SeatView,
 } from '@reviewer2/shared/impostor';
 import type { Viewer } from '../../core/game';
-import { factsOf, scoresFrom } from './results';
-import { agentGuessOpen, candidatesOf, playerOf, votersOf } from './rules';
+import { factsOf, pointsShown, scoresFrom } from './results';
+import { agentGuessOpen, candidatesOf, judgedBy, playerOf, reportedThisRound, votersOf } from './rules';
 import type { ImpostorGame, Report } from './state';
 
 // What each viewer sees of a game (docs/games/impostor.md#who-sees-what). Only the server knows the
@@ -43,19 +43,23 @@ const numberOf = (game: ImpostorGame) => {
   return (id: string) => numbers.get(id) ?? 0;
 };
 
+// A report as everyone sees it. While it is judged, those who may judge it are those still in the
+// game of those who could when it was made, and the verdicts so far theirs; once it is settled,
+// they are those who could still judge it then (settle() in rules.ts).
 function reportView(game: ImpostorGame, report: Report, watcher: Watcher, open: boolean): ReportView {
   const number = numberOf(game);
   const verdicts = open
     ? null
     : Object.fromEntries(Object.entries(report.verdicts).map(([id, verdict]) => [number(id), verdict]));
+  const judges = open ? judgedBy(game) : report.eligible;
   return {
     round: report.round,
     by: number(report.by),
     target: number(report.target),
     line: report.line,
     reason: report.reason,
-    eligible: report.eligible.length,
-    judged: Object.keys(report.verdicts).length,
+    eligible: judges.length,
+    judged: judges.filter((id) => Object.hasOwn(report.verdicts, id)).length,
     mine: watcher.id === null ? null : (report.verdicts[watcher.id] ?? null),
     mayJudge:
       open &&
@@ -144,7 +148,9 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
       ? { left: Math.max(0, game.clock.ends - at), total: game.clock.length }
       : null;
   const agents = game.players.filter((player) => player.agent).length;
-  const scores = over && game.result?.winner ? scoresFrom(factsOf(game), (id) => id) : null;
+  // The points show at the end of a game that a side won, but not of one that brought nobody any.
+  const facts = factsOf(game);
+  const scores = over && pointsShown(facts, agents > 0) ? scoresFrom(facts, (id) => id) : null;
   return {
     gameId: game.gameId,
     round: game.round,
@@ -160,6 +166,7 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
     setterWords: watcher.setter
       ? [game.words.student.word, game.words.reviewer2.word].sort((a, b) => a.localeCompare(b))
       : null,
+    setter: game.source.kind === 'setter' ? game.source.setter : null,
     seats,
     speaker: game.speaker === null ? null : number(game.speaker),
     clock,
@@ -176,11 +183,7 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
     tied: game.tied.map(number),
     report: game.report ? reportView(game, game.report, watcher, true) : null,
     reports: game.reports.map((report) => reportView(game, report, watcher, false)),
-    reported:
-      me !== undefined &&
-      [...game.reports, ...(game.report ? [game.report] : [])].some(
-        (report) => report.round === game.round && report.by === me.id,
-      ),
+    reported: me !== undefined && reportedThisRound(game, me.id),
     comeback: game.comeback === null ? null : number(game.comeback),
     guesses: game.guesses.map((guess) => ({ number: number(guess.by), correct: guess.correct })),
     result: game.result,

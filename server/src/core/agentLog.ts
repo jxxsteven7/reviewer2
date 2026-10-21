@@ -17,9 +17,10 @@ export const MAX_AGENT_LOG_BYTES = 64 * 1024;
 // someone who was offline, brings points, streaks, titles and friend titles only when every answer
 // the AI gave in it came from a certified version (certifiedPlay, docs/architecture.md#ai-players).
 // None is yet, so every such game brings nothing, and is kept whole, with the version of each
-// answer, for the day one is. The room and the recount decide by this alone: the streaks, the
-// friend duos and the records page (store/records.ts), the check of the data (store/check.ts) and
-// the game's score floats (RoomView.agentsPlayed) still take "an AI played" for "brought nothing",
+// answer, for the day one is. The room and the recount decide by this alone, and the record of the
+// game keeps what they decided, by which the streaks, the friend duos (store/records.ts) and the
+// check of the data (store/check.ts) go; the records page (store/records.ts) and the score floats
+// (RoomView.agentsPlayed, the second game's view) still take "an AI played" for "brought nothing",
 // which holds while this is empty, so the first version added here changes those too
 // (agentLog.test.ts).
 export const CERTIFIED_AGENTS: readonly { prompt: string; model: string }[] = [];

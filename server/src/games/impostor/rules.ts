@@ -1,4 +1,4 @@
-import { cleanLine, type BoardWord } from '@reviewer2/shared';
+import { checkChat, cleanLine, type BoardWord } from '@reviewer2/shared';
 import {
   checkDescription,
   checkReason,
@@ -8,6 +8,7 @@ import {
   REPORT_SECONDS,
   roleCounts,
   survivors,
+  TALK_KEPT,
   type ImpostorResult,
   type ImpostorRole,
   type ImpostorSettings,
@@ -91,12 +92,13 @@ export function newGame(
     tied: [],
     report: null,
     reports: [],
+    dropped: [],
     comeback: null,
     guesses: [],
     clock: null,
     paused: null,
     result: null,
-    removed: false,
+    removed: [],
     agentGuesses: {},
     talk: [],
   };
@@ -194,6 +196,9 @@ function reveal(game: ImpostorGame, now: number): ImpostorGame {
   for (const target of Object.values(votes)) {
     if (target !== null && target !== 'timeout') tally.set(target, (tally.get(target) ?? 0) + 1);
   }
+  // A vote cast for a player who has left the room since counts for nobody: only a player still in
+  // the game can be voted out, or tied.
+  for (const target of tally.keys()) if (!isAlive(game, target)) tally.delete(target);
   const most = Math.max(0, ...tally.values());
   const leaders = game.players.filter((player) => most > 0 && tally.get(player.id) === most).map((player) => player.id);
   const ballot = game.phase === 'revote' ? 'revote' : 'vote';
@@ -290,8 +295,8 @@ export function vote(
 
 // A player in the game reports another for breaking the rules (docs/games/impostor.md#reports): with
 // one of their lines or none, and a reason, which gives nothing of the reporter's own word away.
-// One report a round each, and one at a time. The clock stands still while everyone else in the
-// game judges it.
+// One report a round each, also when the one made was dropped because the reported player left,
+// and one at a time. The clock stands still while everyone else in the game judges it.
 export function report(
   game: ImpostorGame,
   playerId: string,
@@ -304,9 +309,7 @@ export function report(
   if (game.report) return refuse('report_open');
   const reporter = playerOf(game, playerId);
   if (!reporter || reporter.fate !== 'alive') return refuse('not_playing');
-  if (game.reports.some((past) => past.round === game.round && past.by === playerId)) {
-    return refuse('reported_already');
-  }
+  if (reportedThisRound(game, playerId)) return refuse('reported_already');
   const target = numbered(game, message.number);
   if (!target || target.fate !== 'alive' || target.id === playerId) return refuse('bad_report');
   if (message.line !== null) {
@@ -334,6 +337,13 @@ export function report(
   return changed({ ...game, report: opened, clock: null, paused });
 }
 
+// Whether a player has made their report of the round: one that is open, settled, or dropped
+// because the reported player left.
+export const reportedThisRound = (game: ImpostorGame, playerId: string): boolean =>
+  [...game.reports, ...game.dropped, ...(game.report ? [game.report] : [])].some(
+    (made) => made.round === game.round && made.by === playerId,
+  );
+
 // A player who may judge the report says whether they agree that the reported player broke the
 // rules, once. Once everyone has, the report is settled.
 export function judge(
@@ -354,37 +364,54 @@ export function judge(
 }
 
 // Who may still judge the open report: those who could when it was made and are still in the game.
-const judgedBy = (game: ImpostorGame): string[] => game.report?.eligible.filter((id) => isAlive(game, id)) ?? [];
+// Whoever has left the room meanwhile no longer counts among them, nor does their verdict.
+export const judgedBy = (game: ImpostorGame): string[] => game.report?.eligible.filter((id) => isAlive(game, id)) ?? [];
+
+// Whether a tie has come apart: a tied player left during the tie lines or the revote, and fewer
+// than two tied players are left, so that the round ends with nobody voted out.
+const tieBroken = (game: ImpostorGame): boolean =>
+  (game.phase === 'tie' || game.phase === 'revote') && game.tied.length < 2;
+
+// The game goes on from what players who left, now or while a report stopped it, left undone: a
+// tie they broke ends the round, the line of the one describing is missed, and a vote that waited
+// only for them is revealed.
+function carryOn(game: ImpostorGame, now: number): ImpostorGame {
+  if (tieBroken(game)) return nextRound(game, now);
+  switch (game.phase) {
+    case 'describe':
+    case 'tie':
+      return game.speaker !== null && !isAlive(game, game.speaker)
+        ? nextSpeaker({ ...game, speaker: null }, now)
+        : game;
+    case 'vote':
+    case 'revote':
+      return votersOf(game).every((voter) => Object.hasOwn(game.pending, voter.id)) ? reveal(game, now) : game;
+    default:
+      return game;
+  }
+}
 
 // A report is settled, once everyone has judged it or the time has run out, those who didn't
-// counting as abstaining: it passes when more than half of those who could judge it agree, and the
-// reported player goes out for breaking the rules. Then the round goes on: the clock again, from
-// where it stood, or, when the reported player was the one describing, with the next one; and
-// during a vote, a vote from the start, without the player.
+// counting as abstaining: it passes when more than half of those who may judge it and are still in
+// the game agree, and the reported player goes out for breaking the rules. Then the round goes on:
+// the clock again, from where it stood, or, when the reported player was the one describing, with
+// the next one; and during a vote, a vote from the start, without the player. What players who
+// left while it was judged left undone is done then, as leave() does it (carryOn()).
 function settle(game: ImpostorGame, now: number): ImpostorGame {
   const open = game.report as Report;
+  const judges = judgedBy(game);
   const verdicts: Record<string, ReportVerdict> = {};
-  for (const id of open.eligible) verdicts[id] = open.verdicts[id] ?? 'abstain';
+  for (const id of judges) verdicts[id] = open.verdicts[id] ?? 'abstain';
   const agree = Object.values(verdicts).filter((verdict) => verdict === 'agree').length;
-  const passed = agree > open.eligible.length / 2;
-  const settled: Report = { ...open, verdicts, passed };
+  const passed = agree > judges.length / 2;
+  const settled: Report = { ...open, eligible: judges, verdicts, passed };
   const resumed = game.paused;
   let next: ImpostorGame = { ...game, report: null, reports: [...game.reports, settled], paused: null };
-  if (!passed || !isAlive(next, open.target)) {
-    return {
-      ...next,
-      clock: resumed?.left === null || !resumed ? null : { ends: now + resumed.left, length: resumed.length },
-    };
-  }
+  const clock = resumed?.left === null || !resumed ? null : { ends: now + resumed.left, length: resumed.length };
+  if (!passed || !isAlive(next, open.target)) return carryOn({ ...next, clock }, now);
   next = putOut(next, open.target, 'violation');
   return endOr(next, (going) => {
-    if (going.phase === 'describe') {
-      if (going.speaker === open.target) return nextSpeaker({ ...going, speaker: null }, now);
-      return {
-        ...going,
-        clock: resumed?.left === null || !resumed ? null : { ends: now + resumed.left, length: resumed.length },
-      };
-    }
+    if (going.phase === 'describe') return carryOn({ ...going, clock }, now);
     return nextSpeaker({ ...going, phase: 'describe', speaker: null, tied: [], pending: {} }, now);
   });
 }
@@ -412,8 +439,11 @@ function guessed(game: ImpostorGame, word: string | null, now: number): Impostor
   return endOr(next, (going) => nextRound(going, now));
 }
 
-// Whoever is out, watches or set the words talks off the field while the game is on; after it,
-// anyone in the room talks it over. What they write names neither word (checkTalk).
+// Whoever is out, watches or set the words talks off the field while the game is on, naming neither
+// word (checkTalk); after it, anyone in the room talks it over, the words known to all by then, but
+// a player who is to guess the AI players, who doesn't read the talk until they have guessed or
+// skipped it. `offField` says whether the player may talk now (offField() in view.ts). The game
+// keeps the latest lines (TALK_KEPT), and the log every one.
 export function talk(
   game: ImpostorGame,
   playerId: string,
@@ -422,10 +452,10 @@ export function talk(
 ): Outcome {
   if (message.gameId !== game.gameId) return refuse('stale');
   const after = game.phase === 'over';
-  if (!after && !offField) return refuse('cannot_talk');
-  const check = checkTalk(message.text, [game.words.student, game.words.reviewer2]);
+  if (!offField) return refuse(after ? 'guess_first' : 'cannot_talk');
+  const check = after ? checkChat(message.text) : checkTalk(message.text, [game.words.student, game.words.reviewer2]);
   if (check.problem) return refuse(check.problem);
-  return changed({ ...game, talk: [...game.talk, { by: playerId, text: check.text, after }] });
+  return changed({ ...game, talk: [...game.talk, { by: playerId, text: check.text, after }].slice(-TALK_KEPT) });
 }
 
 // What is due by now: a report whose time is up is settled; otherwise, once the phase's clock has
@@ -457,22 +487,30 @@ export const deadlineOf = (game: ImpostorGame | null): number | null =>
 // A player leaves the room during the game, or the chair removes them. A Reviewer 2 still in the
 // game takes it with them: it ends with no winner, and every role is shown. Anyone else is out of
 // it, and it goes on without them: as if their line had been written, their vote cast, their
-// verdict given or their guess made, and a report of them dropped.
+// verdict given or their guess made, and a report of them dropped, which the reporter has made all
+// the same. A tied player who goes, leaving fewer than two tied, ends the round with nobody voted
+// out, in the tie lines as in the revote; with two or more left, the tie goes on among them. The
+// chair's removal of a player of the game counts against it whether the player was still in it or
+// out by then (`removed`), so that the chair can't win by removing anyone.
 export function leave(game: ImpostorGame, playerId: string, removed: boolean, now: number): ImpostorGame {
   const player = playerOf(game, playerId);
-  if (game.phase === 'comeback' && game.comeback === playerId) return guessed(game, null, now);
-  if (game.phase === 'over' || !player || player.fate !== 'alive') return game;
-  let next: ImpostorGame = { ...putOut(game, playerId, 'left'), removed: game.removed || removed };
+  if (game.phase === 'over' || !player) return game;
+  const marked = removed ? { ...game, removed: [...game.removed, playerId] } : game;
+  if (marked.phase === 'comeback' && marked.comeback === playerId) return guessed(marked, null, now);
+  if (player.fate !== 'alive') return marked;
+  let next: ImpostorGame = putOut(marked, playerId, 'left');
   if (player.role === 'reviewer2') return over(next, { winner: null, reason: 'reviewer2_left' });
   const pending = { ...next.pending };
   delete pending[playerId];
   next = { ...next, pending, tied: next.tied.filter((id) => id !== playerId) };
-  if (next.report?.target === playerId) {
+  const report = next.report;
+  if (report?.target === playerId) {
     const resumed = next.paused;
     next = {
       ...next,
       report: null,
       paused: null,
+      dropped: [...next.dropped, { round: report.round, by: report.by }],
       clock: resumed?.left === null || !resumed ? null : { ends: now + resumed.left, length: resumed.length },
     };
   }
@@ -481,29 +519,23 @@ export function leave(game: ImpostorGame, playerId: string, removed: boolean, no
   if (next.report) {
     return judgedBy(next).every((id) => Object.hasOwn(next.report?.verdicts ?? {}, id)) ? settle(next, now) : next;
   }
-  switch (next.phase) {
-    case 'describe':
-    case 'tie':
-      return next.speaker === playerId ? nextSpeaker({ ...next, speaker: null }, now) : next;
-    case 'vote':
-    case 'revote': {
-      if (next.phase === 'revote' && next.tied.length < 2) return nextRound(next, now);
-      return votersOf(next).every((voter) => Object.hasOwn(next.pending, voter.id)) ? reveal(next, now) : next;
-    }
-    default:
-      return next;
-  }
+  return carryOn(next, now);
 }
 
-// After an anonymous game with AI players and at least 3 people, a person who played in it
-// guesses which numbers the AI players had, as many as there were at most, or skips with null. In
-// a game that showed everyone's name there is nothing to guess.
+// After an anonymous game with AI players and at least 3 people that ended by itself, a person who
+// played in it guesses which numbers the AI players had, as many as there were at most, but their
+// own, or skips with null. In a game that showed everyone's name there is nothing to guess, and a
+// game that the chair withdrew, which has no result, has no guess either.
 export const AGENT_GUESS_PEOPLE = 3;
 
 export function agentGuessOpen(game: ImpostorGame): boolean {
   const agents = game.players.filter((player) => player.agent).length;
   return (
-    game.phase === 'over' && game.settings.anonymous && agents > 0 && game.players.length - agents >= AGENT_GUESS_PEOPLE
+    game.phase === 'over' &&
+    game.result !== null &&
+    game.settings.anonymous &&
+    agents > 0 &&
+    game.players.length - agents >= AGENT_GUESS_PEOPLE
   );
 }
 
@@ -521,9 +553,8 @@ export function guessAgents(
     if (!Array.isArray(value) || value.length < 1 || value.length > agents) return refuse('bad_request');
     const numbers = new Set<number>();
     for (const number of value) {
-      if (!Number.isInteger(number) || !numbered(game, number as number) || numbers.has(number as number)) {
-        return refuse('bad_request');
-      }
+      const seat = Number.isInteger(number) ? numbered(game, number as number) : undefined;
+      if (!seat || seat.id === playerId || numbers.has(number as number)) return refuse('bad_request');
       numbers.add(number as number);
     }
     guess = [...numbers].sort((a, b) => a - b);

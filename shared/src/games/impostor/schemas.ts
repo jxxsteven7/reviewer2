@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { MAX_AGENT_REASON } from '../../agent';
 import { LANGUAGES } from '../../language';
 import { AGENT_ASKED, AGENT_NOTE_FIELDS, gameId, term } from '../../schemaParts';
-import { FATES, IMPOSTOR_ROLES, MAX_PLAYERS, VERDICTS } from './types';
+import { FATES, IMPOSTOR_ROLES, MAX_LINE_INPUT, MAX_PLAYERS, VERDICTS } from './types';
 
 // The schemas of the hidden word game's own messages, which the server checks every one of them
 // against, and of what the server and the agent say to each other in its games
@@ -35,8 +35,9 @@ export const IMPOSTOR_MESSAGES = {
     reason: z.string(),
   }),
   'impostor:judge': z.object({ gameId, verdict: z.enum(VERDICTS) }),
-  // A guess of the students' word after being voted out, or null to make none.
-  'impostor:comeback': z.object({ gameId, word: z.string().nullable() }),
+  // A guess of the students' word after being voted out, or null to make none. A guess has no
+  // length of its own to check, so one longer than any line that is looked at is no guess at all.
+  'impostor:comeback': z.object({ gameId, word: z.string().max(MAX_LINE_INPUT).nullable() }),
   // A line of the off-field chat, or of the talk after the game.
   'impostor:say': z.object({ gameId, text: z.string() }),
 } as const;

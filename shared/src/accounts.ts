@@ -318,13 +318,16 @@ export interface MatchRecord {
 // others (docs/architecture.md#accounts). A role it has never played in isn't there. `wordsSet`
 // is, for a game in which a setter gives the words, how many games that finished the account set
 // the words of, and how many good ratings players gave them (docs/architecture.md#ratings); it
-// isn't there for an account that has set none.
+// isn't there for an account that has set none. `sums` is what the records of a game that asks for
+// it add up, as the game names it: the totals of counts in the records' detail and how many records
+// have a verdict, such as the votes and the times out for breaking the rules in the second game.
 export interface GameCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };
   roles: Record<string, { games: number; wins: number }>;
   matches: { played: number; won: number };
   wordsSet?: { games: number; good: number };
+  sums?: Record<string, number>;
 }
 
 // The counts of a game that the account has finished no game or match of.

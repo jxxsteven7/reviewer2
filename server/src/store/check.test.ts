@@ -90,6 +90,7 @@ beforeEach(async () => {
     players: [{ playerId: 'p1', accountId: ann.id }],
     counts: { accounts: 1, guests: 1, agents: 0 },
     takeover: false,
+    scoresNothing: false,
     agentPlays: [],
     match: null,
     inMatch: false,
@@ -122,6 +123,7 @@ beforeEach(async () => {
       agentLog: { v: 1, gameId: 'g3', steps: [{ t: 1, by: 'a', persona: 'reviewer1', kind: 'press', answer: {} }] },
       counts: { accounts: 2, guests: 0, agents: 1 },
       takeover: true,
+      scoresNothing: true,
       agentPlays: [
         {
           playerId: 'a',
@@ -618,7 +620,11 @@ describe('the check of the data', () => {
       "UPDATE game_records SET result = 'lost', place = 2 WHERE id = 1",
       ['1'],
     ],
-    ['records of games that an AI played in, with points', 'UPDATE game_records SET points = 3 WHERE id = 4', ['4']],
+    [
+      'records of games that brought nobody points, with points',
+      'UPDATE game_records SET points = 3 WHERE id = 4',
+      ['4'],
+    ],
     [
       'records of games in a role the game does not have',
       "UPDATE game_records SET role = 'spectator' WHERE id = 1",
@@ -709,13 +715,15 @@ describe('the check of the data', () => {
   });
 
   test.each([
-    "UPDATE replays SET winner = NULL WHERE game_id = 'g1'",
-    "UPDATE replays SET reason = 'level' WHERE game_id = 'g1'",
-  ])('finds finished games whose outcome is not what their record counts: %s', (sql) => {
+    ["UPDATE replays SET winner = NULL WHERE game_id = 'g1'", 'g1'],
+    ["UPDATE replays SET reason = 'level' WHERE game_id = 'g1'", 'g1'],
+    // An AI played in g3 with no certified version, so it brought nobody anything.
+    ["UPDATE replays SET scores_nothing = 0 WHERE game_id = 'g3'", 'g3'],
+  ])('finds finished games whose outcome is not what their record counts: %s', (sql, id) => {
     expect(broken(sql)).toEqual({
       rule: 'finished games whose outcome is not what their record counts',
       count: 1,
-      ids: ['g1'],
+      ids: [id],
     });
   });
 

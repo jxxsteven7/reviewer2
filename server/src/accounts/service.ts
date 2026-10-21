@@ -287,7 +287,7 @@ export class Accounts {
       link: account.profile.link,
       bio: account.profile.bio,
       record: account.profile.showRecord
-        ? this.#withWordsSet(account.id, this.records.counts(account.id), emptyGameCounts)
+        ? this.#withGameCounts(account.id, this.records.counts(account.id), emptyGameCounts)
         : null,
       contributions: account.profile.showThanks ? this.#feedback.counts(account.id) : null,
       likes: this.likes.count(account.id),
@@ -811,7 +811,7 @@ export class Accounts {
   }
 
   recordsOf(login: Login): RecordsView {
-    return this.#withWordsSet<GameRecords>(login.account.id, this.records.view(login.account.id), () => ({
+    return this.#withGameCounts<GameRecords>(login.account.id, this.records.view(login.account.id), () => ({
       ...emptyGameCounts(),
       recent: [],
       matches: { played: 0, won: 0, recent: [] },
@@ -819,14 +819,17 @@ export class Accounts {
   }
 
   // The counts of each game, with, for each game in which a setter gives the words, the games the
-  // account set the words of and their good ratings, if it set any (GameCounts.wordsSet). A game it
-  // has set the words of but played none of is there with nothing else.
-  #withWordsSet<Counts extends GameCounts>(
+  // account set the words of and their good ratings, if it set any (GameCounts.wordsSet), and for
+  // each game that asks for them, what its records add up, if it played any (GameCounts.sums). A
+  // game it has set the words of but played none of is there with nothing else.
+  #withGameCounts<Counts extends GameCounts>(
     accountId: number,
     counts: Record<string, Counts>,
     empty: () => Counts,
   ): Record<string, Counts> {
     for (const game of this.#games) {
+      const played = counts[game.id];
+      if (game.recordSums && played) played.sums = this.records.sums(accountId, game.id, game.recordSums);
       const path = game.setupPaths?.setter;
       if (path === undefined) continue;
       const set = this.ratings.setterCounts(game.id, path, accountId);

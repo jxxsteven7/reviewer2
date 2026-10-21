@@ -88,6 +88,21 @@ describe('friend duos', () => {
     expect(records.streaks(ann)).toMatchObject({ keywords: { wins: 1 } });
   });
 
+  test('leave out the games that brought nobody points for another reason, such as a removal', () => {
+    const [ann, bob] = [account('Ann'), account('Bob')];
+    befriend(ann, bob);
+    // The chair removed a player of the game: no AI played in it, but it brought nobody points.
+    keepGame(db, 'removal', { outcome: { winner: 'red', reason: 'found' }, scoresNothing: true });
+    for (const accountId of [ann, bob]) {
+      const record = { side: 'red', role: 'guesser', result: 'won' as const, place: 1, verdict: 'v', points: 0 };
+      expect(records.add(accountId, { game: 'keywords', gameId: 'removal', ...record })).toBeNull();
+    }
+    game({ red: [ann, bob], blue: [] }, 'red');
+    expect(records.duos(ann)).toEqual(new Map([['keywords', new Map([[bob, { ...NONE, wonTogether: 1 }]])]]));
+    expect(records.counts(ann)).toMatchObject({ keywords: { ordinary: { games: 2, wins: 2 } } });
+    expect(records.streaks(ann)).toMatchObject({ keywords: { wins: 1 } });
+  });
+
   test('count the games two friends played together and against each other', () => {
     const [ann, bob, cat] = [account('Ann'), account('Bob'), account('Cat')];
     befriend(ann, bob);

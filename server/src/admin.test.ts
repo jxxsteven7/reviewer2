@@ -1786,6 +1786,7 @@ describe('content', () => {
       players,
       counts: { accounts: players.length, guests: 0, agents: 0 },
       takeover: false,
+      scoresNothing: false,
       agentPlays: [],
       match: null,
       inMatch: false,

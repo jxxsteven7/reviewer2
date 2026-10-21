@@ -373,10 +373,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // titles it brought them, which the database ties to the record of the game; the streak it
   // brought them to, which the room tells in the snapshot that ends the game (Room.noteStreak());
   // their ranks as they are now for everyone to see; and the titles that the game brought friends
-  // who played in it, which the room tells each account alone (Room.noteDuos()). A game that an AI
-  // played in brings nobody points, a streak or a title (docs/architecture.md#ai-players). Whoever
-  // had left by then has no part in its end. A game that couldn't be kept, as when the database is
-  // full, leaves no records either.
+  // who played in it, which the room tells each account alone (Room.noteDuos()). A game that brings
+  // nobody points, as one that an AI played in (docs/architecture.md#ai-players), brings nobody a
+  // streak, a title or a friend title either, as the record of the game says (Room.record()).
+  // Whoever had left by then has no part in its end. A game that couldn't be kept, as when the
+  // database is full, leaves no records either.
   function keepRecords(room: Room): void {
     if (!accounts || room.gameId === null) return;
     const gameId = room.gameId;
@@ -441,6 +442,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         players,
         counts: kept.counts,
         takeover: kept.takeover,
+        scoresNothing: kept.scoresNothing,
         agentPlays: kept.agentPlays,
         match: room.matchGame(),
         inMatch: kept.match,

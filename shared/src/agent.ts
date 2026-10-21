@@ -94,9 +94,8 @@ export interface AgentNote<Candidate = unknown> {
 // The errors that any request may get, for the server to read alike: a request that the agent
 // can't read, too many waiting before it, a model whose service can't be reached or refuses, which
 // the server takes as the AI players being offline, a model that answered nothing usable in time,
-// which is this request's bad luck alone, or no move that the rules of the room take
-// (`no_legal_move`; the team word guessing game said `no_legal_clue` before there was a second
-// game, and the AI's logs of its games still say so).
+// which is this request's bad luck alone, or no move that the rules of the room take: no clue, in
+// the team word guessing game (`no_legal_clue`), and no move, in the second game (`no_legal_move`).
 export const AGENT_ERRORS = [
   'bad_request',
   'busy',

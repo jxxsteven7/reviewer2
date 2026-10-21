@@ -20,7 +20,7 @@ import { pinyinOf } from '../../core/pinyin';
 import { pairKey } from '../../core/words';
 import { agentMove, agentProblems, agentTask, practiceSeats } from './agents';
 import { recountOf, shownReplay } from './replay';
-import { factsOf, LOGGED, resultsFrom, scoresFrom, setupOf, type ImpostorSetup } from './results';
+import { factsOf, LOGGED, outcomeOf, resultsFrom, scoresFrom, setupOf, type ImpostorSetup } from './results';
 import {
   describe,
   expire,
@@ -28,8 +28,10 @@ import {
   guess,
   guessAgents,
   judge,
+  judgedBy,
   leave,
   newGame,
+  playerOf,
   report,
   talk,
   vote,
@@ -75,6 +77,18 @@ function problemsOf(data: ImpostorData, ctx: GameContext): ImpostorStartProblem[
   if (data.settings.setter && !wordsOf(data, ctx)) problems.push({ problem: 'needs_words' });
   return [...problems, ...agentProblems(data, players, ctx)];
 }
+
+// Players still in the game send no quick reaction while it is on: a reaction could tell the others
+// who they are. Whoever is out, watches or set the words may, and everyone once the game is over
+// (docs/games/impostor.md#quick-reactions), but for those out of an anonymous game: a reaction
+// shows its sender's name, which would tell the others whose number went out. The room keeps no
+// reaction.
+const mayEmote = (data: ImpostorData, playerId: string): boolean => {
+  const game = data.game;
+  if (!game || game.phase === 'over') return true;
+  const player = playerOf(game, playerId);
+  return !player || (player.fate !== 'alive' && !game.settings.anonymous);
+};
 
 const fromOutcome = (data: ImpostorData, outcome: Outcome): GameUpdate<ImpostorData> => {
   if (!outcome.ok) return outcome;
@@ -158,7 +172,8 @@ function logNote(type: string, payload: unknown): LogNote | null {
 
 // What happened in a change of the game, besides the message that brought it, for the log
 // (results.ts, LOGGED): the votes once revealed, the lines whose time ran out, the reports settled,
-// the players who went out, the guesses of the students' word, and the end.
+// the players of the game whom the chair removed, in the round they were removed in, the players
+// who went out, the guesses of the students' word, and the end.
 function changeNotes(before: ImpostorData, after: ImpostorData): GameLogNote[] {
   const was = before.game;
   const now = after.game;
@@ -186,19 +201,15 @@ function changeNotes(before: ImpostorData, after: ImpostorData): GameLogNote[] {
       },
     });
   }
+  for (const player of now.removed.slice(was.removed.length)) {
+    notes.push({ type: LOGGED.removed, data: { player, round: was.round } });
+  }
   for (const player of now.players) {
     const earlier = was.players.find((other) => other.id === player.id);
     if (earlier?.fate === 'alive' && player.fate !== 'alive') {
-      const removed = player.fate === 'left' && now.removed && !was.removed;
       notes.push({
         type: LOGGED.out,
-        data: {
-          player: player.id,
-          fate: player.fate,
-          round: player.out,
-          role: player.role,
-          ...(removed ? { removed } : {}),
-        },
+        data: { player: player.id, fate: player.fate, round: player.out, role: player.role },
       });
     }
   }
@@ -375,8 +386,9 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     return { ok: true, data: { ...data, game: { ...game, phase: 'over', clock: null, report: null, speaker: null } } };
   },
 
-  // Back to the waiting room, with everyone at the table as they were.
-  again: (data) => ({ ...data, game: null }),
+  // Back to the waiting room, with everyone at the table as they were. The setter sets the words
+  // of the next game anew, so that no pair is played twice.
+  again: (data) => ({ ...data, game: null, setterWords: null }),
 
   handle(data, ctx, playerId, type, payload) {
     if (!Object.hasOwn(IMPOSTOR_MESSAGES, type)) return fail('bad_request');
@@ -389,13 +401,13 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
   // A game that a side won counts for everyone's record; one that was withdrawn, or that a Reviewer
   // 2 left, for none (results.ts).
   results: (data) => (data.game?.result?.winner ? resultsFrom(factsOf(data.game)) : null),
-  outcome: (data) => {
-    const result = data.game?.result;
-    return result?.winner ? { winner: result.winner, reason: result.reason } : null;
-  },
+  // How the game came out: the side that won, or no side when a Reviewer 2 left; nothing for a
+  // game that was withdrawn, which has no result.
+  outcome: (data) => outcomeOf(data.game?.result ?? null),
   score: (data, ctx) => (data.game ? scoresFrom(factsOf(data.game), ctx.keyOf) : null),
-  // A game in which the chair removed a player counts for no points (docs/games/impostor.md#leaving).
-  scoresNothing: (data) => data.game?.removed === true,
+  // A game in which the chair removed a player of the game counts for no points
+  // (docs/games/impostor.md#leaving).
+  scoresNothing: (data) => (data.game?.removed.length ?? 0) > 0,
   // A game that a side won may be rated (docs/architecture.md#ratings).
   rated: (data) => data.game?.result?.winner !== undefined && data.game.result.winner !== null,
 
@@ -410,21 +422,26 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
   recount: recountOf,
   shapes,
 
-  seated: (data, playerId) => (data.seats.includes(playerId) ? 'player' : 'watcher'),
+  // What each member is in the game being played, for its log, as it begins and for whoever comes
+  // during it: a player of the game, the setter, or someone who watches, as a player at the table
+  // who was offline as the game began and one who came to play the next game do.
+  seated: (data, playerId) => {
+    const game = data.game;
+    if (game && playerOf(game, playerId)) return 'player';
+    return game?.source.kind === 'setter' && game.source.setter === playerId ? 'setter' : 'watcher';
+  },
   setup: (data) => (data.game ? setupOf(data.game) : null),
   logged: logNote,
   logChanges: changeNotes,
 
-  // Nobody sends a quick reaction while a game is on: a reaction could tell the others who
-  // someone is (docs/games/impostor.md#quick-reactions).
-  mayEmote: (data) => !data.game || data.game.phase === 'over',
+  mayEmote,
 
   // Whom the game is waiting for: the player describing, those who haven't voted or judged, and
   // the player guessing the students' word.
   due(data) {
     const game = data.game;
     if (!game || game.phase === 'over') return [];
-    if (game.report) return game.report.eligible.filter((id) => !Object.hasOwn(game.report?.verdicts ?? {}, id));
+    if (game.report) return judgedBy(game).filter((id) => !Object.hasOwn(game.report?.verdicts ?? {}, id));
     if (game.phase === 'comeback') return game.comeback === null ? [] : [game.comeback];
     if (game.phase === 'vote' || game.phase === 'revote') {
       return game.players
@@ -451,6 +468,9 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     };
   },
   setupPaths: { pair: '$.source.pair', setter: '$.source.setter' },
+  // The record page's share of votes for a Reviewer 2 or the PI, rounds lasted and times out for
+  // breaking the rules.
+  recordSums: { detail: ['votes', 'hits', 'rounds'], verdicts: ['violation'] },
   // The chair removes a player by their number in the game being played, which is all the chair
   // knows of them in an anonymous game: the seat is the game's ID and the number.
   playerAt(data, seat) {
@@ -478,7 +498,6 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
       settings: { ...data.settings },
       seats: [...data.seats],
       startProblems: ctx.phase === 'lobby' ? problemsOf(data, ctx) : [],
-      mayEmote: !data.game || data.game.phase === 'over',
     };
     return (viewer) => {
       const own = 'playerId' in viewer && viewer.playerId === setter ? wordsOf(data, ctx) : null;
@@ -486,6 +505,7 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
       return {
         ...shared,
         setterWords: own && { a: own.a, b: own.b, field: own.field, named: own.named },
+        mayEmote: !('playerId' in viewer) || mayEmote(data, viewer.playerId),
         game:
           game &&
           viewOf(

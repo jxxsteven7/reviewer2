@@ -235,6 +235,7 @@ export interface GameRecordData {
   accounts: { playerId: string; accountId: number }[];
   counts: { accounts: number; guests: number; agents: number };
   takeover: boolean;
+  scoresNothing: boolean;
   agentPlays: AgentPlay[];
   match: boolean;
   practice: boolean;
@@ -1430,12 +1431,12 @@ export class Room {
 
   // A player's guess of who the AI players of the game that has just ended were, or their skip, by
   // null (docs/architecture.md#guessing-the-ai), as the game takes it (GameModule.guessAgents),
-  // which then shows them the answer. Returns the guess as the record keeps it, for the socket layer
-  // to keep.
+  // which then shows them the answer, but not after a game that the chair withdrew. Returns the
+  // guess as the record keeps it, for the socket layer to keep.
   guessAgents(id: string, gameId: string, guess: unknown): Ack<{ guess: unknown }> {
     if (gameId !== this.gameId || this.phase !== 'ended') return fail('stale');
     const member = this.members.get(id);
-    if (!member || member.agent || !this.game.guessAgents) return fail('cannot_guess');
+    if (!member || member.agent || !this.game.guessAgents || this.#ending !== 'finished') return fail('cannot_guess');
     const result = this.game.guessAgents(this.data, this.context, id, guess);
     if (!result.ok) return refusalOf(result);
     if (result.data !== this.data) {
@@ -1486,6 +1487,8 @@ export class Room {
   //   Guests have no account, and are not in it.
   // - How many played in it, by member key, with an account, as guests and as AI players, and
   //   whether an AI played for someone who was offline.
+  // - Whether it brought nobody points, a streak, a title or a friend title (#scoresNothing), for
+  //   whatever reason, as an AI that played in it or the game's own.
   // - Whether it was a game of a match, its language, its fields, and the version of its rules.
   record(): GameRecordData | null {
     if (this.#ending === null || !this.#log) return null;
@@ -1521,6 +1524,7 @@ export class Room {
       accounts,
       counts,
       takeover: this.#tookOverFor.size > 0,
+      scoresNothing: this.#scoresNothing(),
       agentPlays: this.#agentPlays(),
       match: this.match !== null,
       practice: this.practice,

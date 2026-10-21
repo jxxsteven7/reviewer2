@@ -97,13 +97,16 @@ export interface KeptCount extends KeptGame {
 // part in it as it ended, as results() gave it then, by the player ID each had at the end, the
 // points of everyone who played for a side, by member key, as the game scores itself
 // (GameModule.score), how it came out, as outcome() gave it then, or null for a game that can't
-// say, and what the game counts of an AI player in a seat, as agentFeats() gave it then, which a
-// game that counts that gives, and one that doesn't never does (store/recount.ts).
+// say, what the game counts of an AI player in a seat, as agentFeats() gave it then, which a
+// game that counts that gives, and one that doesn't never does (store/recount.ts), and whether the
+// game counts for no points, title, streak or friend title for a reason of its own, as
+// scoresNothing() gave it then, which a game with scoresNothing() gives.
 export interface Recount {
   results: PlayerResult[];
   scores: MatchScore[];
   outcome: GameOutcome | null;
   feats?(playerId: string): object;
+  scoresNothing?: boolean;
 }
 
 // What the rows of a game's data hold in the game's own shape (GameModule.shapes), for the check of
@@ -357,7 +360,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // Whether the game counts for no points, title, streak or friend title, as one that an AI played
   // in doesn't (docs/architecture.md#ai-players), for a reason of the game's own: such as one in
   // which the chair removed a player, which the chair could otherwise win by removing others. The
-  // record keeps it in full all the same. Without this, never.
+  // record keeps it in full all the same, and the record of the game says that it brought nothing,
+  // whatever the reason, which keeps it out of the streaks and the friend duos (store/records.ts).
+  // A game with this counts it again from its log (Recount.scoresNothing). Without this, never.
   scoresNothing?(data: Data): boolean;
   // How large the log of one of its games may grow, where the game needs more than gameLog.ts gives.
   logLimits?: LogLimits;
@@ -431,16 +436,22 @@ export interface GameModule<Data = unknown, View = unknown> {
   // which they watch it again (docs/architecture.md#replays), but counts them among no players.
   // Without this, nobody.
   contributors?(data: Data, ctx: GameContext): string[];
-  // What a kept game holds that its players gave the word library (docs/architecture.md#content-
-  // contributions), from how it began (setup()): the kind and the words, who gave them, by player
-  // ID, or null where the record doesn't say, and whether they asked to be named when the words are
-  // adopted. Null for a game that holds none. Without this, a game holds none.
+  // What a kept game holds that its players gave the word library
+  // (docs/architecture.md#content-contributions), from how it began (setup()): the kind and the
+  // words, who gave them, by player ID, or null where the record doesn't say, and whether they asked
+  // to be named when the words are adopted. Null for a game that holds none. Without this, a game
+  // holds none.
   content?(setup: unknown): GameContent | null;
   // Where the setup of one of its games keeps what the records count of its words, as JSON paths
   // into it (docs/architecture.md#ratings): the key of the pair of related terms it was dealt, and
   // the player ID of the setter who gave its words, for how often the players in a room have had a
   // pair and how players rated it (drawPair), and for the games an account set the words of.
   setupPaths?: { pair?: string; setter?: string };
+  // What an account's record of the game adds up besides the games and wins, as its record page
+  // shows it (GameCounts.sums): the whole numbers of the records' detail under these keys, and how
+  // many records have each of these verdicts, by the key or the verdict. Nothing is kept for it:
+  // it is counted from the records whenever it is asked for.
+  recordSums?: { detail?: readonly string[]; verdicts?: readonly string[] };
   // The player behind a seat that the room shows without naming them, such as a number in an
   // anonymous game, for the chair to remove them (room:remove with a seat), as the game reads the
   // seat, or null for a seat that is no player's. A game without this has none.

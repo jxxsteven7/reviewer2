@@ -11,7 +11,7 @@ import {
   type ImpostorSettings,
   type ReportVerdict,
 } from '@reviewer2/shared/impostor';
-import type { MatchScore, PlayerResult } from '../../core/game';
+import type { GameOutcome, MatchScore, PlayerResult } from '../../core/game';
 import type { GameLogEntry } from '../../core/gameLog';
 import type { ImpostorGame, WordSource } from './state';
 
@@ -32,8 +32,9 @@ export interface ImpostorSetup {
 
 // What happened in a game that the records count, as the game had it at its end or as its log
 // tells it: every vote revealed, every description whose time ran out, how each player who went out
-// did, every report settled, every guess of the students' word, and how it came out, in which
-// round. The players are as the setup has them.
+// did, every report settled, every guess of the students' word, whether the chair removed a player
+// of the game, which brings nobody points (docs/games/impostor.md#leaving), and how it came out,
+// in which round. The players are as the setup has them.
 export interface Facts {
   players: ImpostorSetup['players'];
   ballots: { votes: Record<string, string | null | 'timeout'>; out: string | null }[];
@@ -41,6 +42,7 @@ export interface Facts {
   outs: Record<string, { fate: Fate; round: number }>;
   reports: { by: string; target: string; passed: boolean }[];
   guesses: { by: string; word: string | null; correct: boolean }[];
+  removed: boolean;
   result: ImpostorResult | null;
   round: number;
 }
@@ -64,18 +66,27 @@ export function factsOf(game: ImpostorGame): Facts {
     outs,
     reports: game.reports.map(({ by, target, passed }) => ({ by, target, passed: passed === true })),
     guesses: game.guesses.map((guess) => ({ ...guess })),
+    removed: game.removed.length > 0,
     result: game.result,
     round: game.round,
   };
 }
 
+// How a game that ended by itself came out, for its record (GameModule.outcome): the side that won
+// and how, or no side, with the reason, for a game that a Reviewer 2 left. Null for a game that has
+// no result, as one that the chair withdrew.
+export const outcomeOf = (result: ImpostorResult | null): GameOutcome | null =>
+  result && { winner: result.winner, reason: result.reason };
+
 // The entries that the game adds to its log of what happened (GameModule.logChanges), from which a
 // kept game is counted again and watched again: a vote revealed, a description whose time ran out,
-// a player who went out, a report settled, a guess of the students' word, and the end.
+// a player who went out, a player of the game whom the chair removed, a report settled, a guess of
+// the students' word, and the end.
 export const LOGGED = {
   votes: 'impostor:votes',
   missed: 'impostor:missed',
   out: 'impostor:out',
+  removed: 'impostor:removed',
   judged: 'impostor:judged',
   guessed: 'impostor:guessed',
   over: 'impostor:over',
@@ -94,6 +105,7 @@ export function factsFrom(setup: ImpostorSetup, entries: readonly GameLogEntry[]
     outs: {},
     reports: [],
     guesses: [],
+    removed: false,
     result: null,
     round: 1,
   };
@@ -109,6 +121,8 @@ export function factsFrom(setup: ImpostorSetup, entries: readonly GameLogEntry[]
       facts.missed.push(data.player);
     } else if (type === LOGGED.out && typeof data.player === 'string' && FATES.includes(data.fate as Fate)) {
       facts.outs[data.player] = { fate: data.fate as Fate, round: Number(data.round) };
+    } else if (type === LOGGED.removed && typeof data.player === 'string') {
+      facts.removed = true;
     } else if (type === LOGGED.judged && typeof data.by === 'string' && typeof data.target === 'string') {
       facts.reports.push({ by: data.by, target: data.target, passed: data.passed === true });
     } else if (type === LOGGED.guessed && typeof data.player === 'string') {
@@ -195,6 +209,14 @@ export function scoresFrom(facts: Facts, keyOf: (playerId: string) => string): M
     return { key: keyOf(id), points: pointsOf(role, role === winner && fate !== 'left', fate, detail), detail };
   });
 }
+
+// Whether the end of a game shows everyone's points, and its replay: for a game that a side won,
+// but not for one that brings nobody points (GameModule.scoresNothing), as one in which the chair
+// removed a player of the game, or one with AI players (`agents`), which the room decides by
+// whether every answer came from a certified version of the AI, and none is yet
+// (CERTIFIED_AGENTS in core/agentLog.ts), so that the page shows no points that nobody got.
+export const pointsShown = (facts: Facts, agents: boolean): boolean =>
+  facts.result !== null && facts.result.winner !== null && !facts.removed && !agents;
 
 // The record of a game asks what the game says of a guess and a verdict, which the rules keep as
 // they are; these are for the check of the data.

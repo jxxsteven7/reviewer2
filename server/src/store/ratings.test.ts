@@ -50,6 +50,7 @@ function kept(gameId: string, source: object, players: [string, number][], endin
     players: players.map(([playerId, accountId]) => ({ playerId, accountId })),
     counts: { accounts: players.length, guests: 0, agents: 0 },
     takeover: false,
+    scoresNothing: false,
     agentPlays: [],
     match: null,
     inMatch: false,
@@ -167,6 +168,25 @@ describe("an account's page", () => {
     });
     // Bob played and set nothing.
     expect(service.recordsOf({ account: accounts.byId(bob) as never, hash: Buffer.alloc(0) })).toEqual({});
+  });
+
+  test('adds up what its records of a game that asks for it count, game by game', () => {
+    const ann = account('Ann');
+    const service = new Accounts({ db, now: () => 0, clock: () => NOW, games: [impostorGame] });
+    const played = (gameId: string, verdict: string, detail: object) => {
+      kept(gameId, { pair: 'fruit:apple+pear' }, [['p1', ann]]);
+      const record = { side: 'student', role: 'student', result: 'won' as const, place: 1, points: 3 };
+      service.records.add(ann, { game: 'impostor', gameId, ...record, verdict, detail });
+    };
+    played('g1', 'alive', { rounds: 3, votes: 3, hits: 2, missedVotes: 0 });
+    played('g2', 'violation', { rounds: 1, votes: 1, hits: 0, missedVotes: 1 });
+    // The votes, the hits and the rounds of both games, and the one out for breaking the rules.
+    expect(service.recordsOf({ account: accounts.byId(ann) as never, hash: Buffer.alloc(0) }).impostor?.sums).toEqual({
+      votes: 4,
+      hits: 2,
+      rounds: 4,
+      violation: 1,
+    });
   });
 });
 

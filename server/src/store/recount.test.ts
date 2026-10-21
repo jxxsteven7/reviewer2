@@ -290,6 +290,7 @@ describe('adding up a match', () => {
     gameId: id,
     game: 'test',
     outcome: null,
+    scoresNothing: false,
     records: new Map(),
     seats: new Map(),
     match: {

@@ -225,21 +225,22 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
 
   // What accounts keep of the games (docs/architecture.md#accounts), each row against the record
   // of its game, which the foreign keys tie it to, and against what the game counts of the record
-  // of the game under the rules of today (recount.ts): who won and how, as the record of the game
-  // says it came out, how the game came out for each account, the place, the points, the verdict,
-  // the game's own detail and the titles of each record of a game, what each AI did in it, and the
-  // place, the total and the title of each record of a match. A game that one side won has its
-  // records won on that side and not won on any other; one that no one side won says nothing of
-  // its records.
+  // of the game under the rules of today (recount.ts): who won and how, and whether it brought
+  // anybody anything, as the record of the game says it came out, how the game came out for each
+  // account, the place, the points, the verdict, the game's own detail and the titles of each
+  // record of a game, what each AI did in it, and the place, the total and the title of each record
+  // of a match. A game that one side won has its records won on that side and not won on any other;
+  // one that no one side won says nothing of its records, and one that brought nobody points has
+  // none on its records.
   sql(
     'records of games that disagree with the record of the game',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
       "WHERE g.ending <> 'finished' OR (g.winner IS NOT NULL AND (r.result = 'won') <> (r.side = g.winner))",
   );
   sql(
-    'records of games that an AI played in, with points',
+    'records of games that brought nobody points, with points',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-      'WHERE (g.agents > 0 OR g.takeover = 1) AND r.points <> 0',
+      'WHERE g.scores_nothing = 1 AND r.points <> 0',
   );
   each(
     'records of games in a role the game does not have',

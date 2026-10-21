@@ -1,5 +1,5 @@
 import type { BoardWord } from '@reviewer2/shared';
-import type { ImpostorRoomData, ImpostorSettings } from '@reviewer2/shared/impostor';
+import { MAX_LINE_INPUT, type ImpostorRoomData, type ImpostorSettings } from '@reviewer2/shared/impostor';
 import { describe, expect, it } from 'vitest';
 import type { GameContext, Viewer } from '../../core/game';
 import type { GameLogData, GameLogEntry } from '../../core/gameLog';
@@ -111,7 +111,8 @@ function table(
       return game.views(room.data, room.ctx)(viewer);
     },
     // Deals the roles by hand, one letter per player in the order of `players`, as testing.ts's
-    // dealt() does: S a student, R a Reviewer 2 and P the PI, with numbers in that order too.
+    // dealt() does: S a student, R a Reviewer 2 and P the PI, with numbers in that order too. The
+    // AI players stay as the game began with them.
     deal(roles: string) {
       const current = room.data.game as NonNullable<ImpostorData['game']>;
       const named: Record<string, 'student' | 'reviewer2' | 'pi'> = { S: 'student', R: 'reviewer2', P: 'pi' };
@@ -119,7 +120,7 @@ function table(
         id,
         number: index + 1,
         role: named[roles[index] as string] as 'student' | 'reviewer2' | 'pi',
-        agent: false,
+        agent: current.players.some((player) => player.id === id && player.agent),
         fate: 'alive' as const,
         out: null,
       }));
@@ -235,6 +236,11 @@ describe('the waiting room', () => {
     expect(game.participants?.(room.data, room.ctx)?.sort()).toEqual(PEOPLE.map((id) => `key-${id}`));
     expect(game.seated?.(room.data, 'ann')).toBe('player');
     expect(game.seated?.(room.data, 'zed')).toBe('watcher');
+    expect(room.view({ playerId: 'zed' }).game?.setter).toBeNull();
+    // A player at the table who was offline as the game began watches it.
+    const offline = table({ players: [...PEOPLE, 'gus'], offline: ['gus'] });
+    offline.start();
+    expect(game.seated?.(offline.data, 'gus')).toBe('watcher');
   });
 });
 
@@ -268,7 +274,7 @@ describe('the setter', () => {
     expect(off.ok && off.data.setterWords).toBeNull();
   });
 
-  it('needs the words to start, plays without the setter, and deals the setter’s words', () => {
+  it("needs the words to start, plays without the setter, and deals the setter's words", () => {
     const room = setterRoom();
     expect(room.view({ playerId: 'ann' }).startProblems).toEqual([{ problem: 'needs_words' }]);
     room.send('ann', 'impostor:words', words);
@@ -293,6 +299,26 @@ describe('the setter', () => {
     const view = room.view({ playerId: 'ann' }).game;
     expect(view).toMatchObject({ you: null, setterWords: ['Apple', 'pear'], words: null, mayTalk: true });
     expect(view?.seats.every((seat) => seat.role === null)).toBe(true);
+    // Everyone knows who set the words, and the log says so of the setter, who reacts freely, as
+    // someone who watches does.
+    expect(game.seated?.(room.data, 'ann')).toBe('setter');
+    expect(game.seated?.(room.data, 'bob')).toBe('player');
+    expect(game.seated?.(room.data, 'zed')).toBe('watcher');
+    expect(game.mayEmote?.(room.data, 'ann', room.ctx)).toBe(true);
+    expect(room.view({ playerId: 'ann' }).mayEmote).toBe(true);
+    expect(room.view({ playerId: 'bob' }).mayEmote).toBe(false);
+    room.ctx = { ...room.ctx, chairId: 'bob' };
+    for (const viewer of ['ann', 'bob', 'zed']) expect(room.view({ playerId: viewer }).game?.setter).toBe('ann');
+  });
+
+  it('sets the words of the next game anew', () => {
+    const room = setterRoom();
+    room.send('ann', 'impostor:words', words);
+    room.start();
+    room.data = game.again(room.data, { ...room.ctx, phase: 'lobby' });
+    room.ctx = { ...room.ctx, phase: 'lobby' };
+    expect(room.data).toMatchObject({ game: null, setterWords: null });
+    expect(room.view({ playerId: 'ann' }).startProblems).toEqual([{ problem: 'needs_words' }]);
   });
 
   it('loses the words when the chair passes to someone else', () => {
@@ -326,7 +352,7 @@ describe('what each viewer sees', () => {
     expect(room.view({ screen: true }).game?.mayTalk).toBe(false);
   });
 
-  it('shows every name in a game that isn’t anonymous', () => {
+  it("shows every name in a game that isn't anonymous", () => {
     const room = table({ settings: { anonymous: false } });
     room.start();
     expect(
@@ -376,7 +402,79 @@ describe('what each viewer sees', () => {
       { number: null, playerId: 'zed', text: 'hello all', after: false },
     ]);
     expect(room.entries.at(-1)).toMatchObject({ by: 'zed', type: 'impostor:say', said: 'hello all' });
-    expect(game.mayEmote?.(room.data, 'zed', room.ctx)).toBe(false);
+  });
+
+  it('lets those who are out, watch or set the words react while the game is on, and everyone after it', () => {
+    const room = table({ players: PEOPLE.slice(0, 5), settings: { anonymous: false } });
+    expect(game.mayEmote?.(room.data, 'ann', room.ctx)).toBe(true);
+    room.start();
+    room.deal('SSSSR');
+    const reacts = (id: string) => [game.mayEmote?.(room.data, id, room.ctx), room.view({ playerId: id }).mayEmote];
+    expect(reacts('ann')).toEqual([false, false]);
+    expect(reacts('zed')).toEqual([true, true]);
+    room.describeAll();
+    room.voteFor('bob', 'ann');
+    expect(room.data.game?.players[1]?.fate).toBe('voted_out');
+    expect(reacts('bob')).toEqual([true, true]);
+    expect(reacts('ann')).toEqual([false, false]);
+    room.describeAll();
+    room.voteFor('eve', 'ann');
+    expect(room.data.game?.result?.winner).toBe('student');
+    for (const id of ['ann', 'bob', 'eve', 'zed']) expect(reacts(id)).toEqual([true, true]);
+  });
+
+  it('keeps those out of an anonymous game from reacting until it is over, since a reaction names them', () => {
+    const room = table({ players: PEOPLE.slice(0, 5) });
+    room.start();
+    room.deal('SSSSR');
+    const reacts = (id: string) => [game.mayEmote?.(room.data, id, room.ctx), room.view({ playerId: id }).mayEmote];
+    room.describeAll();
+    room.voteFor('bob', 'ann');
+    expect(room.data.game?.players[1]?.fate).toBe('voted_out');
+    expect(reacts('bob')).toEqual([false, false]);
+    expect(reacts('zed')).toEqual([true, true]);
+    room.describeAll();
+    room.voteFor('eve', 'ann');
+    expect(reacts('bob')).toEqual([true, true]);
+  });
+
+  it('has a player after an anonymous game with AI players guess them before talking', () => {
+    const room = table({ agents: ['fay'], settings: { describeTime: 60, voteTime: 30 } });
+    room.start();
+    room.deal('SSSSRP');
+    room.describeAll();
+    room.voteFor('eve', 'ann');
+    expect(room.data.game?.result).toEqual({ winner: 'pi', reason: 'pi_survived' });
+    expect(room.view({ playerId: 'ann' }).game).toMatchObject({ mayTalk: false, offField: null, guess: { agents: 1 } });
+    expect(room.try('ann', 'impostor:say', { gameId: 'g1', text: 'well played' })).toEqual({
+      ok: false,
+      error: 'guess_first',
+    });
+    const guessed = game.guessAgents?.(room.data, room.ctx, 'ann', null);
+    if (!guessed?.ok) throw new Error('refused');
+    room.data = guessed.data;
+    expect(room.view({ playerId: 'ann' }).game?.mayTalk).toBe(true);
+    expect(room.try('ann', 'impostor:say', { gameId: 'g1', text: 'well played' }).ok).toBe(true);
+    // Nobody won a point with an AI player in the game, whose version is not certified.
+    expect(room.view({ playerId: 'ann' }).game?.points).toBeNull();
+  });
+
+  it('has no guess of the AI players in a game that the chair withdrew', () => {
+    const room = table({ agents: ['fay'], settings: { describeTime: 60, voteTime: 30 } });
+    room.start();
+    const withdrawn = game.withdraw(room.data, 'g1');
+    if (!withdrawn.ok) throw new Error(withdrawn.error);
+    room.data = withdrawn.data;
+    expect(room.view({ playerId: 'ann' }).game).toMatchObject({ phase: 'over', guess: null, mayTalk: true });
+    expect(game.guessAgents?.(room.data, room.ctx, 'ann', null)).toEqual({ ok: false, error: 'cannot_guess' });
+  });
+
+  it("takes a guess of the students' word no longer than any line", () => {
+    const room = table();
+    room.start();
+    const guess = (word: string) => room.try('ann', 'impostor:comeback', { gameId: 'g1', word });
+    expect(guess('x'.repeat(MAX_LINE_INPUT + 1))).toEqual({ ok: false, error: 'bad_request' });
+    expect(guess('x'.repeat(MAX_LINE_INPUT))).toEqual({ ok: false, error: 'no_comeback' });
   });
 
   it('shows a report to everyone, and its votes once it is settled', () => {
@@ -408,6 +506,24 @@ describe('what each viewer sees', () => {
     expect(settled?.report).toBeNull();
     expect(settled?.reports[0]).toMatchObject({ passed: false, verdicts: { [room.number(judge)]: 'agree' } });
     expect(room.view({ playerId: reporter }).game?.reported).toBe(true);
+  });
+
+  it('counts the judges of a report who are still in the game, and a report dropped as made', () => {
+    const room = table();
+    room.start();
+    room.deal('SSSSRP');
+    room.send('ann', 'impostor:report', { ...room.at(), number: 2, line: null, reason: 'too plain' });
+    room.send('cat', 'impostor:judge', { gameId: 'g1', verdict: 'agree' });
+    expect(room.view({ playerId: 'dan' }).game?.report).toMatchObject({ judged: 1, eligible: 5 });
+    room.leave('cat');
+    expect(room.view({ playerId: 'dan' }).game?.report).toMatchObject({ judged: 0, eligible: 4 });
+    // Bob, whom Ann reported, leaves: the report goes, and Ann has made hers of the round.
+    room.leave('bob');
+    expect(room.view({ playerId: 'ann' }).game).toMatchObject({ report: null, reports: [], reported: true });
+    expect(room.try('ann', 'impostor:report', { ...room.at(), number: 4, line: null, reason: 'too plain' })).toEqual({
+      ok: false,
+      error: 'reported_already',
+    });
   });
 });
 
@@ -485,9 +601,12 @@ describe('the log and the records', () => {
       language: 'en',
       keyOf: (id) => `key-${id}`,
     });
-    expect(recount).toEqual({ results, scores, outcome: game.outcome?.(room.data) });
+    expect(recount).toEqual({ results, scores, outcome: game.outcome?.(room.data), scoresNothing: false });
     expect(game.rated?.(room.data)).toBe(true);
     expect(game.scoresNothing?.(room.data)).toBe(false);
+    expect(room.view({ playerId: 'zed' }).game?.points).toEqual(
+      scores?.map((score) => ({ number: room.number(score.key.slice('key-'.length)), points: score.points })),
+    );
   });
 
   it('keeps every line, vote, report and the talk, as the replay shows them', () => {
@@ -530,17 +649,61 @@ describe('the log and the records', () => {
     room.leave(reviewer2);
     expect(room.data.game?.result).toEqual({ winner: null, reason: 'reviewer2_left' });
     expect(game.results?.(room.data, room.ctx)).toBeNull();
-    expect(game.score?.(room.data, room.ctx)).toBeNull();
     expect(game.rated?.(room.data)).toBe(false);
+    const outcome = { winner: null, reason: 'reviewer2_left' };
+    expect(game.outcome?.(room.data)).toEqual(outcome);
     expect(room.entries.filter((entry) => entry.type === 'impostor:out').map((entry) => entry.data)).toEqual([
-      { player: student, fate: 'left', round: 1, role: 'student', removed: true },
+      { player: student, fate: 'left', round: 1, role: 'student' },
       { player: reviewer2, fate: 'left', round: 1, role: 'reviewer2' },
     ]);
-    expect(
-      game.recount?.({ setup: game.setup?.(room.data), log: room.log(), language: 'en', keyOf: (id) => id }),
-    ).toBeNull();
-    // Everyone sees every role once it is over.
+    expect(room.entries.filter((entry) => entry.type === 'impostor:removed').map((entry) => entry.data)).toEqual([
+      { player: student, round: 1 },
+    ]);
+    // Counted again, it has no records, as it had none, and comes out as it did.
+    const kept = { setup: game.setup?.(room.data), log: room.log(), language: 'en' as const };
+    expect(game.recount?.({ ...kept, keyOf: (id) => id })).toEqual({
+      results: [],
+      scores: [],
+      outcome,
+      scoresNothing: true,
+    });
+    // It has a replay, with its result and no points.
+    const replay = game.showReplay?.({ ...kept, accounts: new Map(), viewer: new Set([student]) });
+    expect(replay).toMatchObject({ gameId: 'g1', me: student, result: outcome, points: [] });
+    // Everyone sees every role once it is over, and no points.
     expect(room.view({ playerId: 'zed' }).game?.seats.every((seat) => seat.role !== null)).toBe(true);
+    expect(room.view({ playerId: 'zed' }).game?.points).toBeNull();
+  });
+
+  it('counts no points for a game in which the chair removed a player, in it or out, live as again', () => {
+    const room = table({ players: PEOPLE.slice(0, 5), accounts: PEOPLE });
+    room.start();
+    room.deal('SSSSR');
+    room.describeAll();
+    room.voteFor('bob', 'ann');
+    expect(room.data.game?.players[1]?.fate).toBe('voted_out');
+    expect(game.scoresNothing?.(room.data)).toBe(false);
+    room.leave('bob', true);
+    expect(game.scoresNothing?.(room.data)).toBe(true);
+    expect(room.entries.filter((entry) => entry.type === 'impostor:removed').map((entry) => entry.data)).toEqual([
+      { player: 'bob', round: 2 },
+    ]);
+    room.describeAll();
+    room.voteFor('eve', 'ann');
+    expect(room.data.game?.result).toEqual({ winner: 'student', reason: 'caught' });
+    const results = game.results?.(room.data, room.ctx);
+    const scores = game.score?.(room.data, room.ctx);
+    expect(results?.length).toBeGreaterThan(0);
+    expect(room.view({ playerId: 'ann' }).game?.points).toBeNull();
+    const kept = { setup: game.setup?.(room.data), log: room.log(), language: 'en' as const };
+    expect(game.recount?.({ ...kept, keyOf: (id) => `key-${id}` })).toEqual({
+      results,
+      scores,
+      outcome: { winner: 'student', reason: 'caught' },
+      scoresNothing: true,
+    });
+    const replay = game.showReplay?.({ ...kept, accounts: new Map(), viewer: new Set(['ann']) });
+    expect(replay).toMatchObject({ result: { winner: 'student' }, points: [] });
   });
 
   it('counts no record for a player who left a game that a side won', () => {
@@ -591,7 +754,7 @@ describe('the log and the records', () => {
 });
 
 describe('the shapes of the data', () => {
-  it('takes the game’s own and nothing else', () => {
+  it("takes the game's own and nothing else", () => {
     const room = table();
     room.start();
     const setup = game.setup?.(room.data) as Record<string, unknown>;

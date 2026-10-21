@@ -2043,7 +2043,8 @@ describe('a database in DATA_DIR', () => {
   }
 
   test('of the twenty-sixth release keeps its feedback and boards, and gets the ratings, the guesses and the words adopted from the games', async () => {
-    const before = await twentySixth();
+    // An AI played in g2.
+    const before = await twentySixth("UPDATE replays SET agents = 1 WHERE game_id = 'g2'");
     const migrated = await open(dir, MIGRATIONS.slice(0, 27));
     expect(migrated).toMatchObject({ schema: 27, migratedFrom: 26 });
     const { db } = migrated;
@@ -2080,6 +2081,13 @@ describe('a database in DATA_DIR', () => {
           '{"settings":{"language":"en"},"startingTeam":"red","cards":[{"word":"Lamp","color":"red","custom":false},{"word":"Kite","color":"blue","custom":false}]}',
       },
       { id: 'g3', setup: null },
+    ]);
+    // The game that an AI played in brought nobody points, as the records say, and the others
+    // brought them as they do.
+    expect(all('SELECT game_id AS id, scores_nothing AS unscored FROM replays ORDER BY game_id')).toEqual([
+      { id: 'g1', unscored: 0 },
+      { id: 'g2', unscored: 1 },
+      { id: 'g3', unscored: 0 },
     ]);
     // Feedback is about a game of the first game that is kept, or about none; it names both or neither.
     run("UPDATE feedback SET game = 'keywords', game_id = 'g2' WHERE id = 2");

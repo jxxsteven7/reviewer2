@@ -1342,6 +1342,13 @@ export const MIGRATIONS: readonly string[] = [
   // - The setup of every game of the first game with words of the chair's own names who gave them
   //   (`customAuthor`, KeywordsSetup), by the player ID they had in the room. The games kept before
   //   this migration don't say, and name nobody (null).
+  // - replays keeps whether the game brought nobody points, a streak, a title or a friend title
+  //   (`scores_nothing`), for whatever reason: an AI that played in it, as an AI player or for
+  //   someone who was offline, without every answer from a certified version of the AI, or a reason
+  //   of the game's own (GameModule.scoresNothing), as a removal in the second game; the streaks
+  //   and the friend duos leave it out by this alone. No version of the AI is certified yet, and
+  //   the first game has no reason of its own, so of the games that are there, those that an AI
+  //   played in brought nothing, and the others did.
   //
   // Who set the words of a game of the second game has a row in game_players beside its players,
   // with which they watch it again; the code writes it, and no row that is there changes.
@@ -1427,5 +1434,8 @@ export const MIGRATIONS: readonly string[] = [
     WHERE game = 'keywords' AND setup IS NOT NULL AND EXISTS (
       SELECT 1 FROM json_each(replays.setup, '$.cards') AS card WHERE json_extract(card.value, '$.custom') = 1
     );
+
+  ALTER TABLE replays ADD COLUMN scores_nothing INTEGER NOT NULL DEFAULT 0 CHECK (scores_nothing IN (0, 1));
+  UPDATE replays SET scores_nothing = 1 WHERE agents > 0 OR takeover = 1;
   `,
 ];

@@ -29,9 +29,9 @@ const ratedGame: GameModule<FakeData, FakeView> = {
     guess === null || Array.isArray(guess) ? { ok: true, data, guess } : { ok: false, error: 'bad_request' },
 };
 
-// Ann, with an account, and Bob, a guest, play a game of the test game to its end, and Cat, with
-// an account, watches.
-async function played() {
+// Ann, with an account, and Bob, a guest, play a game of the test game to its end, or until Ann,
+// the chair, withdraws it, and Cat, with an account, watches.
+async function played(finish: 'test:finish' | 'room:end' = 'test:finish') {
   const anns = await loggedIn(server.url, 'Ann');
   const ann = track(await anns.connect());
   const reply = await ann.send('room:create', { game: 'test', language: 'en', fields: ['general'], play: true });
@@ -43,7 +43,7 @@ async function played() {
   await ann.waitFor((state) => state.players.length === 3);
   await ann.send('room:start', { round: 0 });
   const { gameId } = (await ann.waitFor((state) => state.phase === 'playing')) as { gameId: string };
-  await ann.send('test:finish');
+  await ann.send(finish, finish === 'room:end' ? { gameId } : {});
   await ann.waitFor((state) => state.phase === 'ended');
   await until(() => server.db.prepare('SELECT 1 FROM replays').get() !== undefined, 'the record');
   return { ann, bob, cat, gameId, annId: ann.state?.me as string, bobId: bob.state?.me as string };
@@ -91,6 +91,14 @@ describe('the end of a game', () => {
     expect(server.db.prepare('SELECT player_id AS player, guess FROM ai_guesses').all()).toEqual([
       { player: annId, guess: '[2]' },
     ]);
+  });
+
+  test('takes no guess of who the AI players were in a game that the chair withdrew', async () => {
+    server = await startServer({ games: [ratedGame as unknown as GameModule] });
+    const { ann, bob, gameId } = await played('room:end');
+    expect(await ann.send('room:guessAgents', { gameId, guess: [2] })).toEqual({ ok: false, error: 'cannot_guess' });
+    expect(await bob.send('room:guessAgents', { gameId, guess: null })).toEqual({ ok: false, error: 'cannot_guess' });
+    expect(server.db.prepare('SELECT 1 FROM ai_guesses').all()).toEqual([]);
   });
 
   test('keeps feedback sent from it with the game, from someone who took part in it alone', async () => {

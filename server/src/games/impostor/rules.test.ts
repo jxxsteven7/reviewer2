@@ -1,4 +1,4 @@
-import { roleCounts, survivors } from '@reviewer2/shared/impostor';
+import { roleCounts, survivors, TALK_KEPT } from '@reviewer2/shared/impostor';
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../../core/random';
 import * as rules from './rules';
@@ -76,7 +76,7 @@ describe('describing', () => {
     expect(refused(write(game, 'p1', 'one more'))).toBe('wrong_phase');
   });
 
-  it('stops a line that gives the writer’s word away, or repeats one', () => {
+  it("stops a line that gives the writer's word away, or repeats one", () => {
     let game = dealt('SRSS');
     expect(refused(write(game, 'p1', 'an Apple a day'))).toBe('line_has_word');
     expect(refused(write(game, 'p1', 'two apples'))).toBe('line_has_word');
@@ -214,7 +214,7 @@ describe('the end', () => {
 describe('the comeback', () => {
   const settings = { comeback: true, describeTime: 60, voteTime: 30 };
 
-  it('lets a Reviewer 2 who was voted out win with the students’ word', () => {
+  it("lets a Reviewer 2 who was voted out win with the students' word", () => {
     let game = playRound(dealt('RPSSSS', settings), { p2: 1, p3: 1, p4: 1, p5: 1, p6: 1 });
     expect(game).toMatchObject({ phase: 'comeback', comeback: 'p1', clock: { ends: 30_000, length: 30_000 } });
     expect(refused(rules.guess(game, 'p2', { gameId: 'g1', word: 'apple' }, 0))).toBe('no_comeback');
@@ -234,7 +234,7 @@ describe('the comeback', () => {
     expect(game).toMatchObject({ phase: 'describe', round: 2, comeback: null });
   });
 
-  it('isn’t there for a student, or when the room leaves it out', () => {
+  it("isn't there for a student, or when the room leaves it out", () => {
     expect(playRound(dealt('RPSSSS', settings), { p1: 3, p2: 3, p4: 3, p5: 3, p6: 3 }).phase).toBe('describe');
     expect(playRound(dealt('RPSSSS'), { p2: 1, p3: 1, p4: 1, p5: 1, p6: 1 }).result?.winner).toBe('pi');
   });
@@ -285,7 +285,7 @@ describe('reports', () => {
     );
   });
 
-  it('takes a reason that gives nothing away, and a line of the reported player’s', () => {
+  it("takes a reason that gives nothing away, and a line of the reported player's", () => {
     let game = accepted(write(dealt('SSSSR'), 'p1', 'grows on a tree'));
     const send = (by: string, number: number, line: number | null, text = reason) =>
       refused(rules.report(game, by, { ...at(game), number, line, reason: text }, 0));
@@ -326,7 +326,7 @@ describe('reports', () => {
     expect(game).toMatchObject({ speaker: 'p3', clock: { ends: 66_000 } });
   });
 
-  it('isn’t open while a Reviewer 2 guesses the word', () => {
+  it("isn't open while a Reviewer 2 guesses the word", () => {
     const game = playRound(dealt('RPSSSS', { comeback: true }), { p2: 1, p3: 1, p4: 1, p5: 1, p6: 1 });
     expect(refused(rules.report(game, 'p2', { ...at(game), number: 3, line: null, reason }, 0))).toBe('wrong_phase');
   });
@@ -335,7 +335,7 @@ describe('reports', () => {
 describe('leaving', () => {
   it('ends the game with no winner when a Reviewer 2 in it leaves', () => {
     const game = rules.leave(dealt('SSSSR'), 'p5', true, 0);
-    expect(game).toMatchObject({ phase: 'over', result: { winner: null, reason: 'reviewer2_left' }, removed: true });
+    expect(game).toMatchObject({ phase: 'over', result: { winner: null, reason: 'reviewer2_left' }, removed: ['p5'] });
     expect(game.players[4]).toMatchObject({ fate: 'left', out: 1 });
   });
 
@@ -343,7 +343,7 @@ describe('leaving', () => {
     let game = dealt('SSSSSR');
     game = rules.leave(game, 'p1', false, 0);
     expect(game.players[0]).toMatchObject({ fate: 'left', out: 1 });
-    expect(game).toMatchObject({ speaker: 'p2', removed: false });
+    expect(game).toMatchObject({ speaker: 'p2', removed: [] });
     game = cast(describeAll(game), { p2: 6, p3: 6, p4: 6, p5: 6 });
     expect(game.phase).toBe('vote');
     game = rules.leave(game, 'p6', false, 0);
@@ -351,30 +351,84 @@ describe('leaving', () => {
     expect(game.result).toEqual({ winner: null, reason: 'reviewer2_left' });
   });
 
-  it('reveals the votes when the last one who hadn’t voted leaves', () => {
+  it("reveals the votes when the last one who hadn't voted leaves", () => {
     let game = cast(describeAll(dealt('SSSSSR')), { p1: 6, p2: 6, p3: 6, p4: 6, p6: 1 });
     game = rules.leave(game, 'p5', false, 0);
     expect(game.ballots[0]?.votes).toEqual({ p1: 'p6', p2: 'p6', p3: 'p6', p4: 'p6', p6: 'p1' });
     expect(game.result?.winner).toBe('student');
   });
 
-  it('drops a report of the player who leaves, and settles one they were to judge', () => {
+  it('drops a report of the player who leaves, which the reporter has made all the same', () => {
     let game = dealt('SSSSSR', { describeTime: 60 }, 0);
     game = accepted(rules.report(game, 'p2', { ...at(game), number: 3, line: null, reason: 'odd' }, 10_000));
     game = rules.leave(game, 'p3', false, 12_000);
-    expect(game).toMatchObject({ report: null, reports: [], clock: { ends: 62_000 } });
+    expect(game).toMatchObject({
+      report: null,
+      reports: [],
+      dropped: [{ round: 1, by: 'p2' }],
+      clock: { ends: 62_000 },
+    });
+    expect(rules.reportedThisRound(game, 'p2')).toBe(true);
+    expect(refused(rules.report(game, 'p2', { ...at(game), number: 4, line: null, reason: 'odd' }, 12_000))).toBe(
+      'reported_already',
+    );
+    game = accepted(rules.report(game, 'p1', { ...at(game), number: 4, line: null, reason: 'odd' }, 12_000));
+    expect(game.report).toMatchObject({ by: 'p1', target: 'p4' });
+  });
+
+  it('settles a report they were to judge by those still in the game, more than half of them agreeing', () => {
+    let game = dealt('SSSSSR', { describeTime: 60 }, 0);
     game = accepted(rules.report(game, 'p2', { ...at(game), number: 4, line: null, reason: 'odd' }, 12_000));
+    expect(game.report?.eligible).toEqual(['p1', 'p2', 'p3', 'p5', 'p6']);
     game = accepted(rules.judge(game, 'p1', { gameId: 'g1', verdict: 'agree' }, 12_000));
     game = accepted(rules.judge(game, 'p2', { gameId: 'g1', verdict: 'agree' }, 12_000));
     game = accepted(rules.judge(game, 'p6', { gameId: 'g1', verdict: 'disagree' }, 12_000));
     game = rules.leave(game, 'p5', false, 13_000);
+    expect(rules.judgedBy(game)).toEqual(['p1', 'p2', 'p3', 'p6']);
+    expect(game.report).not.toBeNull();
+    // Two agreeing of the five who could judge it when it was made would not be enough, but they
+    // are of the three still in the game once p3 has gone too.
+    game = rules.leave(game, 'p3', false, 13_000);
     expect(game.report).toBeNull();
     expect(game.reports[0]).toMatchObject({
       target: 'p4',
-      passed: false,
-      verdicts: { p1: 'agree', p2: 'agree', p5: 'abstain', p6: 'disagree' },
+      passed: true,
+      eligible: ['p1', 'p2', 'p6'],
+      verdicts: { p1: 'agree', p2: 'agree', p6: 'disagree' },
     });
-    expect(game.players[3]?.fate).toBe('alive');
+    expect(game.players[3]?.fate).toBe('violation');
+  });
+
+  it('goes on after a report from what someone who left while it was judged left undone', () => {
+    // The one describing leaves: once the report is settled, the next one describes, with no time
+    // limit as with one.
+    let game = dealt('SSSSSR');
+    game = accepted(rules.report(game, 'p3', { ...at(game), number: 4, line: null, reason: 'odd' }, 0));
+    game = rules.leave(game, 'p1', false, 0);
+    expect(game).toMatchObject({ speaker: 'p1', report: { target: 'p4' } });
+    for (const id of ['p2', 'p3', 'p5', 'p6']) {
+      game = accepted(rules.judge(game, id, { gameId: 'g1', verdict: 'disagree' }, 0));
+    }
+    expect(game).toMatchObject({ phase: 'describe', speaker: 'p2', report: null });
+    // The last one to vote leaves: once the report is settled, the votes are revealed.
+    game = cast(describeAll(dealt('SSSSSR')), { p1: 6, p2: 6, p3: 6, p4: 6, p6: 1 });
+    game = accepted(rules.report(game, 'p2', { ...at(game), number: 3, line: null, reason: 'odd' }, 0));
+    game = rules.leave(game, 'p5', false, 0);
+    expect(game.ballots).toEqual([]);
+    for (const id of ['p1', 'p2', 'p4', 'p6']) {
+      game = accepted(rules.judge(game, id, { gameId: 'g1', verdict: 'disagree' }, 0));
+    }
+    expect(game.ballots[0]).toMatchObject({ out: 'p6' });
+    expect(game.result).toEqual({ winner: 'student', reason: 'caught' });
+  });
+
+  it('counts the votes for a player who left before they were revealed for nobody', () => {
+    let game = cast(describeAll(dealt('SSSSSR')), { p1: 5, p2: 5, p3: 5 });
+    game = rules.leave(game, 'p5', false, 0);
+    game = cast(game, { p4: 1, p6: 2 });
+    expect(game.ballots[0]).toMatchObject({ votes: { p1: 'p5', p2: 'p5', p3: 'p5', p4: 'p1', p6: 'p2' }, out: null });
+    expect(game).toMatchObject({ phase: 'tie', tied: ['p1', 'p2'] });
+    expect(game.players[4]).toMatchObject({ fate: 'left' });
   });
 
   it('counts a player who leaves out, and the game ends if few are left', () => {
@@ -390,12 +444,65 @@ describe('leaving', () => {
     expect(game.result?.winner).toBe('pi');
   });
 
-  it('starts the next round when a tied player leaves before the revote', () => {
+  it('starts the next round, with nobody voted out, when a tie is down to one player', () => {
+    // In the revote.
     let game = playRound(dealt('SSSSR'), { p1: 2, p2: 1, p3: 1, p4: 2, p5: null });
     game = describeAll(game);
     expect(game.phase).toBe('revote');
     game = rules.leave(game, 'p1', false, 0);
-    expect(game).toMatchObject({ phase: 'describe', round: 2, tied: [] });
+    expect(game).toMatchObject({ phase: 'describe', round: 2, tied: [], speaker: 'p2' });
+    expect(game.ballots).toHaveLength(1);
+    // In the tie lines, whether the one who leaves is writing theirs or not.
+    for (const leaving of ['p1', 'p2']) {
+      game = playRound(dealt('SSSSR'), { p1: 2, p2: 1, p3: 1, p4: 2, p5: null });
+      expect(game).toMatchObject({ phase: 'tie', tied: ['p1', 'p2'], speaker: 'p1' });
+      game = rules.leave(game, leaving, false, 0);
+      expect(game).toMatchObject({ phase: 'describe', round: 2, tied: [] });
+      expect(game.players.filter((player) => player.fate !== 'alive').map((player) => player.id)).toEqual([leaving]);
+    }
+  });
+
+  it('goes on with a tie among the tied players left while there are two of them or more', () => {
+    const tied = () => playRound(dealt('SSSSSSR'), { p1: 2, p2: 3, p3: 1, p4: 1, p5: 2, p6: 3, p7: null });
+    // In the tie lines, from the next tied player when the one writing leaves.
+    let game = tied();
+    expect(game).toMatchObject({ phase: 'tie', tied: ['p1', 'p2', 'p3'], speaker: 'p1' });
+    game = rules.leave(game, 'p1', false, 0);
+    expect(game).toMatchObject({ phase: 'tie', tied: ['p2', 'p3'], speaker: 'p2' });
+    game = describeAll(game);
+    expect(game.lines.filter((line) => line.tie).map((line) => line.by)).toEqual(['p2', 'p3']);
+    expect(game.phase).toBe('revote');
+    // In the revote, where a vote for the one who left counts for nobody.
+    game = describeAll(tied());
+    game = cast(game, { p4: 3 });
+    game = rules.leave(game, 'p3', false, 0);
+    expect(game).toMatchObject({ phase: 'revote', tied: ['p1', 'p2'] });
+    expect(refused(rules.vote(game, 'p5', { ...at(game), number: 3 }, 0))).toBe('bad_vote');
+    game = cast(game, { p5: 1, p6: 1, p7: 2 });
+    expect(game.ballots[1]).toMatchObject({ ballot: 'revote', out: 'p1' });
+    expect(game).toMatchObject({ phase: 'describe', round: 2 });
+  });
+
+  it('ends the round with a tie that a player broke by leaving while a report was judged', () => {
+    let game = playRound(dealt('SSSSR'), { p1: 2, p2: 1, p3: 1, p4: 2, p5: null });
+    game = accepted(rules.report(game, 'p3', { ...at(game), number: 4, line: null, reason: 'odd' }, 0));
+    game = rules.leave(game, 'p2', false, 0);
+    expect(game).toMatchObject({ phase: 'tie', tied: ['p1'], report: { target: 'p4' } });
+    for (const id of ['p1', 'p3', 'p5']) {
+      game = accepted(rules.judge(game, id, { gameId: 'g1', verdict: 'disagree' }, 0));
+    }
+    expect(game).toMatchObject({ phase: 'describe', round: 2, tied: [], report: null });
+  });
+
+  it('counts the removal of a player who is out already against the game', () => {
+    let game = playRound(dealt('SSSSSR'), { p1: 2, p2: 1, p3: 2, p4: 2, p5: 2, p6: 2 });
+    expect(game.players[1]?.fate).toBe('voted_out');
+    expect(rules.leave(game, 'p2', false, 0)).toBe(game);
+    game = rules.leave(game, 'p2', true, 0);
+    expect(game).toMatchObject({ removed: ['p2'], phase: 'describe', round: 2 });
+    expect(game.players[1]?.fate).toBe('voted_out');
+    game = rules.leave(game, 'p3', true, 0);
+    expect(game.removed).toEqual(['p2', 'p3']);
   });
 });
 
@@ -410,10 +517,24 @@ describe('talking off the field', () => {
     expect(next.talk).toEqual([{ by: 'w', text: 'pineapple?', after: false }]);
   });
 
-  it('is for everyone after the game', () => {
+  it('is for everyone after the game who has guessed the AI players or skipped it', () => {
     const game = playRound(dealt('SSSSR'), { p1: 5, p2: 5, p3: 5, p4: 5, p5: 1 });
-    const next = accepted(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, false));
+    const next = accepted(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, true));
     expect(next.talk).toEqual([{ by: 'p1', text: 'well played', after: true }]);
+    // The words are known to all by then.
+    expect(accepted(rules.talk(next, 'p2', { gameId: 'g1', text: 'apple, of course' }, true)).talk).toHaveLength(2);
+    // A player still to guess may not talk until then (offField() in view.ts).
+    expect(refused(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, false))).toBe('guess_first');
+  });
+
+  it('keeps the latest lines only', () => {
+    let game = dealt('SSSSR');
+    for (let index = 0; index < TALK_KEPT + 5; index += 1) {
+      game = accepted(rules.talk(game, 'w', { gameId: 'g1', text: `line ${index}` }, true));
+    }
+    expect(game.talk).toHaveLength(TALK_KEPT);
+    expect(game.talk[0]?.text).toBe('line 5');
+    expect(game.talk.at(-1)?.text).toBe(`line ${TALK_KEPT + 4}`);
   });
 });
 
@@ -430,6 +551,8 @@ describe('guessing the AI players', () => {
     const named = withAgents(['p5']);
     expect(rules.agentGuessOpen({ ...named, settings: { ...named.settings, anonymous: false } })).toBe(false);
     expect(rules.agentGuessOpen({ ...named, phase: 'vote' })).toBe(false);
+    // A game that the chair withdrew is over with no result.
+    expect(rules.agentGuessOpen({ ...named, result: null })).toBe(false);
   });
 
   it('takes up to as many numbers as there were AI players, once, or a skip', () => {
@@ -441,6 +564,8 @@ describe('guessing the AI players', () => {
     expect(refused(rules.guessAgents(game, 'p1', [2, 2]))).toBe('bad_request');
     expect(refused(rules.guessAgents(game, 'p1', [6]))).toBe('bad_request');
     expect(refused(rules.guessAgents(game, 'p1', ['4']))).toBe('bad_request');
+    expect(refused(rules.guessAgents(game, 'p1', [1]))).toBe('bad_request');
+    expect(refused(rules.guessAgents(game, 'p1', [1.5]))).toBe('bad_request');
     const made = rules.guessAgents(game, 'p1', [5, 2]);
     expect(made).toMatchObject({ ok: true, guess: [2, 5] });
     const next = accepted(made);

@@ -1,7 +1,7 @@
 import type { BallotView, ImpostorReplay, LineView, ReportView, ReportVerdict } from '@reviewer2/shared/impostor';
 import { peopleOf, type KeptCount, type KeptReplay, type Recount } from '../../core/game';
 import type { GameLogEntry } from '../../core/gameLog';
-import { factsFrom, LOGGED, resultsFrom, scoresFrom, type ImpostorSetup } from './results';
+import { factsFrom, LOGGED, outcomeOf, pointsShown, resultsFrom, scoresFrom, type ImpostorSetup } from './results';
 
 // The replays of the hidden word game (docs/architecture.md#replays) and its records counted again
 // (GameModule.recount), from how a kept game began (ImpostorSetup) and its log. The log keeps every
@@ -20,22 +20,29 @@ const played = (entries: readonly GameLogEntry[]): GameLogEntry[] => {
 };
 
 // What a kept game that finished counts under the rules of today: everyone's part in it, their
-// points and how it came out. Null for a game that didn't finish, or that nobody won.
+// points, how it came out and whether the chair removed a player of the game, which brings nobody
+// points, as the module counts them at the end of a game. A game that a Reviewer 2 left, which
+// nobody won, counts for nobody's record and brings nobody points. Null for a game that didn't
+// finish.
 export function recountOf({ setup, log, keyOf }: KeptCount): Recount | null {
   const facts = factsFrom(setup as ImpostorSetup, played(log.entries));
   if (!facts) return null;
-  const results = resultsFrom(facts);
-  const scores = scoresFrom(facts, keyOf);
-  if (!results || !scores || !facts.result?.winner) return null;
-  return { results, scores, outcome: { winner: facts.result.winner, reason: facts.result.reason } };
+  return {
+    results: resultsFrom(facts) ?? [],
+    scores: scoresFrom(facts, keyOf) ?? [],
+    outcome: outcomeOf(facts.result),
+    scoresNothing: facts.removed,
+  };
 }
 
-// A kept game as an account watches it again, if it finished with a winner, with who everyone was.
+// A kept game that finished as an account watches it again, with who everyone was: one that a
+// side won, and one that a Reviewer 2 left, which has no winner. The points are those the end of
+// the game showed, none for a game that brought nobody any (pointsShown in results.ts).
 export function shownReplay({ setup, log, accounts, viewer }: KeptReplay): ImpostorReplay | null {
   const kept = setup as ImpostorSetup;
   const entries = played(log.entries);
   const facts = factsFrom(kept, entries);
-  if (!facts?.result?.winner) return null;
+  if (!facts?.result) return null;
   const number = new Map(kept.players.map((player) => [player.id, player.number]));
   const of = (id: string) => number.get(id) ?? 0;
   const lines: LineView[] = [];
@@ -83,7 +90,8 @@ export function shownReplay({ setup, log, accounts, viewer }: KeptReplay): Impos
       });
     }
   }
-  const scores = scoresFrom(facts, (id) => id) ?? [];
+  const agents = kept.players.some((player) => log.agents?.[player.id] !== undefined);
+  const scores = (pointsShown(facts, agents) && scoresFrom(facts, (id) => id)) || [];
   const ids = kept.players.map((player) => player.id);
   const setter = kept.source.kind === 'setter' ? kept.source.setter : null;
   const people = peopleOf(log, accounts, setter === null ? ids : [...ids, setter]);

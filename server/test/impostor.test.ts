@@ -8,8 +8,12 @@ import type { AgentChannel } from '../src/core/agentChannel';
 import { WordLibrary } from '../src/core/words';
 import { impostorGame } from '../src/games/impostor';
 import { DESCRIBE_PACE_MS } from '../src/games/impostor/agents';
+import { votersOf } from '../src/games/impostor/rules';
 import type { ImpostorData, ImpostorGame } from '../src/games/impostor/state';
-import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
+import { LINES } from '../src/games/impostor/testing';
+import { checkData } from '../src/store/check';
+import { recountRecords } from '../src/store/recount';
+import { Browser, loggedIn, startServer, TestClient, until, type TestServer } from './helpers';
 
 // AI players of the hidden word game over real sockets (docs/games/impostor.md#ai-players): a
 // person and five AI players play a whole game. What the server asks goes to the agent's own code
@@ -201,6 +205,109 @@ describe('the chair', () => {
     expect(await ann.send('room:remove', { seat: { gameId, number: student.number } })).toEqual({ ok: true });
     // The game goes on without them, and counts for no points.
     expect(game().players.find((player) => player.id === student.id)?.fate).toBe('left');
-    expect(game()).toMatchObject({ phase: expect.not.stringMatching('over'), removed: true });
+    expect(game()).toMatchObject({ phase: expect.not.stringMatching('over'), removed: [student.id] });
+  });
+});
+
+// Five people with accounts, Ann chairing, play a game, as `before` has it begin: they say their
+// lines in turn, and the students vote for the Reviewer 2, who votes for someone else, until the
+// game is over and kept.
+async function peopleGame(before: (game: () => ImpostorGame, table: TestClient[]) => Promise<void>) {
+  const browsers: Browser[] = [];
+  const table: TestClient[] = [];
+  for (const name of ['Ann', 'Bob', 'Cat', 'Dan', 'Eve']) {
+    const browser = await loggedIn(server.url, name);
+    const client = await browser.connect();
+    clients.push(client);
+    browsers.push(browser);
+    table.push(client);
+  }
+  const [ann, ...others] = table as [TestClient, ...TestClient[]];
+  const made = await ann.send('room:create', {
+    game: 'impostor',
+    language: 'en',
+    fields: ['music'],
+    settings: defaultSettings('en'),
+    play: true,
+  });
+  if (!made.ok) throw new Error(`could not make a room: ${made.error}`);
+  const code = made.code as string;
+  for (const other of others) await other.send('room:join', { code, play: true });
+  await ann.waitFor((state) => state.players.length === 5, 'the players');
+  expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
+  await ann.waitFor((state) => state.phase === 'playing', 'the game');
+  let last: ImpostorGame | undefined;
+  const game = (): ImpostorGame => {
+    const played = (server.app.rooms.find(code)?.data as ImpostorData | undefined)?.game ?? last;
+    if (!played) throw new Error('no game');
+    last = played;
+    return played;
+  };
+  const gameId = game().gameId;
+  await before(game, table);
+  const clientOf = (id: string) => table.find((client) => client.me === id) as TestClient;
+  for (let step = 0, lines = 0; step < 100 && game().phase !== 'over'; step += 1) {
+    const now = game();
+    const at = { gameId, round: now.round };
+    const reviewer2 = now.players.find((player) => player.role === 'reviewer2' && player.fate === 'alive');
+    if ((now.phase === 'describe' || now.phase === 'tie') && now.speaker !== null) {
+      const text = LINES[(lines += 1) % LINES.length];
+      expect(await clientOf(now.speaker).send('impostor:describe', { ...at, text })).toEqual({ ok: true });
+    } else if (now.phase === 'vote' || now.phase === 'revote') {
+      const voter = votersOf(now).find((player) => !Object.hasOwn(now.pending, player.id));
+      if (!voter || !reviewer2) throw new Error('no vote to cast');
+      const other = now.players.find((player) => player.fate === 'alive' && player.id !== voter.id);
+      const number = voter.id === reviewer2.id ? other?.number : reviewer2.number;
+      expect(await clientOf(voter.id).send('impostor:vote', { ...at, number })).toEqual({ ok: true });
+    } else if (now.phase === 'comeback' && now.comeback !== null) {
+      expect(await clientOf(now.comeback).send('impostor:comeback', { gameId, word: null })).toEqual({ ok: true });
+    } else throw new Error(`stuck in ${now.phase}`);
+  }
+  expect(game().phase).toBe('over');
+  await until(() => server.db.prepare('SELECT 1 FROM replays').get() !== undefined, 'the record');
+  return { browsers, table, game, gameId };
+}
+
+const NOTHING_CHANGED = { outcomes: 0, records: 0, titles: 0, plays: 0, matches: 0 };
+const records = () => server.db.prepare('SELECT * FROM game_records ORDER BY id').all();
+
+describe('the records of a game', () => {
+  test('count no points for a game with a removal, at its end as when counted again', async () => {
+    const { game } = await peopleGame(async (game, [ann]) => {
+      const student = game().players.find((player) => player.role === 'student' && player.id !== ann?.me);
+      if (!ann || !student) throw new Error('no student');
+      const seat = { gameId: game().gameId, number: student.number };
+      expect(await ann.send('room:remove', { seat })).toEqual({ ok: true });
+    });
+    expect(game().result?.winner).toBe('student');
+    expect(server.db.prepare('SELECT winner, reason, scores_nothing AS unscored FROM replays').get()).toEqual({
+      winner: 'student',
+      reason: 'caught',
+      unscored: 1,
+    });
+    const kept = records();
+    expect(kept).toHaveLength(4);
+    expect(kept.map((record) => record.points)).toEqual([0, 0, 0, 0]);
+    expect(recountRecords(server.db, [impostorGame])).toEqual({ games: 1, ...NOTHING_CHANGED });
+    expect(records()).toEqual(kept);
+    expect(checkData(server.db, { games: [impostorGame] })).toEqual([]);
+  });
+
+  test('keep a game that a Reviewer 2 left, with no records and a replay', async () => {
+    const { browsers, table, game, gameId } = await peopleGame(async (game, people) => {
+      const reviewer2 = game().players.find((player) => player.role === 'reviewer2');
+      const leaving = people.find((client) => client.me === reviewer2?.id);
+      if (!leaving) throw new Error('no Reviewer 2');
+      expect(await leaving.send('room:leave')).toMatchObject({ ok: true });
+    });
+    const outcome = { winner: null, reason: 'reviewer2_left' };
+    expect(server.db.prepare('SELECT winner, reason FROM replays').get()).toEqual(outcome);
+    expect(records()).toEqual([]);
+    expect(recountRecords(server.db, [impostorGame])).toEqual({ games: 1, ...NOTHING_CHANGED });
+    expect(checkData(server.db, { games: [impostorGame] })).toEqual([]);
+    const left = game().players.find((player) => player.role === 'reviewer2')?.id;
+    const stayed = browsers[table.findIndex((client) => client.me !== left)] as Browser;
+    const shown = await stayed.request('/api/account/replay', { gameId });
+    expect(shown.body).toMatchObject({ ok: true, replay: { gameId, result: outcome, points: [] } });
   });
 });

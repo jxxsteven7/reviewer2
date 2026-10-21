@@ -26,6 +26,13 @@ export const MAX_REASON_LENGTH = 60;
 // The longest description, reason or guess that is looked at at all, in UTF-16 units as it arrives.
 export const MAX_LINE_INPUT = 1000;
 
+// How many lines of the off-field chat and the talk after the game a game keeps, the latest. Every
+// change to a room sends everyone who may read the chat a whole snapshot with it, so the chat
+// decides how large a snapshot can get, as a group's chat does in the first game (CHAT_KEPT).
+// Thirty lines are what the sidelines have said over the last round or so, and at most 30,000
+// UTF-16 units in a snapshot. The log of the game keeps every line all the same.
+export const TALK_KEPT = 30;
+
 // How many Reviewer 2s and PIs a game of this many players has: one Reviewer 2 in a game of 4 or 5,
 // one and a PI in one of 6 to 8, two and a PI in one of 9 to 12, and no PI when the room has none.
 export function roleCounts(players: number, pi: boolean): { reviewer2: number; pi: number } {
@@ -60,9 +67,10 @@ export type ReportVerdict = (typeof VERDICTS)[number];
 // `reported_already`: one report a round each; `bad_report`: a report of oneself, of someone out, or
 // pointing at a line that isn't the reported player's. `cannot_judge`: the reported player, and
 // whoever is out, doesn't judge. `cannot_talk`: the off-field chat is for those who are out, watch
-// or set the words. `not_setter`, `bad_field` and `account_required`: only the setter sets the words,
-// of a field of the word library, and the setter needs an account. `private_only`: the god view
-// and the setter are for a private room.
+// or set the words. `guess_first`: a player who is to guess the AI players after the game talks
+// once they have guessed or skipped it. `not_setter`, `bad_field` and `account_required`: only the
+// setter sets the words, of a field of the word library, and the setter needs an account.
+// `private_only`: the god view and the setter are for a private room.
 export const IMPOSTOR_ERRORS = [
   'table_full',
   'not_playing',
@@ -76,6 +84,7 @@ export const IMPOSTOR_ERRORS = [
   'judged_already',
   'no_comeback',
   'cannot_talk',
+  'guess_first',
   'not_setter',
   'bad_field',
   'line_empty',
@@ -193,6 +202,9 @@ export interface ImpostorView {
   // game is over, and the word all along, null for the PI. The setter's two words, in no order.
   you: { number: number; role: ImpostorRole | null; word: string | null } | null;
   setterWords: string[] | null;
+  // Who set the words of the game, by player ID, for everyone, as the waiting room showed it, or
+  // null for a game of words from the library. The chair may have passed to someone else since.
+  setter: string | null;
   seats: SeatView[];
   speaker: number | null;
   clock: { left: number; total: number } | null;

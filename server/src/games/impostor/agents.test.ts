@@ -123,7 +123,7 @@ describe('the AI players', () => {
     expect(agentMove(data, task!, { ok: true, kind: 'vote', number: 1, reason: '', note: NOTE }, [])).toBeNull();
   });
 
-  it('guess the students’ word once voted out, if the room allows it', () => {
+  it("guess the students' word once voted out, if the room allows it", () => {
     const game = playRound(dealt('RPSSSS', { comeback: true }), { p2: 1, p3: 1, p4: 1, p5: 1, p6: 1 });
     const data = dataOf(game, ['p1']);
     const task = agentTask(data, context(['p1']), 'p1');

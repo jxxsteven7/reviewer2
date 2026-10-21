@@ -633,7 +633,6 @@ function summaryOf({ zh, en }: Flags, print: Print): ContributionSummary | 1 | 2
   return wrong ? 1 : { zh: zhCheck.summary as string, en: enCheck.summary as string };
 }
 
-// What a contribution says the player contributed, on two lines.
 // Words adopted from a game as `content list` shows them, on one line: the id, the day they were
 // adopted, the game they are of, the game they came from, if it is still kept, the words, with the
 // field of a pair, who gave them, and then the two sentences.
@@ -646,6 +645,7 @@ function contentLine(
   return `#${id}  ${day(adoptedAt)}  ${game} ${gameId ?? '(game gone)'}  ${kind}  ${words}  ${by}  ${summaryZh} · ${summaryEn}`;
 }
 
+// What a contribution says the player contributed, on two lines.
 function printSummary(print: Print, zh: string | null, en: string | null): void {
   print(`  zh: ${zh ?? '(nothing yet)'}`);
   print(`  en: ${en ?? '(nothing yet)'}`);

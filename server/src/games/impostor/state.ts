@@ -44,8 +44,9 @@ export interface Ballot {
 
 // A report: who reported whom in which round, the line they pointed at, as its index in
 // ImpostorGame.lines, or null, and the reason; who may judge it, everyone still in the game but the
-// reported player, and the verdicts so far, which nobody sees until it is over; when the time to
-// judge it runs out, on the room's clock; and whether it passed, once it is over.
+// reported player, and once it is over those of them who were still in the game then; the verdicts
+// so far, which nobody sees until it is over; when the time to judge it runs out, on the room's
+// clock; and whether it passed, once it is over.
 export interface Report {
   round: number;
   by: string;
@@ -107,14 +108,19 @@ export interface ImpostorGame {
   tied: string[];
   report: Report | null;
   reports: Report[];
+  // The reports dropped because the reported player left, by round and reporter: the reporter has
+  // still used their report of the round.
+  dropped: { round: number; by: string }[];
   // Who may guess the students' word now, in the comeback phase.
   comeback: string | null;
   guesses: Guess[];
   clock: Clock | null;
   paused: { left: number | null; length: number } | null;
   result: ImpostorResult | null;
-  // Whether the chair removed a player during the game, which then counts for no points.
-  removed: boolean;
+  // The players of the game whom the chair removed from the room during it, by player ID, in the
+  // order they were removed, whether they were still in the game or out: such a game counts for no
+  // points.
+  removed: string[];
   // After a game with AI players: each person's guess of who they were, by numbers, or null for a
   // skip (docs/games/impostor.md#guessing-the-ai).
   agentGuesses: Record<string, number[] | null>;
