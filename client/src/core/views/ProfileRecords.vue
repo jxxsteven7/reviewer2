@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ACCOUNT_API, type GameRecord, type GameRecords, type RecordsView } from '@reviewer2/shared';
+import { ACCOUNT_API, emptyGameCounts, type GameRecord, type GameRecords, type RecordsView } from '@reviewer2/shared';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
@@ -12,31 +12,29 @@ import UiSheet from '../components/UiSheet.vue';
 import { formatStamp } from '../dates';
 import { errorKey } from '../errors';
 import { points } from '../points';
-import { noCounts, RECORDS_GAME } from '../records';
+import { RECORDS_GAME } from '../records';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 
 // The account's record of the first game (RECORDS_GAME): the numbers of games, wins and matches
-// (RecordStats.vue); then the last 20
-// games, a line each: when it ended, in numbers, whether it was an ordinary game or which game of
-// its match, or, for a game that an AI played in, which is never one of a match, the robot's head
-// and "AI" in their place, which a tap explains, the role on a chip in the group's tint, and the
-// decision that the group got, by its short English name in every language, with a round button
-// on the right to watch it again; then
-// the last 20 matches, in the same look, each with its games, its place and total, and its title on
-// the right. The columns of a list line up from one line to the next where the browser has
-// subgrids. What doesn't fit, a long decision or title, is cut short with an ellipsis; a tap on it
-// says what it means, in full (TitleInfo.vue). A record that can't be fetched says so, with a way
-// to try again. A game that the server kept to watch again opens in a sheet, in the game's own
-// replay viewer.
+// (RecordStats.vue); then the last 20 games, a line each: when it ended, in numbers, whether it
+// was an ordinary game or which game of its match, or, for a game that an AI played in, which is
+// never one of a match, the robot's head and "AI" in their place, which a tap explains, the role
+// on a chip in the group's tint, and the decision that the group got, by its short English name in
+// every language, with a round button on the right to watch it again; then the last 20 matches, in
+// the same look, each with its games, its place and total, and its title on the right. The columns
+// of a list line up from one line to the next where the browser has subgrids. What doesn't fit, a
+// long decision or title, is cut short with an ellipsis; a tap on it says what it means, in full
+// (TitleInfo.vue). A record that can't be fetched says so, with a way to try again. A game that
+// the server kept to watch again opens in a sheet, in the game's own replay viewer.
 const { t, te } = useI18n();
 const records = ref<RecordsView | null>(null);
 // The record of the game shown, which is empty for an account that has finished none of it.
-const shown = computed<GameRecords | null>(
-  () =>
-    records.value &&
-    (records.value[RECORDS_GAME] ?? { ...noCounts(), recent: [], matches: { played: 0, won: 0, recent: [] } }),
-);
+const emptyRecords = (): GameRecords => {
+  const counts = emptyGameCounts();
+  return { ...counts, recent: [], matches: { ...counts.matches, recent: [] } };
+};
+const shown = computed<GameRecords | null>(() => records.value && (records.value[RECORDS_GAME] ?? emptyRecords()));
 // Every game on the record, in matches or not.
 const played = computed(() => (shown.value ? shown.value.ordinary.games + shown.value.inMatches.games : 0));
 const failed = ref<string | undefined>();

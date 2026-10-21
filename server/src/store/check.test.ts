@@ -614,16 +614,46 @@ describe('the check of the data', () => {
       count: 1,
       ids: ['1'],
     });
-    // A game that no one side won says nothing of who won it, but its count still does.
+    // A game that no one side won says nothing of who won it, but its count still does, of the game
+    // and of its records.
     expect(
-      broken(
+      brokenBy(
         "UPDATE replays SET winner = NULL WHERE game_id = 'g1'; UPDATE game_records SET result = 'drawn' WHERE id = 1",
       ),
-    ).toEqual({ rule: 'records of games that are not what their record counts', count: 1, ids: ['1'] });
+    ).toEqual([
+      { rule: 'finished games whose outcome is not what their record counts', count: 1, ids: ['g1'] },
+      { rule: 'records of games that are not what their record counts', count: 1, ids: ['1'] },
+    ]);
+  });
+
+  test.each([
+    "UPDATE replays SET winner = NULL WHERE game_id = 'g1'",
+    "UPDATE replays SET reason = 'level' WHERE game_id = 'g1'",
+  ])('finds finished games whose outcome is not what their record counts: %s', (sql) => {
+    expect(broken(sql)).toEqual({
+      rule: 'finished games whose outcome is not what their record counts',
+      count: 1,
+      ids: ['g1'],
+    });
   });
 
   test('holds no record against a game that no one side won', () => {
-    expect(brokenBy("UPDATE replays SET winner = NULL WHERE game_id = 'g1'")).toEqual([]);
+    // The fake game under rules by which no one side wins, so that the records say nothing of who
+    // won, and the record of each game says so too.
+    const level: typeof fakeGame = {
+      ...fakeGame,
+      recount: (kept) => {
+        const count = fakeGame.recount?.(kept) ?? null;
+        return count && { ...count, outcome: null };
+      },
+    };
+    const checkLevel = () => checkData(db, { games: [keywordsGame, level], now: () => NOW });
+    db.exec("UPDATE replays SET winner = NULL, reason = NULL WHERE game = 'test' AND ending = 'finished'");
+    expect(checkLevel()).toEqual([]);
+    db.exec("UPDATE game_records SET result = 'drawn' WHERE id = 1");
+    expect(checkLevel()).toEqual([
+      { rule: 'records of games that are not what their record counts', count: 1, ids: ['1'] },
+    ]);
   });
 
   test("finds titles of a game that the game does not bring, and match titles that are not a match's", () => {

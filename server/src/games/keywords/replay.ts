@@ -203,15 +203,16 @@ export function shownReplay({ setup, log, language, accounts, viewer }: KeptRepl
 }
 
 // What a kept game that finished counts under the rules of today (GameModule.recount): everyone's
-// part in it as it ended (resultsOf), everyone's points (scoreGame) and what each AI player did
-// (featsOf), from the game played through again with who was who (`keyOf`). Null for a game that
-// didn't finish.
+// part in it as it ended (resultsOf), everyone's points (scoreGame), which group won and how, and
+// what each AI player did (featsOf), from the game played through again with who was who
+// (`keyOf`). Null for a game that didn't finish.
 export function recountOf({ setup, log, language, keyOf }: KeptCount): Recount | null {
   const { state, seating } = playThrough(setup as KeywordsSetup, log, language, keyOf);
   if (!state.result || state.result.winner === null) return null;
   return {
     results: resultsOf(state, seating, keyOf),
     scores: scoreGame(state, seating, keyOf) ?? [],
+    outcome: { winner: state.result.winner, reason: state.result.reason },
     feats: (playerId) => featsOf(state, playerId),
   };
 }

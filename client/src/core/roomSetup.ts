@@ -29,9 +29,18 @@ function storedRooms(): Record<string, unknown> {
   }
 }
 
+// The room of the game that the browser last set up, if it kept one. The rules of a match kept
+// before they carried the game's own options, as `{games, teams, grouping}`, are read as
+// `{games, options: {teams, grouping}}`, which is what they meant.
 function storedRoom(game: string): Partial<LastRoom> | null {
   const room = storedRooms()[game];
-  return isObject(room) ? (room as Partial<LastRoom>) : null;
+  if (!isObject(room)) return null;
+  const { match } = room;
+  if (isObject(match) && !('options' in match) && ('teams' in match || 'grouping' in match)) {
+    const { games, ...options } = match;
+    return { ...room, match: { games, options } } as Partial<LastRoom>;
+  }
+  return room as Partial<LastRoom>;
 }
 
 // The last setup of a room of the game `game`, as far as it can be read: anything may be missing

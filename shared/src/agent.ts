@@ -49,6 +49,18 @@ export interface AgentGameCounts {
   you: { wonTogether: number; lostTogether: number; beat: number; beaten: number; takenOver: number } | null;
 }
 
+// What an AI player has done in a game it has played none of, with what the viewer has played with
+// it, if the viewer is an account.
+export const emptyAgentCounts = (you: AgentGameCounts['you'] = null): AgentGameCounts => ({
+  games: 0,
+  seats: 0,
+  wins: 0,
+  roles: {},
+  takeovers: 0,
+  feats: null,
+  you,
+});
+
 // A clue that a group was given earlier in the game, as everyone saw it.
 export interface AgentClue {
   team: Team;

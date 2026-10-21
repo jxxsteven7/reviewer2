@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ACCOUNT_API,
+  emptyAgentCounts,
   type AgentGameCounts,
   type AgentPersona,
   type AgentProfileView,
@@ -18,11 +19,11 @@ import StatBlocks, { type StatBlock } from './StatBlocks.vue';
 
 // The page of an AI player (docs/architecture.md#ai-players), in the panel that a tap on its
 // avatar opens in a room: player number 0, how many of it are in the rooms right now, and what it
-// has done in the games of the first game that finished (RECORDS_GAME), as counts: the games, and the share of its seats in them
-// that it won, in all and as a PI and as a student, on blocks as a player's record shows them
-// (StatBlocks.vue), each over how many seats, since in a practice room it sits in both groups of
-// one game; then what its clues found and the rest, line by line; and, for an account, what the
-// viewer has played with it, which nobody else is sent.
+// has done in the games of the first game that finished (RECORDS_GAME), as counts: the games, and
+// the share of its seats in them that it won, in all and as a PI and as a student, on blocks as a
+// player's record shows them (StatBlocks.vue), each over how many seats, since in a practice room
+// it sits in both groups of one game; then what its clues found and the rest, line by line; and,
+// for an account, what the viewer has played with it, which nobody else is sent.
 const props = defineProps<{ persona: AgentPersona }>();
 const { t, n, locale } = useI18n();
 const profile = ref<AgentProfileView | null>(null);
@@ -59,18 +60,7 @@ watch(
 const name = computed(() => t(`agents.personas.${props.persona}`));
 // What it has done in the game shown, which is nothing for an AI that has played none of it, and
 // what the game counts of its seats.
-const shown = computed<AgentGameCounts>(
-  () =>
-    profile.value?.games[RECORDS_GAME] ?? {
-      games: 0,
-      seats: 0,
-      wins: 0,
-      roles: {},
-      takeovers: 0,
-      feats: null,
-      you: null,
-    },
-);
+const shown = computed<AgentGameCounts>(() => profile.value?.games[RECORDS_GAME] ?? emptyAgentCounts());
 const feats = computed(
   () => (shown.value.feats as KeywordsAgentFeats | null) ?? { clues: 0, found: 0, reviewer2: 0, best: null },
 );

@@ -225,11 +225,12 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
 
   // What accounts keep of the games (docs/architecture.md#accounts), each row against the record
   // of its game, which the foreign keys tie it to, and against what the game counts of the record
-  // of the game under the rules of today (recount.ts): how the game came out, the place, the
-  // points, the verdict, the game's own detail and the titles of each record of a game, what each
-  // AI did in it, and the place, the total and the title of each record of a match. A game that
-  // one side won has its records won on that side and not won on any other; one that no one side
-  // won says nothing of its records.
+  // of the game under the rules of today (recount.ts): who won and how, as the record of the game
+  // says it came out, how the game came out for each account, the place, the points, the verdict,
+  // the game's own detail and the titles of each record of a game, what each AI did in it, and the
+  // place, the total and the title of each record of a match. A game that one side won has its
+  // records won on that side and not won on any other; one that no one side won says nothing of
+  // its records.
   sql(
     'records of games that disagree with the record of the game',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
@@ -299,6 +300,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   const misranked: number[] = [];
   const wrongMatchTitles: number[] = [];
   const misplayed: string[] = [];
+  const wrongOutcomes: string[] = [];
   const held = new HeldRecords(db);
   for (const module of games) {
     if (module.recount === undefined) continue;
@@ -309,6 +311,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     }
     uncounted.push(...counted.uncounted.map(({ gameId }) => gameId));
     for (const game of counted.counted) {
+      if (held.outcomeDiffers(game)) wrongOutcomes.push(game.gameId);
       for (const { id, count, fact, counted: differs, titles } of held.game(game)) {
         if (!count || fact || differs) miscounted.push(id);
         if (titles) wrongTitles.push(id);
@@ -343,6 +346,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   }
   found("games whose records are counted under other rules than today's", otherRules);
   found('finished games whose records cannot be counted again from their record', uncounted);
+  found('finished games whose outcome is not what their record counts', wrongOutcomes);
   found('records of games that are not what their record counts', miscounted);
   found('records of games whose titles are not what their record brings', wrongTitles);
   found('AI plays that are not what the record of their game counts', misplayed);

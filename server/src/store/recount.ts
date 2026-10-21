@@ -1,12 +1,14 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import type { Language, MatchTitle, RecordResult } from '@reviewer2/shared';
-import type { GameModule, GameTitle, Recount } from '../core/game';
+import type { GameModule, GameOutcome, GameTitle, Recount } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { rankings, titlesFor } from '../core/match';
+import { jsonOf } from './records';
 
 // The records counted again from the record of every game (docs/architecture.md#game-records). What
-// the records keep of a game that finished, how it came out for each player, their place, points,
-// verdict, the game's own detail and titles, and what each AI player in a seat did, and of a match
+// the record of a game that finished keeps of how it came out, who won and how, and what the
+// records keep of it, how it came out for each player, their place, points, verdict, the game's own
+// detail and titles, and what each AI player in a seat did, and of a match
 // that ran its course, each player's total, place and title, is counted under the rules of the
 // game, from the moves in its log and how it began; the moves are facts, and what they count for is
 // the rules', but for who played for which side in which role, which is the game's as it was
@@ -46,15 +48,17 @@ export interface CountedPlay {
   feats: string | null;
 }
 
-// A kept game that finished, counted: each account's record; everyone's part in it at the end, by
-// player ID, with what the game counts of each AI player in a seat (`seats`), from which what each
-// AI did in it is held against agent_plays; and, for a game of a match, what the match adds up of
-// it: the match's ID and its games, each player's points by their number in the match, the numbers
-// of everyone in the room when the game ended, and the numbers that have gone into another by then
-// (GameLogData.match), with the number of each account that played in it.
+// A kept game that finished, counted: how it came out, who won and how, or null when no one side
+// won or the game can't say (`outcome`); each account's record; everyone's part in it at the end,
+// by player ID, with what the game counts of each AI player in a seat (`seats`), from which what
+// each AI did in it is held against agent_plays; and, for a game of a match, what the match adds up
+// of it: the match's ID and its games, each player's points by their number in the match, the
+// numbers of everyone in the room when the game ended, and the numbers that have gone into another
+// by then (GameLogData.match), with the number of each account that played in it.
 export interface CountedGame {
   gameId: string;
   game: string;
+  outcome: GameOutcome | null;
   records: Map<number, CountedRecord>;
   seats: Map<string, CountedPlay>;
   match: {
@@ -166,6 +170,16 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
   })();
   if (played === null || played.count === null) return { gameId: row.gameId, matchId: row.matchId, reason: 'log' };
   const { log, count } = played;
+  // A game that counts something of an AI player in a seat as a game ends (GameModule.agentFeats)
+  // counts it again here, and one that doesn't never does: a game that breaks this is a mistake in
+  // the code, which would lose or make up what the AI did, and stops the count.
+  if ((module.agentFeats === undefined) !== (count.feats === undefined)) {
+    throw new Error(
+      count.feats === undefined
+        ? `the game ${module.id} counts what an AI player did as a game ends, but not when the game is counted again`
+        : `the game ${module.id} counts what an AI player did when a game is counted again, but not as it ends`,
+    );
+  }
   const keyOf = keyFor(who, log);
   // A game that an AI played in brings nobody points or titles (docs/architecture.md#ai-players).
   const agents = row.agents > 0 || row.takeover === 1;
@@ -173,7 +187,7 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
   const records = new Map<number, CountedRecord>();
   const seats = new Map<string, CountedPlay>();
   for (const { playerId, side, role, result, place, verdict, detail, titles = [] } of count.results) {
-    const feats = log.agents?.[playerId] === undefined ? null : json(count.feats?.(playerId));
+    const feats = log.agents?.[playerId] === undefined ? null : jsonOf(count.feats?.(playerId));
     seats.set(playerId, { side, role, result, place, feats });
     const account = who.get(playerId);
     if (account === undefined) continue;
@@ -183,13 +197,14 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
       result,
       place,
       verdict,
-      detail: json(detail),
+      detail: jsonOf(detail),
       points: agents ? 0 : (points.get(keyOf(playerId)) ?? 0),
       titles: agents ? [] : titles,
     });
   }
+  const { outcome } = count;
   if (row.matchId === null || row.matchGame === null || row.matchGames === null) {
-    return { gameId: row.gameId, game: row.game, records, seats, match: null };
+    return { gameId: row.gameId, game: row.game, outcome, records, seats, match: null };
   }
   // The match knows everyone by their number: the points of each key go to the number of a player
   // ID that has that key, and the numbers of those in the room at the end are those of the
@@ -217,14 +232,12 @@ function countGame(module: GameModule, row: GameRow, who: ReadonlyMap<string, nu
   return {
     gameId: row.gameId,
     game: row.game,
+    outcome,
     records,
     seats,
     match: { id: row.matchId, game: row.matchGame, games: row.matchGames, points: scored, present, merged, accounts },
   };
 }
-
-// A value of the game's own as the records keep it: as JSON, or null for none.
-const json = (value: unknown): string | null => (value === undefined || value === null ? null : JSON.stringify(value));
 
 // The player IDs in the room when the game ended: those there as it began, and those who came,
 // but those who left.
@@ -315,9 +328,10 @@ export const hasGamesOf = (db: DatabaseSync, games: readonly GameModule[]): bool
   );
 
 export interface RecountReport {
-  // The games counted again, the records of games, the games' titles and the AI's seats that
-  // changed, and the matches whose records or titles changed.
+  // The games counted again, those whose outcome changed, the records of games, the games' titles
+  // and the AI's seats that changed, and the matches whose records or titles changed.
   games: number;
+  outcomes: number;
   records: number;
   titles: number;
   plays: number;
@@ -381,16 +395,19 @@ export interface HeldMatchRecord {
   title: boolean;
 }
 
-// Holds the records of games and matches, as the database has them, against what the games count
-// again (countGames, countMatches), one rule for the recount (recountRecords), which sets them
-// right by it, and for the check of the data (check.ts), which reports what differs.
+// Holds the records of games and matches, and how the record of each game says it came out, as the
+// database has them, against what the games count again (countGames, countMatches), one rule for
+// the recount (recountRecords), which sets them right by it, and for the check of the data
+// (check.ts), which reports what differs.
 export class HeldRecords {
+  readonly #outcome: StatementSync;
   readonly #records: StatementSync;
   readonly #titles: StatementSync;
   readonly #plays: StatementSync;
   readonly #matchRecords: StatementSync;
 
   constructor(db: DatabaseSync) {
+    this.#outcome = db.prepare('SELECT winner, reason FROM replays WHERE game_id = ?');
     this.#records = db.prepare(
       'SELECT id, account_id AS account, side, role, result, place, verdict, detail, points FROM game_records ' +
         'WHERE game_id = ?',
@@ -441,6 +458,13 @@ export class HeldRecords {
           !sameSet(titleSet(stored.filter(({ account }) => account === row.account)), titleSet(count.titles)),
       };
     });
+  }
+
+  // Whether the record of a counted game disagrees with the count on how the game came out, who won
+  // and how.
+  outcomeDiffers(game: CountedGame): boolean {
+    const kept = this.#outcome.get(game.gameId) as { winner: string | null; reason: string | null };
+    return kept.winner !== (game.outcome?.winner ?? null) || kept.reason !== (game.outcome?.reason ?? null);
   }
 
   // What the AI did in a counted game, each seat and each person it played for held against the
@@ -494,22 +518,24 @@ export class HeldRecords {
 }
 
 // Counts the records of every kept game of these games again, under the rules of today, in one
-// transaction: each record gets how the game came out for the account, their place, the points, the
-// verdict and the game's own detail that the log counts, and the titles that the game brought are
-// those that the log brings; what each AI did in a seat gets how the game came out for it, its place
-// and what the game counts of it, and what it did for a person how the game came out for them; each
-// record of a match gets the place and the total that its games add up to, and the title that they
-// award. Nothing is added or taken away: a record is of the account whose game it is, and a deleted
-// account's are gone. Who played for which side in which role is a fact of the game, which the
-// records keep too: a record that disagrees with the log on it, or that the log doesn't give at all,
-// stops the recount, as does a game that finished but can't be counted, and the database is left as
-// it was, for the operator to look at. Then the settings note the version counted under. The caller
-// takes a snapshot first.
+// transaction: the record of each game gets who won and how, as the log counts it; each record gets
+// how the game came out for the account, their place, the points, the verdict and the game's own
+// detail that the log counts, and the titles that the game brought are those that the log brings;
+// what each AI did in a seat gets how the game came out for it, its place and what the game counts
+// of it, and what it did for a person how the game came out for them; each record of a match gets
+// the place and the total that its games add up to, and the title that they award. Nothing is
+// added or taken away: a record is of the account whose game it is, and a deleted account's are
+// gone. Who played for which side in which role is a fact of the game, which the records keep too:
+// a record that disagrees with the log on it, or that the log doesn't give at all, stops the
+// recount, as does a game that finished but can't be counted, and the database is left as it was,
+// for the operator to look at. Then the settings note the version counted under. The caller takes
+// a snapshot first.
 export function recountRecords(db: DatabaseSync, games: readonly GameModule[]): RecountReport {
-  const report: RecountReport = { games: 0, records: 0, titles: 0, plays: 0, matches: 0 };
+  const report: RecountReport = { games: 0, outcomes: 0, records: 0, titles: 0, plays: 0, matches: 0 };
   db.exec('BEGIN IMMEDIATE');
   try {
     const held = new HeldRecords(db);
+    const updateOutcome = db.prepare('UPDATE replays SET winner = ?, reason = ? WHERE game_id = ?');
     const update = db.prepare(
       'UPDATE game_records SET result = ?, place = ?, points = ?, verdict = ?, detail = ? WHERE id = ?',
     );
@@ -532,6 +558,10 @@ export function recountRecords(db: DatabaseSync, games: readonly GameModule[]): 
         );
       }
       for (const game of counted) {
+        if (held.outcomeDiffers(game)) {
+          updateOutcome.run(game.outcome?.winner ?? null, game.outcome?.reason ?? null, game.gameId);
+          report.outcomes += 1;
+        }
         const records = held.game(game);
         for (const { id, count, fact, counted: differs } of records) {
           if (!count) throw new Error(`record ${id} of game ${game.gameId} is of nobody the log seats at its end`);

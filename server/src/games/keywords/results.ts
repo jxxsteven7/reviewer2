@@ -7,6 +7,7 @@ import {
   openingRecord,
   TEAMS,
   verdictFor,
+  type KeywordsScoreDetail,
   type Team,
 } from '@reviewer2/shared';
 import type { GameTitle, PlayerResult } from '../../core/game';
@@ -60,7 +61,9 @@ export function resultsOf(game: KeywordsState, seating: Seating, keyOf: (playerI
   if (!result || result.winner === null) return [];
   const left = Object.fromEntries(TEAMS.map((team) => [team, remaining(game.cards, team)])) as Record<Team, number>;
   const { winner } = result;
-  const details = new Map((scoreGame(game, seating, keyOf) ?? []).map(({ key, detail }) => [key, detail]));
+  const details = new Map(
+    (scoreGame(game, seating, keyOf) ?? []).map(({ key, detail }) => [key, detail as KeywordsScoreDetail]),
+  );
   return [...seating.seats].flatMap(([playerId, seat]) =>
     seat.team === null
       ? []

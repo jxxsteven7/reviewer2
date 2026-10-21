@@ -175,13 +175,14 @@ export interface ProfileSettings {
 // uploaded avatar, or null for the default one, which the client draws from the username. `points`
 // are those of every game finished, of every game, from which the client tells the rank (ranks.ts).
 // `streaks` are the longest runs of wins and of losses on the record of each game the account has
-// finished one of, by the game's ID, which the page shows as titles (streaks.ts). `contributions` is how much of its feedback of each kind was adopted
-// (contributions.ts). `profile` is what the owner put on the public profile, with `banned` for
-// an account that the operator has barred from writing a link or a bio there. `likes` is how many
-// accounts like the profile, and `requests` how many friend requests wait for the owner's answer
-// (friends.ts). `roomSetup` is how the account last set up a room and a practice room. `played`
-// names the games that the account has finished at least one game of in a seat, practice games
-// included, by the game's ID, from which the home page tells whether to offer the game's tutorial.
+// finished one of, by the game's ID, which the page shows as titles (streaks.ts). `contributions`
+// is how much of its feedback of each kind was adopted (contributions.ts). `profile` is what the
+// owner put on the public profile, with `banned` for an account that the operator has barred from
+// writing a link or a bio there. `likes` is how many accounts like the profile, and `requests` how
+// many friend requests wait for the owner's answer (friends.ts). `roomSetup` is how the account
+// last set up a room and a practice room. `played` names the games that the account has finished
+// at least one game of in a seat, practice games included, by the game's ID, from which the home
+// page tells whether to offer the game's tutorial.
 export interface AccountSummary {
   id: number;
   handle: string;
@@ -322,6 +323,14 @@ export interface GameCounts {
   roles: Record<string, { games: number; wins: number }>;
   matches: { played: number; won: number };
 }
+
+// The counts of a game that the account has finished no game or match of.
+export const emptyGameCounts = (): GameCounts => ({
+  ordinary: { games: 0, wins: 0 },
+  inMatches: { games: 0, wins: 0 },
+  roles: {},
+  matches: { played: 0, won: 0 },
+});
 
 // The counts of each game that the account has finished a game or a match of, by the game's ID.
 // The records of two games are never added up (docs/architecture.md#game-records).

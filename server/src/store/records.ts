@@ -1,4 +1,6 @@
 import {
+  emptyAgentCounts,
+  emptyGameCounts,
   RECENT_RECORDS,
   TITLES,
   type AgentGameCounts,
@@ -55,10 +57,16 @@ export interface NewRecord {
   result: RecordResult;
   place: number;
   verdict: string;
-  detail?: unknown;
+  detail?: object | null;
   points: number;
   titles?: readonly { title: Title; turn: number }[];
 }
+
+// A value of a game's own, as the records keep it: as JSON, or null for none. The recount writes
+// what it counts the same way (recount.ts), so that the two are held against each other as the
+// same text.
+export const jsonOf = (value: unknown): string | null =>
+  value === undefined || value === null ? null : JSON.stringify(value);
 
 // What the account has played with each of its friends in each game (shared/src/duos.ts): its
 // records, by their own index, each with the friends' records of the same game. Those are found by
@@ -119,14 +127,6 @@ export function streaksOf(results: readonly RecordResult[]): BestStreaks & { lat
   best[last] = Math.max(best[last], run);
   return { ...best, latest };
 }
-
-// The counts of one game on a record that has none of it yet.
-const noCounts = (): GameCounts => ({
-  ordinary: { games: 0, wins: 0 },
-  inMatches: { games: 0, wins: 0 },
-  roles: {},
-  matches: { played: 0, won: 0 },
-});
 
 // A record and the record of its game, joined, for the statements that read what the game says of
 // each record: whether an AI played in it, the match it was in, who won and when it ended.
@@ -217,8 +217,18 @@ export class RecordStore {
   // in a transaction (Accounts.record), so that the streak is counted with the record in place.
   add(accountId: number, record: NewRecord): { streak: Streak | null } | null {
     const { game, gameId, side, role, result, place, verdict, detail, points } = record;
-    const json = detail === undefined || detail === null ? null : JSON.stringify(detail);
-    const { changes } = this.#insert.run(accountId, game, gameId, side, role, result, place, verdict, json, points);
+    const { changes } = this.#insert.run(
+      accountId,
+      game,
+      gameId,
+      side,
+      role,
+      result,
+      place,
+      verdict,
+      jsonOf(detail),
+      points,
+    );
     if (Number(changes) === 0) return null;
     const agents = (this.#agentsIn.get(gameId) as { agents: number } | undefined)?.agents === 1;
     return agents ? null : { streak: this.#streaks(accountId).get(game)?.latest ?? null };
@@ -283,7 +293,7 @@ export class RecordStore {
   // The counts of two games are never added up.
   counts(accountId: number): RecordCounts {
     const counts: RecordCounts = {};
-    const of = (game: string): GameCounts => (counts[game] ??= noCounts());
+    const of = (game: string): GameCounts => (counts[game] ??= emptyGameCounts());
     type Totals = { game: string; ordinaryGames: number; ordinaryWins: number; matchGames: number; matchWins: number };
     for (const totals of this.#totals.all(accountId) as Totals[]) {
       const game = of(totals.game);
@@ -482,7 +492,6 @@ export class ReplayStore {
   // transaction.
   add(game: NewReplay): boolean {
     const endedAt = this.now();
-    const json = (value: unknown) => (value === undefined || value === null ? null : JSON.stringify(value));
     const flag = (value: boolean) => (value ? 1 : 0);
     const added =
       Number(
@@ -491,12 +500,12 @@ export class ReplayStore {
           game.game,
           new Date(endedAt).toISOString(),
           JSON.stringify(game.log),
-          json(game.agentLog),
+          jsonOf(game.agentLog),
           game.ending,
           game.outcome?.winner ?? null,
           game.outcome?.reason ?? null,
           new Date(endedAt - game.durationMs).toISOString(),
-          json(game.setup),
+          jsonOf(game.setup),
           game.counts.accounts,
           game.counts.guests,
           game.counts.agents,
@@ -527,7 +536,7 @@ export class ReplayStore {
         play.role,
         play.result,
         play.place,
-        json(play.feats),
+        jsonOf(play.feats),
       );
     }
     return true;
@@ -668,24 +677,18 @@ export class AgentPlayStore {
   profile(persona: string, accountId: number | null): Record<string, AgentGameCounts> {
     const counts: Record<string, AgentGameCounts> = {};
     const of = (game: string): AgentGameCounts =>
-      (counts[game] ??= {
-        games: 0,
-        seats: 0,
-        wins: 0,
-        roles: {},
-        takeovers: 0,
-        feats: null,
-        you: accountId === null ? null : { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 0, takenOver: 0 },
-      });
+      (counts[game] ??= emptyAgentCounts(
+        accountId === null ? null : { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 0, takenOver: 0 },
+      ));
     type Totals = { game: string; games: number; seats: number; wins: number };
     for (const { game, games, seats, wins } of this.#totals.all(persona) as Totals[]) {
       Object.assign(of(game), { games, seats, wins });
-      const totals = this.games.get(game)?.agentTotals;
-      if (totals) {
+      const module = this.games.get(game);
+      if (module?.agentTotals) {
         const feats = (this.#feats.all(persona, game) as { feats: string }[]).map(
           ({ feats }) => JSON.parse(feats) as unknown,
         );
-        of(game).feats = totals(feats);
+        of(game).feats = module.agentTotals(feats);
       }
     }
     type Role = { game: string; role: string; seats: number; wins: number };

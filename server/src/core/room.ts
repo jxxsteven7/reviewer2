@@ -205,7 +205,7 @@ export interface AgentPlay {
   role: string | null;
   result: RecordResult | null;
   place: number | null;
-  feats: unknown;
+  feats: object | null;
 }
 
 // What the record keeps of a game that has come to an end (Room.record()).

@@ -142,7 +142,7 @@ const profileOf = async (viewer: Browser, { handle }: Person) =>
   (await viewer.request(`/api/profile/${handle}`)).body.profile as ProfileView;
 
 const check = () => checkData(server.db, { games: [tallyGame] });
-const NOTHING_CHANGED = { records: 0, titles: 0, plays: 0, matches: 0 };
+const NOTHING_CHANGED = { outcomes: 0, records: 0, titles: 0, plays: 0, matches: 0 };
 
 describe('a game that is not the first one', () => {
   test('each for themselves goes on the record, draws included, and is counted again from its log', async () => {

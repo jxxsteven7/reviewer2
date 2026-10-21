@@ -182,6 +182,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     return {
       results,
       scores: players.map((playerId) => ({ key: keyOf(playerId), points: 0, detail: null })),
+      outcome: { winner: 'all', reason: 'finish' },
       feats: () => ({ presses }),
     };
   },

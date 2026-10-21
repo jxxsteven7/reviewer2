@@ -254,8 +254,10 @@ export const tallyGame: GameModule<TallyData, TallyView> = {
     const entries = finished(log.entries);
     if (entries === null || !isSetup(setup)) return null;
     const picks = picksIn(log.start, entries);
+    const { results, outcome } = tally(setup.together, picks);
     return {
-      results: tally(setup.together, picks).results,
+      results,
+      outcome,
       scores: [...picks].map(([id, rounds]) => ({
         key: keyOf(id),
         points: sum(rounds),

@@ -99,6 +99,7 @@ const titles = () =>
   db
     .prepare('SELECT account_id AS account, title, match_id AS match, game_id AS game, turn FROM titles ORDER BY id')
     .all();
+const outcomes = () => db.prepare('SELECT game_id AS game, winner, reason FROM replays ORDER BY game_id').all();
 const matches = () =>
   db
     .prepare(
@@ -276,6 +277,7 @@ describe('adding up a match', () => {
   ) => ({
     gameId: id,
     game: 'test',
+    outcome: null,
     records: new Map(),
     seats: new Map(),
     match: {
@@ -392,6 +394,8 @@ describe('counting the records again', () => {
       return {
         results: count.results.map((result) => ({ ...result, titles: [] })),
         scores: count.scores.map((score) => ({ ...score, points: presses })),
+        outcome: count.outcome,
+        feats: count.feats,
       };
     },
   };
@@ -399,7 +403,14 @@ describe('counting the records again', () => {
   test('is due for a game whose records were counted under other rules, or never', () => {
     expect(recountDue(db, [fakeGame])).toEqual([fakeGame]);
     expect(hasGamesOf(db, [fakeGame])).toBe(false);
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 0, records: 0, titles: 0, plays: 0, matches: 0 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 0,
+      outcomes: 0,
+      records: 0,
+      titles: 0,
+      plays: 0,
+      matches: 0,
+    });
     expect(countedUnder(db, 'test')).toBe(7);
     expect(recountDue(db, [fakeGame])).toEqual([]);
     expect(recountDue(db, [otherRules])).toEqual([otherRules]);
@@ -418,7 +429,14 @@ describe('counting the records again', () => {
     // A title that the game no longer brings, and one it never did.
     new TitleStore(db).awardForGame(ann, 'test', 'opening_record', 'g2', 2);
     expect(hasGamesOf(db, [fakeGame])).toBe(true);
-    expect(recountRecords(db, [otherRules])).toEqual({ games: 2, records: 2, titles: 2, plays: 0, matches: 0 });
+    expect(recountRecords(db, [otherRules])).toEqual({
+      games: 2,
+      outcomes: 0,
+      records: 2,
+      titles: 2,
+      plays: 0,
+      matches: 0,
+    });
     expect(records()).toEqual([
       { account: ann, game: 'g1', verdict: 'pressed 2', points: 2 },
       { account: bob, game: 'g1', verdict: 'pressed 2', points: 2 },
@@ -427,14 +445,28 @@ describe('counting the records again', () => {
     expect(titles()).toEqual([]);
     expect(countedUnder(db, 'test')).toBe(8);
     // Back under the rules of the fake game: the title comes back, with the one Ann's game brings.
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 2, records: 2, titles: 2, plays: 0, matches: 0 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 2,
+      outcomes: 0,
+      records: 2,
+      titles: 2,
+      plays: 0,
+      matches: 0,
+    });
     expect(titles()).toEqual([
       { account: bob, title: 'deadline_hero', match: null, game: 'g1', turn: 1 },
       { account: ann, title: 'deadline_hero', match: null, game: 'g2', turn: 1 },
     ]);
     expect(records().map(({ points }) => points)).toEqual([0, 0, 0]);
     // Nothing to change leaves everything, and says so.
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 2, records: 0, titles: 0, plays: 0, matches: 0 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 2,
+      outcomes: 0,
+      records: 0,
+      titles: 0,
+      plays: 0,
+      matches: 0,
+    });
   });
 
   test('counts the records of matches again from their games, titles included', () => {
@@ -452,7 +484,14 @@ describe('counting the records again', () => {
       store.addMatch(account, { game: 'test', matchId: 'm1', games: 2, rank: 1, players: 3, score: 0 });
     }
     // Under rules that give a point for each press, Ann and Bob have two, Cat one.
-    expect(recountRecords(db, [otherRules])).toEqual({ games: 2, records: 5, titles: 0, plays: 0, matches: 1 });
+    expect(recountRecords(db, [otherRules])).toEqual({
+      games: 2,
+      outcomes: 0,
+      records: 5,
+      titles: 0,
+      plays: 0,
+      matches: 1,
+    });
     expect(matches()).toEqual([
       { account: ann, match: 'm1', games: 2, rank: 1, players: 3, score: 2 },
       { account: bob, match: 'm1', games: 2, rank: 1, players: 3, score: 2 },
@@ -463,7 +502,14 @@ describe('counting the records again', () => {
       { account: bob, title: 'best_paper', match: 'm1', game: null, turn: null },
       { account: cat, title: 'black_hole', match: 'm1', game: null, turn: null },
     ]);
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 2, records: 5, titles: 0, plays: 0, matches: 1 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 2,
+      outcomes: 0,
+      records: 5,
+      titles: 0,
+      plays: 0,
+      matches: 1,
+    });
     expect(matches().map(({ rank, score }) => [rank, score])).toEqual([
       [1, 0],
       [1, 0],
@@ -510,14 +556,15 @@ describe('counting the records again', () => {
     db.exec('PRAGMA foreign_keys = OFF');
     breakIt();
     db.exec('PRAGMA foreign_keys = ON');
-    const before = { records: records(), matches: matches(), titles: titles() };
+    const before = { outcomes: outcomes(), records: records(), matches: matches(), titles: titles() };
     expect(() => recountRecords(db, [otherRules])).toThrow(message);
-    expect({ records: records(), matches: matches(), titles: titles() }).toEqual(before);
+    expect({ outcomes: outcomes(), records: records(), matches: matches(), titles: titles() }).toEqual(before);
     expect(countedUnder(db, 'test')).toBeNull();
   });
 
-  // The fake game under rules by which a game is drawn for everyone, who share the first place,
-  // with what each pressed in the detail, and an AI player counts the presses twice.
+  // The fake game under rules by which no one side wins, the game being level, and it is drawn for
+  // everyone, who share the first place, with what each pressed in the detail, and an AI player
+  // counts the presses twice.
   const drawnRules: GameModule = {
     ...fakeGame,
     rulesVersion: 9,
@@ -534,23 +581,40 @@ describe('counting the records again', () => {
           detail: { mine: presses(result.playerId), all: presses(result.playerId) },
         })),
         scores: count.scores,
+        outcome: { winner: null, reason: 'level' },
         feats: (playerId) => ({ presses: 2 * presses(playerId) }),
       };
     },
   };
 
-  test('changes how the game came out, the place and the detail to what the rules of today count', () => {
+  test('changes who won and how, how the game came out for each, the place and the detail to what the rules of today count', () => {
     keep('g1', { p1: ann, p2: bob }, [
       { t: 1, by: 'p1', type: 'test:press' },
       { t: 2, by: 'p1', type: 'test:press' },
     ]);
-    expect(recountRecords(db, [drawnRules])).toEqual({ games: 1, records: 2, titles: 0, plays: 0, matches: 0 });
+    expect(recountRecords(db, [drawnRules])).toEqual({
+      games: 1,
+      outcomes: 1,
+      records: 2,
+      titles: 0,
+      plays: 0,
+      matches: 0,
+    });
+    expect(outcomes()).toEqual([{ game: 'g1', winner: null, reason: 'level' }]);
     expect(results()).toEqual([
       { account: ann, game: 'g1', result: 'drawn', place: 1, detail: '{"mine":2,"all":2}' },
       { account: bob, game: 'g1', result: 'drawn', place: 1, detail: '{"mine":0,"all":0}' },
     ]);
     // Back under the rules of the fake game, which counts no detail.
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 1, records: 2, titles: 0, plays: 0, matches: 0 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 1,
+      outcomes: 1,
+      records: 2,
+      titles: 0,
+      plays: 0,
+      matches: 0,
+    });
+    expect(outcomes()).toEqual([{ game: 'g1', winner: 'all', reason: 'finish' }]);
     expect(results()).toEqual([
       { account: ann, game: 'g1', result: 'won', place: 1, detail: null },
       { account: bob, game: 'g1', result: 'won', place: 1, detail: null },
@@ -560,7 +624,15 @@ describe('counting the records again', () => {
   test('takes the same JSON in another order of its keys for no change', () => {
     keep('g1', { p1: ann }, [{ t: 1, by: 'p1', type: 'test:press' }]);
     db.exec(`UPDATE game_records SET result = 'drawn', detail = '{"all":1,"mine":1}'`);
-    expect(recountRecords(db, [drawnRules])).toEqual({ games: 1, records: 0, titles: 0, plays: 0, matches: 0 });
+    db.exec("UPDATE replays SET winner = NULL, reason = 'level'");
+    expect(recountRecords(db, [drawnRules])).toEqual({
+      games: 1,
+      outcomes: 0,
+      records: 0,
+      titles: 0,
+      plays: 0,
+      matches: 0,
+    });
     expect(results()).toEqual([{ account: ann, game: 'g1', result: 'drawn', place: 1, detail: '{"all":1,"mine":1}' }]);
     // A value that is not the same, in whatever order, is a change.
     db.exec(`UPDATE game_records SET detail = '{"all":1,"mine":2}'`);
@@ -607,8 +679,22 @@ describe('counting the records again', () => {
 
   test('changes how the game came out for each AI seat and each person it played for, and what it counts of a seat', () => {
     keepWithAgents();
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 1, records: 0, titles: 0, plays: 0, matches: 0 });
-    expect(recountRecords(db, [drawnRules])).toEqual({ games: 1, records: 2, titles: 0, plays: 2, matches: 0 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 1,
+      outcomes: 0,
+      records: 0,
+      titles: 0,
+      plays: 0,
+      matches: 0,
+    });
+    expect(recountRecords(db, [drawnRules])).toEqual({
+      games: 1,
+      outcomes: 1,
+      records: 2,
+      titles: 0,
+      plays: 2,
+      matches: 0,
+    });
     expect(plays()).toEqual([
       { game: 'g1', player: 'a', result: 'drawn', place: 1, feats: '{"presses":2}' },
       { game: 'g1', player: 'p2', result: 'drawn', place: 1, feats: null },
@@ -616,7 +702,14 @@ describe('counting the records again', () => {
     // The same written another way is no change.
     db.exec(`UPDATE agent_plays SET feats = '{ "presses": 2 }' WHERE player_id = 'a'`);
     expect(recountRecords(db, [drawnRules])).toMatchObject({ plays: 0 });
-    expect(recountRecords(db, [fakeGame])).toEqual({ games: 1, records: 2, titles: 0, plays: 2, matches: 0 });
+    expect(recountRecords(db, [fakeGame])).toEqual({
+      games: 1,
+      outcomes: 1,
+      records: 2,
+      titles: 0,
+      plays: 2,
+      matches: 0,
+    });
     expect(plays()).toEqual([
       { game: 'g1', player: 'a', result: 'won', place: 1, feats: '{"presses":1}' },
       { game: 'g1', player: 'p2', result: 'won', place: 1, feats: null },
@@ -631,6 +724,27 @@ describe('counting the records again', () => {
     );
     expect(recountRecords(db, [drawnRules])).toMatchObject({ plays: 2 });
     expect(plays()).toContainEqual({ game: 'g1', player: 'p3', result: null, place: null, feats: null });
+  });
+
+  test.each([
+    [
+      'as a game ends, but not when the game is counted again',
+      {
+        ...fakeGame,
+        recount: (kept) => {
+          const count = fakeGame.recount?.(kept) ?? null;
+          if (!count) return null;
+          return { results: count.results, scores: count.scores, outcome: count.outcome };
+        },
+      } satisfies GameModule,
+    ],
+    ['when a game is counted again, but not as it ends', { ...fakeGame, agentFeats: undefined }],
+  ])('stops, with the database as it was, on a game that counts what an AI player did %s', (way, module) => {
+    keepWithAgents();
+    const before = { outcomes: outcomes(), records: results(), plays: plays() };
+    expect(() => recountRecords(db, [module])).toThrow(`the game test counts what an AI player did ${way}`);
+    expect({ outcomes: outcomes(), records: results(), plays: plays() }).toEqual(before);
+    expect(countedUnder(db, 'test')).toBeNull();
   });
 
   test.each([
@@ -651,9 +765,9 @@ describe('counting the records again', () => {
     ],
   ])('stops, with the database as it was, on %s', (_what, changes: Partial<AgentPlay>[], message) => {
     keepWithAgents(changes);
-    const before = { records: results(), plays: plays() };
+    const before = { outcomes: outcomes(), records: results(), plays: plays() };
     expect(() => recountRecords(db, [drawnRules])).toThrow(message);
-    expect({ records: results(), plays: plays() }).toEqual(before);
+    expect({ outcomes: outcomes(), records: results(), plays: plays() }).toEqual(before);
     expect(countedUnder(db, 'test')).toBeNull();
   });
 });

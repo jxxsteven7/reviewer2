@@ -170,6 +170,32 @@ describe('the room setup', () => {
     });
   });
 
+  test("reads a guest's rules of a match kept before they carried the game's options as if they had", async () => {
+    writeStored(
+      'r2.roomSetup',
+      JSON.stringify({
+        keywords: {
+          fields: ['ml'],
+          randomFields: false,
+          match: { games: 5, teams: 'fixed', grouping: 'choose' },
+          public: false,
+          play: true,
+        },
+      }),
+    );
+    const wrapper = await opened();
+    expect(wrapper.get<HTMLInputElement>('.match-form input[inputmode="numeric"]').element.value).toBe('5');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({
+      fields: ['ml'],
+      match: { games: 5, options: { teams: 'fixed', grouping: 'choose' } },
+    });
+    expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toMatchObject({
+      keywords: { match: { games: 5, options: { teams: 'fixed', grouping: 'choose' } } },
+    });
+  });
+
   test('starts afresh, from the defaults with the general list, whatever the last room was, when asked to', async () => {
     writeStored(
       'r2.roomSetup',

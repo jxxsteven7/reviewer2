@@ -13,9 +13,9 @@ import UiField from './UiField.vue';
 
 // The rules of a match, for the room setup and for the chair's next match: how many games, and the
 // first game's options (shared/src/games/keywords/match.ts), whether the groups stay the same, and
-// how they are made, for the first game or after every game. The
-// number is typed, so it can be wrong while it is being typed: the form says so, and `valid` says
-// whether the rules can be sent. The server checks them again.
+// how they are made, for the first game or after every game. The number is typed, so it can be
+// wrong while it is being typed: the form says so, and `valid` says whether the rules can be sent.
+// The server checks them again.
 const model = defineModel<KeywordsMatchRules>({ required: true });
 const valid = defineModel<boolean>('valid', { default: true });
 const { t } = useI18n();

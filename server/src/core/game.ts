@@ -78,12 +78,14 @@ export interface KeptCount extends KeptGame {
 // What a kept game that finished counts under the rules of today (GameModule.recount): everyone's
 // part in it as it ended, as results() gave it then, by the player ID each had at the end, the
 // points of everyone who played for a side, by member key, as the match scores a game
-// (MatchHooks.score), and what the game counts of an AI player in a seat, as agentFeats() gave it
-// then, for a game that counts that.
+// (MatchHooks.score), how it came out, as outcome() gave it then, or null for a game that can't
+// say, and what the game counts of an AI player in a seat, as agentFeats() gave it then, which a
+// game that counts that gives, and one that doesn't never does (store/recount.ts).
 export interface Recount {
   results: PlayerResult[];
   scores: MatchScore[];
-  feats?(playerId: string): unknown;
+  outcome: GameOutcome | null;
+  feats?(playerId: string): object;
 }
 
 // What the rows of a game's data hold in the game's own shape (GameModule.shapes), for the check of
@@ -113,8 +115,8 @@ export type GameUpdate<Data> = Ack<{ data: Data }>;
 // lose together, and in what role; whether they won, drew or lost; their place, 1 and one more for
 // each player who did better, so that players level share it; the game's own word for how it went,
 // such as the verdict of a decision letter; what the game counts of their game, if anything, in its
-// own shape (GameShapes.detail), such as where their points came from; and the titles that the game
-// brought them, if any. In a game of two sides, the winners have place 1 and the others 2; in one
+// own shape (GameShapes.detail), an object, which the record keeps as JSON, such as where their
+// points came from; and the titles that the game brought them, if any. In a game of two sides, the winners have place 1 and the others 2; in one
 // where each plays for themselves, each is their own side; in one that everyone plays together, all
 // are one side, and win or lose together in place 1.
 export interface PlayerResult {
@@ -124,7 +126,7 @@ export interface PlayerResult {
   result: RecordResult;
   place: number;
   verdict: string;
-  detail?: unknown;
+  detail?: object;
   titles?: GameTitle[];
 }
 
@@ -335,9 +337,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // the game can't say. Without this, the record says how the game ended and nothing of who won.
   outcome?(data: Data): GameOutcome | null;
   // What an AI player did in the game that has just finished, for its page, in the game's own shape
-  // (GameShapes.feats), and what it did in all its seats, from what this gave for each, in the
-  // order the games ended (agentTotals); without these, its page counts its games alone.
-  agentFeats?(data: Data, playerId: string): unknown;
+  // (GameShapes.feats), an object, which the record keeps as JSON, and what it did in all its
+  // seats, from what this gave for each, in the order the games ended (agentTotals); without these,
+  // its page counts its games alone. A game with this counts the same again (Recount.feats).
+  agentFeats?(data: Data, playerId: string): object;
   agentTotals?(feats: readonly unknown[]): unknown;
   // The titles that the game brings (docs/architecture.md#titles), which no other game has: those
   // that results() may give. A match of any game awards the match's titles besides.
