@@ -618,7 +618,8 @@
       "id": "birdwatching",
       "zh": "观鸟",
       "en": "Birdwatching",
-      "forms": { "en": ["birdwatcher"] }
+      "forms": { "en": ["birdwatcher"] },
+      "related": ["forest-bathing"]
     },
     {
       "id": "animal-welfare",
@@ -825,8 +826,7 @@
     {
       "id": "dioxin",
       "zh": "二噁英",
-      "en": "Dioxin",
-      "related": ["ddt"]
+      "en": "Dioxin"
     },
     {
       "id": "ddt",
@@ -1335,7 +1335,8 @@
     {
       "id": "greenway",
       "zh": "绿道",
-      "en": "Greenway"
+      "en": "Greenway",
+      "related": ["pocket-park"]
     },
     {
       "id": "pocket-park",
@@ -2048,8 +2049,7 @@
     {
       "id": "pfas",
       "zh": "PFAS",
-      "en": "PFAS",
-      "related": ["bpa"]
+      "en": "PFAS"
     },
     {
       "id": "bpa",

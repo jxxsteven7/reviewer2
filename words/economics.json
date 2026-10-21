@@ -98,7 +98,8 @@
       "id": "bankruptcy",
       "zh": "破产",
       "en": "Bankruptcy",
-      "forms": { "en": ["bankrupt", "bankruptcies"] }
+      "forms": { "en": ["bankrupt", "bankruptcies"] },
+      "related": ["default"]
     },
     {
       "id": "game-theory",
@@ -577,7 +578,8 @@
       "id": "debt",
       "zh": "债务",
       "en": "Debt",
-      "forms": { "en": ["debtor", "indebted"] }
+      "forms": { "en": ["debtor", "indebted"] },
+      "related": ["equity"]
     },
     {
       "id": "loan",
@@ -1019,8 +1021,7 @@
     {
       "id": "pe-ratio",
       "zh": "市盈率",
-      "en": "P/E ratio",
-      "related": ["eps"]
+      "en": "P/E ratio"
     },
     {
       "id": "securities",
@@ -1238,8 +1239,7 @@
     {
       "id": "swot",
       "zh": "SWOT",
-      "en": "SWOT",
-      "related": ["five-forces"]
+      "en": "SWOT"
     },
     {
       "id": "hr",

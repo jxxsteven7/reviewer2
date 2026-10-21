@@ -395,7 +395,8 @@
     {
       "id": "knockout",
       "zh": "敲除",
-      "en": "Knockout"
+      "en": "Knockout",
+      "related": ["gene-silencing"]
     },
     {
       "id": "rnai",
@@ -1253,7 +1254,8 @@
     {
       "id": "petri-dish",
       "zh": "培养皿",
-      "en": "Petri dish"
+      "en": "Petri dish",
+      "related": ["well-plate"]
     },
     {
       "id": "agar",
@@ -1288,8 +1290,7 @@
       "id": "gfp",
       "zh": "GFP",
       "en": "GFP",
-      "forms": { "zh": ["绿色荧光蛋白"], "en": ["green fluorescent protein"] },
-      "related": ["luciferase"]
+      "forms": { "zh": ["绿色荧光蛋白"], "en": ["green fluorescent protein"] }
     },
     {
       "id": "flow-cytometry",
@@ -2232,8 +2233,7 @@
       "id": "gaba",
       "zh": "GABA",
       "en": "GABA",
-      "forms": { "zh": ["γ-氨基丁酸"], "en": ["gamma-aminobutyric acid"] },
-      "related": ["glutamate"]
+      "forms": { "zh": ["γ-氨基丁酸"], "en": ["gamma-aminobutyric acid"] }
     },
     {
       "id": "glutamate",

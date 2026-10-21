@@ -322,8 +322,7 @@
       "id": "adhd",
       "zh": "ADHD",
       "en": "ADHD",
-      "forms": { "zh": ["注意缺陷多动障碍"] },
-      "related": ["autism"]
+      "forms": { "zh": ["注意缺陷多动障碍"] }
     },
     {
       "id": "sensation",
@@ -355,7 +354,8 @@
     {
       "id": "blindsight",
       "zh": "盲视",
-      "en": "Blindsight"
+      "en": "Blindsight",
+      "related": ["blind-spot"]
     },
     {
       "id": "synesthesia",
@@ -565,7 +565,8 @@
     {
       "id": "frontal-lobe",
       "zh": "额叶",
-      "en": "Frontal lobe"
+      "en": "Frontal lobe",
+      "related": ["temporal-lobe"]
     },
     {
       "id": "temporal-lobe",
@@ -718,7 +719,8 @@
     {
       "id": "pride",
       "zh": "骄傲",
-      "en": "Pride"
+      "en": "Pride",
+      "related": ["embarrassment"]
     },
     {
       "id": "embarrassment",
@@ -990,8 +992,7 @@
     {
       "id": "big-five",
       "zh": "大五人格",
-      "en": "Big Five",
-      "related": ["mbti"]
+      "en": "Big Five"
     },
     {
       "id": "neuroticism",
@@ -1080,7 +1081,8 @@
     {
       "id": "denial",
       "zh": "否认",
-      "en": "Denial"
+      "en": "Denial",
+      "related": ["sublimation"]
     },
     {
       "id": "sublimation",
@@ -1298,8 +1300,7 @@
     {
       "id": "p-hacking",
       "zh": "p值操纵",
-      "en": "p-hacking",
-      "related": ["harking"]
+      "en": "p-hacking"
     },
     {
       "id": "latin-square",
@@ -1360,8 +1361,7 @@
     {
       "id": "go-no-go",
       "zh": "Go/No-go",
-      "en": "Go/No-go",
-      "related": ["stop-signal"]
+      "en": "Go/No-go"
     },
     {
       "id": "stop-signal",

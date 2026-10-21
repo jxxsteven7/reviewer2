@@ -1291,7 +1291,8 @@
     {
       "id": "dice",
       "zh": "骰子",
-      "en": "Dice"
+      "en": "Dice",
+      "related": ["coin-toss"]
     },
     {
       "id": "coin-toss",
@@ -2346,8 +2347,7 @@
     {
       "id": "zfc",
       "zh": "ZFC",
-      "en": "ZFC",
-      "related": ["peano-axioms"]
+      "en": "ZFC"
     },
     {
       "id": "model-theory",

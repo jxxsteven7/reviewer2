@@ -29,8 +29,7 @@
       "id": "embedding",
       "zh": "嵌入",
       "en": "Embedding",
-      "forms": { "en": ["embed", "embedded"] },
-      "related": ["one-hot"]
+      "forms": { "en": ["embed", "embedded"] }
     },
     {
       "id": "loss",
@@ -49,8 +48,7 @@
       "id": "agent",
       "zh": "智能体",
       "en": "Agent",
-      "forms": { "en": ["agentic"] },
-      "related": ["environment"]
+      "forms": { "en": ["agentic"] }
     },
     {
       "id": "reward",
@@ -74,8 +72,7 @@
     {
       "id": "dropout",
       "zh": "Dropout",
-      "en": "Dropout",
-      "related": ["weight-decay"]
+      "en": "Dropout"
     },
     {
       "id": "gpu",
@@ -102,8 +99,7 @@
       "id": "computer-vision",
       "zh": "计算机视觉",
       "en": "Computer vision",
-      "forms": { "en": ["CV"] },
-      "related": ["nlp"]
+      "forms": { "en": ["CV"] }
     },
     {
       "id": "neural-network",
@@ -168,7 +164,8 @@
     {
       "id": "meta-learning",
       "zh": "元学习",
-      "en": "Meta-learning"
+      "en": "Meta-learning",
+      "related": ["transfer-learning"]
     },
     {
       "id": "few-shot",
@@ -310,8 +307,7 @@
     {
       "id": "cross-entropy",
       "zh": "交叉熵",
-      "en": "Cross-entropy",
-      "related": ["mse"]
+      "en": "Cross-entropy"
     },
     {
       "id": "prediction",
@@ -570,8 +566,7 @@
     {
       "id": "adapter",
       "zh": "适配器",
-      "en": "Adapter",
-      "related": ["lora"]
+      "en": "Adapter"
     },
     {
       "id": "relu",
@@ -710,7 +705,8 @@
       "id": "denoising",
       "zh": "去噪",
       "en": "Denoising",
-      "forms": { "en": ["denoise", "denoiser"] }
+      "forms": { "en": ["denoise", "denoiser"] },
+      "related": ["deblurring"]
     },
     {
       "id": "nlp",
@@ -739,8 +735,7 @@
     {
       "id": "bag-of-words",
       "zh": "词袋",
-      "en": "Bag of words",
-      "related": ["tf-idf"]
+      "en": "Bag of words"
     },
     {
       "id": "stop-word",
@@ -784,8 +779,7 @@
     {
       "id": "beam-search",
       "zh": "束搜索",
-      "en": "Beam search",
-      "related": ["top-k"]
+      "en": "Beam search"
     },
     {
       "id": "perplexity",
@@ -935,7 +929,8 @@
     {
       "id": "synthetic-data",
       "zh": "合成数据",
-      "en": "Synthetic data"
+      "en": "Synthetic data",
+      "related": ["data-augmentation"]
     },
     {
       "id": "world-model",
@@ -1019,7 +1014,8 @@
       "id": "dqn",
       "zh": "DQN",
       "en": "DQN",
-      "forms": { "en": ["deep Q-network"] }
+      "forms": { "en": ["deep Q-network"] },
+      "related": ["ppo"]
     },
     {
       "id": "ppo",
@@ -1059,8 +1055,7 @@
       "id": "mcts",
       "zh": "MCTS",
       "en": "MCTS",
-      "forms": { "zh": ["蒙特卡洛树搜索"], "en": ["Monte Carlo tree search"] },
-      "related": ["minimax"]
+      "forms": { "zh": ["蒙特卡洛树搜索"], "en": ["Monte Carlo tree search"] }
     },
     {
       "id": "planning",
@@ -1196,7 +1191,8 @@
       "id": "data-leakage",
       "zh": "数据泄露",
       "en": "Data leakage",
-      "forms": { "en": ["leak"] }
+      "forms": { "en": ["leak"] },
+      "related": ["data-drift"]
     },
     {
       "id": "data-drift",
@@ -1267,7 +1263,8 @@
     {
       "id": "fairness",
       "zh": "公平性",
-      "en": "Fairness"
+      "en": "Fairness",
+      "related": ["explainability"]
     },
     {
       "id": "explainability",
@@ -1316,8 +1313,7 @@
     {
       "id": "deep-blue",
       "zh": "深蓝",
-      "en": "Deep Blue",
-      "related": ["alphago"]
+      "en": "Deep Blue"
     },
     {
       "id": "alphago",
@@ -1547,7 +1543,8 @@
       "id": "inpainting",
       "zh": "图像修复",
       "en": "Inpainting",
-      "forms": { "en": ["inpaint"] }
+      "forms": { "en": ["inpaint"] },
+      "related": ["matting"]
     },
     {
       "id": "optical-flow",
@@ -1730,7 +1727,8 @@
     {
       "id": "humanoid",
       "zh": "人形机器人",
-      "en": "Humanoid"
+      "en": "Humanoid",
+      "related": ["robot-dog"]
     },
     {
       "id": "robot-dog",
@@ -1750,7 +1748,8 @@
     {
       "id": "dexterous-hand",
       "zh": "灵巧手",
-      "en": "Dexterous hand"
+      "en": "Dexterous hand",
+      "related": ["gripper"]
     },
     {
       "id": "end-effector",
@@ -2009,8 +2008,7 @@
     {
       "id": "epsilon-greedy",
       "zh": "ε-贪心",
-      "en": "Epsilon-greedy",
-      "related": ["ucb"]
+      "en": "Epsilon-greedy"
     },
     {
       "id": "sparse-reward",
@@ -2076,12 +2074,14 @@
     {
       "id": "reward-model",
       "zh": "奖励模型",
-      "en": "Reward model"
+      "en": "Reward model",
+      "related": ["verifier"]
     },
     {
       "id": "value-function",
       "zh": "价值函数",
-      "en": "Value function"
+      "en": "Value function",
+      "related": ["policy-network"]
     },
     {
       "id": "mdp",

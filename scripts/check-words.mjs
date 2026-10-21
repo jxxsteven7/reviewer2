@@ -248,27 +248,15 @@ function clashesIn(terms, language, texts) {
 }
 
 // Problems with a pair of related terms, which `where` writes. In the game that uses them, most
-// players get one term and one or two get the other, in the room's language, so both terms need
-// both languages, and in neither may they give each other away.
+// players get one term and one or two get the other, in the room's language, so in neither
+// language may they give each other away. That both terms have both languages is checked per term.
 function checkPair(term, other, where) {
   const problems = [];
-  const name = describe(other.id);
-  for (const [whose, each] of [
-    ['the term', term],
-    [name, other],
-  ]) {
-    const missing = LANGUAGES.filter((language) => !isText(each[language]));
-    if (missing.length > 0) {
-      problems.push(
-        `${where}: "related" pairs it with ${name}, but ${whose} has no ${missing.map(describe).join(' or ')}: both terms of a pair need "zh" and "en"`,
-      );
-    }
-  }
   for (const language of LANGUAGES) {
     if (!isText(term[language]) || !isText(other[language])) continue;
     if (clash(termEntry(term, language), termEntry(other, language))) {
       problems.push(
-        `${where}: "related" pairs it with ${name}, but "${language}" ${describe(term[language])} and ${describe(other[language])} give each other away`,
+        `${where}: "related" pairs it with ${describe(other.id)}, but "${language}" ${describe(term[language])} and ${describe(other[language])} give each other away`,
       );
     }
   }
@@ -282,10 +270,10 @@ export function checkWordList(data, file) {
   // What players might like to know and doesn't need fixing: the terms that can't share a board.
   const infos = [];
   const counts = Object.fromEntries(LANGUAGES.map((language) => [language, 0]));
-  // Each pair of related terms, by the ids of its two terms, and how many pairs each term is in.
-  const pairs = new Set();
+  // How many pairs of related terms the list has, and how many each term is in.
+  let pairs = 0;
   const inPairs = new Map();
-  const result = () => ({ problems, warnings, infos, counts, pairs: pairs.size });
+  const result = () => ({ problems, warnings, infos, counts, pairs });
 
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     problems.push(`${file}: the file must hold one JSON object`);
@@ -373,7 +361,8 @@ export function checkWordList(data, file) {
     if (term.related !== undefined) {
       if (!Array.isArray(term.related) || !term.related.every((id) => typeof id === 'string' && ID.test(id))) {
         problems.push(`${where}: "related" must be a list of term ids`);
-      } else {
+      } else if (ids.get(term.id) === index) {
+        // A term without a valid id of its own can't make a pair.
         links.push({ where, index, id: term.id, related: term.related });
       }
     }
@@ -386,8 +375,9 @@ export function checkWordList(data, file) {
     }
   });
 
-  // "related" names other terms of this file, and a term may name one further down the list, so
-  // this waits until every id is known. Each id that it names makes a pair, written only once.
+  // "related" names other terms of this file, further down the list, so this waits until every id
+  // is known. Each id that it names makes a pair, written once, on the term that comes first; so a
+  // term that names an earlier one is wrong, whether or not that one names it too.
   for (const { where, index, id, related } of links) {
     const named = new Set();
     for (const other of related) {
@@ -396,25 +386,34 @@ export function checkWordList(data, file) {
         continue;
       }
       named.add(other);
-      const pair = [id, other].sort().join(' ');
       if (other === id) {
         problems.push(`${where}: "related" names the term itself`);
       } else if (!ids.has(other)) {
         problems.push(`${where}: "related" names ${describe(other)}, which is not the id of a term in this file`);
-      } else if (pairs.has(pair)) {
-        problems.push(`${where}: "related" names ${describe(other)}, which names this term too: write each pair once`);
+      } else if (ids.get(other) < index) {
+        problems.push(
+          `${where}: "related" names ${describe(other)}, which comes before it: write a pair once, on the term that comes first`,
+        );
       } else {
-        pairs.add(pair);
+        pairs += 1;
         for (const each of [id, other]) inPairs.set(each, (inPairs.get(each) ?? 0) + 1);
         problems.push(...checkPair(data.terms[index], data.terms[ids.get(other)], where));
       }
     }
   }
-  for (const [id, count] of inPairs) {
-    if (count > MAX_PAIRS) {
+  // Each term that is in a pair, in the order of the file: it needs both languages, since the
+  // game deals the pair in the room's language, and it is in MAX_PAIRS pairs at most.
+  for (const [id, count] of [...inPairs].sort(([a], [b]) => ids.get(a) - ids.get(b))) {
+    const index = ids.get(id);
+    const where = `${file}: terms[${index}] (${id})`;
+    const missing = LANGUAGES.filter((language) => !isText(data.terms[index][language]));
+    if (missing.length > 0) {
       problems.push(
-        `${file}: terms[${ids.get(id)}] (${id}): is in ${count} pairs of related terms, but a term may be in ${MAX_PAIRS} at most`,
+        `${where}: is in a pair of related terms but has no ${missing.map(describe).join(' or ')}: both terms of a pair need "zh" and "en"`,
       );
+    }
+    if (count > MAX_PAIRS) {
+      problems.push(`${where}: is in ${count} pairs of related terms, but a term may be in ${MAX_PAIRS} at most`);
     }
   }
 

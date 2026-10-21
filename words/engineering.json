@@ -210,8 +210,7 @@
     {
       "id": "raspberry-pi",
       "zh": "树莓派",
-      "en": "Raspberry Pi",
-      "related": ["arduino"]
+      "en": "Raspberry Pi"
     },
     {
       "id": "arduino",
@@ -234,8 +233,7 @@
       "id": "oled",
       "zh": "OLED",
       "en": "OLED",
-      "forms": { "zh": ["有机发光二极管"], "en": ["organic light-emitting diode"] },
-      "related": ["lcd"]
+      "forms": { "zh": ["有机发光二极管"], "en": ["organic light-emitting diode"] }
     },
     {
       "id": "thermistor",
@@ -268,13 +266,13 @@
     {
       "id": "waveguide",
       "zh": "波导",
-      "en": "Waveguide"
+      "en": "Waveguide",
+      "related": ["microstrip"]
     },
     {
       "id": "thyristor",
       "zh": "晶闸管",
-      "en": "Thyristor",
-      "related": ["mosfet"]
+      "en": "Thyristor"
     },
     {
       "id": "mosfet",
@@ -494,7 +492,8 @@
     {
       "id": "schematic",
       "zh": "原理图",
-      "en": "Schematic"
+      "en": "Schematic",
+      "related": ["block-diagram"]
     },
     {
       "id": "maintenance",
@@ -619,7 +618,8 @@
     {
       "id": "jack",
       "zh": "千斤顶",
-      "en": "Jack"
+      "en": "Jack",
+      "related": ["winch"]
     },
     {
       "id": "ratchet",
@@ -765,7 +765,8 @@
       "id": "refrigeration",
       "zh": "制冷",
       "en": "Refrigeration",
-      "forms": { "en": ["refrigerant"] }
+      "forms": { "en": ["refrigerant"] },
+      "related": ["ventilation"]
     },
     {
       "id": "hvac",
@@ -908,8 +909,7 @@
       "id": "finite-element",
       "zh": "有限元",
       "en": "Finite element",
-      "forms": { "en": ["FEM"] },
-      "related": ["cfd"]
+      "forms": { "en": ["FEM"] }
     },
     {
       "id": "factory",
@@ -1080,7 +1080,8 @@
     {
       "id": "crane",
       "zh": "起重机",
-      "en": "Crane"
+      "en": "Crane",
+      "related": ["forklift"]
     },
     {
       "id": "excavator",
@@ -1121,7 +1122,8 @@
     {
       "id": "levee",
       "zh": "堤防",
-      "en": "Levee"
+      "en": "Levee",
+      "related": ["retaining-wall"]
     },
     {
       "id": "floodgate",
@@ -1733,8 +1735,7 @@
       "id": "mimo",
       "zh": "MIMO",
       "en": "MIMO",
-      "forms": { "zh": ["多输入多输出"], "en": ["multiple-input multiple-output"] },
-      "related": ["beamforming"]
+      "forms": { "zh": ["多输入多输出"], "en": ["multiple-input multiple-output"] }
     },
     {
       "id": "ofdm",
@@ -2331,8 +2332,7 @@
       "id": "fmea",
       "zh": "FMEA",
       "en": "FMEA",
-      "forms": { "zh": ["失效模式与影响分析"], "en": ["failure mode and effects analysis"] },
-      "related": ["fault-tree"]
+      "forms": { "zh": ["失效模式与影响分析"], "en": ["failure mode and effects analysis"] }
     },
     {
       "id": "fault-tree",

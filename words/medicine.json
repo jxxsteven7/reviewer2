@@ -565,8 +565,7 @@
       "id": "ventilator",
       "zh": "呼吸机",
       "en": "Ventilator",
-      "forms": { "en": ["ventilate", "ventilation"] },
-      "related": ["ecmo"]
+      "forms": { "en": ["ventilate", "ventilation"] }
     },
     {
       "id": "defibrillator",
@@ -1601,7 +1600,8 @@
       "id": "thrombus",
       "zh": "血栓",
       "en": "Thrombus",
-      "forms": { "en": ["thrombi", "thrombosis", "thrombotic"] }
+      "forms": { "en": ["thrombi", "thrombosis", "thrombotic"] },
+      "related": ["embolism"]
     },
     {
       "id": "anemia",

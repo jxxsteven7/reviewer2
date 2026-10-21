@@ -1217,7 +1217,8 @@
     {
       "id": "triple-point",
       "zh": "三相点",
-      "en": "Triple point"
+      "en": "Triple point",
+      "related": ["critical-point"]
     },
     {
       "id": "critical-point",
@@ -1951,8 +1952,7 @@
     {
       "id": "axion",
       "zh": "轴子",
-      "en": "Axion",
-      "related": ["wimp"]
+      "en": "Axion"
     },
     {
       "id": "tachyon",

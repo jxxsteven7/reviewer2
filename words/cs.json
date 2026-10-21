@@ -932,7 +932,8 @@
     {
       "id": "docker",
       "zh": "Docker",
-      "en": "Docker"
+      "en": "Docker",
+      "related": ["kubernetes"]
     },
     {
       "id": "kubernetes",
@@ -949,8 +950,7 @@
       "id": "command-line",
       "zh": "命令行",
       "en": "Command line",
-      "forms": { "en": ["CLI"] },
-      "related": ["gui"]
+      "forms": { "en": ["CLI"] }
     },
     {
       "id": "permission",
@@ -976,8 +976,7 @@
     {
       "id": "bios",
       "zh": "BIOS",
-      "en": "BIOS",
-      "related": ["bootloader"]
+      "en": "BIOS"
     },
     {
       "id": "reboot",
@@ -1168,8 +1167,7 @@
     {
       "id": "wi-fi",
       "zh": "Wi-Fi",
-      "en": "Wi-Fi",
-      "related": ["bluetooth"]
+      "en": "Wi-Fi"
     },
     {
       "id": "bluetooth",
@@ -2042,7 +2040,8 @@
     {
       "id": "ruby",
       "zh": "Ruby",
-      "en": "Ruby"
+      "en": "Ruby",
+      "related": ["perl"]
     },
     {
       "id": "perl",
@@ -2182,7 +2181,8 @@
     {
       "id": "cloud",
       "zh": "云",
-      "en": "Cloud"
+      "en": "Cloud",
+      "related": ["edge-computing"]
     },
     {
       "id": "edge-computing",

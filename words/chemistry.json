@@ -393,7 +393,8 @@
     {
       "id": "single-crystal",
       "zh": "单晶",
-      "en": "Single crystal"
+      "en": "Single crystal",
+      "related": ["polycrystal"]
     },
     {
       "id": "hydrogen",
@@ -1433,8 +1434,7 @@
       "id": "mof",
       "zh": "MOF",
       "en": "MOF",
-      "forms": { "zh": ["金属有机框架"], "en": ["metal-organic framework"] },
-      "related": ["zeolite"]
+      "forms": { "zh": ["金属有机框架"], "en": ["metal-organic framework"] }
     },
     {
       "id": "ionic-liquid",

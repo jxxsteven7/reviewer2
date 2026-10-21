@@ -58,7 +58,7 @@ describe('a word list', () => {
       zh: `\u8bcd${i}`,
       en: `Term ${i}`,
       difficulty: 1 + (i % 5),
-      related: [`term-${(i + 1) % MIN_TERMS}`],
+      ...(i + 1 < MIN_TERMS ? { related: [`term-${i + 1}`] } : {}),
       note: { zh: '\u4e00\u53e5\u8bdd', en: 'One line' },
     }));
     assert.deepEqual(check(list({ terms: rich })).problems, []);
@@ -167,14 +167,16 @@ describe('a term', () => {
     assert.ok(has(withTerm({ id: 'extra', en: 'Extra', hint: 'x' }).problems, /unknown field "hint"/));
   });
 
-  test('may be related only to other terms of the same file', () => {
-    const related = (...ids) => withTerm({ id: 'rel', zh: ATTENTION, en: 'Rel', related: ids }).problems;
+  test('may be related only to other terms of the same file that come after it', () => {
+    const rel = (...ids) => ({ id: 'rel', zh: ATTENTION, en: 'Rel', related: ids });
+    const related = (...ids) => check(list({ terms: [rel(...ids), ...terms(MIN_TERMS)] })).problems;
     assert.deepEqual(related('term-1', 'term-2'), []);
     assert.ok(has(related('term-1', 'nope'), /\(rel\): "related" names "nope", which is not the id of a term/));
     assert.ok(has(related('rel'), /\(rel\): "related" names the term itself/));
-    // A term may name one that comes after it.
-    const forward = [{ id: 'first', zh: ATTENTION, en: 'First', related: ['term-3'] }, ...terms(MIN_TERMS)];
-    assert.deepEqual(check(list({ terms: forward })).problems, []);
+    // A pair is written on the term that comes first in the file.
+    assert.deepEqual(withTerm(rel('term-3')).problems, [
+      'ml.json: terms[25] (rel): "related" names "term-3", which comes before it: write a pair once, on the term that comes first',
+    ]);
   });
 
   test("brings warnings for long terms and the game's own names", () => {
@@ -386,14 +388,24 @@ describe('related terms', () => {
     assert.equal(check(list()).pairs, 0);
   });
 
-  test('write each pair once', () => {
+  test('write each pair once, on the term that comes first', () => {
     const both = withTerms({ ...precision, related: ['recall'] }, { ...recall, related: ['precision'] });
     assert.deepEqual(both.problems, [
-      'ml.json: terms[26] (recall): "related" names "precision", which names this term too: write each pair once',
+      'ml.json: terms[26] (recall): "related" names "precision", which comes before it: write a pair once, on the term that comes first',
     ]);
     assert.equal(both.pairs, 1);
     const twice = withTerms({ ...precision, related: ['recall', 'recall'] }, recall);
     assert.deepEqual(twice.problems, ['ml.json: terms[25] (precision): "related" names "recall" twice']);
+  });
+
+  test('are not made by a term without a valid id', () => {
+    const nameless = (en) => ({ zh: `${PRECISION}${en}`, en, related: ['recall'] });
+    const result = withTerms(nameless('One'), nameless('Two'), recall);
+    assert.deepEqual(result.problems, [
+      'ml.json: terms[25]: "id" must be lowercase English words joined by "-"',
+      'ml.json: terms[26]: "id" must be lowercase English words joined by "-"',
+    ]);
+    assert.equal(result.pairs, 0);
   });
 
   test("don't give each other away, in either language", () => {
@@ -413,21 +425,45 @@ describe('related terms', () => {
   test('need both terms in Chinese and in English', () => {
     const englishOnly = withTerms({ id: 'precision', en: 'Precision', related: ['recall'] }, recall);
     assert.deepEqual(englishOnly.problems, [
-      'ml.json: terms[25] (precision): "related" pairs it with "recall", but the term has no "zh": both terms of a pair need "zh" and "en"',
+      'ml.json: terms[25] (precision): is in a pair of related terms but has no "zh": both terms of a pair need "zh" and "en"',
     ]);
     const chineseOnly = withTerms({ ...precision, related: ['recall'] }, { id: 'recall', zh: RECALL });
     assert.deepEqual(chineseOnly.problems, [
-      'ml.json: terms[25] (precision): "related" pairs it with "recall", but "recall" has no "en": both terms of a pair need "zh" and "en"',
+      'ml.json: terms[26] (recall): is in a pair of related terms but has no "en": both terms of a pair need "zh" and "en"',
+    ]);
+    // A term that lacks a language is reported once, however many pairs it is in.
+    const several = check(
+      list({
+        terms: [{ id: 'precision', en: 'Precision', related: ['recall', 'term-1'] }, recall, ...terms(MIN_TERMS)],
+      }),
+    );
+    assert.deepEqual(several.problems, [
+      'ml.json: terms[0] (precision): is in a pair of related terms but has no "zh": both terms of a pair need "zh" and "en"',
     ]);
   });
 
   test('put a term in 3 pairs at most', () => {
     const hub = { id: 'hub', zh: PRECISION, en: 'Hub', related: ['term-1', 'term-2', 'term-3'] };
-    assert.deepEqual(withTerms(hub).problems, []);
-    // A pair counts for both of its terms, whichever of them it is written on.
-    assert.deepEqual(withTerms(hub, { ...recall, related: ['hub'] }).problems, [
-      'ml.json: terms[25] (hub): is in 4 pairs of related terms, but a term may be in 3 at most',
-    ]);
+    assert.deepEqual(check(list({ terms: [hub, ...terms(MIN_TERMS)] })).problems, []);
+    // A pair counts for both of its terms, whichever of them it is written on, and the terms over
+    // the limit are reported in the order of the file.
+    const limit = (index, id, count) =>
+      `ml.json: terms[${index}] (${id}): is in ${count} pairs of related terms, but a term may be in 3 at most`;
+    const four = check(list({ terms: [{ ...recall, related: ['hub'] }, hub, ...terms(MIN_TERMS)] }));
+    assert.deepEqual(four.problems, [limit(1, 'hub', 4)]);
+    const naming = terms(MIN_TERMS, (i) => ({ ...terms(i + 1)[i], ...(i < 2 ? { related: ['last'] } : {}) }));
+    const last = { id: 'last', zh: ATTENTION, en: 'Last' };
+    const both = check(
+      list({
+        terms: [
+          { ...recall, related: ['last'] },
+          { ...precision, related: ['term-1', 'term-2', 'term-3', 'last'] },
+          ...naming,
+          last,
+        ],
+      }),
+    );
+    assert.deepEqual(both.problems, [limit(1, 'precision', 4), limit(27, 'last', 4)]);
   });
 });
 
@@ -550,7 +586,7 @@ describe('command line', () => {
   test('counts the pairs of related terms of each list that passes', () => {
     const paired = join(dir, 'paired.json');
     const term = { id: 'attention', zh: ATTENTION, en: 'Attention', related: ['term-1'] };
-    writeFileSync(paired, JSON.stringify(list({ id: 'paired', terms: [...terms(MIN_TERMS), term] })));
+    writeFileSync(paired, JSON.stringify(list({ id: 'paired', terms: [term, ...terms(MIN_TERMS)] })));
     const result = run(good, paired);
     assert.equal(result.status, 0, result.stdout);
     assert.match(result.stdout, /^check-words: OK ml\.json \(25 zh, 25 en, 0 related pairs\)$/m);
