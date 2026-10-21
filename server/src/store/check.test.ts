@@ -14,6 +14,7 @@ import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore } from './feedback';
 import { RecordStore, ReplayStore, TitleStore } from './records';
 import { countedUnderKey } from './recount';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
+import { knownTitles } from '../core/game';
 
 // The check of the data (docs/rules/constraints.md#data): a database with a row of every kind, in
 // the newest format, passes every rule, and each rule finds the rows that break it, by id alone.
@@ -173,7 +174,7 @@ beforeEach(async () => {
   records.addMatch(ann.id, { game: 'test', matchId: 'm1', games: 1, rank: 1, players: 2, score: 0 });
   records.addMatch(bob.id, { game: 'test', matchId: 'm1', games: 1, rank: 1, players: 2, score: 0 });
   // Bob said something in the game of the match, which brings him the title.
-  new TitleStore(db).awardForGame(bob.id, 'test', 'deadline_hero', 'g2', 1);
+  new TitleStore(db, knownTitles([fakeGame, keywordsGame])).awardForGame(bob.id, 'test', 'deadline_hero', 'g2', 1);
   // The records of both games are counted under the rules of today.
   const counted = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)');
   for (const game of [fakeGame, keywordsGame]) counted.run(countedUnderKey(game.id), String(game.rulesVersion));

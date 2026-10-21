@@ -6,7 +6,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schemas": "./src/schemas.ts"
+    "./schemas": "./src/schemas.ts",
+    "./keywords": "./src/games/keywords/index.ts",
+    "./keywords/schemas": "./src/games/keywords/schemas.ts"
   },
   "dependencies": {
     "zod": "^4.6.5"

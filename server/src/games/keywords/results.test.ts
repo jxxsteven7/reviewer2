@@ -1,4 +1,4 @@
-import type { CardColor, ClueRecord, GameResult, Seat } from '@reviewer2/shared';
+import type { CardColor, ClueRecord, GameResult, Seat } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { keywordsGame, type KeywordsData } from './index';

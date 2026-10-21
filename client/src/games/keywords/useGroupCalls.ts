@@ -1,4 +1,4 @@
-import type { KeywordsView } from '@reviewer2/shared';
+import type { KeywordsView } from '@reviewer2/shared/keywords';
 import type { Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { callOutGroup } from '../../core/emotes';

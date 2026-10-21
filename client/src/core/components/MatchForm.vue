@@ -1,12 +1,11 @@
 <script setup lang="ts">
+import { MATCH_GAMES, matchGamesValid } from '@reviewer2/shared';
 import {
-  MATCH_GAMES,
   MATCH_GROUPINGS,
   MATCH_TEAMS,
-  matchGamesValid,
   type KeywordsMatchOptions,
   type KeywordsMatchRules,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiField from './UiField.vue';

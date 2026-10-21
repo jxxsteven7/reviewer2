@@ -1,4 +1,4 @@
-import { SPECTATOR, type Seat } from '@reviewer2/shared';
+import { SPECTATOR, type Seat } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { extend, giveClue, mark, pause, reveal, say, select, withdraw } from './rules';
 import type { KeywordsState } from './state';

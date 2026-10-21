@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Team } from '@reviewer2/shared';
+import type { Team } from '@reviewer2/shared/keywords';
 
 // A number to rise: its text, such as "+1", and the group whose color it takes; once shown, with a
 // key that tells it from the one before, so that one right after another starts its own.

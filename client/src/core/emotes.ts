@@ -1,4 +1,5 @@
-import { EMOTE_COOLDOWN_MS, EMOTES, type Emote, type EmoteEvent, type Team } from '@reviewer2/shared';
+import { EMOTE_COOLDOWN_MS, EMOTES, type Emote, type EmoteEvent } from '@reviewer2/shared';
+import { type Team } from '@reviewer2/shared/keywords';
 import { reactive, ref, watch } from 'vue';
 import { room } from './room';
 import { act, socket } from './socket';

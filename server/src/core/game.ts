@@ -10,6 +10,7 @@ import type {
   RoomPhase,
   Title,
 } from '@reviewer2/shared';
+import { MATCH_TITLES } from '@reviewer2/shared';
 import type { GameLogData } from './gameLog';
 import type { Rng } from './random';
 
@@ -384,3 +385,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // and for the screens, so a module builds what everyone sees once, and filters it for each.
   views(data: Data, ctx: GameContext): (viewer: Viewer) => View;
 }
+
+// The titles there are (docs/architecture.md#titles): the match's, and those that the games bring.
+export const knownTitles = (games: readonly GameModule[]): Title[] => [
+  ...MATCH_TITLES,
+  ...games.flatMap(({ titles = [] }) => titles),
+];

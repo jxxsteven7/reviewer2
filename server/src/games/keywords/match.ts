@@ -12,7 +12,7 @@ import {
   type Seat,
   type StartProblem,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { MatchScore } from '../../core/game';
 import { pick, shuffle, type Rng } from '../../core/random';
 import { dealGroups, smallerTeam, type Member, type Seating } from './seats';

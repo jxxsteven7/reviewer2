@@ -1,4 +1,11 @@
-import { firstTurnReject, heavenlyHand, instantReject, openingRecord, type Played, type Team } from '@reviewer2/shared';
+import {
+  firstTurnReject,
+  heavenlyHand,
+  instantReject,
+  openingRecord,
+  type Played,
+  type Team,
+} from '@reviewer2/shared/keywords';
 import { fnv1a } from '../../core/hash';
 import type { Sound } from '../../core/sound';
 

@@ -1,12 +1,11 @@
+import type { MatchView, RecordsView } from '@reviewer2/shared';
 import type {
   KeywordsMatchOptions,
   KeywordsMatchRules,
   KeywordsRoomData,
   KeywordsView,
-  MatchView,
-  RecordsView,
   Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test } from 'vitest';
 import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';

@@ -1,7 +1,6 @@
 import type { ContributionCount } from './contributions';
 import type { DuoView } from './duos';
 import type { Language } from './language';
-import { KEYWORDS_TITLES } from './games/keywords/titles';
 import type { MatchRules } from './match';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
@@ -148,12 +147,12 @@ export type EmailState = (typeof EMAIL_STATES)[number];
 // was won, by the game it was won in. A match of any game that runs its course awards its two to
 // the top and the bottom of its ranking (MATCH_TITLES); a game brings the players with accounts
 // whose game goes on the record titles of its own, each time they earn one, which each game
-// declares (for the team word guessing game, KEYWORDS_TITLES). The records keep a title by its ID
-// alone, so no two games declare the same one (accounts.test.ts).
+// declares (GameModule.titles on the server; for the team word guessing game, KEYWORDS_TITLES). The
+// records keep a title by its ID alone, so no two games declare the same one
+// (server/src/games/index.test.ts).
 export const MATCH_TITLES = ['best_paper', 'black_hole'] as const;
 export type MatchTitle = (typeof MATCH_TITLES)[number];
-export const TITLES = [...MATCH_TITLES, ...KEYWORDS_TITLES] as const;
-export type Title = (typeof TITLES)[number];
+export type Title = string;
 
 export interface TitleCount {
   game: string;

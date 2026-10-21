@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { type MatchView, type RoomView, type StandingView } from '@reviewer2/shared';
 import {
   clueCounts,
   defaultSettings,
@@ -8,12 +9,9 @@ import {
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
-  type MatchView,
-  type RoomView,
   type Seat,
   type ShownReplay,
-  type StandingView,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { computed, defineComponent, h, nextTick } from 'vue';

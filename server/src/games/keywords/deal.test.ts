@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { BOARD_SIZE, cardsClash, LANGUAGES, otherTeam, TEAMS, type CardColor } from '@reviewer2/shared';
+import { LANGUAGES } from '@reviewer2/shared';
+import { BOARD_SIZE, cardsClash, otherTeam, TEAMS, type CardColor } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { pick, seededRng, shuffle } from '../../core/random';
 import { drawWords, loadWordLibrary } from '../../core/words';

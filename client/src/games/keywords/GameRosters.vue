@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { PlayerView, RoomView, Team } from '@reviewer2/shared';
+import type { PlayerView, RoomView } from '@reviewer2/shared';
+import type { Team } from '@reviewer2/shared/keywords';
 import { computed, ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerName from '../../core/components/PlayerName.vue';

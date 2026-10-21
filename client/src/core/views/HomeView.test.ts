@@ -15,7 +15,7 @@ vi.mock('../socket', () => ({
 }));
 vi.mock('../fields', () => ({ fields: { value: null }, loadFields: vi.fn() }));
 vi.mock('../../games', async () => {
-  const { defaultSettings } = await import('@reviewer2/shared');
+  const { defaultSettings } = await import('@reviewer2/shared/keywords');
   const RulesSheet = (await import('../../games/keywords/RulesSheet.vue')).default;
   return { games: { keywords: { Rules: RulesSheet, defaultSettings } } };
 });

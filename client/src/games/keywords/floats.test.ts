@@ -1,11 +1,11 @@
+import { type GamePoints } from '@reviewer2/shared';
 import {
   defaultSettings,
   type ClueRecord,
-  type GamePoints,
   type KeywordsRoomData,
   type KeywordsScoreDetail,
   type KeywordsView,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { endFloats, endsBetween, revealedBetween, revealFloats, signed, turnedBetween } from './floats';
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { defaultMatchRules, keywordsMatchRules, type KeywordsMatchRules, type MatchRules } from '@reviewer2/shared';
+import { type MatchRules } from '@reviewer2/shared';
+import { defaultMatchRules, keywordsMatchRules, type KeywordsMatchRules } from '@reviewer2/shared/keywords';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { points } from '../points';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Mark, Team } from '@reviewer2/shared';
+import type { Mark, Team } from '@reviewer2/shared/keywords';
 
 // The round sticker of a group's mark (docs/games/keywords.md#talking-it-over), in the color it
 // stands for, with a sign of its own, so that color is never the only signal: a tick for one of

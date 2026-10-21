@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { otherTeam, type ClueRecord, type GameEvent, type KeywordsView } from '@reviewer2/shared';
+import { otherTeam, type ClueRecord, type GameEvent, type KeywordsView } from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatList } from '../../core/i18n';

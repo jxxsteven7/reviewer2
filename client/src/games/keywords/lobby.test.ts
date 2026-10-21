@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { defaultSettings, type KeywordsRoomData, type RoomView } from '@reviewer2/shared';
+import { type RoomView } from '@reviewer2/shared';
+import { defaultSettings, type KeywordsRoomData } from '@reviewer2/shared/keywords';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';

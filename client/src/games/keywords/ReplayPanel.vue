@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { actionsOf, type ReplayAction, type ShownReplay } from '@reviewer2/shared';
+import { actionsOf, type ReplayAction, type ShownReplay } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgentProfileCard from '../../core/components/AgentProfileCard.vue';

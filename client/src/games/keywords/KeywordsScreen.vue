@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { formatCode, type KeywordsView, type RoomView } from '@reviewer2/shared';
+import { formatCode, type RoomView } from '@reviewer2/shared';
+import { type KeywordsView } from '@reviewer2/shared/keywords';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MatchResults from '../../core/components/MatchResults.vue';

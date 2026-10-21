@@ -1,3 +1,4 @@
+import { type GamePoints } from '@reviewer2/shared';
 import {
   endPoints,
   openingRecord,
@@ -6,12 +7,11 @@ import {
   revealPoints,
   type CardColor,
   type CardView,
-  type GamePoints,
   type KeywordsRoomData,
   type KeywordsScoreDetail,
   type KeywordsView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { Float } from '../../core/components/ScoreFloat.vue';
 
 // The points that rise from the board as a game goes (docs/games/keywords.md#points-as-they-come):

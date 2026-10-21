@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MARKS, otherTeam, type Mark, type Team } from '@reviewer2/shared';
+import { MARKS, otherTeam, type Mark, type Team } from '@reviewer2/shared/keywords';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MarkSticker from './MarkSticker.vue';

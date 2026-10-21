@@ -1,4 +1,12 @@
-import { CARD_COUNTS, CHAT_KEPT, otherTeam, SPECTATOR, TEAMS, type ClueCount, type Seat } from '@reviewer2/shared';
+import {
+  CARD_COUNTS,
+  CHAT_KEPT,
+  otherTeam,
+  SPECTATOR,
+  TEAMS,
+  type ClueCount,
+  type Seat,
+} from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { pick, seededRng, type Rng } from '../../core/random';
 import {

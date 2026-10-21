@@ -1,4 +1,4 @@
-import type { ClueCount, ClueRecord, Team } from '@reviewer2/shared';
+import type { ClueCount, ClueRecord, Team } from '@reviewer2/shared/keywords';
 import { readStored, removeStored, writeStored } from '../../core/storage';
 
 // The clue that a PI prepares ahead of their turn (docs/games/keywords.md#the-clue): the word,

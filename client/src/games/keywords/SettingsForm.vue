@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { type Language } from '@reviewer2/shared';
 import {
   CLUE_LENGTH,
   CLUE_RULES,
@@ -7,8 +8,7 @@ import {
   TIME_LIMIT,
   TIME_SETTINGS,
   type KeywordsSettings,
-  type Language,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { computed, reactive, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiField from '../../core/components/UiField.vue';

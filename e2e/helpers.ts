@@ -8,17 +8,15 @@ import {
   type Page,
   type TestInfo,
 } from '@playwright/test';
+import { ACCOUNT_API, PROFILE_PATH, type RoomView } from '@reviewer2/shared';
 import {
-  ACCOUNT_API,
   checkClue,
-  PROFILE_PATH,
   type CardColor,
   type KeywordsMatchRules,
   type KeywordsRoomData,
   type KeywordsView,
-  type RoomView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { io, type Socket } from 'socket.io-client';
 import { TOKEN } from '../client/src/core/session';
 import en from '../client/src/locales/en.json' with { type: 'json' };

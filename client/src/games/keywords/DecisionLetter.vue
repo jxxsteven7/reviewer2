@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { otherTeam, type KeywordsView, type MatchView, type Team } from '@reviewer2/shared';
+import { type MatchView } from '@reviewer2/shared';
+import { otherTeam, type KeywordsView, type Team } from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import TitleInfo from '../../core/components/TitleInfo.vue';

@@ -1,3 +1,4 @@
+import { type RoomPhase } from '@reviewer2/shared';
 import {
   bonusPoints,
   cardPoints,
@@ -9,10 +10,9 @@ import {
   type KeywordsScoreDetail,
   type KeywordsMatchOptions,
   type KeywordsMatchRules,
-  type RoomPhase,
   type Seat,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { seededRng, type Rng } from '../../core/random';

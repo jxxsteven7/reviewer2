@@ -1,11 +1,11 @@
-import type { GameResult, Team, Verdict } from '@reviewer2/shared';
+import type { GameResult, Team, Verdict } from '@reviewer2/shared/keywords';
 import { fnv1a } from '../../core/hash';
 
 // The decision letters at the end of a game (DecisionLetter.vue), one for each group. Which
 // verdict a group gets is shared with the server, which keeps it on each player's record
 // (shared/src/games/keywords/letters.ts); which letter of that verdict the group reads is the
 // client's alone.
-export { verdictFor, type Verdict } from '@reviewer2/shared';
+export { verdictFor, type Verdict } from '@reviewer2/shared/keywords';
 
 // How many letters each verdict has to choose from, under game.letter.bodies in the locale files,
 // numbered from 1.

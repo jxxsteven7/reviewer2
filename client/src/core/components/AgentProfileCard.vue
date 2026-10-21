@@ -2,12 +2,11 @@
 import {
   ACCOUNT_API,
   emptyAgentCounts,
-  emptyKeywordsFeats,
   type AgentGameCounts,
   type AgentPersona,
   type AgentProfileView,
-  type KeywordsAgentFeats,
 } from '@reviewer2/shared';
+import { emptyKeywordsFeats, type KeywordsAgentFeats } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { account, request } from '../account';

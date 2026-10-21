@@ -1,4 +1,5 @@
-import type { KeywordsRoomData, RoomView, Team } from '@reviewer2/shared';
+import type { RoomView } from '@reviewer2/shared';
+import type { KeywordsRoomData, Team } from '@reviewer2/shared/keywords';
 import { computed, onBeforeUnmount, ref, shallowRef, type Ref } from 'vue';
 import type { Float, Shown } from '../../core/components/ScoreFloat.vue';
 import { endFloats, endsBetween, openingRose, revealedBetween, revealFloats } from './floats';

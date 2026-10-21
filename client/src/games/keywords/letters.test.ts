@@ -1,4 +1,4 @@
-import type { GameResult } from '@reviewer2/shared';
+import type { GameResult } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { letterNumber, LETTERS_PER_VERDICT, lettersFor } from './letters';
 

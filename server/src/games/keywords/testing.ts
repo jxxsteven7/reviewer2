@@ -1,4 +1,5 @@
-import { defaultSettings, type CardColor, type KeywordsSettings, type Language, type Team } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { defaultSettings, type CardColor, type KeywordsSettings, type Team } from '@reviewer2/shared/keywords';
 import type { GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';
 import { keywordsGame, type KeywordsData } from './index';

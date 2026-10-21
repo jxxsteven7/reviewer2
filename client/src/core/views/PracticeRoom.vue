@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { BOARD_SIZE, type Language } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { BOARD_SIZE } from '@reviewer2/shared/keywords';
 import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';

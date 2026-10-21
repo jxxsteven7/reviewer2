@@ -6,11 +6,11 @@ import {
   clueLength,
   MAX_CLUE_INPUT,
   normalizeClue,
-  wordKey,
   type BoardText,
   type ClueCard,
   type ClueOptions,
 } from './clue';
+import { wordKey } from '../../words';
 
 // The fixtures that stand for Chinese words are written as \u escapes, because everything in
 // the repository is in English (docs/rules/language.md). So are invisible characters and

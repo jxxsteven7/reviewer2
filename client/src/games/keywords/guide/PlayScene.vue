@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { clueCounts, defaultSettings, type Language, type Mark, type Team } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { clueCounts, defaultSettings, type Mark, type Team } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { spot, useSpot } from '../../../core/guide/spot';

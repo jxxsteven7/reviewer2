@@ -9,7 +9,7 @@ import {
   verdictFor,
   type KeywordsScoreDetail,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { GameTitle, PlayerResult } from '../../core/game';
 import { missedDeadline, scoreGame } from './match';
 import { heroesOf, wonInTurn } from './rules';

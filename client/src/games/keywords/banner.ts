@@ -1,4 +1,4 @@
-import type { KeywordsView, Seat, Team } from '@reviewer2/shared';
+import type { KeywordsView, Seat, Team } from '@reviewer2/shared/keywords';
 
 // What the turn strip of a game tells one viewer about the moment (TurnStrip.vue), as the banner
 // at the top of the game once did. Each line is a key under banner.lines in the locale files.

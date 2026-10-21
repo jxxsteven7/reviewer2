@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { SPECTATOR, type KeywordsView, type Seat } from '@reviewer2/shared';
+import { SPECTATOR, type KeywordsView, type Seat } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { bannerFor, type BannerLine } from './banner';
 

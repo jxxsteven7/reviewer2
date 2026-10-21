@@ -1,8 +1,8 @@
 import {
   emptyAgentCounts,
   emptyGameCounts,
+  MATCH_TITLES,
   RECENT_RECORDS,
-  TITLES,
   type AgentGameCounts,
   type BestStreaks,
   type DuoCounts,
@@ -336,8 +336,12 @@ export class TitleStore {
   readonly #insertForGame: StatementSync;
   readonly #counts: StatementSync;
   readonly #count: StatementSync;
+  readonly #known: ReadonlySet<Title>;
 
-  constructor(db: DatabaseSync) {
+  // `known` are the titles there are: the match's, and those that the games bring
+  // (GameModule.titles).
+  constructor(db: DatabaseSync, known: Iterable<Title> = MATCH_TITLES) {
+    this.#known = new Set(known);
     // A match awards an account one title (the titles_match index), and a turn of a game brings it
     // one title once (titles_game). Unlike OR IGNORE, ON CONFLICT passes over that alone, and still
     // refuses a row that the table's checks refuse, or one of a match or a game that isn't on the
@@ -358,14 +362,14 @@ export class TitleStore {
   // Awards a title from a match of the game `game`, and says whether it was new. The same title can
   // be awarded many times, but a match awards an account one title.
   award(accountId: number, game: string, title: Title, matchId: string): boolean {
-    known(title);
+    this.#check(title);
     return Number(this.#insert.run(accountId, game, title, matchId).changes) > 0;
   }
 
   // Awards a title that a game brought, in one of its turns, and says whether it was new: a turn of
   // a game brings an account a title once, however often the end of the game is reported.
   awardForGame(accountId: number, game: string, title: Title, gameId: string, turn: number): boolean {
-    known(title);
+    this.#check(title);
     return Number(this.#insertForGame.run(accountId, game, title, gameId, turn).changes) > 0;
   }
 
@@ -382,13 +386,13 @@ export class TitleStore {
       ({ game, title, count }) => ({ game, title, count }),
     );
   }
-}
 
-// The titles are the code's to check (migration 14), as they are for the whole table: a title that
-// isn't one is a mistake in the code, and is never kept. Which game's they are, the check of the
-// data checks (check.ts).
-function known(title: Title): void {
-  if (!TITLES.includes(title)) throw new Error(`Unknown title: ${String(title)}`);
+  // The titles are the code's to check (migration 14), as they are for the whole table: a title
+  // that isn't one is a mistake in the code, and is never kept. Which game's they are, the check of
+  // the data checks (check.ts).
+  #check(title: Title): void {
+    if (!this.#known.has(title)) throw new Error(`Unknown title: ${String(title)}`);
+  }
 }
 
 // A game to keep (docs/architecture.md#game-records), once for each game, however often its end is

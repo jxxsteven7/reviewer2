@@ -1,4 +1,5 @@
-import { defaultSettings, type AgentAnswer, type CardColor, type ClueRecord, type Seat } from '@reviewer2/shared';
+import { type AgentAnswer } from '@reviewer2/shared';
+import { defaultSettings, type CardColor, type ClueRecord, type Seat } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import type { AgentTask, GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';

@@ -7,23 +7,22 @@ import {
   FEEDBACK_ERRORS,
   FEEDBACK_KINDS,
   FRIEND_ERRORS,
-  KEYWORDS_ERRORS,
   RANKS,
   REPORT_ERRORS,
   ROOM_ERRORS,
-  SEAT_ERRORS,
   SPONSOR_KINDS,
-  START_PROBLEMS,
+  MATCH_TITLES,
   STREAK_KINDS,
-  TITLES,
-  VERDICTS,
 } from '@reviewer2/shared';
+import { KEYWORDS_ERRORS, KEYWORDS_TITLES, SEAT_ERRORS, START_PROBLEMS, VERDICTS } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { DUO_LINES } from '../core/duos';
 import { CLIENT_ERRORS } from '../core/errors';
 import { LINES_PER_TIER, STREAK_TIERS } from '../core/streaks';
 import { MISSED_LINES } from '../games/keywords/missed';
 import { HERO_LINES } from '../games/keywords/heroes';
+
+const TITLES = [...MATCH_TITLES, ...KEYWORDS_TITLES];
 
 // Every interface string exists in both languages (docs/rules/constraints.md). The files are
 // read as plain JSON: importing them would hand back the compiled messages instead.

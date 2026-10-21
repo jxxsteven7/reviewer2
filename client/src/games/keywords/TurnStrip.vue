@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GuessRule, KeywordsView, Seat } from '@reviewer2/shared';
+import type { GuessRule, KeywordsView, Seat } from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUrgentTitle } from '../../core/head';

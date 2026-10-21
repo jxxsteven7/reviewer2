@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { KeywordsSettings, Language } from '@reviewer2/shared';
+import type { Language } from '@reviewer2/shared';
+import type { KeywordsSettings } from '@reviewer2/shared/keywords';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute } from 'vue-router';

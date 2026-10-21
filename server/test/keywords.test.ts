@@ -1,7 +1,6 @@
+import { MAX_CHAT_INPUT, MAX_CHAT_LENGTH, type RoomView } from '@reviewer2/shared';
 import {
   defaultSettings,
-  MAX_CHAT_INPUT,
-  MAX_CHAT_LENGTH,
   MAX_CLUE_INPUT,
   otherTeam,
   SPECTATOR,
@@ -9,9 +8,8 @@ import {
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
-  type RoomView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameContext } from '../src/core/game';
 import { seededRng } from '../src/core/random';

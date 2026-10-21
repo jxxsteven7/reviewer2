@@ -1,4 +1,4 @@
-import type { CardView, KeywordsView } from '@reviewer2/shared';
+import type { CardView, KeywordsView } from '@reviewer2/shared/keywords';
 import { onBeforeUnmount, ref, watch, type Ref } from 'vue';
 import { turnedBetween } from './floats';
 import { useLiveViews } from './useLiveViews';

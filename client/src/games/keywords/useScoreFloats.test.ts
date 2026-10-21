@@ -1,11 +1,6 @@
 // @vitest-environment happy-dom
-import {
-  defaultSettings,
-  type ClueRecord,
-  type KeywordsRoomData,
-  type KeywordsView,
-  type RoomView,
-} from '@reviewer2/shared';
+import { type RoomView } from '@reviewer2/shared';
+import { defaultSettings, type ClueRecord, type KeywordsRoomData, type KeywordsView } from '@reviewer2/shared/keywords';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref } from 'vue';

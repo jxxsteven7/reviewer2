@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { TIME_SETTINGS, type KeywordsSettings, type Language } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { TIME_SETTINGS, type KeywordsSettings } from '@reviewer2/shared/keywords';
 import { useI18n } from 'vue-i18n';
 
 // The settings of a room, for everyone to read: in the waiting room for all but the chair, who

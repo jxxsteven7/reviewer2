@@ -34,7 +34,7 @@ import {
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
-import type { GameModule, KeptReplay, ShownAccount } from '../core/game';
+import { knownTitles, type GameModule, type KeptReplay, type ShownAccount } from '../core/game';
 import type { GameLogEntry, MatchNumbers } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
@@ -182,7 +182,7 @@ export class Accounts {
     this.records = new RecordStore(options.db, clock);
     this.replays = new ReplayStore(options.db, clock);
     this.agentPlays = new AgentPlayStore(options.db, new Map((options.games ?? []).map((game) => [game.id, game])));
-    this.titles = new TitleStore(options.db);
+    this.titles = new TitleStore(options.db, knownTitles(options.games ?? []));
     this.#feedback = options.feedback ?? new FeedbackStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
     this.likes = new LikeStore(options.db, clock);

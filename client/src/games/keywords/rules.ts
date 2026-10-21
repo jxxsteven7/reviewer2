@@ -1,4 +1,5 @@
-import type { KeywordsSettings, Language } from '@reviewer2/shared';
+import type { Language } from '@reviewer2/shared';
+import type { KeywordsSettings } from '@reviewer2/shared/keywords';
 
 // The sections of "How to play" (RulesSheet.vue) as a room with these settings plays the game: its
 // guess rule, its clue rule, its time limits and its extensions, and at the end what becomes of the

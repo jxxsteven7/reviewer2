@@ -1,4 +1,5 @@
-import { defaultSettings, restoreSettings, type Language } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { defaultSettings, restoreSettings } from '@reviewer2/shared/keywords';
 import type { Component } from 'vue';
 import type { GuideChapter } from '../core/guide/chapters';
 import type { ShownRoom } from '../core/room';

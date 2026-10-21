@@ -1,18 +1,17 @@
+import { type AgentPersona, type Language } from '@reviewer2/shared';
 import {
   SPECTATOR,
   TEAMS,
-  type AgentPersona,
   type CardColor,
   type ClueCount,
   type KeywordsReplay,
   type KeywordsSettings,
-  type Language,
   type ReplayGroup,
   type ReplayPerson,
   type Seat,
   type ShownReplay,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { KeptCount, KeptReplay, Recount } from '../../core/game';
 import type { GameLogData } from '../../core/gameLog';
 import { featsOf } from './agents';

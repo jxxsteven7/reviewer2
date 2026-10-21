@@ -1,4 +1,4 @@
-import { SPECTATOR, TEAMS, type KeywordsRoomData, type Seat, type Team } from '@reviewer2/shared';
+import { SPECTATOR, TEAMS, type KeywordsRoomData, type Seat, type Team } from '@reviewer2/shared/keywords';
 import { computed, type Ref } from 'vue';
 import type { ShownPlayer, ShownRoom } from '../../core/room';
 import { act } from '../../core/socket';

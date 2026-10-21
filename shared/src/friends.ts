@@ -1,5 +1,5 @@
 import type { DuoView } from './duos';
-import { checkChat } from './games/keywords/chat';
+import { checkChat } from './chat';
 import { checkName } from './names';
 import { textLength } from './text';
 

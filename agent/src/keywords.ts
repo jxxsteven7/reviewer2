@@ -1,19 +1,16 @@
+import { MAX_AGENT_REASON, type AgentNote, type AgentReply, type AgentRequest } from '@reviewer2/shared';
 import {
   checkClue,
   cleanClue,
   clueCounts,
   clueOptions,
-  MAX_AGENT_REASON,
   normalizeClue,
   type AgentCandidate,
   type AgentGame,
-  type AgentNote,
-  type AgentReply,
-  type AgentRequest,
   type CardColor,
   type ClueCount,
   type ClueMatch,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { ModelError, type Model } from './model';
 import type { Persona } from './personas';
 import { CLUE_SCHEMA, clueSystem, clueUser, GUESS_SCHEMA, guessSystem, guessUser, PROMPT_VERSION } from './prompts';
@@ -194,7 +191,7 @@ async function picksFor(
 
 export async function guess(request: GuessRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
-  const note = (): AgentNote => ({
+  const note = (): AgentNote<AgentCandidate> => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
@@ -242,7 +239,7 @@ function danger(stop: CardColor | null, team: string): number {
 export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
   const considered: AgentCandidate[] = [];
-  const note = (): AgentNote => ({
+  const note = (): AgentNote<AgentCandidate> => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),

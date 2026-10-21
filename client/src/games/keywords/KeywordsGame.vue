@@ -6,7 +6,7 @@ import {
   type KeywordsScoreDetail,
   type KeywordsView,
   type Mark,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DuoNotices from '../../core/components/DuoNotices.vue';

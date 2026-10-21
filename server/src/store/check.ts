@@ -14,13 +14,12 @@ import {
   matchGamesValid,
   MAX_ROOM_SETUP,
   RECORDS_NOTICE_VERSION,
-  TITLES,
   usernameKey,
   type Language,
 } from '@reviewer2/shared';
 import { AVATAR_FILE } from '../accounts/avatars';
 import type { AgentLogData } from '../core/agentLog';
-import type { GameModule } from '../core/game';
+import { knownTitles, type GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
 import { countedUnder, countGames, countMatches, HeldRecords } from './recount';
@@ -262,12 +261,13 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'SELECT m.id FROM match_records AS m WHERE NOT EXISTS (SELECT 1 FROM replays AS g ' +
       'WHERE g.match_id = m.match_id AND g.game = m.game)',
   );
+  const titles = knownTitles(games);
   found(
     'titles that are not ones there are',
     (
       db
-        .prepare('SELECT id FROM titles WHERE title NOT IN (' + TITLES.map(() => '?').join(', ') + ')')
-        .all(...TITLES) as Row[]
+        .prepare('SELECT id FROM titles WHERE title NOT IN (' + titles.map(() => '?').join(', ') + ')')
+        .all(...titles) as Row[]
     ).map((row) => String(row.id)),
   );
   each(
@@ -275,7 +275,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'SELECT id, game, title FROM titles WHERE game_id IS NOT NULL',
     ({ game, title }) => {
       const module = known.get(String(game));
-      return module !== undefined && !(module.titles ?? []).includes(title as (typeof TITLES)[number]);
+      return module !== undefined && !(module.titles ?? []).includes(String(title));
     },
   );
   sql(

@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { replaySteps, TEAMS, type CardView, type ReplayStep, type ShownReplay, type Team } from '@reviewer2/shared';
+import {
+  replaySteps,
+  TEAMS,
+  type CardView,
+  type ReplayStep,
+  type ShownReplay,
+  type Team,
+} from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';

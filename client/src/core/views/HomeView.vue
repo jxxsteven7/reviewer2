@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { BOARD_SIZE, isLanguage, REPOSITORY_URL } from '@reviewer2/shared';
+import { isLanguage, REPOSITORY_URL } from '@reviewer2/shared';
+import { BOARD_SIZE } from '@reviewer2/shared/keywords';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute, useRouter } from 'vue-router';

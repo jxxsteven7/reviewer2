@@ -1,6 +1,6 @@
+import { checkChat, type BoardWord, type Language } from '@reviewer2/shared';
 import {
   CHAT_KEPT,
-  checkChat,
   checkClue,
   cleanClue,
   clueCounts,
@@ -10,18 +10,16 @@ import {
   EXTENSION_SECONDS,
   otherTeam,
   TEAMS,
-  type BoardWord,
   type ClueCount,
   type ClueRecord,
   type EventKind,
   type GameEvent,
   type KeywordsError,
   type KeywordsSettings,
-  type Language,
   type Mark,
   type Role,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { Rng } from '../../core/random';
 import { deal } from './deal';
 import { guessesLeft, remaining, type Card, type Clock, type KeywordsState } from './state';

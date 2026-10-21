@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@reviewer2/shared';
+import type { ChatMessage } from '@reviewer2/shared/keywords';
 import { readStored, writeStored } from '../../core/storage';
 
 // The group chat on the client: the messages grouped by the turn in which they were written, and

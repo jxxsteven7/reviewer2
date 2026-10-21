@@ -1,4 +1,5 @@
-import { defaultSettings, type AgentReply, type CardColor, type CardView } from '@reviewer2/shared';
+import { type AgentReply } from '@reviewer2/shared';
+import { defaultSettings, type CardColor, type CardView } from '@reviewer2/shared/keywords';
 import { AGENT_REPLY } from '@reviewer2/shared/schemas';
 import { expect } from 'vitest';
 import type { ClueRequest, GuessRequest } from './keywords';

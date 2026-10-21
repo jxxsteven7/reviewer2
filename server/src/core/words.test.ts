@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BOARD_SIZE, cardsClash, LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
+import { LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
+import { BOARD_SIZE, cardsClash } from '@reviewer2/shared/keywords';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
 import {

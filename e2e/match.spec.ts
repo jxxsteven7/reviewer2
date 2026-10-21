@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import type { KeywordsRoomData, Seat, Team } from '@reviewer2/shared';
+import type { KeywordsRoomData, Seat, Team } from '@reviewer2/shared/keywords';
 import {
   chooseCard,
   chooseMatch,

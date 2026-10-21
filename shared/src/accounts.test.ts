@@ -9,13 +9,10 @@ import {
   MAX_BIO_LENGTH,
   isReservedName,
   looksLikeEmail,
-  MATCH_TITLES,
   MAX_PASSWORD_INPUT,
   normalizePassword,
-  TITLES,
   usernameKey,
 } from './accounts';
-import { KEYWORDS_TITLES } from './games/keywords/titles';
 
 // Letters outside ASCII are written as escapes, so that look-alikes can be told apart.
 const FULL_WIDTH_ANN = '\u{ff21}\u{ff4e}\u{ff4e}';
@@ -198,18 +195,5 @@ describe('a handle', () => {
     ]) {
       expect(handleInLink(wrong), wrong).toBeNull();
     }
-  });
-});
-
-describe('the titles', () => {
-  // The records keep a title by its ID alone, so the ID tells which it is, of whichever game.
-  test('are each declared once, by one game or by matches', () => {
-    expect(new Set(TITLES).size).toBe(TITLES.length);
-    expect([...TITLES].sort()).toEqual([...MATCH_TITLES, ...KEYWORDS_TITLES].sort());
-  });
-
-  test("of a game are never a match's", () => {
-    const match: readonly string[] = MATCH_TITLES;
-    expect(KEYWORDS_TITLES.filter((title) => match.includes(title))).toEqual([]);
   });
 });

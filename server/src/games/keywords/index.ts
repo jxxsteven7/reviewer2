@@ -1,7 +1,7 @@
+import { checkChat, type Title, type TitleCount } from '@reviewer2/shared';
 import {
   BOARD_SIZE,
   cardsClash,
-  checkChat,
   cleanClue,
   defaultSettings,
   KEYWORDS_TITLES,
@@ -17,10 +17,8 @@ import {
   type KeywordsView,
   type Seat,
   type Team,
-  type Title,
-  type TitleCount,
-} from '@reviewer2/shared';
-import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
+} from '@reviewer2/shared/keywords';
+import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/keywords/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
 import { recountOf, shownReplay, type KeywordsSetup } from './replay';

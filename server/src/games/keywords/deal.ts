@@ -1,13 +1,5 @@
-import {
-  BOARD_SIZE,
-  CARD_COUNTS,
-  otherTeam,
-  TEAMS,
-  wordKey,
-  type BoardWord,
-  type CardColor,
-  type Team,
-} from '@reviewer2/shared';
+import { wordKey, type BoardWord } from '@reviewer2/shared';
+import { BOARD_SIZE, CARD_COUNTS, otherTeam, TEAMS, type CardColor, type Team } from '@reviewer2/shared/keywords';
 import { pick, shuffle, type Rng } from '../../core/random';
 import type { Card } from './state';
 

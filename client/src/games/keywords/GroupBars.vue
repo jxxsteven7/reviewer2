@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TEAMS, type Team } from '@reviewer2/shared';
+import { TEAMS, type Team } from '@reviewer2/shared/keywords';
 import { useI18n } from 'vue-i18n';
 import AvatarButton from '../../core/components/AvatarButton.vue';
 

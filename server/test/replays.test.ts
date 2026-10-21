@@ -1,4 +1,4 @@
-import type { KeywordsRoomData, KeywordsView, ShownReplay, Team } from '@reviewer2/shared';
+import type { KeywordsRoomData, KeywordsView, ShownReplay, Team } from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test } from 'vitest';
 import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';

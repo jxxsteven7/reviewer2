@@ -3,7 +3,8 @@
 // it accepts the clue. docs/games/keywords.md says which conflicts are always refused, which are
 // refused under the strict clue rule only, and which only bring up a warning.
 
-import { HAN, toSimplified } from '../../han';
+import { HAN } from '../../han';
+import { cleanWord, foldWord, normalizeWord, wordKey } from '../../words';
 
 export type ClueProblem =
   'clue_empty' | 'clue_not_one_word' | 'clue_too_many_words' | 'clue_too_long' | 'clue_on_board';
@@ -60,7 +61,7 @@ export interface ClueCheck {
 // What the check needs to know about a card. The translations are the card's term in the other
 // languages of the word library, which a clue must not repeat either, the forms are the other
 // forms of the term that the library lists, in any language, and the pinyin is that of a Chinese
-// word, as the server works it out (BoardWord in types.ts), which a clue must not be either. The
+// word, as the server works it out (BoardWord in ../../words.ts), which a clue must not be either. The
 // glosses are the English meanings of the Chinese characters of the card's word, from a dictionary,
 // which only the captains get.
 export interface ClueCard {
@@ -103,10 +104,6 @@ const LATIN = /\p{Script=Latin}/u;
 const LATIN_ONLY = /^\p{Script=Latin}+$/u;
 // A letter or a digit that isn't a Chinese character, for the length of a clue in a Chinese room.
 const OTHER_LETTER = /^(?!\p{Script=Han})[\p{L}\p{N}]$/u;
-// Characters that show nothing: zero-width spaces and joiners, variation selectors, soft hyphens
-// and blank fillers. Inside a word they would make it look like another word.
-const INVISIBLE = /\p{Default_Ignorable_Code_Point}/gu;
-const MARKS = /\p{M}/gu;
 // One word is made of letters and digits, each with at most two combining marks, and of hyphens
 // and apostrophes: "self-attention" is one word. It has at least one letter or digit.
 const ONE_WORD = /^(?:[\p{L}\p{N}]\p{M}{0,2}|['\u2019-])+$/u;
@@ -120,8 +117,6 @@ const NOT_LETTER_OR_DIGIT = /[^\p{L}\p{N}]+/gu;
 // Small words that hold a compound together without being what it is about. "State-of-the-art"
 // doesn't repeat "out-of-distribution".
 const SMALL_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
-
-const SPACES = /\s+/gu;
 
 // Numbers, which count as characters (docs/games/keywords.md#the-clue): a digit, a Chinese numeral
 // and an English number word that stand for the same number are the same character. The Chinese
@@ -184,13 +179,10 @@ function numbersIn(folded: string, parts: readonly string[]): Set<string> {
   return numbers;
 }
 
-// A clue as it is recorded and shown: as the captain typed it, but without invisible characters,
-// without the spaces at its ends, and with one plain space between its words.
-export const cleanClue = (text: string): string => text.replace(INVISIBLE, '').trim().replace(SPACES, ' ');
-
-// A clue as it is checked: with full-width and compatibility forms folded (NFKC), and in lower
-// case.
-export const normalizeClue = (text: string): string => cleanClue(text.normalize('NFKC')).toLowerCase();
+// A clue as it is recorded and shown, and as it is checked (cleanWord and normalizeWord in
+// words.ts).
+export const cleanClue = cleanWord;
+export const normalizeClue = normalizeWord;
 
 // How long a clue is in a Chinese room: its Chinese characters, and its other letters and digits
 // two to one, rounded up, as Weibo counts. "GPU" is 2, "Python" 3, "GPU" followed by two Chinese
@@ -205,13 +197,7 @@ export function clueLength(text: string): number {
   return han + Math.ceil(other / 2);
 }
 
-// A word as it is compared: normalized, without accents, and with traditional Chinese characters
-// turned into simplified ones.
-const fold = (text: string): string => toSimplified(normalizeClue(text).normalize('NFD').replace(MARKS, ''));
-
-// What makes two texts the same word: their letters and digits, in the form in which words are
-// compared. "Co-author", "co author", "Coauthor" and "COAUTHOR" all have the key "coauthor".
-export const wordKey = (text: string): string => fold(text).replace(NOT_LETTER_OR_DIGIT, '');
+const fold = foldWord;
 
 interface Word {
   key: string;

@@ -1,4 +1,4 @@
-import { checkClue, otherTeam } from '@reviewer2/shared';
+import { checkClue, otherTeam } from '@reviewer2/shared/keywords';
 import {
   chooseRule,
   createRoom,

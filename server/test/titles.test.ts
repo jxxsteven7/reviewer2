@@ -1,4 +1,4 @@
-import { defaultSettings, type KeywordsRoomData, type KeywordsView } from '@reviewer2/shared';
+import { defaultSettings, type KeywordsRoomData, type KeywordsView } from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test } from 'vitest';
 import { keywordsGame } from '../src/games/keywords';
 import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
