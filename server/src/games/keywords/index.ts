@@ -398,10 +398,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   rulesVersion: RULES_VERSION,
   titles: KEYWORDS_TITLES,
-  wordsNeeded: BOARD_SIZE,
-  // Two words of which one lies inside the other would give each other away: "Gene" and "Gene
-  // editing" can't share a board.
-  wordsClash: cardsClash,
+  // A board, of which no two words lie inside each other, which would give each other away: "Gene"
+  // and "Gene editing" can't share a board.
+  words: { board: BOARD_SIZE, clash: cardsClash },
 
   create: (language) => ({
     settings: defaultSettings(language),
@@ -593,11 +592,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // still there.
   participants: (data) => [...data.seating.sides.keys()],
 
+  score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
+
   match: {
     // Whether the groups stay the same and how they are made (KeywordsMatchOptions).
     options: keywordsMatchOptions,
     setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules as KeywordsMatchRules) }),
-    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
     lineup: (data) => [...data.seating.seats].filter(([, seat]) => seat.team !== null).map(([id]) => id),
   },
 

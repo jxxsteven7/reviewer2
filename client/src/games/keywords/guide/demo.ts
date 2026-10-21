@@ -438,6 +438,7 @@ export function demoRoom(t: Translate, language: Language, options: RoomOptions)
     duos: [],
     agentsPlayed: false,
     points: [],
+    rating: null,
     data,
   };
 }

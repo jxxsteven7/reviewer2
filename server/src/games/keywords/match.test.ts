@@ -38,11 +38,13 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     language: 'en',
     rng,
     chairId: null,
+    public: false,
     now: () => 0,
     keyOf,
     isOnline: (id) => !offline.includes(id),
     agentOf: () => null,
     playerIds: () => ids,
+    hasAccount: () => false,
     titleCount: () => null,
     awardsTitles: () => false,
   };
@@ -664,7 +666,7 @@ describe('a match of the game', () => {
     const expired = keywordsGame.tick(data, late);
     const pi = captainOf(data.seating, game.team) as string;
     expect(expired.game?.history[0]).toMatchObject({ word: null, timedOut: true, captain: pi });
-    const scores = keywordsGame.match?.score(expired, late) ?? [];
+    const scores = keywordsGame.score?.(expired, late) ?? [];
     const of = (id: string) => scores.find(({ key }) => key === keyOf(id));
     expect(of(pi)).toMatchObject({ points: -5, detail: { role: 'captain', missed: 1 } });
     for (const id of ['ann', 'bob', 'cat', 'dee'].filter((other) => other !== pi)) {
@@ -679,7 +681,7 @@ describe('a match of the game', () => {
     const late = { ...context(ids, { phase: 'playing' }), now: () => (game.clock?.ends ?? 0) + 1 };
     const missedBy = (expired: KeywordsData) => {
       expect(expired.game?.events.at(-1)).toMatchObject({ kind: 'missed', team: game.team });
-      return keywordsGame.match?.score(expired, late)?.find(({ key }) => key === keyOf(pi));
+      return keywordsGame.score?.(expired, late)?.find(({ key }) => key === keyOf(pi));
     };
     // The PI steps down to watch, the seat stands empty when the time runs out, and the PI takes it
     // back afterwards: the turn costs them as it would have in the seat.
@@ -713,7 +715,7 @@ describe('a match of the game', () => {
     expect(spared.game?.events).toHaveLength(0);
     const returned = seat(spared, pi, { team: game.team, role: 'captain' }, 'playing');
     if (!returned.ok) throw new Error(returned.error);
-    expect(keywordsGame.match?.score(returned.data, late)?.find(({ key }) => key === keyOf(pi))?.points).toBe(0);
+    expect(keywordsGame.score?.(returned.data, late)?.find(({ key }) => key === keyOf(pi))?.points).toBe(0);
     // The chair benching themselves is stepping down.
     const self = keywordsGame.bench(data, { ...chair, chairId: pi }, pi);
     expect(missedBy(keywordsGame.tick(self, late))).toMatchObject({ points: -5 });

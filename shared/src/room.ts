@@ -62,6 +62,12 @@ export interface GamePoints {
   detail?: unknown;
 }
 
+// A question of how a game was (RoomView.rating).
+export interface RatingView {
+  options: string[];
+  rating: string | null;
+}
+
 export interface RoomView<Game = unknown> {
   // A new random ID for every room, so that a code that is used again later never mixes two rooms up.
   roomId: string;
@@ -70,18 +76,21 @@ export interface RoomView<Game = unknown> {
   rev: number;
   game: string;
   language: Language;
-  fields: string[];
+  // The word lists that the games draw from, absent for a game that uses no word library
+  // (GameModule.words on the server).
+  fields?: string[];
   // Whether every game draws its word lists anew, at random, from those with enough words in the
   // room's language (drawFields in protocol.ts), whatever `fields` holds: the room keeps those for
-  // when the chair turns this off again. Nobody is told which lists a game drew.
-  randomFields: boolean;
+  // when the chair turns this off again. Nobody is told which lists a game drew. Absent with
+  // `fields`.
+  randomFields?: boolean;
   // Whether the room is listed on the home page for anyone with an account to join, rather than
   // open only to those who have its code (docs/architecture.md#public-rooms).
   public: boolean;
   // How many words of the chair's own the next games draw from along with the word lists
-  // (docs/games/keywords.md#custom-words). The words themselves go to the chair alone, who
-  // edits them; for everyone else the key is absent.
-  customWordCount: number;
+  // (docs/games/keywords.md#custom-words), for a game with a board of words alone. The words
+  // themselves go to the chair alone, who edits them; for everyone else the key is absent.
+  customWordCount?: number;
   customWords?: string[];
   // The friends whom the viewer has invited into the room and who haven't come, while the
   // invitations stand, the oldest first (docs/architecture.md#friends): for the member who sent
@@ -123,6 +132,11 @@ export interface RoomView<Game = unknown> {
   // the game shows as it ends. Empty in any other phase, and after a game that brings no points: one
   // that the chair withdrew, or that an AI played in.
   points: GamePoints[];
+  // How the game that has just ended was, as the viewer may still say (docs/architecture.md#ratings):
+  // the options, and what the viewer chose so far, or null for nothing yet. Null for anyone who
+  // didn't play in it, once they have dismissed the question, in any other phase, and after a game
+  // that may not be rated, such as one that didn't finish.
+  rating: RatingView | null;
   // The game's own part of the view, built for this viewer alone.
   data: Game;
 }

@@ -84,11 +84,13 @@ export function seatedGame() {
     language: 'en',
     rng: seededRng(1),
     chairId: 'ann',
+    public: false,
     now: () => 0,
     keyOf: (id) => `key-${id}`,
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => players,
+    hasAccount: () => false,
     titleCount: () => null,
     awardsTitles: () => false,
   };

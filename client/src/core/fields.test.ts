@@ -25,7 +25,7 @@ vi.mock('./socket', () => mock);
 
 import { fields, loadFields } from './fields';
 
-const general: FieldInfo = { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } };
+const general: FieldInfo = { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 };
 
 afterEach(() => vi.useRealTimers());
 

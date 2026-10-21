@@ -135,7 +135,7 @@ describe('dealing from the word library', () => {
   const fields = library.fields().map(({ id }) => id);
 
   test('lets the room keep apart the words that give each other away', () => {
-    expect(keywordsGame.wordsClash).toBe(cardsClash);
+    expect(keywordsGame.words).toEqual({ board: 25, clash: cardsClash });
   });
 
   test('puts no two words on a board of which one repeats the other, for every list and some mixes', () => {

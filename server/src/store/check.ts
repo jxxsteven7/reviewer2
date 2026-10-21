@@ -378,7 +378,8 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   const plays = "SELECT game_id || ':' || player_id AS id, game, role, feats, takeover FROM agent_plays";
   each("AI seats whose counts are not in the game's shape", plays, ({ game, feats, takeover }) => {
     const shapes = known.get(String(game))?.shapes;
-    return shapes !== undefined && Number(takeover) === 0 && !shapes.feats(parse(feats));
+    if (shapes === undefined || Number(takeover) !== 0) return false;
+    return shapes.feats ? !shapes.feats(parse(feats)) : feats !== null;
   });
   each('AI plays in a role the game does not have', plays, ({ game, role }) => {
     const shapes = known.get(String(game))?.shapes;

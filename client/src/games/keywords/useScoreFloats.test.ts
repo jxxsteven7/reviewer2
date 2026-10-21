@@ -68,6 +68,7 @@ function room(view: KeywordsView, more: Partial<RoomView> = {}): RoomView {
     randomFields: false,
     public: false,
     customWordCount: 0,
+    rating: null,
     phase: 'playing',
     round: 1,
     gameId: 'g1',

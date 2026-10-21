@@ -38,7 +38,7 @@ import { newPlayerId } from './identity';
 import { Match, type Present, type Who } from './match';
 import { pinyinOf } from './pinyin';
 import { randomId, type Rng } from './random';
-import { drawWords, type WordLibrary } from './words';
+import { drawPair, drawWords, type PairRecord, type WordLibrary } from './words';
 
 // One room: who is in it, who chairs it, which connections belong to whom, and the game's data.
 // The socket layer (socket.ts) calls these methods and then sends everyone the new state.
@@ -149,35 +149,51 @@ export interface RoomOptions {
   now: () => number;
   // How many times an account has won a title, where accounts are on (GameContext.titleCount).
   titleCount?: ((accountId: number, title: Title) => number) | null;
+  // What the records say of each pair of related terms that the accounts have had in the game's
+  // games, by the pair's key, for a game that draws pairs (GameModule.words), where accounts are on.
+  pairRecords?: ((game: string, accountIds: readonly number[]) => ReadonlyMap<string, PairRecord>) | null;
   agents?: AgentState | null;
 }
 
+// What a game takes from the word library (GameModule.words).
+type WordsWanted = GameModule['words'];
+
 // The fields that a room is to play with, once each, or why it can't play with them: one of them
 // isn't in the library, or together with the chair's own words they have too few words in the
-// room's language. Rooms are created and their fields changed only through this check, so a room
-// that exists can always deal a game. A room that draws its fields anew for every game (`random`)
-// keeps the ones chosen for when it stops, and only needs a field to draw from.
+// room's language for a board, or no pair for a game of pairs (GameModule.words). Rooms are created
+// and their fields changed only through this check, so a room that exists can always deal a game. A
+// room that draws its fields anew for every game (`random`) keeps the ones chosen for when it stops,
+// and only needs a field to draw from. A game of pairs may have no fields at all, for games whose
+// words a setter brings: one that is to draw words then can't start (Room.start). A game without
+// words has no fields.
 export function chooseFields(
   words: WordLibrary,
   fields: readonly string[],
   language: Language,
-  needed: number,
+  wanted: WordsWanted,
   custom: readonly BoardWord[] = [],
   random = false,
 ): Ack<{ fields: string[] }> {
   const chosen = [...new Set(fields)];
+  if (!wanted) return chosen.length === 0 && !random ? { ok: true, fields: [] } : fail('bad_fields');
   if (!chosen.every((id) => words.has(id))) return fail('bad_fields');
-  if (random) return usableFields(words, language, needed).length > 0 ? { ok: true, fields: chosen } : fail('no_words');
-  if (poolOf(words, chosen, language, custom).length < needed) return fail('no_words');
+  if (random) return usableFields(words, language, wanted).length > 0 ? { ok: true, fields: chosen } : fail('no_words');
+  if ('pair' in wanted) {
+    return chosen.length === 0 || words.pairs(chosen, language).length > 0
+      ? { ok: true, fields: chosen }
+      : fail('no_words');
+  }
+  if (poolOf(words, chosen, language, custom).length < wanted.board) return fail('no_words');
   return { ok: true, fields: chosen };
 }
 
 // The fields with enough words in a language for a game of their own, which a random draw draws
-// from (drawFields in shared/src/protocol.ts).
-export function usableFields(words: WordLibrary, language: Language, needed: number): string[] {
+// from (drawFields in shared/src/protocol.ts): a board's worth, or a pair.
+export function usableFields(words: WordLibrary, language: Language, wanted: WordsWanted): string[] {
+  if (!wanted) return [];
   return words
     .fields()
-    .filter((field) => field.counts[language] >= needed)
+    .filter((field) => ('pair' in wanted ? field.pairs > 0 : field.counts[language] >= wanted.board))
     .map((field) => field.id);
 }
 
@@ -326,11 +342,18 @@ export class Room {
   // Since when the room has been in the waiting room this time.
   #lobbySince: number;
   readonly #words: WordLibrary;
-  // The words of the games so far, which the next game avoids for as long as it can.
+  // The words of the games so far, which the next game avoids for as long as it can, and the pairs
+  // of a game of pairs, by key, which the next game avoids too (drawPair).
   #usedWords: ReadonlySet<string> = new Set();
+  readonly #usedPairs = new Set<string>();
+  // The ratings of the game that has just ended, by player ID: an option of the game's, or null for
+  // a player who dismissed the question (docs/architecture.md#ratings), until the room leaves the
+  // game behind.
+  readonly #ratings = new Map<string, string | null>();
   readonly #rng: Rng;
   readonly #now: () => number;
   readonly #titleCount: ((accountId: number, title: Title) => number) | null;
+  readonly #pairRecords: RoomOptions['pairRecords'];
 
   constructor(options: RoomOptions) {
     this.code = options.code;
@@ -344,6 +367,7 @@ export class Room {
     this.#rng = options.rng;
     this.#now = options.now;
     this.#titleCount = options.titleCount ?? null;
+    this.#pairRecords = options.pairRecords ?? null;
     this.#agents = options.agents ?? null;
     this.createdAt = options.now();
     this.lastActivity = this.createdAt;
@@ -364,11 +388,13 @@ export class Room {
       language: this.language,
       rng: this.#rng,
       chairId: this.chairId,
+      public: this.public,
       now: this.#now,
       keyOf: (id) => this.members.get(id)?.key ?? this.#gone.get(id)?.key ?? id,
       isOnline: (id) => this.isOnline(id),
       agentOf: (id) => this.members.get(id)?.agent ?? this.#gone.get(id)?.agent ?? null,
       playerIds: () => [...this.members.keys()],
+      hasAccount: (id) => this.#accountIdOf(id) !== null,
       titleCount: (id, title) => this.#titleCountOf(id, title),
       awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#scoresNothing(),
     };
@@ -377,8 +403,10 @@ export class Room {
   // Whether the game brings nobody points, a streak, a title or a friend title
   // (docs/architecture.md#ai-players): an AI has played in it, as an AI player or for someone who
   // was offline, and not every answer it gave came from a certified version (certifiedPlay), which
-  // none does yet. During the game, this is as far as the AI has answered.
+  // none does yet, or the game says so for a reason of its own (GameModule.scoresNothing), as for
+  // one in which the chair removed a player. During the game, this is as things stand.
   #scoresNothing(): boolean {
+    if (this.phase !== 'lobby' && (this.game.scoresNothing?.(this.data) ?? false)) return true;
     return this.#agentsPlayed && !certifiedPlay(this.#agentLog?.data() ?? null);
   }
 
@@ -647,10 +675,10 @@ export class Room {
   // A member goes for good: they left, the chair removed them, or they were offline too long in
   // the waiting room. Returns the connections they still had. The AI players go with the last
   // person, so that a room that nobody is in any more closes as an empty one.
-  drop(id: string): string[] {
+  drop(id: string, removed = false): string[] {
     const member = this.members.get(id);
     if (!member) return [];
-    const data = this.game.leave(this.data, id);
+    const data = this.game.leave(this.data, id, removed);
     const over = this.#endsWith(data);
     if (this.phase !== 'lobby') {
       this.#gone.set(id, {
@@ -766,6 +794,8 @@ export class Room {
   setPublic(value: boolean): Ack {
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (value && this.customWords.length > 0) return fail('custom_words_private');
+    // A game may be set up for people who know each other, as one whose words a setter gives.
+    if (value && this.game.mayBePublic?.(this.data) === false) return fail('private_only');
     // A public room has no AI players (docs/architecture.md#ai-players).
     if (value && this.hasAgents()) return fail('agents_in_room');
     if (value) this.#list();
@@ -806,7 +836,10 @@ export class Room {
     // A match plays all its games by the same settings, once one of them has counted.
     if (this.match?.status === 'on' && this.match.played > 0) return fail('match_locked');
     let custom = this.customWords;
+    const wanted = this.game.words;
     if (changes.words !== undefined) {
+      // Only a game with a board takes words of the chair's own.
+      if (!wanted || !('board' in wanted)) return changes.words.trim() === '' ? done : fail('bad_words');
       const parsed = parseCustomWords(changes.words);
       if (parsed.tooMany || parsed.tooLong.length > 0) return fail('bad_words');
       if (this.public && parsed.words.length > 0) return fail('custom_words_private');
@@ -824,14 +857,7 @@ export class Room {
     const random = changes.randomFields ?? this.randomFields;
     let fields = this.fields;
     if (changes.fields !== undefined || custom !== this.customWords || random !== this.randomFields) {
-      const chosen = chooseFields(
-        this.#words,
-        changes.fields ?? this.fields,
-        this.language,
-        this.game.wordsNeeded,
-        custom,
-        random,
-      );
+      const chosen = chooseFields(this.#words, changes.fields ?? this.fields, this.language, wanted, custom, random);
       if (!chosen.ok) return chosen;
       fields = chosen.fields;
     }
@@ -855,30 +881,26 @@ export class Room {
   // started then. One that arrives after another start, such as from a second tab whose
   // connection had stalled, is stale, even when the room is back in the waiting room by now.
   //
-  // The room draws the words itself, preferring those that it hasn't played with yet, and keeping
-  // apart those that clash with each other, as far as it can. A room that draws its fields anew
-  // draws them first, and tells nobody which they were but the game's record. `clashes` says how many pairs of
-  // the words drawn clash all the same: it is 0 unless the draw found no way to keep them apart.
+  // The room draws the words itself (GameModule.words), preferring those that it hasn't played with
+  // yet, and keeping apart those that clash with each other, as far as it can, or a pair of related
+  // terms, as drawPair() prefers one. A room that draws its fields anew draws them first, and tells
+  // nobody which they were but the game's record. `clashes` says how many pairs of the words drawn
+  // clash all the same: it is 0 unless the draw found no way to keep them apart. A game of pairs
+  // with no fields to draw from, which its setter was to bring words for, can't start (`no_words`).
   start(round: number): Ack<{ clashes: number }> {
     if (round !== this.round) return fail('stale');
     if (this.phase !== 'lobby') return fail('wrong_phase');
     if (this.match && this.match.status !== 'on') return fail('match_over');
     if (!this.game.canStart(this.data, this.context)) return fail('cannot_start');
-    const fields = this.randomFields
-      ? drawFields(usableFields(this.#words, this.language, this.game.wordsNeeded), (below) => this.#rng.int(below))
-      : this.fields;
-    const pool = poolOf(this.#words, fields, this.language, this.customWords);
-    const clash = this.game.wordsClash?.bind(this.game);
-    const draw = drawWords(pool, this.game.wordsNeeded, this.#usedWords, this.#rng, clash);
-    // chooseFields() has made sure of this, and the library doesn't change while the server runs.
-    if (!draw) throw new Error(`the fields of room ${this.code} have too few words for a game`);
+    const draw = this.#draw();
+    if (!draw.ok) return draw;
     const gameId = randomId();
     const context: GameContext = { ...this.context, phase: 'playing' };
     const data = this.game.start(this.data, context, draw.words, gameId);
     this.data = data;
     const agents: Record<string, string> = {};
     for (const member of this.members.values()) if (member.agent) agents[member.id] = member.agent;
-    this.#log = new GameLog(this.game.id, gameId, this.#now(), this.#seating(data), agents);
+    this.#log = new GameLog(this.game.id, gameId, this.#now(), this.#seating(data), agents, this.game.logLimits);
     this.#agentLog = new AgentLog(gameId, this.#now());
     this.#setup = this.game.setup?.(data) ?? null;
     this.#ending = null;
@@ -886,7 +908,9 @@ export class Room {
     this.#agentsPlayed = Object.keys(agents).length > 0;
     this.#tookOverFor.clear();
     this.#usedWords = draw.used;
-    this.#gameFields = [...fields];
+    if (draw.pair !== null) this.#usedPairs.add(draw.pair);
+    this.#gameFields = draw.fields;
+    this.#ratings.clear();
     this.gameId = gameId;
     this.round += 1;
     this.phase = 'playing';
@@ -903,6 +927,49 @@ export class Room {
     }
     this.changed();
     return { ok: true, clashes: draw.clashes };
+  }
+
+  // The words of the game about to start, as start() draws them, with the fields they came from,
+  // the words used since the room last started over, and the key of the pair, for a game of pairs.
+  #draw(): Ack<{
+    words: BoardWord[];
+    fields: string[];
+    used: ReadonlySet<string>;
+    pair: string | null;
+    clashes: number;
+  }> {
+    const wanted = this.game.words;
+    if (!wanted || this.game.drawsWords?.(this.data) === false) {
+      return { ok: true, words: [], fields: [], used: this.#usedWords, pair: null, clashes: 0 };
+    }
+    const fields = this.randomFields
+      ? drawFields(usableFields(this.#words, this.language, wanted), (below) => this.#rng.int(below))
+      : this.fields;
+    if ('pair' in wanted) {
+      const accounts = [...this.members.values()].flatMap((member) => (member.account ? [member.account.id] : []));
+      let records: ReadonlyMap<string, PairRecord> = new Map();
+      try {
+        records = this.#pairRecords?.(this.game.id, accounts) ?? records;
+      } catch {
+        // A record that can't be read leaves the draw to the room's own memory.
+      }
+      const pair = drawPair(this.#words.pairs(fields, this.language), records, this.#usedPairs, this.#rng);
+      if (!pair) return fail('no_words');
+      return {
+        ok: true,
+        words: [...pair.words],
+        fields: [...fields],
+        used: this.#usedWords,
+        pair: pair.key,
+        clashes: 0,
+      };
+    }
+    const pool = poolOf(this.#words, fields, this.language, this.customWords);
+    const clash = wanted.clash?.bind(wanted);
+    const draw = drawWords(pool, wanted.board, this.#usedWords, this.#rng, clash);
+    // chooseFields() has made sure of this, and the library doesn't change while the server runs.
+    if (!draw) throw new Error(`the fields of room ${this.code} have too few words for a game`);
+    return { ok: true, words: draw.words, fields: [...fields], used: draw.used, pair: null, clashes: draw.clashes };
   }
 
   // A withdrawal names the game it is meant for, so that one sent late, for instance by a tab
@@ -952,6 +1019,7 @@ export class Room {
     this.#tookOverFor.clear();
     this.#streaks.clear();
     this.#duos.clear();
+    this.#ratings.clear();
   }
 
   // --- matches ----------------------------------------------------------------------------
@@ -1033,7 +1101,7 @@ export class Room {
   // withdrew ends without this, and counts for nothing.
   #scoreGame(): void {
     if (!this.match || this.match.status !== 'on' || !this.game.match || this.gameId === null) return;
-    const scores = this.game.match.score(this.data, this.context);
+    const scores = this.game.score?.(this.data, this.context) ?? null;
     if (scores) this.match.score(this.gameId, scores, this.#present);
   }
 
@@ -1075,7 +1143,7 @@ export class Room {
     if (!member) return fail('no_such_player');
     if (this.#chairFlooded()) return fail('rate_limited');
     this.#note(this.chairId, 'remove', { player: id });
-    const sockets = this.drop(id);
+    const sockets = this.drop(id, true);
     if (member.agent) return { ok: true, sockets, keys: [], reason: 'removed_recently' };
     const removal: Removal = {
       until: this.#now() + REMOVED_FOR_MS,
@@ -1154,9 +1222,10 @@ export class Room {
     if (key !== undefined) this.#logged.set(key, (this.#logged.get(key) ?? 0) + 1);
   }
 
-  // Whether a member key has added to the log of the current game as much as one may.
+  // Whether a member key has added to the log of the current game as much as one may, as the game
+  // allows (GameModule.logLimits).
   #flooded(key: string): boolean {
-    return (this.#logged.get(key) ?? 0) >= MAX_LOGGED_PER_MEMBER;
+    return (this.#logged.get(key) ?? 0) >= (this.game.logLimits?.perMember ?? MAX_LOGGED_PER_MEMBER);
   }
 
   #chairFlooded(): boolean {
@@ -1309,18 +1378,63 @@ export class Room {
     return true;
   }
 
+  // A player's rating of the game that has just ended (docs/architecture.md#ratings), one of the
+  // game's options (GameModule.ratings), or null to dismiss the question, which then goes away for
+  // them. The rating names the game it is for, so that one sent late can't land on the next game. A
+  // player may change their rating for as long as the room shows the game, but not take back a
+  // dismissal. Only a player of a game that the game says may be rated may rate it, and no AI.
+  // Returns the rating, for the socket layer to keep with the record of the game.
+  rate(id: string, gameId: string, rating: unknown): Ack<{ rating: string | null }> {
+    if (gameId !== this.gameId || this.phase !== 'ended') return fail('stale');
+    if (!this.#mayRate(id)) return fail('cannot_rate');
+    if (rating !== null && !(typeof rating === 'string' && this.game.ratings?.includes(rating))) {
+      return fail('bad_request');
+    }
+    if (this.#ratings.get(id) === rating) return { ok: true, rating };
+    this.#ratings.set(id, rating);
+    this.changed();
+    return { ok: true, rating };
+  }
+
+  // Whether a member may rate the game that has just ended now: they played in it, it finished by
+  // itself as one the game says may be rated, and they haven't dismissed the question.
+  #mayRate(id: string): boolean {
+    const member = this.members.get(id);
+    if (!member || member.agent || this.#ending !== 'finished' || !this.game.ratings) return false;
+    if (!(this.game.rated?.(this.data) ?? false) || this.#ratings.get(id) === null) return false;
+    return (this.results() ?? []).some((result) => result.playerId === id);
+  }
+
+  // A player's guess of who the AI players of the game that has just ended were, or their skip, by
+  // null (docs/architecture.md#guessing-the-ai), as the game takes it (GameModule.guessAgents),
+  // which then shows them the answer. Returns the guess as the record keeps it, for the socket layer
+  // to keep.
+  guessAgents(id: string, gameId: string, guess: unknown): Ack<{ guess: unknown }> {
+    if (gameId !== this.gameId || this.phase !== 'ended') return fail('stale');
+    const member = this.members.get(id);
+    if (!member || member.agent || !this.game.guessAgents) return fail('cannot_guess');
+    const result = this.game.guessAgents(this.data, this.context, id, guess);
+    if (!result.ok) return refusalOf(result);
+    if (result.data !== this.data) {
+      this.data = result.data;
+      this.changed();
+    }
+    return { ok: true, guess: result.guess };
+  }
+
   // The viewer's own duo notices, of the friends who are still in the room.
   #duoNotices(viewer: Viewer): DuoNotice[] {
     const notices = 'playerId' in viewer ? this.#duos.get(viewer.playerId) : undefined;
     return (notices ?? []).filter(({ playerId }) => this.members.has(playerId));
   }
 
-  // The points of the game that has just ended, by member key, scored as a match scores a game
-  // (docs/architecture.md#academic-ranks), or null when the game counts for none: it was withdrawn,
-  // it hasn't ended, an AI played in it (#scoresNothing), or the game can't be scored at all.
+  // The points of the game that has just ended, by member key, as the game scores itself
+  // (GameModule.score, docs/architecture.md#academic-ranks), or null when the game counts for none:
+  // it was withdrawn, it hasn't ended, an AI played in it or the game says it counts for nothing
+  // (#scoresNothing), or the game brings no points at all.
   points(): ReadonlyMap<string, number> | null {
     if (this.#scoresNothing()) return null;
-    const scores = this.phase === 'ended' ? (this.game.match?.score(this.data, this.context) ?? null) : null;
+    const scores = this.phase === 'ended' ? (this.game.score?.(this.data, this.context) ?? null) : null;
     return scores && new Map(scores.map(({ key, points }) => [key, points]));
   }
 
@@ -1594,8 +1708,7 @@ export class Room {
       code: this.code,
       game: this.game.id,
       language: this.language,
-      fields: [...this.fields],
-      randomFields: this.randomFields,
+      ...(this.game.words ? { fields: [...this.fields], randomFields: this.randomFields } : {}),
       players: this.members.size,
       playing: this.phase === 'playing',
     };
@@ -1617,10 +1730,9 @@ export class Room {
       rev: this.rev,
       game: this.game.id,
       language: this.language,
-      fields: [...this.fields],
-      randomFields: this.randomFields,
+      ...(this.game.words ? { fields: [...this.fields], randomFields: this.randomFields } : {}),
+      ...(this.game.words && 'board' in this.game.words ? { customWordCount: this.customWords.length } : {}),
       public: this.public,
-      customWordCount: this.customWords.length,
       phase: this.phase,
       round: this.round,
       gameId: this.gameId,
@@ -1642,7 +1754,7 @@ export class Room {
     // part is, since it asks the game for the scores of a game in progress.
     const matchView = (): RoomView['match'] => {
       if (!this.match) return null;
-      const live = this.phase === 'playing' ? (this.game.match?.score(this.data, context) ?? null) : null;
+      const live = this.phase === 'playing' ? (this.game.score?.(this.data, context) ?? null) : null;
       return this.match.view(this.phase, this.gameId, live, this.#present);
     };
     // The chair's own words go to the chair alone, and only in the waiting room, where the chair
@@ -1655,7 +1767,7 @@ export class Room {
     let points: GamePoints[] | undefined;
     const pointsView = (): GamePoints[] => {
       if (this.phase !== 'ended' || this.#scoresNothing()) return [];
-      const scores = this.game.match?.score(this.data, context) ?? [];
+      const scores = this.game.score?.(this.data, context) ?? [];
       return scores.flatMap(({ key, points: total, detail }) => {
         const member = this.memberByKey(key);
         return member ? [{ playerId: member.id, points: total, ...(detail === undefined ? {} : { detail }) }] : [];
@@ -1670,12 +1782,20 @@ export class Room {
       duos: this.#duoNotices(viewer),
       agentsPlayed: this.phase !== 'lobby' && this.#agentsPlayed,
       points: (points ??= pointsView()),
+      rating: this.#ratingView(viewer),
       data: (game ??= this.game.views(this.data, context))(viewer),
     });
   }
 
   view(viewer: Viewer): RoomView {
     return this.views()(viewer);
+  }
+
+  // The question of how the game that has just ended was, for a viewer who may still answer it
+  // (#mayRate): the game's options and the viewer's rating so far, or null for none yet.
+  #ratingView(viewer: Viewer): RoomView['rating'] {
+    if (!('playerId' in viewer) || !this.game.ratings || !this.#mayRate(viewer.playerId)) return null;
+    return { options: [...this.game.ratings], rating: this.#ratings.get(viewer.playerId) ?? null };
   }
 
   // The member who joined first among those online, or else among everyone: the rule is shared with

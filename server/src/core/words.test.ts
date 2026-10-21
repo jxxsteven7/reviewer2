@@ -36,8 +36,8 @@ describe('the word library', () => {
       { id: 'en-only', name: { zh: 'E', en: 'E' }, terms: [{ id: 'a', en: 'Alpha' }] },
     ]);
     expect(library.fields()).toEqual([
-      { id: 'en-only', name: { zh: 'E', en: 'E' }, counts: { zh: 0, en: 1 } },
-      { id: 'ml', name: { zh: '\u9886\u57df ml', en: 'Field ml' }, counts: { zh: 30, en: 30 } },
+      { id: 'en-only', name: { zh: 'E', en: 'E' }, counts: { zh: 0, en: 1 }, pairs: 0 },
+      { id: 'ml', name: { zh: '\u9886\u57df ml', en: 'Field ml' }, counts: { zh: 30, en: 30 }, pairs: 0 },
     ]);
     expect(library.has('ml')).toBe(true);
     expect(library.has('nope')).toBe(false);

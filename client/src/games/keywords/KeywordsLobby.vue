@@ -115,16 +115,18 @@ const invite = (team: Team, role: 'captain' | 'guesser') =>
 // when they save it. Every snapshot brings the room's lists as a new array, so they are compared
 // by their contents: an unsaved choice survives the snapshots that others cause by taking seats or
 // coming and going.
-const roomFields = computed(() => [...props.room.fields].sort().join());
-const chosenFields = ref<string[]>([...props.room.fields]);
-const chosenRandom = ref(props.room.randomFields);
+const roomFields = computed(() => [...(props.room.fields ?? [])].sort().join());
+const chosenFields = ref<string[]>([...(props.room.fields ?? [])]);
+const chosenRandom = ref(props.room.randomFields ?? false);
 const fieldsChanged = computed(
-  () => [...chosenFields.value].sort().join() !== roomFields.value || chosenRandom.value !== props.room.randomFields,
+  () =>
+    [...chosenFields.value].sort().join() !== roomFields.value ||
+    chosenRandom.value !== (props.room.randomFields ?? false),
 );
 
-watch(roomFields, () => (chosenFields.value = [...props.room.fields]));
+watch(roomFields, () => (chosenFields.value = [...(props.room.fields ?? [])]));
 watch(
-  () => props.room.randomFields,
+  () => props.room.randomFields ?? false,
   (random) => (chosenRandom.value = random),
 );
 

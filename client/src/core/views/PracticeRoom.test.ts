@@ -37,9 +37,9 @@ const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 
 const FIELDS: FieldInfo[] = [
-  { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } },
-  { id: 'ml', name: { zh: 'M', en: 'Machine learning' }, counts: { zh: 3, en: 30 } },
-  { id: 'physics', name: { zh: 'P', en: 'Physics' }, counts: { zh: 30, en: 30 } },
+  { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 },
+  { id: 'ml', name: { zh: 'M', en: 'Machine learning' }, counts: { zh: 3, en: 30 }, pairs: 0 },
+  { id: 'physics', name: { zh: 'P', en: 'Physics' }, counts: { zh: 30, en: 30 }, pairs: 0 },
 ];
 
 beforeEach(() => {

@@ -696,7 +696,7 @@ describe("the chair's controls", () => {
     expect(await chair.send('room:settings', { fields: ['tiny'] })).toEqual({ ok: false, error: 'no_words' });
     expect(await chair.send('room:settings', { fields: ['nope'] })).toEqual({ ok: false, error: 'bad_fields' });
     expect(await chair.send('room:settings', { fields: ['general', 'tiny', 'general'] })).toEqual({ ok: true });
-    await chair.waitFor((state) => state.fields.length === 2);
+    await chair.waitFor((state) => state.fields?.length === 2);
     expect(chair.state?.fields).toEqual(['general', 'tiny']);
   });
 
@@ -709,7 +709,7 @@ describe("the chair's controls", () => {
     expect(fields.length).toBeGreaterThan(20);
     const { chair, code } = await room();
     expect(await chair.send('room:settings', { fields })).toEqual({ ok: true });
-    await chair.waitFor((state) => state.fields.length === fields.length);
+    await chair.waitFor((state) => state.fields?.length === fields.length);
     expect(server.app.rooms.find(code)?.fields).toEqual(fields);
     const created = await createRoom(server.url, { fields, language: 'zh' });
     track(created.chair);
@@ -796,7 +796,7 @@ describe("the chair's controls", () => {
     expect(await chair.send('room:settings', { fields: ['general', 'tiny'], settings: { level: 3 } })).toEqual({
       ok: true,
     });
-    await bob.waitFor((state) => state.fields.length === 2 && game(bob).level === 3);
+    await bob.waitFor((state) => state.fields?.length === 2 && game(bob).level === 3);
     // Settings that change nothing are granted, and nobody is sent a snapshot for them.
     const rev = server.app.rooms.find(code)?.rev;
     expect(await chair.send('room:settings', { fields: ['tiny', 'general'], settings: { level: 3 } })).toEqual({

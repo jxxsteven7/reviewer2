@@ -1,16 +1,16 @@
-import type {
-  Ack,
-  AgentAnswer,
-  AgentPersona,
-  AgentQuestion,
-  BoardWord,
-  Language,
-  MatchRules,
-  RecordResult,
-  RoomPhase,
-  Title,
+import {
+  MATCH_TITLES,
+  type Ack,
+  type AgentAnswer,
+  type AgentPersona,
+  type AgentQuestion,
+  type BoardWord,
+  type Language,
+  type MatchRules,
+  type RecordResult,
+  type RoomPhase,
+  type Title,
 } from '@reviewer2/shared';
-import { MATCH_TITLES } from '@reviewer2/shared';
 import type { GameLogData } from './gameLog';
 import type { Rng } from './random';
 
@@ -24,6 +24,9 @@ export interface GameContext {
   rng: Rng;
   // Who chairs the room, for what a game leaves to the chair alone, such as pausing it.
   chairId: string | null;
+  // Whether the room is listed for anyone with an account to join (docs/architecture.md#public-rooms),
+  // for what a game allows in a private room alone.
+  public: boolean;
   // The room's clock, in milliseconds. It only runs forward, and only differences between its
   // readings mean anything.
   now(): number;
@@ -36,6 +39,9 @@ export interface GameContext {
   agentOf(playerId: string): AgentPersona | null;
   // Everyone in the room, in the order they joined.
   playerIds(): string[];
+  // Whether a member, or one who has left during the current game, is logged in to an account,
+  // for what a game allows a member with an account alone.
+  hasAccount(playerId: string): boolean;
   // How many times the account of a player, also of one who has left during the current game, has
   // won a title, as its record has it, or null when there is no count to give: for a guest, who
   // keeps none, in a game that awards none, as one that an AI has played in
@@ -79,8 +85,8 @@ export interface KeptCount extends KeptGame {
 
 // What a kept game that finished counts under the rules of today (GameModule.recount): everyone's
 // part in it as it ended, as results() gave it then, by the player ID each had at the end, the
-// points of everyone who played for a side, by member key, as the match scores a game
-// (MatchHooks.score), how it came out, as outcome() gave it then, or null for a game that can't
+// points of everyone who played for a side, by member key, as the game scores itself
+// (GameModule.score), how it came out, as outcome() gave it then, or null for a game that can't
 // say, and what the game counts of an AI player in a seat, as agentFeats() gave it then, which a
 // game that counts that gives, and one that doesn't never does (store/recount.ts).
 export interface Recount {
@@ -95,14 +101,28 @@ export interface Recount {
 // (`setup`, as GameModule.setup gives it), the game's settings as a room setup keeps them
 // (`settings`, as GameModule.settingsOf gives them), one of the roles that its records name
 // (`role`), what a record counts of a player's game (`detail`, as PlayerResult.detail gives it),
-// and what it counts of an AI player in a seat (`feats`, as GameModule.agentFeats gives it, or null
-// for a game that counts nothing of them).
+// what it counts of an AI player in a seat (`feats`, as GameModule.agentFeats gives it, or null;
+// without this, a game counts nothing of them), and a player's guess of who the AI players were
+// (`guess`, as GameModule.guessAgents gives it; without this, a game takes no guesses).
 export interface GameShapes {
   setup(value: unknown): boolean;
   settings(value: unknown): boolean;
   role(role: string): boolean;
   detail(value: unknown): boolean;
-  feats(value: unknown): boolean;
+  feats?(value: unknown): boolean;
+  guess?(value: unknown): boolean;
+}
+
+// How large the log of one of the game's games may grow (gameLog.ts), where the game needs more
+// than most, as one in which every player writes something every round does: the whole log, in
+// bytes, the part past which it is crowded, the part that what the players say may take up, and how
+// many entries each member may add to it apart from what they say (MAX_LOGGED_PER_MEMBER in
+// room.ts). What the game leaves out is as gameLog.ts and room.ts have it.
+export interface LogLimits {
+  bytes?: number;
+  crowded?: number;
+  said?: number;
+  perMember?: number;
 }
 
 // Who is looking: a member of the room, or a screen that only watches.
@@ -212,7 +232,7 @@ export interface MatchScore {
 
 // What a game needs to be played as a match (docs/architecture.md#matches). The room keeps the
 // match: the number of games, the totals and the ranking. The game decides how its players are
-// grouped from one game to the next, and how each of them scores.
+// grouped from one game to the next; each of them scores as in any game (GameModule.score).
 export interface MatchHooks<Data> {
   // The game's own options of a match (MatchRules.options), as the chair's message or a room setup
   // carried them: whole and checked, or null when they won't do, which the room refuses with
@@ -221,21 +241,23 @@ export interface MatchHooks<Data> {
   // A match begins with these rules, or the room stops being one, with null. The game forgets
   // whatever it remembered of an earlier match. The rules' options are as options() gave them.
   setup(data: Data, ctx: GameContext, rules: MatchRules | null): Data;
-  // Each player's points in the current game as they stand, the game's end included once it has
-  // ended, or null for a game that counts for nothing, as one that the chair withdrew. Everyone
-  // who played for a side is in it, also with no points.
-  score(data: Data, ctx: GameContext): MatchScore[] | null;
   // The players who play in the game, by player ID, which the match lists from its start.
   lineup(data: Data): string[];
 }
 
 export interface GameModule<Data = unknown, View = unknown> {
   id: string;
-  // How many words a game needs from the word library.
-  wordsNeeded: number;
-  // Whether two words must not be in the same game, such as two of which one contains the other.
-  // The room draws words of which no two clash, as far as its fields let it.
-  wordsClash?(a: BoardWord, b: BoardWord): boolean;
+  // What the game takes from the word library (words/README.md), as the room draws it for each
+  // game from the fields that the chair chose: a board of `board` words, of which no two clash
+  // (`clash`, such as two of which one contains the other), as far as the fields let it, or one pair
+  // of related terms (`pair`), with the IDs of their terms and their field (BoardWord.term). A game
+  // without this uses no word library: its rooms have no fields, draw none at random, and take no
+  // words of the chair's own, which only a game with a board takes.
+  words?: { board: number; clash?(a: BoardWord, b: BoardWord): boolean } | { pair: true };
+  // Whether the game that is about to start takes words from the library: a game that may bring its
+  // own, as one whose words a setter gives, says no then. Without this, a game with `words` always
+  // does.
+  drawsWords?(data: Data): boolean;
   // A new room's data, with the game's default settings for the room's language.
   create(language: Language): Data;
   // The chair sets the game's own settings, when creating the room and later in the waiting room,
@@ -250,7 +272,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // A newcomer, who has come to play or only to watch. The game decides what that means, such as
   // a seat in a group; the context already knows the newcomer's member key.
   join(data: Data, ctx: GameContext, playerId: string, play: boolean): Data;
-  leave(data: Data, playerId: string): Data;
+  // A member goes, by themselves or, with `removed`, because the chair removed them, which a game
+  // may count against the game, as one that the chair could win by removing others.
+  leave(data: Data, playerId: string, removed?: boolean): Data;
   // The chair takes a player out of play, for instance to free a seat.
   bench(data: Data, ctx: GameContext, playerId: string): Data;
   // The chair's "shuffle the groups", or whatever the game makes of it.
@@ -258,7 +282,9 @@ export interface GameModule<Data = unknown, View = unknown> {
   // Whether a game can start. What still keeps it from starting is for the module's view to
   // say, in its own words; the room only needs the answer.
   canStart(data: Data, ctx: GameContext): boolean;
-  // The words come with their terms in the other languages of the word library.
+  // The words are those that the room drew (`words`): the board, or the two terms of the pair, in
+  // the order of the word library, each with its terms in the other languages of the library. None
+  // for a game that takes none, or that said it brings its own this time (drawsWords).
   start(data: Data, ctx: GameContext, words: BoardWord[], gameId: string): Data;
   // When the game next has something to do by itself, without anyone's message, such as ending a
   // turn whose time has run out: a reading of the room's clock (GameContext.now), or null for
@@ -291,7 +317,7 @@ export interface GameModule<Data = unknown, View = unknown> {
   // to watch, as for a game that didn't finish. A game without this has no replays.
   showReplay?(kept: KeptReplay): unknown;
   // A kept game that finished, counted again under the rules of today
-  // (docs/architecture.md#game-records): what results() and the match's score gave at its end, worked
+  // (docs/architecture.md#game-records): what results() and score() gave at its end, worked
   // out from how the game began and its log, as the replay is, or null when the log doesn't tell,
   // as for a game that didn't finish. The server counts every kept game of the game again when its
   // rules change (store/recount.ts), and the check of the data holds the records against it. A game
@@ -305,6 +331,34 @@ export interface GameModule<Data = unknown, View = unknown> {
   // by the old key, it remembers by the new one. The seat stands, and what the game knows of the
   // two keys goes together under the new one.
   rekey?(data: Data, playerId: string, from: string, to: string): Data;
+  // Each player's points in the current game as they stand, the game's end included once it has
+  // ended (docs/architecture.md#academic-ranks), or null for a game that counts for nothing, as one
+  // that the chair withdrew. Everyone who played for a side is in it, also with no points. A match
+  // adds these up. A game without this brings nobody points.
+  score?(data: Data, ctx: GameContext): MatchScore[] | null;
+  // Whether the game counts for no points, title, streak or friend title, as one that an AI played
+  // in doesn't (docs/architecture.md#ai-players), for a reason of the game's own: such as one in
+  // which the chair removed a player, which the chair could otherwise win by removing others. The
+  // record keeps it in full all the same. Without this, never.
+  scoresNothing?(data: Data): boolean;
+  // How large the log of one of its games may grow, where the game needs more than gameLog.ts gives.
+  logLimits?: LogLimits;
+  // The ratings that a player may give a game that finished normally (docs/architecture.md#ratings),
+  // such as "good" or "too hard", and whether the game that has just ended is one that may be
+  // rated: one that ended by itself as its rules say, and not, say, because a player left it. A
+  // game without these has no ratings.
+  ratings?: readonly string[];
+  rated?(data: Data): boolean;
+  // A player's guess of who the AI players were, after a game that had them
+  // (docs/architecture.md#guessing-the-ai), as the room's message carried it, or their skip, by
+  // null: the data that shows them the answer, with the guess as the record keeps it, in the
+  // game's own shape (GameShapes.guess), or a refusal, as from someone who has no guess to make. A
+  // game without this takes no guesses.
+  guessAgents?(data: Data, ctx: GameContext, playerId: string, guess: unknown): Ack<{ data: Data; guess: unknown }>;
+  // Whether the room may be listed for anyone to join with the game as the chair has set it up: a
+  // game whose setter needs players who know them, as one with words of a setter, says no. Without
+  // this, always.
+  mayBePublic?(data: Data): boolean;
   // A game that can be played as a match.
   match?: MatchHooks<Data>;
   // For the log of the game (docs/architecture.md#game-records), which the room keeps from the

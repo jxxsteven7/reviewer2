@@ -59,7 +59,7 @@ onBeforeUnmount(() => waiting());
 const listsOf = (room: PublicRoom) =>
   room.randomFields
     ? t('home.publicRooms.randomFields')
-    : room.fields.map((id) => fieldNames.value.get(id)?.[room.language] ?? id).join(' · ');
+    : (room.fields ?? []).map((id) => fieldNames.value.get(id)?.[room.language] ?? id).join(' · ');
 </script>
 
 <template>

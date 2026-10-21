@@ -59,8 +59,8 @@ beforeEach(() => {
   setLanguage('en', { remember: false });
   signedIn.account.summary = null;
   fields.value = [
-    { id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 30, en: 30 } },
-    { id: 'ml', name: { zh: '机器学习', en: 'Machine learning' }, counts: { zh: 30, en: 30 } },
+    { id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 },
+    { id: 'ml', name: { zh: '机器学习', en: 'Machine learning' }, counts: { zh: 30, en: 30 }, pairs: 0 },
   ];
   socket.send.mockReset();
   socket.send.mockResolvedValue({ ok: true, rooms: ROOMS });

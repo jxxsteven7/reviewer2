@@ -62,7 +62,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   rulesVersion: 7,
   // The one title that it brings, which the first game has too: no other game is played beside it.
   titles: ['deadline_hero'],
-  wordsNeeded: 3,
+  words: { board: 3 },
   create: (language) => ({
     joined: [],
     players: [],

@@ -113,14 +113,7 @@ export class Rooms {
       }
       if (!this.agents?.up) return fail('agents_offline');
     }
-    const chosen = chooseFields(
-      this.words,
-      options.fields,
-      language,
-      game.wordsNeeded,
-      [],
-      options.randomFields ?? false,
-    );
+    const chosen = chooseFields(this.words, options.fields, language, game.words, [], options.randomFields ?? false);
     if (!chosen.ok) return chosen;
     let code = newCode(this.rng);
     while (this.#rooms.has(code)) code = newCode(this.rng);

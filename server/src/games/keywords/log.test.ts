@@ -18,11 +18,13 @@ describe('the log of the team word guessing game', () => {
     language: 'en',
     rng: seededRng(1),
     chairId: 'ann',
+    public: false,
     now: () => 0,
     keyOf: (id) => keys[id] ?? id,
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => Object.keys(keys),
+    hasAccount: () => false,
     titleCount: () => null,
     awardsTitles: () => false,
   });

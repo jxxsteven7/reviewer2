@@ -172,11 +172,13 @@ const context = (): GameContext => ({
   language: 'en',
   rng: seededRng(1),
   chairId: 'ann',
+  public: false,
   now: () => 0,
   keyOf: (id) => id,
   isOnline: () => true,
   agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],
+  hasAccount: () => false,
   titleCount: () => null,
   awardsTitles: () => false,
 });
@@ -1179,7 +1181,7 @@ describe('custom words', () => {
       error: 'no_words',
     });
     await expectOk(ann.send('room:settings', { fields: [], words: chinese.join('\n') }));
-    await ann.waitFor((state) => state.fields.length === 0 && state.customWordCount === 25);
+    await ann.waitFor((state) => state.fields?.length === 0 && state.customWordCount === 25);
     await expectOk(ann.send('room:start', { round: ann.state?.round }));
     await settle(table);
     const words = board(table.spectator).cards.map((card) => card.word);

@@ -18,6 +18,10 @@ export interface BoardWord {
   // A word of the chair's own (docs/games/keywords.md#custom-words), which the record of the game
   // marks on its card; a word of the lists has none.
   custom?: true;
+  // The term of the word library that the word is, by its ID and its field, for a game that keeps
+  // which terms it played with, as one with a pair of related terms does (GameModule.words on the
+  // server).
+  term?: { id: string; field: string };
 }
 
 // Characters that show nothing: zero-width spaces and joiners, variation selectors, soft hyphens

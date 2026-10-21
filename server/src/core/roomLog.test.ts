@@ -277,9 +277,9 @@ describe('the record of a game', () => {
       ...fakeGame,
       match: {
         setup: (data) => data,
-        score: (data, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
         lineup: (data) => data.players,
       },
+      score: (data, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
     };
     const { room, ann, bob } = table(matchGame);
     expect(room.startMatch({ games: 3 })).toEqual({ ok: true });

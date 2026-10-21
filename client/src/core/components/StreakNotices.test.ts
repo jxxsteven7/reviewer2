@@ -29,6 +29,7 @@ function room(me: string | null, streaks: StreakNotice[]): RoomView {
     randomFields: false,
     public: false,
     customWordCount: 0,
+    rating: null,
     phase: 'ended',
     round: 1,
     gameId: 'g1',

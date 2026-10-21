@@ -182,7 +182,6 @@ export const tallyGame: GameModule<TallyData, TallyView> = {
   id: 'tally',
   rulesVersion: 1,
   titles: [],
-  wordsNeeded: 0,
   create: () => ({
     together: false,
     rounds: 2,
@@ -304,15 +303,15 @@ export const tallyGame: GameModule<TallyData, TallyView> = {
       ...data,
       matchRounds: rules === null ? null : (rules.options as TallyMatchOptions).rounds,
     }),
-    score: (data, ctx) =>
-      data.withdrawn
-        ? null
-        : data.players.map((id) => {
-            const rounds = data.picks[id] ?? [];
-            return { key: ctx.keyOf(id), points: sum(rounds), detail: { score: sum(rounds), rounds } };
-          }),
     lineup: (data) => data.players,
   },
+  score: (data, ctx) =>
+    data.withdrawn
+      ? null
+      : data.players.map((id) => {
+          const rounds = data.picks[id] ?? [];
+          return { key: ctx.keyOf(id), points: sum(rounds), detail: { score: sum(rounds), rounds } };
+        }),
   views: (data) => (viewer) => ({
     together: data.together,
     rounds: data.rounds,

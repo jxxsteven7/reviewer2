@@ -131,8 +131,8 @@ describe('PlayerName', () => {
 
 describe('FieldPicker', () => {
   const fields = [
-    { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } },
-    { id: 'small', name: { zh: 'S', en: 'Small' }, counts: { zh: 30, en: 3 } },
+    { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 },
+    { id: 'small', name: { zh: 'S', en: 'Small' }, counts: { zh: 30, en: 3 }, pairs: 0 },
   ];
 
   test('offers only the lists with enough words in the language', async () => {
@@ -151,7 +151,7 @@ describe('FieldPicker', () => {
 });
 
 describe('FieldFold', () => {
-  const fields = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } }];
+  const fields = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 }];
 
   // The lists unfold with their height eased from nothing, and fold back to nothing before they are
   // hidden; the marker's state and the hidden lists switch at once. The transition is the real one

@@ -36,8 +36,8 @@ const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 
 const FIELDS: FieldInfo[] = [
-  { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } },
-  { id: 'ml', name: { zh: 'M', en: 'Machine learning' }, counts: { zh: 3, en: 30 } },
+  { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 },
+  { id: 'ml', name: { zh: 'M', en: 'Machine learning' }, counts: { zh: 3, en: 30 }, pairs: 0 },
 ];
 
 beforeEach(() => {
@@ -316,7 +316,7 @@ describe('the room setup', () => {
   });
 
   test('chooses every list there is words enough in, or some of them at random, at least one', async () => {
-    fields.value = [...FIELDS, { id: 'tiny', name: { zh: 'T', en: 'Tiny' }, counts: { zh: 3, en: 3 } }];
+    fields.value = [...FIELDS, { id: 'tiny', name: { zh: 'T', en: 'Tiny' }, counts: { zh: 3, en: 3 }, pairs: 0 }];
     const wrapper = await opened();
     const checked = () => wrapper.findAll<HTMLInputElement>('.fields input:checked').map((input) => input.element);
     const [atRandom, all] = wrapper.findAll('.tool');

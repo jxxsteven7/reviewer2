@@ -53,15 +53,20 @@ export const ROOM_ERRORS = [
   'agents_in_room',
   'player_is_agent',
   'agents_offline',
+  'private_only',
+  'cannot_rate',
+  'cannot_guess',
 ] as const;
 export type RoomError = (typeof ROOM_ERRORS)[number];
 
-// A field of the word library, as the room setup shows it: its name and how many words it has
-// in each language.
+// A field of the word library, as the room setup shows it: its name, how many words it has in each
+// language, and how many pairs of related terms, which have words in every language
+// (words/README.md#related-terms).
 export interface FieldInfo {
   id: string;
   name: Record<Language, string>;
   counts: Record<Language, number>;
+  pairs: number;
 }
 
 // Word lists drawn at random (docs/architecture.md#rooms): each of the lists that have enough words
@@ -82,8 +87,9 @@ export interface PublicRoom {
   code: string;
   game: string;
   language: Language;
-  fields: string[];
-  randomFields: boolean;
+  // Absent for a game that uses no word library, as in RoomView.
+  fields?: string[];
+  randomFields?: boolean;
   players: number;
   playing: boolean;
 }

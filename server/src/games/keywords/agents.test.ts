@@ -30,6 +30,7 @@ function context(online = new Set(SEATS.map(([id]) => id))): GameContext {
     language: 'en',
     rng: seededRng(1),
     chairId: 'bea',
+    public: false,
     now: () => 0,
     keyOf: (id) => id,
     isOnline: (id) => online.has(id),
@@ -37,6 +38,7 @@ function context(online = new Set(SEATS.map(([id]) => id))): GameContext {
     titleCount: () => null,
     awardsTitles: () => false,
     playerIds: () => SEATS.map(([id]) => id),
+    hasAccount: () => false,
   };
 }
 
