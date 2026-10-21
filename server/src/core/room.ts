@@ -1146,6 +1146,13 @@ export class Room {
   // later. Returns the connections they still had, every key they stay out by and what they hear:
   // what room:join would answer them.
   // An AI player has nothing to stay out by, and the chair may invite it again.
+  // The player behind a seat of the game, as the game reads it (GameModule.playerAt), if they are
+  // still in the room.
+  playerAt(seat: unknown): string | null {
+    const id = this.game.playerAt?.(this.data, seat) ?? null;
+    return id !== null && this.members.has(id) ? id : null;
+  }
+
   remove(id: string): Ack<{ sockets: string[]; keys: string[]; reason: 'removed' | 'removed_recently' }> {
     const member = this.members.get(id);
     if (!member) return fail('no_such_player');

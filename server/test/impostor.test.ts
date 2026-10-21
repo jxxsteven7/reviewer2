@@ -77,41 +77,45 @@ afterEach(async () => {
 // A moment for the agent's answers, which come at once, to be sent on.
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 
+// Ann, whose account the operator lets have AI players, makes a room that allows a guess after a
+// vote-out, invites five of them, and starts a game.
+async function aiGame() {
+  const browser = new Browser(server.url);
+  if (!(await browser.register('Ann')).body.ok) throw new Error('could not register');
+  const account = server.accounts.byName('Ann');
+  if (!account) throw new Error('no account');
+  server.accounts.store.setAgents(account.id, true);
+  const ann = await browser.connect();
+  clients.push(ann);
+  await until(() => server.app.stats().agents?.up === true, 'the agent');
+  const made = await ann.send('room:create', {
+    game: 'impostor',
+    language: 'en',
+    fields: ['music'],
+    settings: { ...defaultSettings('en'), comeback: true },
+    play: true,
+  });
+  if (!made.ok) throw new Error(`could not make a room: ${made.error}`);
+  const code = made.code as string;
+  await ann.waitFor((state) => state.code === code, 'the room');
+  for (let added = 0; added < 5; added += 1) {
+    expect(await ann.send('room:addAgent', { persona: 'reviewer1', seat: null })).toMatchObject({ ok: true });
+  }
+  await ann.waitFor((state) => state.players.length === 6, 'the AI players');
+  expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
+  await ann.waitFor((state) => state.phase === 'playing', 'the game');
+  const game = (): ImpostorGame => {
+    const played = (server.app.rooms.find(code)?.data as ImpostorData | undefined)?.game;
+    if (!played) throw new Error('no game');
+    return played;
+  };
+  return { ann, code, game };
+}
+
 describe('AI players', () => {
   test('describe, vote, judge a report and guess the word, through a whole game with a person', async () => {
-    // Ann, whose account the operator lets have AI players, makes a room that allows a guess after
-    // a vote-out, and invites five of them.
-    const browser = new Browser(server.url);
-    if (!(await browser.register('Ann')).body.ok) throw new Error('could not register');
-    const account = server.accounts.byName('Ann');
-    if (!account) throw new Error('no account');
-    server.accounts.store.setAgents(account.id, true);
-    const ann = await browser.connect();
-    clients.push(ann);
-    await until(() => server.app.stats().agents?.up === true, 'the agent');
-    const made = await ann.send('room:create', {
-      game: 'impostor',
-      language: 'en',
-      fields: ['music'],
-      settings: { ...defaultSettings('en'), comeback: true },
-      play: true,
-    });
-    if (!made.ok) throw new Error(`could not make a room: ${made.error}`);
-    const code = made.code as string;
-    await ann.waitFor((state) => state.code === code, 'the room');
-    for (let added = 0; added < 5; added += 1) {
-      expect(await ann.send('room:addAgent', { persona: 'reviewer1', seat: null })).toMatchObject({ ok: true });
-    }
-    await ann.waitFor((state) => state.players.length === 6, 'the AI players');
-    expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
-    await ann.waitFor((state) => state.phase === 'playing', 'the game');
-
+    const { ann, game } = await aiGame();
     const me = ann.me as string;
-    const game = (): ImpostorGame => {
-      const played = (server.app.rooms.find(code)?.data as ImpostorData | undefined)?.game;
-      if (!played) throw new Error('no game');
-      return played;
-    };
     // Everyone votes out an AI player who isn't a student while there is one, so that it may guess
     // the word, and then anyone who isn't a student.
     const isAi = (id: string) => game().players.find((player) => player.id === id)?.agent === true;
@@ -172,5 +176,31 @@ describe('AI players', () => {
     const steps = (JSON.parse(row.agentLog) as { steps: { kind: string; note?: { prompt: string } }[] }).steps;
     expect(new Set(steps.map(({ kind }) => kind))).toEqual(new Set(['describe', 'vote', 'judge', 'comeback']));
     expect(steps.every(({ note }) => note?.prompt === 'impostor-1')).toBe(true);
+  });
+});
+
+describe('the chair', () => {
+  test('removes a player by their number, which is all an anonymous game shows of them', async () => {
+    const { ann, game } = await aiGame();
+    const { gameId } = game();
+    const student = game().players.find((player) => player.agent && player.role === 'student');
+    if (!student) throw new Error('no AI student');
+    expect(await ann.send('room:remove', { seat: { gameId, number: 13 } })).toEqual({
+      ok: false,
+      error: 'no_such_player',
+    });
+    expect(await ann.send('room:remove', { seat: { gameId: 'other', number: student.number } })).toEqual({
+      ok: false,
+      error: 'no_such_player',
+    });
+    const me = game().players.find((player) => player.id === ann.me);
+    expect(await ann.send('room:remove', { seat: { gameId, number: me?.number } })).toEqual({
+      ok: false,
+      error: 'bad_request',
+    });
+    expect(await ann.send('room:remove', { seat: { gameId, number: student.number } })).toEqual({ ok: true });
+    // The game goes on without them, and counts for no points.
+    expect(game().players.find((player) => player.id === student.id)?.fate).toBe('left');
+    expect(game()).toMatchObject({ phase: expect.not.stringMatching('over'), removed: true });
   });
 });

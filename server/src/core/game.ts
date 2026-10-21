@@ -441,6 +441,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // the player ID of the setter who gave its words, for how often the players in a room have had a
   // pair and how players rated it (drawPair), and for the games an account set the words of.
   setupPaths?: { pair?: string; setter?: string };
+  // The player behind a seat that the room shows without naming them, such as a number in an
+  // anonymous game, for the chair to remove them (room:remove with a seat), as the game reads the
+  // seat, or null for a seat that is no player's. A game without this has none.
+  playerAt?(data: Data, seat: unknown): string | null;
   // AI players (docs/architecture.md#ai-players); a game without these has none. The chair seats a
   // new AI player at the seat that the chair's message names, as the game reads it, or the game
   // refuses with one of its codes, as for a seat that is taken. The context already knows the

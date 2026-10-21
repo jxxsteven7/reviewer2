@@ -133,7 +133,9 @@ export const ROOM_MESSAGES = {
   'room:spectate': z.object({ playerId }),
   // The chair invites an AI player to a seat, which the game reads (GameModule.seatAgent).
   'room:addAgent': z.object({ persona: z.enum(AGENT_PERSONAS), seat: z.unknown() }),
-  'room:remove': z.object({ playerId }),
+  // The chair removes a player, named by their player ID or by their seat in the game, as the game
+  // reads it, where the room doesn't name who sits there (GameModule.playerAt).
+  'room:remove': z.union([z.object({ playerId }), z.object({ seat: z.unknown() })]),
   'room:chair': z.object({ playerId }),
   'room:dismiss': none,
   'room:close': none,

@@ -1497,8 +1497,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    on(handlers, 'room:remove', ({ playerId }) =>
+    on(handlers, 'room:remove', (payload) =>
       asChair(socket, (room, chair) => {
+        const playerId = 'playerId' in payload ? payload.playerId : room.playerAt(payload.seat);
+        if (playerId === null) return fail('no_such_player');
         if (playerId === chair.id) return fail('bad_request'); // the chair leaves instead
         const removed = room.remove(playerId);
         if (!removed.ok) return removed;

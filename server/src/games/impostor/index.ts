@@ -451,6 +451,13 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     };
   },
   setupPaths: { pair: '$.source.pair', setter: '$.source.setter' },
+  // The chair removes a player by their number in the game being played, which is all the chair
+  // knows of them in an anonymous game: the seat is the game's ID and the number.
+  playerAt(data, seat) {
+    const game = data.game;
+    if (!game || game.phase === 'over' || !isObject(seat) || seat.gameId !== game.gameId) return null;
+    return game.players.find((player) => player.number === seat.number)?.id ?? null;
+  },
 
   // An AI player takes a place at the table in the waiting room, once a person has.
   seatAgent(data, ctx, playerId) {
