@@ -1,7 +1,9 @@
 import { type AgentReply } from '@reviewer2/shared';
+import type { ImpostorAgentGame } from '@reviewer2/shared/impostor';
 import { defaultSettings, type CardColor, type CardView } from '@reviewer2/shared/keywords';
 import { AGENT_REPLY } from '@reviewer2/shared/schemas';
 import { expect } from 'vitest';
+import type { ImpostorRequest } from './impostor';
 import type { ClueRequest, GuessRequest } from './keywords';
 import { ModelError, type Model, type Question } from './model';
 
@@ -85,19 +87,57 @@ export const guessRequest = (changes: Partial<GuessRequest> = {}): GuessRequest 
   ...changes,
 });
 
-// A model that answers each question with the next answer scripted for its kind, `clue` or
-// `guess`: an object, which it gives back, an error, which it throws, or a promise, which it waits
-// for. It keeps the questions it was asked.
+// A game of the hidden word game of five, as player 2 sees it in the second round: its word is the
+// apple; player 4 was voted out in the first round, a student; player 1's line ran out of time.
+export function impostorRequest<Kind extends ImpostorRequest['kind']>(
+  kind: Kind,
+  changes: Partial<Extract<ImpostorRequest, { kind: Kind }>> = {},
+): Extract<ImpostorRequest, { kind: Kind }> {
+  const game: ImpostorAgentGame = {
+    game: 'impostor',
+    language: 'en',
+    length: 60,
+    number: 2,
+    word: { word: 'apple', forms: ['apples'], translations: ['\u82f9\u679c'] },
+    round: 2,
+    seats: [1, 2, 3, 4, 5].map((number) => ({
+      number,
+      fate: number === 4 ? 'voted_out' : 'alive',
+      role: number === 4 ? 'student' : null,
+    })),
+    lines: [
+      { round: 1, number: 1, text: null, tie: false },
+      { round: 1, number: 2, text: 'grows on a tree', tie: false },
+      { round: 1, number: 3, text: 'sweet and crisp', tie: false },
+      { round: 1, number: 5, text: 'often eaten raw', tie: false },
+    ],
+    ballots: [{ round: 1, ballot: 'vote', votes: { 1: 4, 2: 4, 3: 0, 5: -1 }, out: 4, tied: [] }],
+    reports: [],
+  };
+  const asked = {
+    describe: { tie: false },
+    vote: { candidates: [1, 3, 5] },
+    judge: { report: { by: 3, target: 5, line: 3, reason: 'It names the word' } },
+    comeback: {},
+  }[kind];
+  const request = { v: 1, kind, persona: 'reviewer1', waitMs: 10_000, ...game, ...asked, ...changes };
+  // TypeScript can't tell that the parts asked for go with the kind.
+  return request as unknown as Extract<ImpostorRequest, { kind: Kind }>;
+}
+
+// A model that answers each question with the next answer scripted for its kind, such as `clue` or
+// `guess` (Question.name): an object, which it gives back, an error, which it throws, or a promise,
+// which it waits for. It keeps the questions it was asked.
 export class ScriptedModel implements Model {
   readonly asked: Question[] = [];
   readonly answers: Record<string, unknown[]>;
   known = true;
 
   constructor(
-    answers: { clue?: unknown[]; guess?: unknown[] } = {},
+    answers: Partial<Record<string, unknown[]>> = {},
     readonly name = 'scripted',
   ) {
-    this.answers = { clue: [...(answers.clue ?? [])], guess: [...(answers.guess ?? [])] };
+    this.answers = Object.fromEntries(Object.entries(answers).map(([kind, list]) => [kind, [...(list ?? [])]]));
   }
 
   async ask(question: Question, signal: AbortSignal): Promise<Record<string, unknown>> {

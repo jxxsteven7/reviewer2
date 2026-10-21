@@ -19,6 +19,7 @@ describe('the settings', () => {
       modelUrl: 'http://127.0.0.1:11434/v1',
       model: 'm',
       modelKey: null,
+      models: {},
       concurrency: DEFAULT_CONCURRENCY,
       queue: DEFAULT_QUEUE,
     });
@@ -49,6 +50,29 @@ describe('the settings', () => {
     });
   });
 
+  test('give a game a model of its own, with what it leaves unset from the first game', () => {
+    const keyed = { ...base, AGENT_MODEL_URL: 'https://model.test/v1', AGENT_MODEL_KEY: 'k' };
+    // The name alone: the first game's address and key.
+    expect(loadConfig({ ...keyed, AGENT_IMPOSTOR_MODEL: 'small' }, 1).models).toEqual({
+      impostor: { modelUrl: 'https://model.test/v1', model: 'small', modelKey: 'k' },
+    });
+    // An address of its own, which the first game's key never goes to.
+    expect(loadConfig({ ...keyed, AGENT_IMPOSTOR_MODEL_URL: 'http://127.0.0.1:8080/v1/' }, 1).models).toEqual({
+      impostor: { modelUrl: 'http://127.0.0.1:8080/v1', model: 'm', modelKey: null },
+    });
+    const file = join(dir, 'key');
+    writeFileSync(file, 'own\n');
+    expect(
+      loadConfig(
+        { ...keyed, AGENT_IMPOSTOR_MODEL_URL: 'https://other.test/v1', AGENT_IMPOSTOR_MODEL_KEY_FILE: file },
+        1,
+      ).models.impostor,
+    ).toEqual({ modelUrl: 'https://other.test/v1', model: 'm', modelKey: 'own' });
+    expect(() =>
+      loadConfig({ ...base, AGENT_IMPOSTOR_MODEL_URL: 'http://other.test/v1', AGENT_IMPOSTOR_MODEL_KEY: 'own' }, 1),
+    ).toThrow(/AGENT_IMPOSTOR_MODEL_URL must be an https address/);
+  });
+
   test('that are wrong stop the agent', () => {
     const wrong = [
       { AGENT_SOCKET: '' },
@@ -64,6 +88,9 @@ describe('the settings', () => {
       { AGENT_CONCURRENCY: 'two' },
       { AGENT_QUEUE: '-1' },
       { AGENT_QUEUE: '1001' },
+      { AGENT_IMPOSTOR_MODEL_URL: 'not an address' },
+      { AGENT_IMPOSTOR_MODEL_URL: 'http://model.test/v1?key=1' },
+      { AGENT_IMPOSTOR_MODEL_KEY: 'a', AGENT_IMPOSTOR_MODEL_KEY_FILE: '/key' },
     ];
     for (const changes of wrong)
       expect(() => loadConfig({ ...base, ...changes }, 1), JSON.stringify(changes)).toThrow();
