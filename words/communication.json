@@ -34,7 +34,8 @@
     {
       "id": "headline",
       "zh": "头条",
-      "en": "Headline"
+      "en": "Headline",
+      "related": ["lede"]
     },
     {
       "id": "lede",
@@ -50,7 +51,8 @@
     {
       "id": "scoop",
       "zh": "独家新闻",
-      "en": "Scoop"
+      "en": "Scoop",
+      "related": ["breaking-news"]
     },
     {
       "id": "breaking-news",
@@ -156,7 +158,8 @@
     {
       "id": "newspaper",
       "zh": "报纸",
-      "en": "Newspaper"
+      "en": "Newspaper",
+      "related": ["magazine"]
     },
     {
       "id": "tabloid",
@@ -176,7 +179,8 @@
     {
       "id": "daily",
       "zh": "日报",
-      "en": "Daily"
+      "en": "Daily",
+      "related": ["weekly"]
     },
     {
       "id": "weekly",
@@ -207,12 +211,14 @@
     {
       "id": "print-media",
       "zh": "纸媒",
-      "en": "Print media"
+      "en": "Print media",
+      "related": ["new-media"]
     },
     {
       "id": "circulation",
       "zh": "发行量",
-      "en": "Circulation"
+      "en": "Circulation",
+      "related": ["ratings"]
     },
     {
       "id": "newsreel",
@@ -228,7 +234,8 @@
     {
       "id": "tv-station",
       "zh": "电视台",
-      "en": "TV station"
+      "en": "TV station",
+      "related": ["radio-station"]
     },
     {
       "id": "radio-station",
@@ -284,7 +291,8 @@
     {
       "id": "viewer",
       "zh": "观众",
-      "en": "Viewer"
+      "en": "Viewer",
+      "related": ["listener"]
     },
     {
       "id": "listener",
@@ -294,7 +302,8 @@
     {
       "id": "talk-show",
       "zh": "脱口秀",
-      "en": "Talk show"
+      "en": "Talk show",
+      "related": ["variety-show"]
     },
     {
       "id": "reality-show",
@@ -324,7 +333,8 @@
     {
       "id": "tv-series",
       "zh": "电视剧",
-      "en": "TV series"
+      "en": "TV series",
+      "related": ["web-series"]
     },
     {
       "id": "web-series",
@@ -339,7 +349,8 @@
     {
       "id": "finale",
       "zh": "大结局",
-      "en": "Finale"
+      "en": "Finale",
+      "related": ["pilot"]
     },
     {
       "id": "spin-off",
@@ -374,7 +385,8 @@
     {
       "id": "audiobook",
       "zh": "有声书",
-      "en": "Audiobook"
+      "en": "Audiobook",
+      "related": ["podcast"]
     },
     {
       "id": "podcast",
@@ -385,7 +397,8 @@
     {
       "id": "set-top-box",
       "zh": "机顶盒",
-      "en": "Set-top box"
+      "en": "Set-top box",
+      "related": ["satellite-dish"]
     },
     {
       "id": "cable-tv",
@@ -473,7 +486,8 @@
     {
       "id": "chroma-key",
       "zh": "抠像",
-      "en": "Chroma key"
+      "en": "Chroma key",
+      "related": ["split-screen"]
     },
     {
       "id": "split-screen",
@@ -514,7 +528,8 @@
       "id": "blog",
       "zh": "博客",
       "en": "Blog",
-      "forms": { "en": ["blogger", "blogging"] }
+      "forms": { "en": ["blogger", "blogging"] },
+      "related": ["wiki"]
     },
     {
       "id": "vlog",
@@ -526,7 +541,8 @@
       "id": "livestream",
       "zh": "直播",
       "en": "Livestream",
-      "forms": { "en": ["livestreaming"] }
+      "forms": { "en": ["livestreaming"] },
+      "related": ["short-video"]
     },
     {
       "id": "short-video",
@@ -551,7 +567,8 @@
     {
       "id": "repost",
       "zh": "转发",
-      "en": "Repost"
+      "en": "Repost",
+      "related": ["like"]
     },
     {
       "id": "like",
@@ -604,7 +621,8 @@
       "id": "direct-message",
       "zh": "私信",
       "en": "Direct message",
-      "forms": { "en": ["DM"] }
+      "forms": { "en": ["DM"] },
+      "related": ["text-message"]
     },
     {
       "id": "chat-room",
@@ -629,7 +647,8 @@
     {
       "id": "troll",
       "zh": "网络喷子",
-      "en": "Troll"
+      "en": "Troll",
+      "related": ["lurker"]
     },
     {
       "id": "lurker",
@@ -654,12 +673,14 @@
     {
       "id": "voice-message",
       "zh": "语音消息",
-      "en": "Voice message"
+      "en": "Voice message",
+      "related": ["voicemail"]
     },
     {
       "id": "beauty-filter",
       "zh": "美颜",
-      "en": "Beauty filter"
+      "en": "Beauty filter",
+      "related": ["ring-light"]
     },
     {
       "id": "ring-light",
@@ -782,7 +803,8 @@
     {
       "id": "page-view",
       "zh": "浏览量",
-      "en": "Page view"
+      "en": "Page view",
+      "related": ["bounce-rate"]
     },
     {
       "id": "bounce-rate",
@@ -792,7 +814,8 @@
     {
       "id": "impressions",
       "zh": "曝光量",
-      "en": "Impressions"
+      "en": "Impressions",
+      "related": ["reach"]
     },
     {
       "id": "reach",
@@ -824,7 +847,8 @@
     {
       "id": "billboard",
       "zh": "广告牌",
-      "en": "Billboard"
+      "en": "Billboard",
+      "related": ["banner"]
     },
     {
       "id": "banner",
@@ -835,7 +859,8 @@
       "id": "flyer",
       "zh": "传单",
       "en": "Flyer",
-      "forms": { "en": ["flier"] }
+      "forms": { "en": ["flier"] },
+      "related": ["pamphlet"]
     },
     {
       "id": "pamphlet",
@@ -988,7 +1013,8 @@
     {
       "id": "hot-medium",
       "zh": "热媒介",
-      "en": "Hot medium"
+      "en": "Hot medium",
+      "related": ["cool-medium"]
     },
     {
       "id": "cool-medium",
@@ -1003,7 +1029,8 @@
     {
       "id": "magic-bullet",
       "zh": "魔弹论",
-      "en": "Magic bullet"
+      "en": "Magic bullet",
+      "related": ["two-step-flow"]
     },
     {
       "id": "two-step-flow",
@@ -1018,7 +1045,8 @@
     {
       "id": "knowledge-gap",
       "zh": "知沟",
-      "en": "Knowledge gap"
+      "en": "Knowledge gap",
+      "related": ["digital-divide"]
     },
     {
       "id": "digital-divide",
@@ -1063,7 +1091,8 @@
     {
       "id": "media-event",
       "zh": "媒介事件",
-      "en": "Media event"
+      "en": "Media event",
+      "related": ["pseudo-event"]
     },
     {
       "id": "pseudo-event",
@@ -1166,7 +1195,8 @@
     {
       "id": "telephone",
       "zh": "电话",
-      "en": "Telephone"
+      "en": "Telephone",
+      "related": ["fax"]
     },
     {
       "id": "fax",
@@ -1196,7 +1226,8 @@
     {
       "id": "book-fair",
       "zh": "书展",
-      "en": "Book fair"
+      "en": "Book fair",
+      "related": ["book-signing"]
     },
     {
       "id": "book-signing",
@@ -1221,7 +1252,8 @@
     {
       "id": "guest",
       "zh": "嘉宾",
-      "en": "Guest"
+      "en": "Guest",
+      "related": ["presenter"]
     },
     {
       "id": "presenter",
@@ -1261,7 +1293,8 @@
     {
       "id": "record-label",
       "zh": "唱片公司",
-      "en": "Record label"
+      "en": "Record label",
+      "related": ["talent-agency"]
     },
     {
       "id": "talent-agency",
@@ -1356,7 +1389,8 @@
     {
       "id": "hardcover",
       "zh": "精装",
-      "en": "Hardcover"
+      "en": "Hardcover",
+      "related": ["paperback"]
     },
     {
       "id": "paperback",
@@ -1366,7 +1400,8 @@
     {
       "id": "out-of-print",
       "zh": "绝版",
-      "en": "Out of print"
+      "en": "Out of print",
+      "related": ["reprint"]
     },
     {
       "id": "reprint",

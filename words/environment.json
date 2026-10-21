@@ -45,7 +45,8 @@
     {
       "id": "producer",
       "zh": "生产者",
-      "en": "Producer"
+      "en": "Producer",
+      "related": ["consumer"]
     },
     {
       "id": "consumer",
@@ -62,7 +63,8 @@
       "id": "scavenger",
       "zh": "食腐动物",
       "en": "Scavenger",
-      "forms": { "en": ["scavenge"] }
+      "forms": { "en": ["scavenge"] },
+      "related": ["detritivore"]
     },
     {
       "id": "apex-predator",
@@ -88,7 +90,8 @@
       "id": "mutualism",
       "zh": "互利共生",
       "en": "Mutualism",
-      "forms": { "en": ["mutualistic"] }
+      "forms": { "en": ["mutualistic"] },
+      "related": ["commensalism"]
     },
     {
       "id": "commensalism",
@@ -108,12 +111,14 @@
     {
       "id": "fragmentation",
       "zh": "破碎化",
-      "en": "Fragmentation"
+      "en": "Fragmentation",
+      "related": ["habitat-loss"]
     },
     {
       "id": "canopy",
       "zh": "林冠",
-      "en": "Canopy"
+      "en": "Canopy",
+      "related": ["understory"]
     },
     {
       "id": "phenology",
@@ -128,7 +133,8 @@
     {
       "id": "alien-species",
       "zh": "外来物种",
-      "en": "Alien species"
+      "en": "Alien species",
+      "related": ["native-species"]
     },
     {
       "id": "native-species",
@@ -138,7 +144,8 @@
     {
       "id": "endangered",
       "zh": "濒危",
-      "en": "Endangered"
+      "en": "Endangered",
+      "related": ["vulnerable"]
     },
     {
       "id": "extinction",
@@ -160,7 +167,8 @@
     {
       "id": "quadrat",
       "zh": "样方",
-      "en": "Quadrat"
+      "en": "Quadrat",
+      "related": ["transect"]
     },
     {
       "id": "transect",
@@ -175,7 +183,8 @@
     {
       "id": "camera-trap",
       "zh": "红外相机",
-      "en": "Camera trap"
+      "en": "Camera trap",
+      "related": ["radio-collar"]
     },
     {
       "id": "radio-collar",
@@ -218,7 +227,8 @@
     {
       "id": "leaf-litter",
       "zh": "落叶层",
-      "en": "Leaf litter"
+      "en": "Leaf litter",
+      "related": ["humus"]
     },
     {
       "id": "mycorrhiza",
@@ -239,7 +249,8 @@
     {
       "id": "salt-marsh",
       "zh": "盐沼",
-      "en": "Salt marsh"
+      "en": "Salt marsh",
+      "related": ["mangrove"]
     },
     {
       "id": "pond",
@@ -294,7 +305,8 @@
     {
       "id": "national-park",
       "zh": "国家公园",
-      "en": "National park"
+      "en": "National park",
+      "related": ["marine-reserve"]
     },
     {
       "id": "migratory-bird",
@@ -314,7 +326,8 @@
     {
       "id": "snow-leopard",
       "zh": "雪豹",
-      "en": "Snow leopard"
+      "en": "Snow leopard",
+      "related": ["siberian-tiger"]
     },
     {
       "id": "siberian-tiger",
@@ -324,7 +337,8 @@
     {
       "id": "polar-bear",
       "zh": "北极熊",
-      "en": "Polar bear"
+      "en": "Polar bear",
+      "related": ["penguin"]
     },
     {
       "id": "pangolin",
@@ -356,12 +370,14 @@
     {
       "id": "ivory",
       "zh": "象牙",
-      "en": "Ivory"
+      "en": "Ivory",
+      "related": ["shark-fin"]
     },
     {
       "id": "overfishing",
       "zh": "过度捕捞",
-      "en": "Overfishing"
+      "en": "Overfishing",
+      "related": ["deforestation"]
     },
     {
       "id": "mangrove",
@@ -371,7 +387,8 @@
     {
       "id": "seagrass",
       "zh": "海草",
-      "en": "Seagrass"
+      "en": "Seagrass",
+      "related": ["seaweed"]
     },
     {
       "id": "seaweed",
@@ -398,7 +415,8 @@
     {
       "id": "firebreak",
       "zh": "防火带",
-      "en": "Firebreak"
+      "en": "Firebreak",
+      "related": ["shelterbelt"]
     },
     {
       "id": "shelterbelt",
@@ -423,7 +441,8 @@
     {
       "id": "earth-day",
       "zh": "地球日",
-      "en": "Earth Day"
+      "en": "Earth Day",
+      "related": ["earth-hour"]
     },
     {
       "id": "earth-hour",
@@ -444,7 +463,8 @@
     {
       "id": "yellowstone",
       "zh": "黄石公园",
-      "en": "Yellowstone"
+      "en": "Yellowstone",
+      "related": ["galapagos"]
     },
     {
       "id": "galapagos",
@@ -495,7 +515,8 @@
     {
       "id": "pest",
       "zh": "害虫",
-      "en": "Pest"
+      "en": "Pest",
+      "related": ["weed"]
     },
     {
       "id": "natural-enemy",
@@ -516,12 +537,14 @@
     {
       "id": "water-hyacinth",
       "zh": "水葫芦",
-      "en": "Water hyacinth"
+      "en": "Water hyacinth",
+      "related": ["spartina"]
     },
     {
       "id": "zoo",
       "zh": "动物园",
-      "en": "Zoo"
+      "en": "Zoo",
+      "related": ["aquarium"]
     },
     {
       "id": "aquarium",
@@ -636,12 +659,14 @@
       "id": "compost",
       "zh": "堆肥",
       "en": "Compost",
-      "forms": { "en": ["composting"] }
+      "forms": { "en": ["composting"] },
+      "related": ["manure"]
     },
     {
       "id": "crop-rotation",
       "zh": "轮作",
-      "en": "Crop rotation"
+      "en": "Crop rotation",
+      "related": ["monoculture"]
     },
     {
       "id": "soil-erosion",
@@ -658,7 +683,8 @@
       "id": "eutrophication",
       "zh": "富营养化",
       "en": "Eutrophication",
-      "forms": { "en": ["eutrophic"] }
+      "forms": { "en": ["eutrophic"] },
+      "related": ["acidification"]
     },
     {
       "id": "algal-bloom",
@@ -673,7 +699,8 @@
     {
       "id": "acid-rain",
       "zh": "酸雨",
-      "en": "Acid rain"
+      "en": "Acid rain",
+      "related": ["ozone-hole"]
     },
     {
       "id": "acidification",
@@ -684,7 +711,8 @@
     {
       "id": "wastewater",
       "zh": "污水",
-      "en": "Wastewater"
+      "en": "Wastewater",
+      "related": ["stormwater"]
     },
     {
       "id": "drinking-water",
@@ -781,7 +809,8 @@
       "id": "pm25",
       "zh": "PM2.5",
       "en": "PM2.5",
-      "forms": { "zh": ["细颗粒物"], "en": ["fine particulate matter"] }
+      "forms": { "zh": ["细颗粒物"], "en": ["fine particulate matter"] },
+      "related": ["pm10"]
     },
     {
       "id": "air-purifier",
@@ -796,7 +825,8 @@
     {
       "id": "dioxin",
       "zh": "二噁英",
-      "en": "Dioxin"
+      "en": "Dioxin",
+      "related": ["ddt"]
     },
     {
       "id": "ddt",
@@ -807,7 +837,8 @@
     {
       "id": "silent-spring",
       "zh": "寂静的春天",
-      "en": "Silent Spring"
+      "en": "Silent Spring",
+      "related": ["walden"]
     },
     {
       "id": "nuclear-waste",
@@ -857,12 +888,14 @@
     {
       "id": "e-waste",
       "zh": "电子垃圾",
-      "en": "E-waste"
+      "en": "E-waste",
+      "related": ["food-waste"]
     },
     {
       "id": "biogas",
       "zh": "沼气",
-      "en": "Biogas"
+      "en": "Biogas",
+      "related": ["biofuel"]
     },
     {
       "id": "sludge",
@@ -894,12 +927,14 @@
       "id": "recycling",
       "zh": "回收",
       "en": "Recycling",
-      "forms": { "en": ["recycle", "recyclable"] }
+      "forms": { "en": ["recycle", "recyclable"] },
+      "related": ["reuse"]
     },
     {
       "id": "landfill",
       "zh": "填埋",
-      "en": "Landfill"
+      "en": "Landfill",
+      "related": ["incineration"]
     },
     {
       "id": "incineration",
@@ -941,7 +976,8 @@
       "id": "upcycling",
       "zh": "升级再造",
       "en": "Upcycling",
-      "forms": { "en": ["upcycle"] }
+      "forms": { "en": ["upcycle"] },
+      "related": ["downcycling"]
     },
     {
       "id": "bioplastic",
@@ -951,7 +987,8 @@
     {
       "id": "bottled-water",
       "zh": "瓶装水",
-      "en": "Bottled water"
+      "en": "Bottled water",
+      "related": ["tap-water"]
     },
     {
       "id": "fast-fashion",
@@ -991,7 +1028,8 @@
     {
       "id": "fossil-fuel",
       "zh": "化石燃料",
-      "en": "Fossil fuel"
+      "en": "Fossil fuel",
+      "related": ["renewables"]
     },
     {
       "id": "renewables",
@@ -1001,7 +1039,8 @@
     {
       "id": "solar-energy",
       "zh": "太阳能",
-      "en": "Solar energy"
+      "en": "Solar energy",
+      "related": ["wind-power"]
     },
     {
       "id": "wind-power",
@@ -1012,7 +1051,8 @@
       "id": "hydropower",
       "zh": "水电",
       "en": "Hydropower",
-      "forms": { "en": ["hydroelectric"] }
+      "forms": { "en": ["hydroelectric"] },
+      "related": ["tidal-energy"]
     },
     {
       "id": "nuclear-power",
@@ -1047,7 +1087,8 @@
     {
       "id": "bike-sharing",
       "zh": "共享单车",
-      "en": "Bike sharing"
+      "en": "Bike sharing",
+      "related": ["carpool"]
     },
     {
       "id": "public-transit",
@@ -1077,7 +1118,8 @@
     {
       "id": "wind-turbine",
       "zh": "风力发电机",
-      "en": "Wind turbine"
+      "en": "Wind turbine",
+      "related": ["windmill"]
     },
     {
       "id": "windmill",
@@ -1166,7 +1208,8 @@
     {
       "id": "greenhouse-gas",
       "zh": "温室气体",
-      "en": "Greenhouse gas"
+      "en": "Greenhouse gas",
+      "related": ["aerosol"]
     },
     {
       "id": "emissions",
@@ -1178,7 +1221,8 @@
       "id": "carbon-neutral",
       "zh": "碳中和",
       "en": "Carbon neutral",
-      "forms": { "en": ["carbon neutrality"] }
+      "forms": { "en": ["carbon neutrality"] },
+      "related": ["carbon-peaking"]
     },
     {
       "id": "carbon-peaking",
@@ -1188,7 +1232,8 @@
     {
       "id": "carbon-sink",
       "zh": "碳汇",
-      "en": "Carbon sink"
+      "en": "Carbon sink",
+      "related": ["carbon-capture"]
     },
     {
       "id": "carbon-capture",
@@ -1198,7 +1243,8 @@
     {
       "id": "carbon-trading",
       "zh": "碳交易",
-      "en": "Carbon trading"
+      "en": "Carbon trading",
+      "related": ["carbon-tax"]
     },
     {
       "id": "carbon-tax",
@@ -1224,7 +1270,8 @@
     {
       "id": "food-miles",
       "zh": "食物里程",
-      "en": "Food miles"
+      "en": "Food miles",
+      "related": ["virtual-water"]
     },
     {
       "id": "sustainability",
@@ -1313,7 +1360,8 @@
     {
       "id": "resource-curse",
       "zh": "资源诅咒",
-      "en": "Resource curse"
+      "en": "Resource curse",
+      "related": ["jevons-paradox"]
     },
     {
       "id": "jevons-paradox",
@@ -1355,7 +1403,8 @@
     {
       "id": "r-selection",
       "zh": "r选择",
-      "en": "r-selection"
+      "en": "r-selection",
+      "related": ["k-selection"]
     },
     {
       "id": "k-selection",
@@ -1365,7 +1414,8 @@
     {
       "id": "predation",
       "zh": "捕食",
-      "en": "Predation"
+      "en": "Predation",
+      "related": ["parasitism"]
     },
     {
       "id": "parasitism",
@@ -1496,7 +1546,8 @@
     {
       "id": "phytoplankton",
       "zh": "浮游植物",
-      "en": "Phytoplankton"
+      "en": "Phytoplankton",
+      "related": ["zooplankton"]
     },
     {
       "id": "zooplankton",
@@ -1843,7 +1894,8 @@
       "id": "bod",
       "zh": "BOD",
       "en": "BOD",
-      "forms": { "zh": ["生化需氧量"], "en": ["biochemical oxygen demand"] }
+      "forms": { "zh": ["生化需氧量"], "en": ["biochemical oxygen demand"] },
+      "related": ["cod"]
     },
     {
       "id": "cod",
@@ -1888,7 +1940,8 @@
       "id": "sulfur-dioxide",
       "zh": "二氧化硫",
       "en": "Sulfur dioxide",
-      "forms": { "en": ["sulphur dioxide", "SO2"] }
+      "forms": { "en": ["sulphur dioxide", "SO2"] },
+      "related": ["nox"]
     },
     {
       "id": "nox",
@@ -1926,7 +1979,8 @@
     {
       "id": "scrubber",
       "zh": "洗涤塔",
-      "en": "Scrubber"
+      "en": "Scrubber",
+      "related": ["baghouse"]
     },
     {
       "id": "baghouse",
@@ -1994,7 +2048,8 @@
     {
       "id": "pfas",
       "zh": "PFAS",
-      "en": "PFAS"
+      "en": "PFAS",
+      "related": ["bpa"]
     },
     {
       "id": "bpa",

@@ -22,13 +22,15 @@
       "id": "overfitting",
       "zh": "过拟合",
       "en": "Overfitting",
-      "forms": { "en": ["overfit", "overfitted"] }
+      "forms": { "en": ["overfit", "overfitted"] },
+      "related": ["underfitting"]
     },
     {
       "id": "embedding",
       "zh": "嵌入",
       "en": "Embedding",
-      "forms": { "en": ["embed", "embedded"] }
+      "forms": { "en": ["embed", "embedded"] },
+      "related": ["one-hot"]
     },
     {
       "id": "loss",
@@ -40,13 +42,15 @@
       "id": "hallucination",
       "zh": "幻觉",
       "en": "Hallucination",
-      "forms": { "en": ["hallucinate"] }
+      "forms": { "en": ["hallucinate"] },
+      "related": ["sycophancy"]
     },
     {
       "id": "agent",
       "zh": "智能体",
       "en": "Agent",
-      "forms": { "en": ["agentic"] }
+      "forms": { "en": ["agentic"] },
+      "related": ["environment"]
     },
     {
       "id": "reward",
@@ -58,7 +62,8 @@
       "id": "pretraining",
       "zh": "预训练",
       "en": "Pretraining",
-      "forms": { "en": ["pretrain", "pretrained"] }
+      "forms": { "en": ["pretrain", "pretrained"] },
+      "related": ["fine-tuning"]
     },
     {
       "id": "fine-tuning",
@@ -69,31 +74,36 @@
     {
       "id": "dropout",
       "zh": "Dropout",
-      "en": "Dropout"
+      "en": "Dropout",
+      "related": ["weight-decay"]
     },
     {
       "id": "gpu",
       "zh": "GPU",
       "en": "GPU",
-      "forms": { "zh": ["图形处理器"], "en": ["graphics processing unit"] }
+      "forms": { "zh": ["图形处理器"], "en": ["graphics processing unit"] },
+      "related": ["tpu"]
     },
     {
       "id": "cnn",
       "zh": "CNN",
       "en": "CNN",
-      "forms": { "zh": ["卷积神经网络"], "en": ["convolutional neural network"] }
+      "forms": { "zh": ["卷积神经网络"], "en": ["convolutional neural network"] },
+      "related": ["rnn"]
     },
     {
       "id": "llm",
       "zh": "LLM",
       "en": "LLM",
-      "forms": { "zh": ["大语言模型"], "en": ["large language model"] }
+      "forms": { "zh": ["大语言模型"], "en": ["large language model"] },
+      "related": ["vlm"]
     },
     {
       "id": "computer-vision",
       "zh": "计算机视觉",
       "en": "Computer vision",
-      "forms": { "en": ["CV"] }
+      "forms": { "en": ["CV"] },
+      "related": ["nlp"]
     },
     {
       "id": "neural-network",
@@ -105,7 +115,8 @@
       "id": "label",
       "zh": "标签",
       "en": "Label",
-      "forms": { "en": ["labeled", "labelled", "labeling", "labelling"] }
+      "forms": { "en": ["labeled", "labelled", "labeling", "labelling"] },
+      "related": ["feature"]
     },
     {
       "id": "generalization",
@@ -162,7 +173,8 @@
     {
       "id": "few-shot",
       "zh": "少样本",
-      "en": "Few-shot"
+      "en": "Few-shot",
+      "related": ["zero-shot"]
     },
     {
       "id": "zero-shot",
@@ -178,7 +190,8 @@
     {
       "id": "test-set",
       "zh": "测试集",
-      "en": "Test set"
+      "en": "Test set",
+      "related": ["validation-set"]
     },
     {
       "id": "validation-set",
@@ -189,7 +202,8 @@
       "id": "classification",
       "zh": "分类",
       "en": "Classification",
-      "forms": { "en": ["classify", "classifier"] }
+      "forms": { "en": ["classify", "classifier"] },
+      "related": ["clustering"]
     },
     {
       "id": "clustering",
@@ -200,7 +214,8 @@
     {
       "id": "k-means",
       "zh": "k均值",
-      "en": "k-means"
+      "en": "k-means",
+      "related": ["k-nn"]
     },
     {
       "id": "k-nn",
@@ -228,7 +243,8 @@
       "id": "pca",
       "zh": "PCA",
       "en": "PCA",
-      "forms": { "zh": ["主成分分析"], "en": ["principal component analysis"] }
+      "forms": { "zh": ["主成分分析"], "en": ["principal component analysis"] },
+      "related": ["t-sne"]
     },
     {
       "id": "naive-bayes",
@@ -245,7 +261,8 @@
       "id": "boosting",
       "zh": "Boosting",
       "en": "Boosting",
-      "forms": { "en": ["boost", "boosted"] }
+      "forms": { "en": ["boost", "boosted"] },
+      "related": ["bagging"]
     },
     {
       "id": "xgboost",
@@ -276,7 +293,8 @@
       "id": "hidden-markov-model",
       "zh": "HMM",
       "en": "HMM",
-      "forms": { "zh": ["隐马尔可夫模型"], "en": ["hidden Markov model"] }
+      "forms": { "zh": ["隐马尔可夫模型"], "en": ["hidden Markov model"] },
+      "related": ["crf"]
     },
     {
       "id": "similarity",
@@ -292,13 +310,15 @@
     {
       "id": "cross-entropy",
       "zh": "交叉熵",
-      "en": "Cross-entropy"
+      "en": "Cross-entropy",
+      "related": ["mse"]
     },
     {
       "id": "prediction",
       "zh": "预测",
       "en": "Prediction",
-      "forms": { "en": ["predict", "predictor", "predictive"] }
+      "forms": { "en": ["predict", "predictor", "predictive"] },
+      "related": ["ground-truth"]
     },
     {
       "id": "ground-truth",
@@ -320,7 +340,8 @@
     {
       "id": "double-descent",
       "zh": "双下降",
-      "en": "Double descent"
+      "en": "Double descent",
+      "related": ["grokking"]
     },
     {
       "id": "underfitting",
@@ -355,7 +376,8 @@
       "id": "sgd",
       "zh": "SGD",
       "en": "SGD",
-      "forms": { "zh": ["随机梯度下降"], "en": ["stochastic gradient descent"] }
+      "forms": { "zh": ["随机梯度下降"], "en": ["stochastic gradient descent"] },
+      "related": ["adam"]
     },
     {
       "id": "backpropagation",
@@ -399,7 +421,8 @@
     {
       "id": "local-optimum",
       "zh": "局部最优",
-      "en": "Local optimum"
+      "en": "Local optimum",
+      "related": ["global-optimum"]
     },
     {
       "id": "early-stopping",
@@ -481,7 +504,8 @@
       "id": "quantization",
       "zh": "量化",
       "en": "Quantization",
-      "forms": { "en": ["quantize", "quantise", "quantized"] }
+      "forms": { "en": ["quantize", "quantise", "quantized"] },
+      "related": ["pruning"]
     },
     {
       "id": "pruning",
@@ -504,7 +528,8 @@
       "id": "convolution",
       "zh": "卷积",
       "en": "Convolution",
-      "forms": { "en": ["convolve", "convolutional"] }
+      "forms": { "en": ["convolve", "convolutional"] },
+      "related": ["pooling"]
     },
     {
       "id": "pooling",
@@ -515,7 +540,8 @@
     {
       "id": "stride",
       "zh": "步长",
-      "en": "Stride"
+      "en": "Stride",
+      "related": ["padding"]
     },
     {
       "id": "padding",
@@ -527,7 +553,8 @@
       "id": "encoder",
       "zh": "编码器",
       "en": "Encoder",
-      "forms": { "en": ["encode", "encoding"] }
+      "forms": { "en": ["encode", "encoding"] },
+      "related": ["decoder"]
     },
     {
       "id": "decoder",
@@ -543,19 +570,22 @@
     {
       "id": "adapter",
       "zh": "适配器",
-      "en": "Adapter"
+      "en": "Adapter",
+      "related": ["lora"]
     },
     {
       "id": "relu",
       "zh": "ReLU",
       "en": "ReLU",
-      "forms": { "en": ["rectified linear unit"] }
+      "forms": { "en": ["rectified linear unit"] },
+      "related": ["tanh"]
     },
     {
       "id": "sigmoid",
       "zh": "Sigmoid",
       "en": "Sigmoid",
-      "forms": { "en": ["sigmoidal"] }
+      "forms": { "en": ["sigmoidal"] },
+      "related": ["softmax"]
     },
     {
       "id": "softmax",
@@ -589,13 +619,15 @@
       "id": "lstm",
       "zh": "LSTM",
       "en": "LSTM",
-      "forms": { "zh": ["长短期记忆"], "en": ["long short-term memory"] }
+      "forms": { "zh": ["长短期记忆"], "en": ["long short-term memory"] },
+      "related": ["gru"]
     },
     {
       "id": "gan",
       "zh": "GAN",
       "en": "GAN",
-      "forms": { "zh": ["生成对抗网络"], "en": ["generative adversarial network"] }
+      "forms": { "zh": ["生成对抗网络"], "en": ["generative adversarial network"] },
+      "related": ["vae"]
     },
     {
       "id": "vae",
@@ -642,7 +674,8 @@
       "id": "discriminator",
       "zh": "判别器",
       "en": "Discriminator",
-      "forms": { "en": ["discriminate", "discriminative"] }
+      "forms": { "en": ["discriminate", "discriminative"] },
+      "related": ["generator"]
     },
     {
       "id": "generator",
@@ -670,7 +703,8 @@
       "id": "diffusion",
       "zh": "扩散",
       "en": "Diffusion",
-      "forms": { "en": ["diffuse"] }
+      "forms": { "en": ["diffuse"] },
+      "related": ["flow-matching"]
     },
     {
       "id": "denoising",
@@ -705,7 +739,8 @@
     {
       "id": "bag-of-words",
       "zh": "词袋",
-      "en": "Bag of words"
+      "en": "Bag of words",
+      "related": ["tf-idf"]
     },
     {
       "id": "stop-word",
@@ -725,12 +760,14 @@
     {
       "id": "word2vec",
       "zh": "Word2Vec",
-      "en": "Word2Vec"
+      "en": "Word2Vec",
+      "related": ["glove"]
     },
     {
       "id": "bert",
       "zh": "BERT",
-      "en": "BERT"
+      "en": "BERT",
+      "related": ["gpt"]
     },
     {
       "id": "gpt",
@@ -747,7 +784,8 @@
     {
       "id": "beam-search",
       "zh": "束搜索",
-      "en": "Beam search"
+      "en": "Beam search",
+      "related": ["top-k"]
     },
     {
       "id": "perplexity",
@@ -763,7 +801,8 @@
       "id": "asr",
       "zh": "语音识别",
       "en": "ASR",
-      "forms": { "en": ["automatic speech recognition"] }
+      "forms": { "en": ["automatic speech recognition"] },
+      "related": ["tts"]
     },
     {
       "id": "tts",
@@ -817,7 +856,8 @@
       "id": "rlhf",
       "zh": "RLHF",
       "en": "RLHF",
-      "forms": { "zh": ["基于人类反馈的强化学习"], "en": ["reinforcement learning from human feedback"] }
+      "forms": { "zh": ["基于人类反馈的强化学习"], "en": ["reinforcement learning from human feedback"] },
+      "related": ["dpo"]
     },
     {
       "id": "sft",
@@ -884,7 +924,8 @@
     {
       "id": "text-to-image",
       "zh": "文生图",
-      "en": "Text-to-image"
+      "en": "Text-to-image",
+      "related": ["text-to-video"]
     },
     {
       "id": "digital-human",
@@ -910,7 +951,8 @@
       "id": "segmentation",
       "zh": "分割",
       "en": "Segmentation",
-      "forms": { "en": ["segment", "segmented"] }
+      "forms": { "en": ["segment", "segmented"] },
+      "related": ["detection"]
     },
     {
       "id": "bounding-box",
@@ -925,7 +967,8 @@
     {
       "id": "point-cloud",
       "zh": "点云",
-      "en": "Point cloud"
+      "en": "Point cloud",
+      "related": ["voxel"]
     },
     {
       "id": "edge-detection",
@@ -947,7 +990,8 @@
       "id": "yolo",
       "zh": "YOLO",
       "en": "YOLO",
-      "forms": { "en": ["you only look once"] }
+      "forms": { "en": ["you only look once"] },
+      "related": ["r-cnn"]
     },
     {
       "id": "clip",
@@ -958,7 +1002,8 @@
       "id": "nerf",
       "zh": "NeRF",
       "en": "NeRF",
-      "forms": { "en": ["neural radiance field"] }
+      "forms": { "en": ["neural radiance field"] },
+      "related": ["3dgs"]
     },
     {
       "id": "t-sne",
@@ -991,7 +1036,8 @@
       "id": "exploration",
       "zh": "探索",
       "en": "Exploration",
-      "forms": { "en": ["explore", "exploratory"] }
+      "forms": { "en": ["explore", "exploratory"] },
+      "related": ["exploitation"]
     },
     {
       "id": "exploitation",
@@ -1013,7 +1059,8 @@
       "id": "mcts",
       "zh": "MCTS",
       "en": "MCTS",
-      "forms": { "zh": ["蒙特卡洛树搜索"], "en": ["Monte Carlo tree search"] }
+      "forms": { "zh": ["蒙特卡洛树搜索"], "en": ["Monte Carlo tree search"] },
+      "related": ["minimax"]
     },
     {
       "id": "planning",
@@ -1071,7 +1118,8 @@
       "id": "precision",
       "zh": "精确率",
       "en": "Precision",
-      "forms": { "en": ["precise"] }
+      "forms": { "en": ["precise"] },
+      "related": ["recall"]
     },
     {
       "id": "recall",
@@ -1164,12 +1212,14 @@
     {
       "id": "mnist",
       "zh": "MNIST",
-      "en": "MNIST"
+      "en": "MNIST",
+      "related": ["cifar-10"]
     },
     {
       "id": "imagenet",
       "zh": "ImageNet",
-      "en": "ImageNet"
+      "en": "ImageNet",
+      "related": ["coco"]
     },
     {
       "id": "coco",
@@ -1250,7 +1300,8 @@
       "id": "connectionism",
       "zh": "联结主义",
       "en": "Connectionism",
-      "forms": { "en": ["connectionist"] }
+      "forms": { "en": ["connectionist"] },
+      "related": ["symbolic-ai"]
     },
     {
       "id": "ai-winter",
@@ -1265,7 +1316,8 @@
     {
       "id": "deep-blue",
       "zh": "深蓝",
-      "en": "Deep Blue"
+      "en": "Deep Blue",
+      "related": ["alphago"]
     },
     {
       "id": "alphago",
@@ -1280,7 +1332,8 @@
     {
       "id": "pytorch",
       "zh": "PyTorch",
-      "en": "PyTorch"
+      "en": "PyTorch",
+      "related": ["tensorflow"]
     },
     {
       "id": "tensorflow",
@@ -1310,7 +1363,8 @@
     {
       "id": "neurips",
       "zh": "NeurIPS",
-      "en": "NeurIPS"
+      "en": "NeurIPS",
+      "related": ["icml"]
     },
     {
       "id": "icml",
@@ -1444,7 +1498,8 @@
       "id": "upsampling",
       "zh": "上采样",
       "en": "Upsampling",
-      "forms": { "en": ["upsample", "upsampled"] }
+      "forms": { "en": ["upsample", "upsampled"] },
+      "related": ["downsampling"]
     },
     {
       "id": "downsampling",
@@ -1456,7 +1511,8 @@
       "id": "layernorm",
       "zh": "LayerNorm",
       "en": "LayerNorm",
-      "forms": { "en": ["layer normalization"] }
+      "forms": { "en": ["layer normalization"] },
+      "related": ["batchnorm"]
     },
     {
       "id": "batchnorm",
@@ -1538,7 +1594,8 @@
     {
       "id": "bleu",
       "zh": "BLEU",
-      "en": "BLEU"
+      "en": "BLEU",
+      "related": ["rouge"]
     },
     {
       "id": "rouge",
@@ -1600,7 +1657,8 @@
     {
       "id": "dall-e",
       "zh": "DALL-E",
-      "en": "DALL-E"
+      "en": "DALL-E",
+      "related": ["midjourney"]
     },
     {
       "id": "midjourney",
@@ -1791,7 +1849,8 @@
     {
       "id": "numpy",
       "zh": "NumPy",
-      "en": "NumPy"
+      "en": "NumPy",
+      "related": ["pandas"]
     },
     {
       "id": "pandas",
@@ -1833,7 +1892,8 @@
       "id": "oversampling",
       "zh": "过采样",
       "en": "Oversampling",
-      "forms": { "en": ["oversample"] }
+      "forms": { "en": ["oversample"] },
+      "related": ["undersampling"]
     },
     {
       "id": "undersampling",
@@ -1889,7 +1949,8 @@
       "id": "lemmatization",
       "zh": "词形还原",
       "en": "Lemmatization",
-      "forms": { "en": ["lemmatize", "lemmatise"] }
+      "forms": { "en": ["lemmatize", "lemmatise"] },
+      "related": ["stemming"]
     },
     {
       "id": "top-k",
@@ -1948,7 +2009,8 @@
     {
       "id": "epsilon-greedy",
       "zh": "ε-贪心",
-      "en": "Epsilon-greedy"
+      "en": "Epsilon-greedy",
+      "related": ["ucb"]
     },
     {
       "id": "sparse-reward",
@@ -2542,7 +2604,8 @@
       "id": "psnr",
       "zh": "PSNR",
       "en": "PSNR",
-      "forms": { "zh": ["峰值信噪比"], "en": ["peak signal-to-noise ratio"] }
+      "forms": { "zh": ["峰值信噪比"], "en": ["peak signal-to-noise ratio"] },
+      "related": ["fid"]
     },
     {
       "id": "fid",

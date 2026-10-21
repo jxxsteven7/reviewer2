@@ -10,7 +10,8 @@
       "id": "derivative",
       "zh": "导数",
       "en": "Derivative",
-      "forms": { "en": ["derive", "derived"] }
+      "forms": { "en": ["derive", "derived"] },
+      "related": ["integral"]
     },
     {
       "id": "integral",
@@ -46,19 +47,22 @@
       "id": "infinity",
       "zh": "无穷大",
       "en": "Infinity",
-      "forms": { "en": ["infinite", "infinitely"] }
+      "forms": { "en": ["infinite", "infinitely"] },
+      "related": ["infinitesimal"]
     },
     {
       "id": "probability",
       "zh": "概率",
       "en": "Probability",
-      "forms": { "en": ["probable", "probabilistic"] }
+      "forms": { "en": ["probable", "probabilistic"] },
+      "related": ["statistics"]
     },
     {
       "id": "topology",
       "zh": "拓扑",
       "en": "Topology",
-      "forms": { "en": ["topological"] }
+      "forms": { "en": ["topological"] },
+      "related": ["geometry"]
     },
     {
       "id": "symmetry",
@@ -75,7 +79,8 @@
       "id": "permutation",
       "zh": "排列",
       "en": "Permutation",
-      "forms": { "en": ["permute"] }
+      "forms": { "en": ["permute"] },
+      "related": ["combination"]
     },
     {
       "id": "polynomial",
@@ -86,7 +91,8 @@
       "id": "convergence",
       "zh": "收敛",
       "en": "Convergence",
-      "forms": { "en": ["converge", "convergent"] }
+      "forms": { "en": ["converge", "convergent"] },
+      "related": ["divergence"]
     },
     {
       "id": "induction",
@@ -121,7 +127,8 @@
     {
       "id": "p-value",
       "zh": "p值",
-      "en": "p-value"
+      "en": "p-value",
+      "related": ["confidence-interval"]
     },
     {
       "id": "calculus",
@@ -161,7 +168,8 @@
       "id": "maximum",
       "zh": "最大值",
       "en": "Maximum",
-      "forms": { "en": ["maxima", "max", "maximize", "maximise", "maximal"] }
+      "forms": { "en": ["maxima", "max", "maximize", "maximise", "maximal"] },
+      "related": ["minimum"]
     },
     {
       "id": "minimum",
@@ -190,12 +198,14 @@
       "id": "tangent",
       "zh": "切线",
       "en": "Tangent",
-      "forms": { "en": ["tangential"] }
+      "forms": { "en": ["tangential"] },
+      "related": ["secant"]
     },
     {
       "id": "slope",
       "zh": "斜率",
-      "en": "Slope"
+      "en": "Slope",
+      "related": ["intercept"]
     },
     {
       "id": "curvature",
@@ -283,7 +293,8 @@
       "id": "interpolation",
       "zh": "插值",
       "en": "Interpolation",
-      "forms": { "en": ["interpolate"] }
+      "forms": { "en": ["interpolate"] },
+      "related": ["extrapolation"]
     },
     {
       "id": "extrapolation",
@@ -311,7 +322,8 @@
     {
       "id": "imaginary-number",
       "zh": "虚数",
-      "en": "Imaginary number"
+      "en": "Imaginary number",
+      "related": ["real-number"]
     },
     {
       "id": "complex-number",
@@ -342,7 +354,8 @@
       "id": "fraction",
       "zh": "分数",
       "en": "Fraction",
-      "forms": { "en": ["fractional"] }
+      "forms": { "en": ["fractional"] },
+      "related": ["decimal"]
     },
     {
       "id": "decimal",
@@ -364,7 +377,8 @@
     {
       "id": "even-number",
       "zh": "偶数",
-      "en": "Even number"
+      "en": "Even number",
+      "related": ["odd-number"]
     },
     {
       "id": "odd-number",
@@ -417,7 +431,8 @@
       "id": "addition",
       "zh": "加法",
       "en": "Addition",
-      "forms": { "en": ["add", "additive"] }
+      "forms": { "en": ["add", "additive"] },
+      "related": ["subtraction"]
     },
     {
       "id": "subtraction",
@@ -429,7 +444,8 @@
       "id": "multiplication",
       "zh": "乘法",
       "en": "Multiplication",
-      "forms": { "en": ["multiply", "multiplicative", "multiplier"] }
+      "forms": { "en": ["multiply", "multiplicative", "multiplier"] },
+      "related": ["division"]
     },
     {
       "id": "division",
@@ -440,7 +456,8 @@
     {
       "id": "remainder",
       "zh": "余数",
-      "en": "Remainder"
+      "en": "Remainder",
+      "related": ["quotient"]
     },
     {
       "id": "multiple",
@@ -451,12 +468,14 @@
       "id": "rounding",
       "zh": "四舍五入",
       "en": "Rounding",
-      "forms": { "en": ["round", "rounded"] }
+      "forms": { "en": ["round", "rounded"] },
+      "related": ["truncation"]
     },
     {
       "id": "golden-ratio",
       "zh": "黄金比例",
-      "en": "Golden ratio"
+      "en": "Golden ratio",
+      "related": ["eulers-number"]
     },
     {
       "id": "roman-numerals",
@@ -484,7 +503,8 @@
       "id": "gcd",
       "zh": "最大公约数",
       "en": "GCD",
-      "forms": { "en": ["greatest common divisor"] }
+      "forms": { "en": ["greatest common divisor"] },
+      "related": ["lcm"]
     },
     {
       "id": "congruence",
@@ -528,12 +548,14 @@
     {
       "id": "determinant",
       "zh": "行列式",
-      "en": "Determinant"
+      "en": "Determinant",
+      "related": ["trace"]
     },
     {
       "id": "eigenvalue",
       "zh": "特征值",
-      "en": "Eigenvalue"
+      "en": "Eigenvalue",
+      "related": ["eigenvector"]
     },
     {
       "id": "rank",
@@ -573,7 +595,8 @@
     {
       "id": "dot-product",
       "zh": "点积",
-      "en": "Dot product"
+      "en": "Dot product",
+      "related": ["cross-product"]
     },
     {
       "id": "cross-product",
@@ -607,7 +630,8 @@
       "id": "group",
       "zh": "群",
       "en": "Group",
-      "forms": { "en": ["subgroup"] }
+      "forms": { "en": ["subgroup"] },
+      "related": ["ring"]
     },
     {
       "id": "ring",
@@ -653,7 +677,8 @@
     {
       "id": "domain",
       "zh": "定义域",
-      "en": "Domain"
+      "en": "Domain",
+      "related": ["range"]
     },
     {
       "id": "range",
@@ -756,7 +781,8 @@
       "id": "radius",
       "zh": "半径",
       "en": "Radius",
-      "forms": { "en": ["radii"] }
+      "forms": { "en": ["radii"] },
+      "related": ["diameter"]
     },
     {
       "id": "diameter",
@@ -766,7 +792,8 @@
     {
       "id": "perimeter",
       "zh": "周长",
-      "en": "Perimeter"
+      "en": "Perimeter",
+      "related": ["area"]
     },
     {
       "id": "area",
@@ -788,7 +815,8 @@
       "id": "ellipse",
       "zh": "椭圆",
       "en": "Ellipse",
-      "forms": { "en": ["elliptic", "elliptical"] }
+      "forms": { "en": ["elliptic", "elliptical"] },
+      "related": ["hyperbola"]
     },
     {
       "id": "parabola",
@@ -824,7 +852,8 @@
       "id": "cone",
       "zh": "圆锥",
       "en": "Cone",
-      "forms": { "en": ["conic", "conical"] }
+      "forms": { "en": ["conic", "conical"] },
+      "related": ["cylinder"]
     },
     {
       "id": "cylinder",
@@ -890,7 +919,8 @@
       "id": "sine",
       "zh": "正弦",
       "en": "Sine",
-      "forms": { "en": ["sin", "sinusoid", "sinusoidal"] }
+      "forms": { "en": ["sin", "sinusoid", "sinusoidal"] },
+      "related": ["cosine"]
     },
     {
       "id": "cosine",
@@ -923,7 +953,8 @@
     {
       "id": "mobius-strip",
       "zh": "莫比乌斯带",
-      "en": "Möbius strip"
+      "en": "Möbius strip",
+      "related": ["klein-bottle"]
     },
     {
       "id": "klein-bottle",
@@ -956,7 +987,8 @@
     {
       "id": "mandelbrot-set",
       "zh": "曼德博集合",
-      "en": "Mandelbrot set"
+      "en": "Mandelbrot set",
+      "related": ["julia-set"]
     },
     {
       "id": "koch-snowflake",
@@ -1015,7 +1047,8 @@
     {
       "id": "union",
       "zh": "并集",
-      "en": "Union"
+      "en": "Union",
+      "related": ["intersection"]
     },
     {
       "id": "intersection",
@@ -1032,7 +1065,8 @@
       "id": "cardinality",
       "zh": "基数",
       "en": "Cardinality",
-      "forms": { "en": ["cardinal"] }
+      "forms": { "en": ["cardinal"] },
+      "related": ["ordinal"]
     },
     {
       "id": "logic",
@@ -1089,7 +1123,8 @@
     {
       "id": "counterexample",
       "zh": "反例",
-      "en": "Counterexample"
+      "en": "Counterexample",
+      "related": ["contradiction"]
     },
     {
       "id": "qed",
@@ -1113,7 +1148,8 @@
       "id": "uniqueness",
       "zh": "唯一性",
       "en": "Uniqueness",
-      "forms": { "en": ["unique", "uniquely"] }
+      "forms": { "en": ["unique", "uniquely"] },
+      "related": ["existence"]
     },
     {
       "id": "construction",
@@ -1125,12 +1161,14 @@
       "id": "abacus",
       "zh": "算盘",
       "en": "Abacus",
-      "forms": { "en": ["abaci"] }
+      "forms": { "en": ["abaci"] },
+      "related": ["calculator"]
     },
     {
       "id": "ruler",
       "zh": "直尺",
-      "en": "Ruler"
+      "en": "Ruler",
+      "related": ["protractor"]
     },
     {
       "id": "protractor",
@@ -1156,12 +1194,14 @@
     {
       "id": "fields-medal",
       "zh": "菲尔兹奖",
-      "en": "Fields Medal"
+      "en": "Fields Medal",
+      "related": ["abel-prize"]
     },
     {
       "id": "magic-square",
       "zh": "幻方",
-      "en": "Magic square"
+      "en": "Magic square",
+      "related": ["sudoku"]
     },
     {
       "id": "sudoku",
@@ -1210,7 +1250,8 @@
     {
       "id": "prior",
       "zh": "先验",
-      "en": "Prior"
+      "en": "Prior",
+      "related": ["posterior"]
     },
     {
       "id": "posterior",
@@ -1288,7 +1329,8 @@
       "id": "skewness",
       "zh": "偏度",
       "en": "Skewness",
-      "forms": { "en": ["skew", "skewed"] }
+      "forms": { "en": ["skew", "skewed"] },
+      "related": ["kurtosis"]
     },
     {
       "id": "kurtosis",
@@ -1298,17 +1340,20 @@
     {
       "id": "histogram",
       "zh": "直方图",
-      "en": "Histogram"
+      "en": "Histogram",
+      "related": ["bar-chart"]
     },
     {
       "id": "scatter-plot",
       "zh": "散点图",
-      "en": "Scatter plot"
+      "en": "Scatter plot",
+      "related": ["line-chart"]
     },
     {
       "id": "box-plot",
       "zh": "箱线图",
-      "en": "Box plot"
+      "en": "Box plot",
+      "related": ["violin-plot"]
     },
     {
       "id": "pie-chart",
@@ -1345,7 +1390,8 @@
     {
       "id": "effect-size",
       "zh": "效应量",
-      "en": "Effect size"
+      "en": "Effect size",
+      "related": ["sample-size"]
     },
     {
       "id": "estimation",
@@ -1404,7 +1450,8 @@
       "id": "seasonality",
       "zh": "季节性",
       "en": "Seasonality",
-      "forms": { "en": ["seasonal"] }
+      "forms": { "en": ["seasonal"] },
+      "related": ["trend"]
     },
     {
       "id": "trend",
@@ -1415,7 +1462,8 @@
     {
       "id": "benfords-law",
       "zh": "本福特定律",
-      "en": "Benford's law"
+      "en": "Benford's law",
+      "related": ["zipfs-law"]
     },
     {
       "id": "zipfs-law",
@@ -1447,7 +1495,8 @@
       "id": "bisection",
       "zh": "二分法",
       "en": "Bisection",
-      "forms": { "en": ["bisect"] }
+      "forms": { "en": ["bisect"] },
+      "related": ["newton-raphson"]
     },
     {
       "id": "discretization",
@@ -1491,7 +1540,8 @@
       "id": "consistency",
       "zh": "一致性",
       "en": "Consistency",
-      "forms": { "en": ["consistent"] }
+      "forms": { "en": ["consistent"] },
+      "related": ["unbiasedness"]
     },
     {
       "id": "stability",
@@ -1544,12 +1594,14 @@
       "id": "homotopy",
       "zh": "同伦",
       "en": "Homotopy",
-      "forms": { "en": ["homotopic"] }
+      "forms": { "en": ["homotopic"] },
+      "related": ["homology"]
     },
     {
       "id": "lie-group",
       "zh": "李群",
-      "en": "Lie group"
+      "en": "Lie group",
+      "related": ["lie-algebra"]
     },
     {
       "id": "midpoint",
@@ -1717,7 +1769,8 @@
       "id": "commutativity",
       "zh": "交换律",
       "en": "Commutativity",
-      "forms": { "en": ["commutative", "commute"] }
+      "forms": { "en": ["commutative", "commute"] },
+      "related": ["associativity"]
     },
     {
       "id": "associativity",
@@ -1868,7 +1921,8 @@
       "id": "supremum",
       "zh": "上确界",
       "en": "Supremum",
-      "forms": { "en": ["sup"] }
+      "forms": { "en": ["sup"] },
+      "related": ["infimum"]
     },
     {
       "id": "infimum",
@@ -1880,7 +1934,8 @@
       "id": "compactness",
       "zh": "紧致性",
       "en": "Compactness",
-      "forms": { "en": ["compact"] }
+      "forms": { "en": ["compact"] },
+      "related": ["connectedness"]
     },
     {
       "id": "connectedness",
@@ -2055,7 +2110,8 @@
     {
       "id": "continuum",
       "zh": "连续统",
-      "en": "Continuum"
+      "en": "Continuum",
+      "related": ["aleph-null"]
     },
     {
       "id": "gamblers-ruin",
@@ -2161,7 +2217,8 @@
     {
       "id": "am-gm",
       "zh": "均值不等式",
-      "en": "AM-GM"
+      "en": "AM-GM",
+      "related": ["cauchy-schwarz"]
     },
     {
       "id": "cauchy-schwarz",
@@ -2289,7 +2346,8 @@
     {
       "id": "zfc",
       "zh": "ZFC",
-      "en": "ZFC"
+      "en": "ZFC",
+      "related": ["peano-axioms"]
     },
     {
       "id": "model-theory",
@@ -2387,7 +2445,8 @@
     {
       "id": "euler-method",
       "zh": "欧拉法",
-      "en": "Euler method"
+      "en": "Euler method",
+      "related": ["runge-kutta"]
     },
     {
       "id": "runge-kutta",

@@ -24,7 +24,8 @@
     {
       "id": "western-zhou",
       "zh": "西周",
-      "en": "Western Zhou"
+      "en": "Western Zhou",
+      "related": ["eastern-zhou"]
     },
     {
       "id": "eastern-zhou",
@@ -44,17 +45,20 @@
     {
       "id": "qin-dynasty",
       "zh": "秦朝",
-      "en": "Qin dynasty"
+      "en": "Qin dynasty",
+      "related": ["sui-dynasty"]
     },
     {
       "id": "han-dynasty",
       "zh": "汉朝",
-      "en": "Han dynasty"
+      "en": "Han dynasty",
+      "related": ["tang-dynasty"]
     },
     {
       "id": "western-han",
       "zh": "西汉",
-      "en": "Western Han"
+      "en": "Western Han",
+      "related": ["eastern-han"]
     },
     {
       "id": "eastern-han",
@@ -74,7 +78,8 @@
     {
       "id": "eastern-jin",
       "zh": "东晋",
-      "en": "Eastern Jin"
+      "en": "Eastern Jin",
+      "related": ["western-jin"]
     },
     {
       "id": "sui-dynasty",
@@ -104,7 +109,8 @@
     {
       "id": "northern-song",
       "zh": "北宋",
-      "en": "Northern Song"
+      "en": "Northern Song",
+      "related": ["southern-song"]
     },
     {
       "id": "southern-song",
@@ -119,7 +125,8 @@
     {
       "id": "ming-dynasty",
       "zh": "明朝",
-      "en": "Ming dynasty"
+      "en": "Ming dynasty",
+      "related": ["qing-dynasty"]
     },
     {
       "id": "qing-dynasty",
@@ -129,7 +136,8 @@
     {
       "id": "changan",
       "zh": "长安",
-      "en": "Chang'an"
+      "en": "Chang'an",
+      "related": ["luoyang"]
     },
     {
       "id": "luoyang",
@@ -159,7 +167,8 @@
     {
       "id": "crown-prince",
       "zh": "太子",
-      "en": "Crown prince"
+      "en": "Crown prince",
+      "related": ["princess"]
     },
     {
       "id": "consort-clan",
@@ -169,7 +178,8 @@
     {
       "id": "eunuch",
       "zh": "宦官",
-      "en": "Eunuch"
+      "en": "Eunuch",
+      "related": ["palace-maid"]
     },
     {
       "id": "feudal-lord",
@@ -190,7 +200,8 @@
     {
       "id": "fengjian",
       "zh": "分封制",
-      "en": "Fengjian"
+      "en": "Fengjian",
+      "related": ["junxian-system"]
     },
     {
       "id": "junxian-system",
@@ -205,7 +216,8 @@
     {
       "id": "secretariat",
       "zh": "中书省",
-      "en": "Secretariat"
+      "en": "Secretariat",
+      "related": ["chancellery"]
     },
     {
       "id": "chancellery",
@@ -226,7 +238,8 @@
     {
       "id": "privy-council",
       "zh": "枢密院",
-      "en": "Privy Council"
+      "en": "Privy Council",
+      "related": ["grand-council"]
     },
     {
       "id": "grand-council",
@@ -251,7 +264,8 @@
     {
       "id": "prefect",
       "zh": "知府",
-      "en": "Prefect"
+      "en": "Prefect",
+      "related": ["magistrate"]
     },
     {
       "id": "magistrate",
@@ -276,7 +290,8 @@
     {
       "id": "edict",
       "zh": "圣旨",
-      "en": "Edict"
+      "en": "Edict",
+      "related": ["memorial"]
     },
     {
       "id": "memorial",
@@ -296,7 +311,8 @@
     {
       "id": "dragon-robe",
       "zh": "龙袍",
-      "en": "Dragon robe"
+      "en": "Dragon robe",
+      "related": ["phoenix-crown"]
     },
     {
       "id": "phoenix-crown",
@@ -306,7 +322,8 @@
     {
       "id": "era-name",
       "zh": "年号",
-      "en": "Era name"
+      "en": "Era name",
+      "related": ["temple-name"]
     },
     {
       "id": "temple-name",
@@ -332,7 +349,8 @@
     {
       "id": "zhuangyuan",
       "zh": "状元",
-      "en": "Zhuangyuan"
+      "en": "Zhuangyuan",
+      "related": ["bangyan"]
     },
     {
       "id": "jinshi",
@@ -342,12 +360,14 @@
     {
       "id": "xiucai",
       "zh": "秀才",
-      "en": "Xiucai"
+      "en": "Xiucai",
+      "related": ["juren"]
     },
     {
       "id": "academy",
       "zh": "书院",
-      "en": "Academy"
+      "en": "Academy",
+      "related": ["private-school"]
     },
     {
       "id": "private-school",
@@ -357,7 +377,8 @@
     {
       "id": "well-field",
       "zh": "井田制",
-      "en": "Well-field"
+      "en": "Well-field",
+      "related": ["equal-field"]
     },
     {
       "id": "equal-field",
@@ -367,7 +388,8 @@
     {
       "id": "two-tax-system",
       "zh": "两税法",
-      "en": "Two-tax system"
+      "en": "Two-tax system",
+      "related": ["single-whip"]
     },
     {
       "id": "single-whip",
@@ -494,7 +516,8 @@
     {
       "id": "bride-price",
       "zh": "聘礼",
-      "en": "Bride price"
+      "en": "Bride price",
+      "related": ["dowry"]
     },
     {
       "id": "dowry",
@@ -514,7 +537,8 @@
     {
       "id": "door-god",
       "zh": "门神",
-      "en": "Door god"
+      "en": "Door god",
+      "related": ["kitchen-god"]
     },
     {
       "id": "kitchen-god",
@@ -529,7 +553,8 @@
     {
       "id": "city-god",
       "zh": "城隍",
-      "en": "City god"
+      "en": "City god",
+      "related": ["earth-god"]
     },
     {
       "id": "earth-god",
@@ -549,7 +574,8 @@
     {
       "id": "jiaozi",
       "zh": "交子",
-      "en": "Jiaozi"
+      "en": "Jiaozi",
+      "related": ["flying-cash"]
     },
     {
       "id": "tael",
@@ -589,7 +615,8 @@
     {
       "id": "spinning-wheel",
       "zh": "纺车",
-      "en": "Spinning wheel"
+      "en": "Spinning wheel",
+      "related": ["loom"]
     },
     {
       "id": "loom",
@@ -634,7 +661,8 @@
     {
       "id": "inn",
       "zh": "客栈",
-      "en": "Inn"
+      "en": "Inn",
+      "related": ["teahouse"]
     },
     {
       "id": "teahouse",
@@ -649,7 +677,8 @@
     {
       "id": "temple-fair",
       "zh": "庙会",
-      "en": "Temple fair"
+      "en": "Temple fair",
+      "related": ["market-day"]
     },
     {
       "id": "peddler",
@@ -699,7 +728,8 @@
     {
       "id": "drum-tower",
       "zh": "鼓楼",
-      "en": "Drum tower"
+      "en": "Drum tower",
+      "related": ["bell-tower"]
     },
     {
       "id": "bell-tower",
@@ -739,7 +769,8 @@
     {
       "id": "movable-type",
       "zh": "活字印刷",
-      "en": "Movable type"
+      "en": "Movable type",
+      "related": ["block-printing"]
     },
     {
       "id": "block-printing",
@@ -781,7 +812,8 @@
     {
       "id": "chain-pump",
       "zh": "龙骨水车",
-      "en": "Chain pump"
+      "en": "Chain pump",
+      "related": ["noria"]
     },
     {
       "id": "noria",
@@ -861,12 +893,14 @@
     {
       "id": "chinese-rings",
       "zh": "九连环",
-      "en": "Chinese rings"
+      "en": "Chinese rings",
+      "related": ["burr-puzzle"]
     },
     {
       "id": "cuju",
       "zh": "蹴鞠",
-      "en": "Cuju"
+      "en": "Cuju",
+      "related": ["touhu"]
     },
     {
       "id": "touhu",
@@ -881,7 +915,8 @@
     {
       "id": "heavenly-stem",
       "zh": "天干",
-      "en": "Heavenly stem"
+      "en": "Heavenly stem",
+      "related": ["earthly-branch"]
     },
     {
       "id": "earthly-branch",
@@ -966,7 +1001,8 @@
     {
       "id": "zongzi",
       "zh": "粽子",
-      "en": "Zongzi"
+      "en": "Zongzi",
+      "related": ["mooncake"]
     },
     {
       "id": "qixi",
@@ -1001,7 +1037,8 @@
     {
       "id": "book-of-songs",
       "zh": "诗经",
-      "en": "Book of Songs"
+      "en": "Book of Songs",
+      "related": ["chu-ci"]
     },
     {
       "id": "book-of-rites",
@@ -1021,7 +1058,8 @@
     {
       "id": "four-books",
       "zh": "四书",
-      "en": "Four Books"
+      "en": "Four Books",
+      "related": ["five-classics"]
     },
     {
       "id": "five-classics",
@@ -1031,7 +1069,8 @@
     {
       "id": "shiji",
       "zh": "史记",
-      "en": "Shiji"
+      "en": "Shiji",
+      "related": ["book-of-han"]
     },
     {
       "id": "book-of-han",
@@ -1086,7 +1125,8 @@
     {
       "id": "bencao-gangmu",
       "zh": "本草纲目",
-      "en": "Bencao Gangmu"
+      "en": "Bencao Gangmu",
+      "related": ["tiangong-kaiwu"]
     },
     {
       "id": "tiangong-kaiwu",
@@ -1201,7 +1241,8 @@
     {
       "id": "sanzijing",
       "zh": "三字经",
-      "en": "Sanzijing"
+      "en": "Sanzijing",
+      "related": ["qianziwen"]
     },
     {
       "id": "qianziwen",
@@ -1356,7 +1397,8 @@
     {
       "id": "kaifeng",
       "zh": "开封",
-      "en": "Kaifeng"
+      "en": "Kaifeng",
+      "related": ["linan"]
     },
     {
       "id": "linan",
@@ -1401,7 +1443,8 @@
     {
       "id": "qianzhuang",
       "zh": "钱庄",
-      "en": "Qianzhuang"
+      "en": "Qianzhuang",
+      "related": ["piaohao"]
     },
     {
       "id": "piaohao",
@@ -1416,7 +1459,8 @@
     {
       "id": "first-month",
       "zh": "正月",
-      "en": "First month"
+      "en": "First month",
+      "related": ["twelfth-month"]
     },
     {
       "id": "twelfth-month",

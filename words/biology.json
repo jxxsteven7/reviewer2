@@ -10,7 +10,8 @@
       "id": "dna",
       "zh": "DNA",
       "en": "DNA",
-      "forms": { "zh": ["脱氧核糖核酸"], "en": ["deoxyribonucleic acid"] }
+      "forms": { "zh": ["脱氧核糖核酸"], "en": ["deoxyribonucleic acid"] },
+      "related": ["rna"]
     },
     {
       "id": "gene",
@@ -22,7 +23,8 @@
       "id": "mitochondria",
       "zh": "线粒体",
       "en": "Mitochondria",
-      "forms": { "en": ["mitochondrion", "mitochondrial"] }
+      "forms": { "en": ["mitochondrion", "mitochondrial"] },
+      "related": ["chloroplast"]
     },
     {
       "id": "evolution",
@@ -45,7 +47,8 @@
       "id": "virus",
       "zh": "病毒",
       "en": "Virus",
-      "forms": { "en": ["viral", "virology"] }
+      "forms": { "en": ["viral", "virology"] },
+      "related": ["bacteria"]
     },
     {
       "id": "crispr",
@@ -56,7 +59,8 @@
       "id": "photosynthesis",
       "zh": "光合作用",
       "en": "Photosynthesis",
-      "forms": { "en": ["photosynthetic", "photosynthesize"] }
+      "forms": { "en": ["photosynthetic", "photosynthesize"] },
+      "related": ["respiration"]
     },
     {
       "id": "species",
@@ -91,7 +95,8 @@
       "id": "hormone",
       "zh": "激素",
       "en": "Hormone",
-      "forms": { "en": ["hormonal"] }
+      "forms": { "en": ["hormonal"] },
+      "related": ["pheromone"]
     },
     {
       "id": "symbiosis",
@@ -103,12 +108,14 @@
       "id": "chromosome",
       "zh": "染色体",
       "en": "Chromosome",
-      "forms": { "en": ["chromosomal"] }
+      "forms": { "en": ["chromosomal"] },
+      "related": ["chromatin"]
     },
     {
       "id": "fruit-fly",
       "zh": "果蝇",
-      "en": "Fruit fly"
+      "en": "Fruit fly",
+      "related": ["nematode"]
     },
     {
       "id": "pcr",
@@ -126,7 +133,8 @@
       "id": "mrna",
       "zh": "mRNA",
       "en": "mRNA",
-      "forms": { "zh": ["信使RNA"], "en": ["messenger RNA"] }
+      "forms": { "zh": ["信使RNA"], "en": ["messenger RNA"] },
+      "related": ["trna"]
     },
     {
       "id": "genome",
@@ -163,7 +171,8 @@
       "id": "transcription",
       "zh": "转录",
       "en": "Transcription",
-      "forms": { "en": ["transcribe", "transcriptional"] }
+      "forms": { "en": ["transcribe", "transcriptional"] },
+      "related": ["translation"]
     },
     {
       "id": "expression",
@@ -174,7 +183,8 @@
     {
       "id": "promoter",
       "zh": "启动子",
-      "en": "Promoter"
+      "en": "Promoter",
+      "related": ["enhancer"]
     },
     {
       "id": "enhancer",
@@ -184,7 +194,8 @@
     {
       "id": "intron",
       "zh": "内含子",
-      "en": "Intron"
+      "en": "Intron",
+      "related": ["exon"]
     },
     {
       "id": "exon",
@@ -211,7 +222,8 @@
       "id": "telomere",
       "zh": "端粒",
       "en": "Telomere",
-      "forms": { "en": ["telomeric"] }
+      "forms": { "en": ["telomeric"] },
+      "related": ["centromere"]
     },
     {
       "id": "oncogene",
@@ -283,7 +295,8 @@
     {
       "id": "collagen",
       "zh": "胶原蛋白",
-      "en": "Collagen"
+      "en": "Collagen",
+      "related": ["keratin"]
     },
     {
       "id": "hemoglobin",
@@ -307,7 +320,8 @@
       "id": "genotype",
       "zh": "基因型",
       "en": "Genotype",
-      "forms": { "en": ["genotypic"] }
+      "forms": { "en": ["genotypic"] },
+      "related": ["phenotype"]
     },
     {
       "id": "phenotype",
@@ -319,7 +333,8 @@
       "id": "dominant",
       "zh": "显性",
       "en": "Dominant",
-      "forms": { "en": ["dominance"] }
+      "forms": { "en": ["dominance"] },
+      "related": ["recessive"]
     },
     {
       "id": "recessive",
@@ -352,7 +367,8 @@
     {
       "id": "genetic-drift",
       "zh": "遗传漂变",
-      "en": "Genetic drift"
+      "en": "Genetic drift",
+      "related": ["natural-selection"]
     },
     {
       "id": "inbreeding",
@@ -401,7 +417,8 @@
     {
       "id": "primer",
       "zh": "引物",
-      "en": "Primer"
+      "en": "Primer",
+      "related": ["probe"]
     },
     {
       "id": "probe",
@@ -482,13 +499,15 @@
       "id": "flagellum",
       "zh": "鞭毛",
       "en": "Flagellum",
-      "forms": { "en": ["flagella"] }
+      "forms": { "en": ["flagella"] },
+      "related": ["cilia"]
     },
     {
       "id": "mitosis",
       "zh": "有丝分裂",
       "en": "Mitosis",
-      "forms": { "en": ["mitotic"] }
+      "forms": { "en": ["mitotic"] },
+      "related": ["meiosis"]
     },
     {
       "id": "meiosis",
@@ -505,7 +524,8 @@
       "id": "apoptosis",
       "zh": "细胞凋亡",
       "en": "Apoptosis",
-      "forms": { "en": ["apoptotic"] }
+      "forms": { "en": ["apoptotic"] },
+      "related": ["autophagy"]
     },
     {
       "id": "autophagy",
@@ -516,7 +536,8 @@
     {
       "id": "endocytosis",
       "zh": "内吞",
-      "en": "Endocytosis"
+      "en": "Endocytosis",
+      "related": ["exocytosis"]
     },
     {
       "id": "receptor",
@@ -560,7 +581,8 @@
       "id": "glycolysis",
       "zh": "糖酵解",
       "en": "Glycolysis",
-      "forms": { "en": ["glycolytic"] }
+      "forms": { "en": ["glycolytic"] },
+      "related": ["krebs-cycle"]
     },
     {
       "id": "krebs-cycle",
@@ -593,7 +615,8 @@
       "id": "neuron",
       "zh": "神经元",
       "en": "Neuron",
-      "forms": { "en": ["neuronal", "neural"] }
+      "forms": { "en": ["neuronal", "neural"] },
+      "related": ["glia"]
     },
     {
       "id": "synapse",
@@ -605,7 +628,8 @@
       "id": "axon",
       "zh": "轴突",
       "en": "Axon",
-      "forms": { "en": ["axonal"] }
+      "forms": { "en": ["axonal"] },
+      "related": ["dendrite"]
     },
     {
       "id": "dendrite",
@@ -629,7 +653,8 @@
       "id": "hippocampus",
       "zh": "海马体",
       "en": "Hippocampus",
-      "forms": { "en": ["hippocampal", "hippocampi"] }
+      "forms": { "en": ["hippocampal", "hippocampi"] },
+      "related": ["amygdala"]
     },
     {
       "id": "optogenetics",
@@ -640,7 +665,8 @@
       "id": "dopamine",
       "zh": "多巴胺",
       "en": "Dopamine",
-      "forms": { "en": ["dopaminergic"] }
+      "forms": { "en": ["dopaminergic"] },
+      "related": ["serotonin"]
     },
     {
       "id": "serotonin",
@@ -650,7 +676,8 @@
     {
       "id": "adrenaline",
       "zh": "肾上腺素",
-      "en": "Adrenaline"
+      "en": "Adrenaline",
+      "related": ["cortisol"]
     },
     {
       "id": "oxytocin",
@@ -823,7 +850,8 @@
       "id": "herbivore",
       "zh": "食草动物",
       "en": "Herbivore",
-      "forms": { "en": ["herbivorous"] }
+      "forms": { "en": ["herbivorous"] },
+      "related": ["carnivore"]
     },
     {
       "id": "carnivore",
@@ -851,7 +879,8 @@
     {
       "id": "carbon-cycle",
       "zh": "碳循环",
-      "en": "Carbon cycle"
+      "en": "Carbon cycle",
+      "related": ["nitrogen-cycle"]
     },
     {
       "id": "coral-reef",
@@ -894,7 +923,8 @@
     {
       "id": "camouflage",
       "zh": "伪装",
-      "en": "Camouflage"
+      "en": "Camouflage",
+      "related": ["mimicry"]
     },
     {
       "id": "mimicry",
@@ -916,7 +946,8 @@
     {
       "id": "pollen",
       "zh": "花粉",
-      "en": "Pollen"
+      "en": "Pollen",
+      "related": ["spore"]
     },
     {
       "id": "seed",
@@ -962,7 +993,8 @@
     {
       "id": "yeast",
       "zh": "酵母",
-      "en": "Yeast"
+      "en": "Yeast",
+      "related": ["e-coli"]
     },
     {
       "id": "e-coli",
@@ -990,7 +1022,8 @@
       "id": "prokaryote",
       "zh": "原核生物",
       "en": "Prokaryote",
-      "forms": { "en": ["prokaryotic"] }
+      "forms": { "en": ["prokaryotic"] },
+      "related": ["eukaryote"]
     },
     {
       "id": "eukaryote",
@@ -1050,7 +1083,8 @@
       "id": "larva",
       "zh": "幼虫",
       "en": "Larva",
-      "forms": { "en": ["larvae", "larval"] }
+      "forms": { "en": ["larvae", "larval"] },
+      "related": ["pupa"]
     },
     {
       "id": "cocoon",
@@ -1093,7 +1127,8 @@
     {
       "id": "zebrafish",
       "zh": "斑马鱼",
-      "en": "Zebrafish"
+      "en": "Zebrafish",
+      "related": ["xenopus"]
     },
     {
       "id": "nematode",
@@ -1118,7 +1153,8 @@
     {
       "id": "macaque",
       "zh": "猕猴",
-      "en": "Macaque"
+      "en": "Macaque",
+      "related": ["chimpanzee"]
     },
     {
       "id": "chimpanzee",
@@ -1140,7 +1176,8 @@
       "id": "reptile",
       "zh": "爬行动物",
       "en": "Reptile",
-      "forms": { "en": ["reptilian"] }
+      "forms": { "en": ["reptilian"] },
+      "related": ["amphibian"]
     },
     {
       "id": "amphibian",
@@ -1165,7 +1202,8 @@
     {
       "id": "bee",
       "zh": "蜜蜂",
-      "en": "Bee"
+      "en": "Bee",
+      "related": ["butterfly"]
     },
     {
       "id": "butterfly",
@@ -1181,12 +1219,14 @@
       "id": "octopus",
       "zh": "章鱼",
       "en": "Octopus",
-      "forms": { "en": ["octopi"] }
+      "forms": { "en": ["octopi"] },
+      "related": ["squid"]
     },
     {
       "id": "chameleon",
       "zh": "变色龙",
-      "en": "Chameleon"
+      "en": "Chameleon",
+      "related": ["gecko"]
     },
     {
       "id": "tardigrade",
@@ -1196,12 +1236,14 @@
     {
       "id": "platypus",
       "zh": "鸭嘴兽",
-      "en": "Platypus"
+      "en": "Platypus",
+      "related": ["kangaroo"]
     },
     {
       "id": "in-vitro",
       "zh": "体外",
-      "en": "In vitro"
+      "en": "In vitro",
+      "related": ["in-vivo"]
     },
     {
       "id": "in-vivo",
@@ -1233,7 +1275,8 @@
       "id": "western-blot",
       "zh": "Western blot",
       "en": "Western blot",
-      "forms": { "en": ["Western blotting"] }
+      "forms": { "en": ["Western blotting"] },
+      "related": ["elisa"]
     },
     {
       "id": "elisa",
@@ -1245,7 +1288,8 @@
       "id": "gfp",
       "zh": "GFP",
       "en": "GFP",
-      "forms": { "zh": ["绿色荧光蛋白"], "en": ["green fluorescent protein"] }
+      "forms": { "zh": ["绿色荧光蛋白"], "en": ["green fluorescent protein"] },
+      "related": ["luciferase"]
     },
     {
       "id": "flow-cytometry",
@@ -1313,7 +1357,8 @@
       "id": "haploid",
       "zh": "单倍体",
       "en": "Haploid",
-      "forms": { "en": ["haploidy"] }
+      "forms": { "en": ["haploidy"] },
+      "related": ["diploid"]
     },
     {
       "id": "diploid",
@@ -1325,7 +1370,8 @@
       "id": "heterozygote",
       "zh": "杂合子",
       "en": "Heterozygote",
-      "forms": { "en": ["heterozygous"] }
+      "forms": { "en": ["heterozygous"] },
+      "related": ["homozygote"]
     },
     {
       "id": "homozygote",
@@ -1357,13 +1403,15 @@
     {
       "id": "cellulose",
       "zh": "纤维素",
-      "en": "Cellulose"
+      "en": "Cellulose",
+      "related": ["chitin"]
     },
     {
       "id": "starch",
       "zh": "淀粉",
       "en": "Starch",
-      "forms": { "en": ["starchy"] }
+      "forms": { "en": ["starchy"] },
+      "related": ["glycogen"]
     },
     {
       "id": "melanin",
@@ -1891,7 +1939,8 @@
     {
       "id": "actin",
       "zh": "肌动蛋白",
-      "en": "Actin"
+      "en": "Actin",
+      "related": ["myosin"]
     },
     {
       "id": "myosin",
@@ -2139,12 +2188,14 @@
       "id": "cerebellum",
       "zh": "小脑",
       "en": "Cerebellum",
-      "forms": { "en": ["cerebellar"] }
+      "forms": { "en": ["cerebellar"] },
+      "related": ["brainstem"]
     },
     {
       "id": "hypothalamus",
       "zh": "下丘脑",
-      "en": "Hypothalamus"
+      "en": "Hypothalamus",
+      "related": ["pituitary"]
     },
     {
       "id": "brainstem",
@@ -2159,7 +2210,8 @@
     {
       "id": "grid-cell",
       "zh": "网格细胞",
-      "en": "Grid cell"
+      "en": "Grid cell",
+      "related": ["place-cell"]
     },
     {
       "id": "place-cell",
@@ -2180,7 +2232,8 @@
       "id": "gaba",
       "zh": "GABA",
       "en": "GABA",
-      "forms": { "zh": ["γ-氨基丁酸"], "en": ["gamma-aminobutyric acid"] }
+      "forms": { "zh": ["γ-氨基丁酸"], "en": ["gamma-aminobutyric acid"] },
+      "related": ["glutamate"]
     },
     {
       "id": "glutamate",
@@ -2226,7 +2279,8 @@
     {
       "id": "testosterone",
       "zh": "睾酮",
-      "en": "Testosterone"
+      "en": "Testosterone",
+      "related": ["estrogen"]
     },
     {
       "id": "estrogen",
@@ -2247,7 +2301,8 @@
     {
       "id": "gamete",
       "zh": "配子",
-      "en": "Gamete"
+      "en": "Gamete",
+      "related": ["zygote"]
     },
     {
       "id": "zygote",
@@ -2257,7 +2312,8 @@
     {
       "id": "sperm",
       "zh": "精子",
-      "en": "Sperm"
+      "en": "Sperm",
+      "related": ["egg-cell"]
     },
     {
       "id": "egg-cell",
@@ -2315,7 +2371,8 @@
     {
       "id": "arthropod",
       "zh": "节肢动物",
-      "en": "Arthropod"
+      "en": "Arthropod",
+      "related": ["mollusk"]
     },
     {
       "id": "mollusk",
@@ -2385,7 +2442,8 @@
     {
       "id": "lamarckism",
       "zh": "拉马克主义",
-      "en": "Lamarckism"
+      "en": "Lamarckism",
+      "related": ["darwinism"]
     },
     {
       "id": "darwinism",
@@ -2426,7 +2484,8 @@
     {
       "id": "sea-urchin",
       "zh": "海胆",
-      "en": "Sea urchin"
+      "en": "Sea urchin",
+      "related": ["starfish"]
     },
     {
       "id": "starfish",
@@ -2466,7 +2525,8 @@
     {
       "id": "shark",
       "zh": "鲨鱼",
-      "en": "Shark"
+      "en": "Shark",
+      "related": ["dolphin"]
     },
     {
       "id": "dolphin",
@@ -2522,7 +2582,8 @@
       "id": "amoeba",
       "zh": "变形虫",
       "en": "Amoeba",
-      "forms": { "en": ["amoebae", "ameba"] }
+      "forms": { "en": ["amoebae", "ameba"] },
+      "related": ["paramecium"]
     },
     {
       "id": "paramecium",
@@ -2592,7 +2653,8 @@
     {
       "id": "xylem",
       "zh": "木质部",
-      "en": "Xylem"
+      "en": "Xylem",
+      "related": ["phloem"]
     },
     {
       "id": "phloem",
@@ -2613,7 +2675,8 @@
       "id": "monocot",
       "zh": "单子叶植物",
       "en": "Monocot",
-      "forms": { "en": ["monocotyledon"] }
+      "forms": { "en": ["monocotyledon"] },
+      "related": ["dicot"]
     },
     {
       "id": "dicot",
@@ -2624,7 +2687,8 @@
     {
       "id": "angiosperm",
       "zh": "被子植物",
-      "en": "Angiosperm"
+      "en": "Angiosperm",
+      "related": ["gymnosperm"]
     },
     {
       "id": "gymnosperm",
@@ -2634,7 +2698,8 @@
     {
       "id": "stamen",
       "zh": "雄蕊",
-      "en": "Stamen"
+      "en": "Stamen",
+      "related": ["pistil"]
     },
     {
       "id": "pistil",
@@ -2655,7 +2720,8 @@
     {
       "id": "venus-flytrap",
       "zh": "捕蝇草",
-      "en": "Venus flytrap"
+      "en": "Venus flytrap",
+      "related": ["mimosa"]
     },
     {
       "id": "mimosa",

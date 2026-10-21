@@ -46,7 +46,8 @@
       "id": "aerobic",
       "zh": "有氧",
       "en": "Aerobic",
-      "forms": { "en": ["aerobically"] }
+      "forms": { "en": ["aerobically"] },
+      "related": ["anaerobic"]
     },
     {
       "id": "anaerobic",
@@ -83,7 +84,8 @@
     {
       "id": "fast-twitch",
       "zh": "快肌",
-      "en": "Fast-twitch"
+      "en": "Fast-twitch",
+      "related": ["slow-twitch"]
     },
     {
       "id": "slow-twitch",
@@ -148,7 +150,8 @@
     {
       "id": "overtraining",
       "zh": "过度训练",
-      "en": "Overtraining"
+      "en": "Overtraining",
+      "related": ["detraining"]
     },
     {
       "id": "taper",
@@ -175,7 +178,8 @@
     {
       "id": "foam-roller",
       "zh": "泡沫轴",
-      "en": "Foam roller"
+      "en": "Foam roller",
+      "related": ["massage-gun"]
     },
     {
       "id": "flexibility",
@@ -234,7 +238,8 @@
     {
       "id": "body-fat",
       "zh": "体脂",
-      "en": "Body fat"
+      "en": "Body fat",
+      "related": ["lean-mass"]
     },
     {
       "id": "lean-mass",
@@ -274,7 +279,8 @@
     {
       "id": "concentric",
       "zh": "向心收缩",
-      "en": "Concentric"
+      "en": "Concentric",
+      "related": ["eccentric"]
     },
     {
       "id": "eccentric",
@@ -301,7 +307,8 @@
     {
       "id": "superset",
       "zh": "超级组",
-      "en": "Superset"
+      "en": "Superset",
+      "related": ["drop-set"]
     },
     {
       "id": "drop-set",
@@ -359,7 +366,8 @@
     {
       "id": "macrocycle",
       "zh": "大周期",
-      "en": "Macrocycle"
+      "en": "Macrocycle",
+      "related": ["microcycle"]
     },
     {
       "id": "microcycle",
@@ -484,7 +492,8 @@
     {
       "id": "topspin",
       "zh": "上旋",
-      "en": "Topspin"
+      "en": "Topspin",
+      "related": ["backspin"]
     },
     {
       "id": "backspin",
@@ -524,7 +533,8 @@
     {
       "id": "squat",
       "zh": "深蹲",
-      "en": "Squat"
+      "en": "Squat",
+      "related": ["deadlift"]
     },
     {
       "id": "deadlift",
@@ -539,7 +549,8 @@
     {
       "id": "clean-and-jerk",
       "zh": "挺举",
-      "en": "Clean and jerk"
+      "en": "Clean and jerk",
+      "related": ["snatch"]
     },
     {
       "id": "snatch",
@@ -549,7 +560,8 @@
     {
       "id": "pull-up",
       "zh": "引体向上",
-      "en": "Pull-up"
+      "en": "Pull-up",
+      "related": ["push-up"]
     },
     {
       "id": "push-up",
@@ -575,7 +587,8 @@
     {
       "id": "sit-up",
       "zh": "仰卧起坐",
-      "en": "Sit-up"
+      "en": "Sit-up",
+      "related": ["crunch"]
     },
     {
       "id": "crunch",
@@ -590,7 +603,8 @@
     {
       "id": "kettlebell",
       "zh": "壶铃",
-      "en": "Kettlebell"
+      "en": "Kettlebell",
+      "related": ["dumbbell"]
     },
     {
       "id": "dumbbell",
@@ -616,7 +630,8 @@
       "id": "jump-rope",
       "zh": "跳绳",
       "en": "Jump rope",
-      "forms": { "en": ["skipping rope"] }
+      "forms": { "en": ["skipping rope"] },
+      "related": ["hula-hoop"]
     },
     {
       "id": "rowing-machine",
@@ -647,7 +662,8 @@
       "id": "weightlifting",
       "zh": "举重",
       "en": "Weightlifting",
-      "forms": { "en": ["weightlifter"] }
+      "forms": { "en": ["weightlifter"] },
+      "related": ["powerlifting"]
     },
     {
       "id": "powerlifting",
@@ -680,12 +696,14 @@
     {
       "id": "tennis",
       "zh": "网球",
-      "en": "Tennis"
+      "en": "Tennis",
+      "related": ["squash"]
     },
     {
       "id": "table-tennis",
       "zh": "乒乓球",
-      "en": "Table tennis"
+      "en": "Table tennis",
+      "related": ["badminton"]
     },
     {
       "id": "badminton",
@@ -695,7 +713,8 @@
     {
       "id": "baseball",
       "zh": "棒球",
-      "en": "Baseball"
+      "en": "Baseball",
+      "related": ["softball"]
     },
     {
       "id": "softball",
@@ -721,7 +740,8 @@
     {
       "id": "field-hockey",
       "zh": "曲棍球",
-      "en": "Field hockey"
+      "en": "Field hockey",
+      "related": ["ice-hockey"]
     },
     {
       "id": "ice-hockey",
@@ -747,7 +767,8 @@
       "id": "bowling",
       "zh": "保龄球",
       "en": "Bowling",
-      "forms": { "en": ["bowler"] }
+      "forms": { "en": ["bowler"] },
+      "related": ["curling"]
     },
     {
       "id": "billiards",
@@ -795,12 +816,14 @@
       "id": "hurdles",
       "zh": "跨栏",
       "en": "Hurdles",
-      "forms": { "en": ["hurdler", "hurdling"] }
+      "forms": { "en": ["hurdler", "hurdling"] },
+      "related": ["steeplechase"]
     },
     {
       "id": "long-jump",
       "zh": "跳远",
-      "en": "Long jump"
+      "en": "Long jump",
+      "related": ["high-jump"]
     },
     {
       "id": "high-jump",
@@ -821,7 +844,8 @@
     {
       "id": "shot-put",
       "zh": "铅球",
-      "en": "Shot put"
+      "en": "Shot put",
+      "related": ["discus"]
     },
     {
       "id": "discus",
@@ -831,7 +855,8 @@
     {
       "id": "javelin",
       "zh": "标枪",
-      "en": "Javelin"
+      "en": "Javelin",
+      "related": ["hammer-throw"]
     },
     {
       "id": "hammer-throw",
@@ -842,7 +867,8 @@
       "id": "decathlon",
       "zh": "十项全能",
       "en": "Decathlon",
-      "forms": { "en": ["decathlete"] }
+      "forms": { "en": ["decathlete"] },
+      "related": ["heptathlon"]
     },
     {
       "id": "heptathlon",
@@ -889,7 +915,8 @@
     {
       "id": "breaststroke",
       "zh": "蛙泳",
-      "en": "Breaststroke"
+      "en": "Breaststroke",
+      "related": ["backstroke"]
     },
     {
       "id": "backstroke",
@@ -925,7 +952,8 @@
     {
       "id": "pike",
       "zh": "屈体",
-      "en": "Pike"
+      "en": "Pike",
+      "related": ["tuck"]
     },
     {
       "id": "tuck",
@@ -946,7 +974,8 @@
     {
       "id": "pommel-horse",
       "zh": "鞍马",
-      "en": "Pommel horse"
+      "en": "Pommel horse",
+      "related": ["vaulting-horse"]
     },
     {
       "id": "still-rings",
@@ -956,7 +985,8 @@
     {
       "id": "parallel-bars",
       "zh": "双杠",
-      "en": "Parallel bars"
+      "en": "Parallel bars",
+      "related": ["uneven-bars"]
     },
     {
       "id": "uneven-bars",
@@ -1018,7 +1048,8 @@
     {
       "id": "judo",
       "zh": "柔道",
-      "en": "Judo"
+      "en": "Judo",
+      "related": ["karate"]
     },
     {
       "id": "taekwondo",
@@ -1066,7 +1097,8 @@
     {
       "id": "uppercut",
       "zh": "上勾拳",
-      "en": "Uppercut"
+      "en": "Uppercut",
+      "related": ["jab"]
     },
     {
       "id": "jab",
@@ -1076,7 +1108,8 @@
     {
       "id": "heavyweight",
       "zh": "重量级",
-      "en": "Heavyweight"
+      "en": "Heavyweight",
+      "related": ["featherweight"]
     },
     {
       "id": "featherweight",
@@ -1086,7 +1119,8 @@
     {
       "id": "foil",
       "zh": "花剑",
-      "en": "Foil"
+      "en": "Foil",
+      "related": ["epee"]
     },
     {
       "id": "epee",
@@ -1128,7 +1162,8 @@
       "id": "archery",
       "zh": "射箭",
       "en": "Archery",
-      "forms": { "en": ["archer"] }
+      "forms": { "en": ["archer"] },
+      "related": ["shooting"]
     },
     {
       "id": "shooting",
@@ -1159,7 +1194,8 @@
       "id": "triathlon",
       "zh": "铁人三项",
       "en": "Triathlon",
-      "forms": { "en": ["triathlete"] }
+      "forms": { "en": ["triathlete"] },
+      "related": ["biathlon"]
     },
     {
       "id": "biathlon",
@@ -1177,7 +1213,8 @@
       "id": "kayak",
       "zh": "皮艇",
       "en": "Kayak",
-      "forms": { "en": ["kayaking"] }
+      "forms": { "en": ["kayaking"] },
+      "related": ["canoe"]
     },
     {
       "id": "canoe",
@@ -1241,7 +1278,8 @@
     {
       "id": "mountain-bike",
       "zh": "山地车",
-      "en": "Mountain bike"
+      "en": "Mountain bike",
+      "related": ["bmx"]
     },
     {
       "id": "bmx",
@@ -1284,7 +1322,8 @@
       "id": "skateboarding",
       "zh": "滑板",
       "en": "Skateboarding",
-      "forms": { "en": ["skateboarder"] }
+      "forms": { "en": ["skateboarder"] },
+      "related": ["snowboarding"]
     },
     {
       "id": "parkour",
@@ -1326,7 +1365,8 @@
     {
       "id": "big-air",
       "zh": "大跳台",
-      "en": "Big air"
+      "en": "Big air",
+      "related": ["halfpipe"]
     },
     {
       "id": "halfpipe",
@@ -1336,7 +1376,8 @@
     {
       "id": "figure-skating",
       "zh": "花样滑冰",
-      "en": "Figure skating"
+      "en": "Figure skating",
+      "related": ["speed-skating"]
     },
     {
       "id": "speed-skating",
@@ -1357,7 +1398,8 @@
       "id": "bobsleigh",
       "zh": "雪车",
       "en": "Bobsleigh",
-      "forms": { "en": ["bobsled"] }
+      "forms": { "en": ["bobsled"] },
+      "related": ["luge"]
     },
     {
       "id": "luge",
@@ -1373,7 +1415,8 @@
     {
       "id": "yoga",
       "zh": "瑜伽",
-      "en": "Yoga"
+      "en": "Yoga",
+      "related": ["pilates"]
     },
     {
       "id": "pilates",
@@ -1418,7 +1461,8 @@
     {
       "id": "penalty-kick",
       "zh": "点球",
-      "en": "Penalty kick"
+      "en": "Penalty kick",
+      "related": ["free-kick"]
     },
     {
       "id": "free-kick",
@@ -1428,7 +1472,8 @@
     {
       "id": "corner-kick",
       "zh": "角球",
-      "en": "Corner kick"
+      "en": "Corner kick",
+      "related": ["goal-kick"]
     },
     {
       "id": "throw-in",
@@ -1458,7 +1503,8 @@
     {
       "id": "red-card",
       "zh": "红牌",
-      "en": "Red card"
+      "en": "Red card",
+      "related": ["yellow-card"]
     },
     {
       "id": "yellow-card",
@@ -1505,7 +1551,8 @@
     {
       "id": "stoppage-time",
       "zh": "伤停补时",
-      "en": "Stoppage time"
+      "en": "Stoppage time",
+      "related": ["extra-time"]
     },
     {
       "id": "extra-time",
@@ -1568,7 +1615,8 @@
     {
       "id": "slam-dunk",
       "zh": "扣篮",
-      "en": "Slam dunk"
+      "en": "Slam dunk",
+      "related": ["layup"]
     },
     {
       "id": "three-pointer",
@@ -1676,7 +1724,8 @@
     {
       "id": "setter",
       "zh": "二传手",
-      "en": "Setter"
+      "en": "Setter",
+      "related": ["libero"]
     },
     {
       "id": "libero",
@@ -1718,7 +1767,8 @@
     {
       "id": "drop-shot",
       "zh": "吊球",
-      "en": "Drop shot"
+      "en": "Drop shot",
+      "related": ["lob"]
     },
     {
       "id": "lob",
@@ -1728,7 +1778,8 @@
     {
       "id": "forehand",
       "zh": "正手",
-      "en": "Forehand"
+      "en": "Forehand",
+      "related": ["backhand"]
     },
     {
       "id": "backhand",
@@ -1794,7 +1845,8 @@
     {
       "id": "pitcher",
       "zh": "投手",
-      "en": "Pitcher"
+      "en": "Pitcher",
+      "related": ["catcher"]
     },
     {
       "id": "catcher",
@@ -1814,7 +1866,8 @@
     {
       "id": "curveball",
       "zh": "曲线球",
-      "en": "Curveball"
+      "en": "Curveball",
+      "related": ["knuckleball"]
     },
     {
       "id": "knuckleball",
@@ -1844,7 +1897,8 @@
     {
       "id": "birdie",
       "zh": "小鸟球",
-      "en": "Birdie"
+      "en": "Birdie",
+      "related": ["eagle"]
     },
     {
       "id": "eagle",
@@ -1997,7 +2051,8 @@
       "id": "olympics",
       "zh": "奥运会",
       "en": "Olympics",
-      "forms": { "en": ["Olympian"] }
+      "forms": { "en": ["Olympian"] },
+      "related": ["paralympics"]
     },
     {
       "id": "paralympics",
@@ -2039,7 +2094,8 @@
       "id": "champion",
       "zh": "冠军",
       "en": "Champion",
-      "forms": { "en": ["championship"] }
+      "forms": { "en": ["championship"] },
+      "related": ["runner-up"]
     },
     {
       "id": "runner-up",
@@ -2092,7 +2148,8 @@
     {
       "id": "rookie",
       "zh": "新秀",
-      "en": "Rookie"
+      "en": "Rookie",
+      "related": ["veteran"]
     },
     {
       "id": "veteran",
@@ -2102,7 +2159,8 @@
     {
       "id": "teammate",
       "zh": "队友",
-      "en": "Teammate"
+      "en": "Teammate",
+      "related": ["opponent"]
     },
     {
       "id": "opponent",
@@ -2184,7 +2242,8 @@
     {
       "id": "round-robin",
       "zh": "循环赛",
-      "en": "Round-robin"
+      "en": "Round-robin",
+      "related": ["knockout-stage"]
     },
     {
       "id": "group-stage",
@@ -2199,7 +2258,8 @@
     {
       "id": "playoffs",
       "zh": "季后赛",
-      "en": "Playoffs"
+      "en": "Playoffs",
+      "related": ["regular-season"]
     },
     {
       "id": "regular-season",
@@ -2286,7 +2346,8 @@
     {
       "id": "stadium",
       "zh": "体育场",
-      "en": "Stadium"
+      "en": "Stadium",
+      "related": ["gymnasium"]
     },
     {
       "id": "gymnasium",
@@ -2469,12 +2530,14 @@
       "id": "acl",
       "zh": "前交叉韧带",
       "en": "ACL",
-      "forms": { "en": ["anterior cruciate ligament"] }
+      "forms": { "en": ["anterior cruciate ligament"] },
+      "related": ["meniscus"]
     },
     {
       "id": "tennis-elbow",
       "zh": "网球肘",
-      "en": "Tennis elbow"
+      "en": "Tennis elbow",
+      "related": ["runners-knee"]
     },
     {
       "id": "runners-knee",
