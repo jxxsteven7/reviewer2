@@ -212,10 +212,11 @@ export function checkTalk(text: string, words: readonly BoardWord[]): { text: st
 export type SetterProblem = 'words_missing' | 'words_too_long' | 'words_same';
 
 // The setter's two words (docs/games/impostor.md#the-setter): both there, each short enough for the
-// word library, and different, not even forms of each other.
+// word library, and different, not even forms of each other. The words are checked whole, as they
+// are kept (cleanLine); the schema of the message bounds what arrives (MAX_LINE_INPUT).
 export function checkSetterWords(a: string, b: string): SetterProblem | null {
-  const first = cleanLine(typeof a === 'string' ? a.slice(0, MAX_LINE_INPUT) : '');
-  const second = cleanLine(typeof b === 'string' ? b.slice(0, MAX_LINE_INPUT) : '');
+  const first = cleanLine(typeof a === 'string' ? a : '');
+  const second = cleanLine(typeof b === 'string' ? b : '');
   if (wordKey(first) === '' || wordKey(second) === '') return 'words_missing';
   if (!fitsCard(first) || !fitsCard(second)) return 'words_too_long';
   if (sameOrPlural(wordKey(first), wordKey(second))) return 'words_same';

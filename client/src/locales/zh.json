@@ -1244,7 +1244,7 @@
     "line_too_long": "太长了。",
     "line_has_word": "不能说出你的词，也不能用它的字、变形、翻译或拼音。",
     "line_repeated": "和之前的描述几乎一样，换个说法。",
-    "chat_has_word": "不能打出这一局的词。",
+    "chat_has_word": "不能打出你知道的词。",
     "words_missing": "两个词都要填。",
     "words_too_long": "词太长了：最多 5 个汉字或 14 个字母。",
     "words_same": "两个词不能一样，也不能是彼此的变形。",

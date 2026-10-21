@@ -182,6 +182,19 @@ describe('the waiting room', () => {
     expect(room.try('p0', 'impostor:seat', { play: 'yes' })).toEqual({ ok: false, error: 'bad_request' });
   });
 
+  it('keeps a place for twelve players besides the setter, who watches', () => {
+    const players = Array.from({ length: 13 }, (_, index) => `p${index}`);
+    const room = table({ players, settings: { setter: true }, accounts: ['p0'] });
+    // The chair, who sets the words, keeps the place they took, and the thirteenth plays.
+    expect(room.data.seats).toEqual(players);
+    expect(game.join(room.data, room.ctx, 'p13', true).seats).toEqual(players);
+    room.send('p3', 'impostor:seat', { play: false });
+    room.send('p13', 'impostor:seat', { play: true });
+    expect(room.try('p3', 'impostor:seat', { play: true })).toEqual({ ok: false, error: 'table_full' });
+    expect(game.seatAgent?.(room.data, room.ctx, 'ai-1', null)).toEqual({ ok: false, error: 'table_full' });
+    expect(game.players?.(room.data, room.ctx)).toEqual([...players.slice(1, 3), ...players.slice(4), 'p13']);
+  });
+
   it('takes the settings whole, and the god view and the setter in a private room alone', () => {
     const room = table();
     expect(game.configure(room.data, room.ctx, { ...SETTINGS, length: 0 })).toEqual({
@@ -264,6 +277,16 @@ describe('the setter', () => {
       ok: false,
       error: 'words_missing',
     });
+    // A word is checked whole, as it is kept: a long one doesn't pass as the word it begins with.
+    const long = `pear ${' '.repeat(500)}${'and a sentence after it '.repeat(10)}`;
+    expect(setterRoom().try('ann', 'impostor:words', { ...words, b: long })).toEqual({
+      ok: false,
+      error: 'words_too_long',
+    });
+    expect(setterRoom().try('ann', 'impostor:words', { ...words, b: `pear${' '.repeat(MAX_LINE_INPUT)}` })).toEqual({
+      ok: false,
+      error: 'bad_request',
+    });
     const room = setterRoom();
     room.send('ann', 'impostor:words', words);
     expect(room.data.setterWords).toEqual({ by: 'ann', a: 'Apple', b: 'pear', field: 'fruit', named: false });
@@ -338,8 +361,14 @@ describe('what each viewer sees', () => {
     const [pi] = room.who('pi');
     const [student] = room.who('student');
     const mine = room.view({ playerId: student as string }).game;
-    expect(mine?.you).toEqual({ number: room.number(student as string), role: null, word: started.words.student.word });
-    expect(room.view({ playerId: reviewer2 as string }).game?.you?.word).toBe(started.words.reviewer2.word);
+    expect(mine?.you).toEqual({
+      number: room.number(student as string),
+      role: null,
+      word: { word: started.words.student.word },
+    });
+    expect(room.view({ playerId: reviewer2 as string }).game?.you?.word).toEqual({
+      word: started.words.reviewer2.word,
+    });
     expect(room.view({ playerId: pi as string }).game?.you?.word).toBeNull();
     for (const viewer of [student, 'zed'] as string[]) {
       const seen = room.view({ playerId: viewer }).game;
@@ -371,6 +400,29 @@ describe('what each viewer sees', () => {
     expect(watcher?.words).toEqual({ student: started.words.student.word, reviewer2: started.words.reviewer2.word });
     expect(room.view({ playerId: 'ann' }).game?.words).toBeNull();
     expect(room.view({ screen: true }).game?.words).toBeNull();
+    // Off the field, a line is held against the words the writer knows: both with the god view,
+    // one's own for a player who is out, none for a spectator without it.
+    const { student, reviewer2 } = started.words;
+    for (const word of [student.word, reviewer2.word]) {
+      expect(room.try('zed', 'impostor:say', { gameId: 'g1', text: `is it ${word}?` })).toEqual({
+        ok: false,
+        error: 'chat_has_word',
+      });
+    }
+    const plain = table({ players: PEOPLE.slice(0, 5) });
+    const dealt = plain.start();
+    for (const word of [dealt.words.student.word, dealt.words.reviewer2.word]) {
+      expect(plain.try('zed', 'impostor:say', { gameId: 'g1', text: `is it ${word}?` }).ok).toBe(true);
+    }
+    plain.deal('SSSSR');
+    plain.describeAll();
+    plain.voteFor('ann', 'bob');
+    expect(plain.data.game?.players[0]?.fate).toBe('voted_out');
+    expect(plain.try('ann', 'impostor:say', { gameId: 'g1', text: `not ${dealt.words.reviewer2.word}` }).ok).toBe(true);
+    expect(plain.try('ann', 'impostor:say', { gameId: 'g1', text: `not ${dealt.words.student.word}` })).toEqual({
+      ok: false,
+      error: 'chat_has_word',
+    });
   });
 
   it('keeps the votes hidden until they are revealed, and shows the role of whoever goes out', () => {
@@ -399,7 +451,7 @@ describe('what each viewer sees', () => {
     expect(room.try('ann', 'impostor:say', { gameId: 'g1', text: 'hi' })).toEqual({ ok: false, error: 'cannot_talk' });
     expect(room.view({ playerId: 'ann' }).game).toMatchObject({ offField: null, mayTalk: false });
     expect(room.view({ playerId: 'zed' }).game?.offField).toEqual([
-      { number: null, playerId: 'zed', text: 'hello all', after: false },
+      { id: 1, number: null, playerId: 'zed', text: 'hello all', after: false },
     ]);
     expect(room.entries.at(-1)).toMatchObject({ by: 'zed', type: 'impostor:say', said: 'hello all' });
   });
@@ -450,9 +502,14 @@ describe('what each viewer sees', () => {
       ok: false,
       error: 'guess_first',
     });
+    // The replay waits for the guess too (Room.guessing).
+    expect(game.guessing?.(room.data, 'ann')).toBe(true);
+    expect(game.guessing?.(room.data, 'fay')).toBe(false);
+    expect(game.guessing?.(room.data, 'zed')).toBe(false);
     const guessed = game.guessAgents?.(room.data, room.ctx, 'ann', null);
     if (!guessed?.ok) throw new Error('refused');
     room.data = guessed.data;
+    expect(game.guessing?.(room.data, 'ann')).toBe(false);
     expect(room.view({ playerId: 'ann' }).game?.mayTalk).toBe(true);
     expect(room.try('ann', 'impostor:say', { gameId: 'g1', text: 'well played' }).ok).toBe(true);
     // Nobody won a point with an AI player in the game, whose version is not certified.

@@ -2,7 +2,7 @@ import type { AgentAnswer } from '@reviewer2/shared';
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';
-import { agentMove, agentTask, DESCRIBE_PACE_MS, practiceSeats, VOTE_PACE_MS } from './agents';
+import { agentMove, agentTask, DESCRIBE_PACE_MS, HISTORY_BYTES, practiceSeats, VOTE_PACE_MS } from './agents';
 import { impostorGame } from './index';
 import * as rules from './rules';
 import type { ImpostorData, ImpostorGame } from './state';
@@ -75,6 +75,29 @@ describe('the AI players', () => {
       word: { word: 'pear' },
       seats: expect.arrayContaining([{ number: 1, fate: 'alive', role: null }]),
     });
+  });
+
+  it('are told as many whole rounds of a long game as fit in a request', () => {
+    // Twelve players, lines as long as a room allows, and round after round in which nobody is
+    // voted out: the history outgrows the request's share.
+    let game = dealt('RSSSSSSSSSSS', { length: 500 });
+    const rng = seededRng(7);
+    const filler = () => Array.from({ length: 480 }, () => String.fromCharCode(97 + rng.int(26))).join('');
+    for (let round = 1; round <= 12; round += 1) {
+      for (let number = 1; number <= 12; number += 1) {
+        game = accepted(rules.describe(game, `p${number}`, { ...at(game), text: filler() }, 0));
+      }
+      game = rules.expire({ ...game, clock: { ends: 0, length: 1 } }, 0);
+    }
+    expect(game.round).toBe(13);
+    const task = agentTask(dataOf(game, ['p1']), context(['p1']), 'p1');
+    const question = task?.question as { lines: { round: number }[]; ballots: { round: number }[] };
+    expect(Buffer.byteLength(JSON.stringify(question))).toBeLessThanOrEqual(HISTORY_BYTES + 1024);
+    const rounds = new Set(question.lines.map((line) => line.round));
+    expect(rounds.size).toBeGreaterThan(1);
+    expect(rounds.size).toBeLessThan(12);
+    expect(Math.max(...rounds)).toBe(12);
+    expect(Math.min(...question.ballots.map((ballot) => ballot.round))).toBe(Math.min(...rounds));
   });
 
   it('vote, each for its own seat, among those it may vote for', () => {

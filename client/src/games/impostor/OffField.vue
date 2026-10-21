@@ -13,8 +13,8 @@ import SeatAvatar from './SeatAvatar.vue';
 // words, who all read what was said before they came; and after it, for everyone who has seen how it
 // ended, under a heading of its own. Whoever played writes by their number, with how their game
 // went, until the game is over and the numbers are known; whoever only watched or set the words, by
-// name. A line may not name either word while the game is on: the chat checks it against the words
-// the viewer knows, and the server against both. The line and its sending are the page's.
+// name. A line may not name a word that the viewer knows while the game is on: the chat checks it
+// against those, as the server does. The line and its sending are the page's.
 const props = defineProps<{
   room: ShownRoom;
   game: ImpostorView;
@@ -46,15 +46,15 @@ function nameOf(line: OffFieldLine): string {
   }
   const seat = seatOf(line.number);
   const label = t('games.impostor.number', { number: line.number });
-  const name = player && props.game.result !== null ? `${label} ${player.name}` : label;
+  const name = player ? `${label} ${player.name}` : label;
   return seat && seat.fate !== 'alive' && !line.after
     ? t('games.impostor.offField.named', { name, role: t(`games.impostor.seat.states.${seat.fate}`) })
     : name;
 }
 
 const sections = computed<ChatSection<Message>[]>(() => {
-  const lines = (props.game.offField ?? []).map((line, index) => ({
-    id: index,
+  const lines = (props.game.offField ?? []).map((line) => ({
+    id: line.id,
     own: mine(line),
     name: nameOf(line),
     text: line.text,
@@ -70,9 +70,10 @@ const sections = computed<ChatSection<Message>[]>(() => {
 
 // The words that the viewer knows, which a line may not name while the game is on.
 const known = computed<BoardWord[]>(() => {
-  const words = [props.game.you?.word ?? null, ...(props.game.setterWords ?? [])];
-  if (props.game.words) words.push(props.game.words.student, props.game.words.reviewer2);
-  return words.flatMap((word) => (word ? [{ word }] : []));
+  const words: BoardWord[] = props.game.you?.word ? [props.game.you.word] : [];
+  for (const word of props.game.setterWords ?? []) words.push({ word });
+  if (props.game.words) words.push({ word: props.game.words.student }, { word: props.game.words.reviewer2 });
+  return words;
 });
 const over = computed(() => props.game.phase === 'over');
 const check = (text: string) => (over.value ? checkChat(text) : checkTalk(text, known.value));

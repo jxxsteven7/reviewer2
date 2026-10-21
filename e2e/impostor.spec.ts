@@ -64,7 +64,7 @@ test('four players describe, judge a report, come back after a reload and vote R
 
   // Everyone has a number of their own and a term; Reviewer 2's differs from the three students'.
   await expect.poll(() => new Set(players.map(numberOf).filter(Boolean)).size).toBe(4);
-  const termOf = (page: Page) => latest(page)?.you?.word ?? null;
+  const termOf = (page: Page) => latest(page)?.you?.word?.word ?? null;
   const terms = players.map(termOf);
   const reviewer2 = players.find((page) => terms.filter((term) => term === termOf(page)).length === 1);
   if (!reviewer2) throw new Error('no player has a term of their own');

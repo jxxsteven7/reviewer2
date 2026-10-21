@@ -23,7 +23,7 @@ import ReplayViewer from './ReplayViewer.vue';
 import RevealList from './RevealList.vue';
 import RoundLog from './RoundLog.vue';
 import SeatPanel from './SeatPanel.vue';
-import { reportRows } from './rows';
+import { ballotRows, reportRows } from './rows';
 import { needed, seatState, voteRows } from './seats';
 import SetterForm from './SetterForm.vue';
 
@@ -78,7 +78,7 @@ function view(overrides: Partial<ImpostorView> = {}): ImpostorView {
     round: 2,
     phase: 'describe',
     players: 6,
-    you: { number: 4, role: null, word: 'preprint' },
+    you: { number: 4, role: null, word: { word: 'preprint' } },
     setterWords: null,
     setter: null,
     seats: [1, 2, 3, 4, 5, 6].map((number) =>
@@ -180,6 +180,21 @@ describe('the seats and the votes', () => {
       abstained: [3],
       timedOut: [7],
     });
+    // The record has a row of abstentions whether or not anyone abstained, and one of votes out
+    // of time only when someone's ran out.
+    const t = (key: string) => key;
+    expect(ballotRows(t, ballot).map((row) => [row.key, row.voters])).toEqual([
+      ['n3', [2, 5, 6]],
+      ['n5', [1, 4]],
+      ['abstain', [3]],
+      ['timeout', [7]],
+    ]);
+    const everyone = { ...ballot, votes: { 1: 5, 2: 3, 3: 5, 4: 5, 5: 3, 6: 3, 7: 3 } };
+    expect(ballotRows(t, everyone).map((row) => [row.key, row.voters])).toEqual([
+      ['n3', [2, 5, 6, 7]],
+      ['n5', [1, 3, 4]],
+      ['abstain', []],
+    ]);
   });
 
   test('say how each seat stands in each phase', () => {
@@ -270,9 +285,32 @@ describe('ImpostorGame', () => {
     expect(cards[1]?.text()).toContain('Ran out of time');
     expect(cards[2]?.classes()).toContain('grey');
     expect(cards[2]?.text()).toContain('Voted out in round 1');
+    // The role of a seat that is out is everyone's to know; the others' are nobody's yet.
+    expect(cards[2]?.text()).toContain('Student');
+    expect(cards[0]?.text()).not.toContain('Student');
     expect(cards[3]?.text()).toContain('You');
     expect(wrapper.find('.line-box').exists()).toBe(false);
     expect(wrapper.text()).toContain('#5 is describing');
+  });
+
+  test('shows every role and the AI players on the cards to a viewer with the god view', () => {
+    const god = view({
+      you: null,
+      speaker: 5,
+      words: { student: 'preprint', reviewer2: 'conference paper' },
+      seats: view().seats.map((one) => ({
+        ...one,
+        role: one.number === 5 ? 'reviewer2' : 'student',
+        playerId: `p${one.number}`,
+        agent: one.number === 6,
+      })),
+    });
+    const wrapper = mount(ImpostorGame, { props: { room: room(god) }, global: global() });
+    const cards = wrapper.findAll('.board .seat-card');
+    expect(cards[4]?.text()).toContain('Reviewer 2');
+    expect(cards[0]?.text()).toContain('Student');
+    expect(cards[5]?.text()).toContain('AI');
+    expect(cards[4]?.text()).not.toContain('AI');
   });
 
   test('makes the seats the choices of a vote, with one to abstain, and casts the choice', async () => {
@@ -289,6 +327,31 @@ describe('ImpostorGame', () => {
     await vote()!.trigger('click');
     await flushPromises();
     expect(send).toHaveBeenLastCalledWith('impostor:vote', { gameId: 'g1', round: 2, number: 5 });
+    // A report that passes during the vote starts it again without the player: the choice goes.
+    const settled: ReportView = {
+      round: 2,
+      by: 1,
+      target: 5,
+      line: null,
+      reason: 'said the term',
+      eligible: 4,
+      judged: 4,
+      mine: null,
+      mayJudge: false,
+      verdicts: { 1: 'agree', 2: 'agree', 4: 'agree', 6: 'disagree' },
+      passed: true,
+    };
+    const restarted = view({
+      ...game,
+      candidates: [1, 2, 4, 6],
+      voted: [],
+      reports: [settled],
+      seats: game.seats.map((one) => (one.number === 5 ? { ...one, fate: 'violation', out: 2, role: 'student' } : one)),
+    });
+    await wrapper.setProps({ room: room(restarted) });
+    expect(wrapper.text()).toContain('Choose someone first');
+    await wrapper.findAll('.board input[type="radio"]')[1]!.setValue(true);
+    expect(vote()?.text()).toBe('Vote for #2');
     await wrapper.get('.abstain-card input').setValue(true);
     const abstain = wrapper.findAll('.actions button').find((button) => button.text() === 'Abstain');
     await abstain!.trigger('click');
@@ -303,8 +366,8 @@ describe('ImpostorGame', () => {
     expect(wrapper.find('.board input[type="radio"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Sidelines');
     const out = view({
-      you: { number: 3, role: 'student', word: 'preprint' },
-      offField: [{ number: 3, playerId: 'ann', text: 'it was not me', after: false }],
+      you: { number: 3, role: 'student', word: { word: 'preprint' } },
+      offField: [{ id: 1, number: 3, playerId: 'ann', text: 'it was not me', after: false }],
       mayTalk: true,
     });
     const sidelined = mount(ImpostorGame, { props: { room: room(out) }, global: global() });

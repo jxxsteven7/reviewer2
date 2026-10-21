@@ -444,6 +444,30 @@ describe('leaving', () => {
     expect(game.result?.winner).toBe('pi');
   });
 
+  it('waits for the comeback guess when anyone else leaves, or is removed, meanwhile', () => {
+    // The last Reviewer 2 was voted out: without the guess, the students would have won by now.
+    const voted = playRound(dealt('RSSSS', { comeback: true }), { p2: 1, p3: 1, p4: 1, p5: 1 });
+    expect(voted).toMatchObject({ phase: 'comeback', comeback: 'p1' });
+    let game = rules.leave(voted, 'p3', false, 0);
+    expect(game).toMatchObject({ phase: 'comeback', comeback: 'p1', result: null });
+    expect(game.players[2]).toMatchObject({ fate: 'left', out: 1 });
+    expect(accepted(rules.guess(game, 'p1', { gameId: 'g1', word: 'apple' }, 0)).result).toEqual({
+      winner: 'reviewer2',
+      reason: 'comeback',
+    });
+    expect(accepted(rules.guess(game, 'p1', { gameId: 'g1', word: 'plum' }, 0)).result).toEqual({
+      winner: 'student',
+      reason: 'caught',
+    });
+    game = rules.leave(voted, 'p3', true, 0);
+    expect(game).toMatchObject({ phase: 'comeback', comeback: 'p1', removed: ['p3'], result: null });
+    expect(rules.expire(game, 30_000).result).toEqual({ winner: 'student', reason: 'caught' });
+    // A second Reviewer 2 who goes still takes the game along.
+    game = playRound(dealt('RSSSSSSSR', { comeback: true }), { p2: 1, p3: 1, p4: 1, p5: 1, p6: 1, p7: 1, p8: 1 });
+    expect(game.phase).toBe('comeback');
+    expect(rules.leave(game, 'p9', false, 0).result).toEqual({ winner: null, reason: 'reviewer2_left' });
+  });
+
   it('starts the next round, with nobody voted out, when a tie is down to one player', () => {
     // In the revote.
     let game = playRound(dealt('SSSSR'), { p1: 2, p2: 1, p3: 1, p4: 2, p5: null });
@@ -507,34 +531,42 @@ describe('leaving', () => {
 });
 
 describe('talking off the field', () => {
-  it('is for those who are out, watch or set the words, and names neither word', () => {
+  const both = [APPLE, PEAR];
+
+  it('is for those who are out, watch or set the words, and names no word the writer knows', () => {
     const game = dealt('SSSSR');
-    expect(refused(rules.talk(game, 'p1', { gameId: 'g1', text: 'hello' }, false))).toBe('cannot_talk');
-    expect(refused(rules.talk(game, 'w', { gameId: 'g1', text: 'pears!' }, true))).toBe('chat_has_word');
-    expect(refused(rules.talk(game, 'w', { gameId: 'g1', text: 'Apple' }, true))).toBe('chat_has_word');
-    expect(refused(rules.talk(game, 'w', { gameId: 'g2', text: 'hello' }, true))).toBe('stale');
-    const next = accepted(rules.talk(game, 'w', { gameId: 'g1', text: ' pineapple? ' }, true));
-    expect(next.talk).toEqual([{ by: 'w', text: 'pineapple?', after: false }]);
+    expect(refused(rules.talk(game, 'p1', { gameId: 'g1', text: 'hello' }, false, [APPLE]))).toBe('cannot_talk');
+    expect(refused(rules.talk(game, 'w', { gameId: 'g1', text: 'pears!' }, true, both))).toBe('chat_has_word');
+    expect(refused(rules.talk(game, 'w', { gameId: 'g1', text: 'Apple' }, true, both))).toBe('chat_has_word');
+    expect(refused(rules.talk(game, 'w', { gameId: 'g2', text: 'hello' }, true, both))).toBe('stale');
+    const next = accepted(rules.talk(game, 'w', { gameId: 'g1', text: ' pineapple? ' }, true, both));
+    expect(next.talk).toEqual([{ id: 1, by: 'w', text: 'pineapple?', after: false }]);
+    // A word the writer doesn't know gives nothing away, and refusing it would tell them it: a
+    // student who is out may name the pear, and a spectator either word.
+    expect(accepted(rules.talk(game, 'p1', { gameId: 'g1', text: 'a pear?' }, true, [APPLE])).talk).toHaveLength(1);
+    expect(refused(rules.talk(game, 'p1', { gameId: 'g1', text: 'an apple?' }, true, [APPLE]))).toBe('chat_has_word');
+    expect(accepted(rules.talk(game, 'w', { gameId: 'g1', text: 'apple or pear' }, true, [])).talk).toHaveLength(1);
   });
 
   it('is for everyone after the game who has guessed the AI players or skipped it', () => {
     const game = playRound(dealt('SSSSR'), { p1: 5, p2: 5, p3: 5, p4: 5, p5: 1 });
-    const next = accepted(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, true));
-    expect(next.talk).toEqual([{ by: 'p1', text: 'well played', after: true }]);
+    const next = accepted(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, true, [APPLE]));
+    expect(next.talk).toEqual([{ id: 1, by: 'p1', text: 'well played', after: true }]);
     // The words are known to all by then.
-    expect(accepted(rules.talk(next, 'p2', { gameId: 'g1', text: 'apple, of course' }, true)).talk).toHaveLength(2);
+    const talked = accepted(rules.talk(next, 'p2', { gameId: 'g1', text: 'apple, of course' }, true, [APPLE]));
+    expect(talked.talk).toHaveLength(2);
     // A player still to guess may not talk until then (offField() in view.ts).
-    expect(refused(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, false))).toBe('guess_first');
+    expect(refused(rules.talk(game, 'p1', { gameId: 'g1', text: 'well played' }, false, [APPLE]))).toBe('guess_first');
   });
 
-  it('keeps the latest lines only', () => {
+  it('keeps the latest lines only, with IDs that go on', () => {
     let game = dealt('SSSSR');
     for (let index = 0; index < TALK_KEPT + 5; index += 1) {
-      game = accepted(rules.talk(game, 'w', { gameId: 'g1', text: `line ${index}` }, true));
+      game = accepted(rules.talk(game, 'w', { gameId: 'g1', text: `line ${index}` }, true, both));
     }
     expect(game.talk).toHaveLength(TALK_KEPT);
-    expect(game.talk[0]?.text).toBe('line 5');
-    expect(game.talk.at(-1)?.text).toBe(`line ${TALK_KEPT + 4}`);
+    expect(game.talk[0]).toMatchObject({ id: 6, text: 'line 5' });
+    expect(game.talk.at(-1)).toMatchObject({ id: TALK_KEPT + 5, text: `line ${TALK_KEPT + 4}` });
   });
 });
 

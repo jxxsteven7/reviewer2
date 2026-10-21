@@ -82,8 +82,10 @@ export type WordSource =
   | { kind: 'library'; field: string; pair: string; terms: { student: string; reviewer2: string } }
   | { kind: 'setter'; setter: string; field: string; named: boolean };
 
-// A line of the off-field chat or of the talk after the game.
+// A line of the off-field chat or of the talk after the game, with its ID, which goes up from 1 in
+// the game (talk() in rules.ts).
 export interface Talk {
+  id: number;
   by: string;
   text: string;
   after: boolean;

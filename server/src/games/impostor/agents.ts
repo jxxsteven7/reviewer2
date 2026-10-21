@@ -1,4 +1,4 @@
-import type { AgentAnswer } from '@reviewer2/shared';
+import { MAX_AGENT_REQUEST, type AgentAnswer } from '@reviewer2/shared';
 import type { ImpostorAgentGame, ImpostorStartProblem } from '@reviewer2/shared/impostor';
 import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
 import { playerOf, votersOf, wordOf } from './rules';
@@ -43,13 +43,35 @@ export function practiceSeats(role: string): PracticeSeats | null {
   };
 }
 
+// The agent takes a request of MAX_AGENT_REQUEST at most (agent/src/agent.ts), which the history of
+// a game of many rounds would outgrow: the lines, the votes and the reports go to the agent from
+// the newest round back, as many whole rounds as fit in the history's share of the request, which
+// leaves the rest of it, the words and the seats, what it needs.
+export const HISTORY_BYTES = MAX_AGENT_REQUEST - 8 * 1024;
+
+function fitted(game: ImpostorAgentGame): ImpostorAgentGame {
+  let kept = game;
+  while (Buffer.byteLength(JSON.stringify(kept)) > HISTORY_BYTES) {
+    const rounds = [...kept.lines, ...kept.ballots, ...kept.reports].map((entry) => entry.round);
+    if (rounds.length === 0) break;
+    const oldest = Math.min(...rounds);
+    kept = {
+      ...kept,
+      lines: kept.lines.filter((line) => line.round > oldest),
+      ballots: kept.ballots.filter((ballot) => ballot.round > oldest),
+      reports: kept.reports.filter((report) => report.round > oldest),
+    };
+  }
+  return kept;
+}
+
 // The game as the seat sees it, for the agent.
 function agentGame(game: ImpostorGame, ctx: GameContext, playerId: string): ImpostorAgentGame {
   const me = playerOf(game, playerId);
   const number = new Map(game.players.map((player) => [player.id, player.number]));
   const of = (id: string) => number.get(id) ?? 0;
   const word = me ? wordOf(game, me.role) : null;
-  return {
+  return fitted({
     game: 'impostor',
     language: ctx.language,
     length: game.settings.length,
@@ -86,7 +108,7 @@ function agentGame(game: ImpostorGame, ctx: GameContext, playerId: string): Impo
       reason: report.reason,
       passed: report.passed,
     })),
-  };
+  });
 }
 
 // What an AI player is to do now: judge the report that is open, if it may; describe its word in

@@ -439,23 +439,28 @@ function guessed(game: ImpostorGame, word: string | null, now: number): Impostor
   return endOr(next, (going) => nextRound(going, now));
 }
 
-// Whoever is out, watches or set the words talks off the field while the game is on, naming neither
-// word (checkTalk); after it, anyone in the room talks it over, the words known to all by then, but
-// a player who is to guess the AI players, who doesn't read the talk until they have guessed or
-// skipped it. `offField` says whether the player may talk now (offField() in view.ts). The game
-// keeps the latest lines (TALK_KEPT), and the log every one.
+// Whoever is out, watches or set the words talks off the field while the game is on, naming no
+// word that they know (checkTalk, `known`, knownWords() in view.ts): a word they don't know gives
+// nothing away, and refusing it would tell them it. After the game, anyone in the room talks it
+// over, the words known to all by then, but a player who is to guess the AI players, who doesn't
+// read the talk until they have guessed or skipped it. `offField` says whether the player may talk
+// now (offField() in view.ts). The game keeps the latest lines (TALK_KEPT), and the log every one;
+// each line has an ID that goes up from 1 in the game, so that the page tells a new line from the
+// last kept, whichever lines were dropped before it.
 export function talk(
   game: ImpostorGame,
   playerId: string,
   message: { gameId: string; text: string },
   offField: boolean,
+  known: readonly BoardWord[],
 ): Outcome {
   if (message.gameId !== game.gameId) return refuse('stale');
   const after = game.phase === 'over';
   if (!offField) return refuse(after ? 'guess_first' : 'cannot_talk');
-  const check = after ? checkChat(message.text) : checkTalk(message.text, [game.words.student, game.words.reviewer2]);
+  const check = after ? checkChat(message.text) : checkTalk(message.text, known);
   if (check.problem) return refuse(check.problem);
-  return changed({ ...game, talk: [...game.talk, { by: playerId, text: check.text, after }].slice(-TALK_KEPT) });
+  const line = { id: (game.talk.at(-1)?.id ?? 0) + 1, by: playerId, text: check.text, after };
+  return changed({ ...game, talk: [...game.talk, line].slice(-TALK_KEPT) });
 }
 
 // What is due by now: a report whose time is up is settled; otherwise, once the phase's clock has
@@ -489,9 +494,11 @@ export const deadlineOf = (game: ImpostorGame | null): number | null =>
 // it, and it goes on without them: as if their line had been written, their vote cast, their
 // verdict given or their guess made, and a report of them dropped, which the reporter has made all
 // the same. A tied player who goes, leaving fewer than two tied, ends the round with nobody voted
-// out, in the tie lines as in the revote; with two or more left, the tie goes on among them. The
-// chair's removal of a player of the game counts against it whether the player was still in it or
-// out by then (`removed`), so that the chair can't win by removing anyone.
+// out, in the tie lines as in the revote; with two or more left, the tie goes on among them. While
+// someone else's comeback guess is due, the game waits for it as before: the guess comes before the
+// win (guessed()), whoever has gone meanwhile. The chair's removal of a player of the game counts
+// against it whether the player was still in it or out by then (`removed`), so that the chair
+// can't win by removing anyone.
 export function leave(game: ImpostorGame, playerId: string, removed: boolean, now: number): ImpostorGame {
   const player = playerOf(game, playerId);
   if (game.phase === 'over' || !player) return game;
@@ -503,6 +510,7 @@ export function leave(game: ImpostorGame, playerId: string, removed: boolean, no
   const pending = { ...next.pending };
   delete pending[playerId];
   next = { ...next, pending, tied: next.tied.filter((id) => id !== playerId) };
+  if (next.phase === 'comeback') return next;
   const report = next.report;
   if (report?.target === playerId) {
     const resumed = next.paused;

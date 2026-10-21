@@ -194,7 +194,12 @@ export function createAppServer(options: AppOptions): AppServer {
           log,
           // Asked only once the server answers requests, when the rooms are there.
           agentsLive: (persona) => agentsIn(rooms.all(), persona),
-          showReplay: (kept) => games.get(kept.game)?.showReplay?.(kept) ?? null,
+          // Not while the account still has to guess the AI players of the game in the room that
+          // has just played it (Room.guessing): the replay would show who they were.
+          showReplay: (kept) =>
+            rooms.all().some((room) => room.guessing(kept.log.gameId, kept.viewer))
+              ? null
+              : (games.get(kept.game)?.showReplay?.(kept) ?? null),
         }),
       }),
     }),

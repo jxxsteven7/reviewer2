@@ -21,11 +21,12 @@ import type { ImpostorGame, WordSource } from './state';
 // apart.
 
 // How a game began, as its record keeps it (GameModule.setup): the settings; who played, by player
-// ID, with their number and role; the two words, as the students and the Reviewer 2s had them;
-// and where they came from. The AI players are in the log (GameLogData.agents).
+// ID, with their number, their role and whether an AI played the seat, which the log names by
+// persona too (GameLogData.agents); the two words, as the students and the Reviewer 2s had them;
+// and where they came from.
 export interface ImpostorSetup {
   settings: ImpostorSettings;
-  players: { id: string; number: number; role: ImpostorRole }[];
+  players: { id: string; number: number; role: ImpostorRole; agent: boolean }[];
   words: { student: string; reviewer2: string };
   source: WordSource;
 }
@@ -49,7 +50,7 @@ export interface Facts {
 
 export const setupOf = (game: ImpostorGame): ImpostorSetup => ({
   settings: { ...game.settings },
-  players: game.players.map(({ id, number, role }) => ({ id, number, role })),
+  players: game.players.map(({ id, number, role, agent }) => ({ id, number, role, agent })),
   words: { student: game.words.student.word, reviewer2: game.words.reviewer2.word },
   source: { ...game.source },
 });

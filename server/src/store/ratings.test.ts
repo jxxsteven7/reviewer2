@@ -106,10 +106,17 @@ describe('the ratings', () => {
     ratings.rate('impostor', 'g2', 'p2', 'problem');
     ratings.rate('impostor', 'g2', 'p3', 'problem');
     ratings.rate('impostor', 'g3', 'p1', 'easy');
+    // Bob had the cat and the dog again and said again that they had a problem, and so did a guest
+    // in that game: a person counts once, a guest once a game.
+    kept('g4', { pair: 'pets:cat+dog' }, [['p1', bob]]);
+    kept('g5', { pair: 'pets:cat+dog' }, [['p1', bob]]);
+    ratings.rate('impostor', 'g4', 'p1', 'problem');
+    ratings.rate('impostor', 'g4', 'p3', 'problem');
+    ratings.rate('impostor', 'g5', 'p1', 'problem');
     const records = ratings.pairRecords('impostor', PATHS.pair, [ann, bob, ann]);
     expect(Object.fromEntries(records)).toEqual({
       'fruit:apple+pear': { seen: 2, together: true, good: 0, problems: 0 },
-      'pets:cat+dog': { seen: 1, together: false, good: 1, problems: 2 },
+      'pets:cat+dog': { seen: 3, together: false, good: 1, problems: 4 },
       'sky:sun+moon': { seen: 0, together: false, good: 0, problems: 0 },
     });
     // A room of nobody with an account has only the ratings to go by, and another game none.

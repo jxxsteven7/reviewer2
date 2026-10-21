@@ -47,10 +47,15 @@ export class RatingStore {
         'WHERE g.game = ? AND p.account_id IN (SELECT value FROM json_each(?)) AND json_extract(g.setup, ?) IS NOT NULL ' +
         'GROUP BY g.game_id',
     );
+    // How many people rated each pair good, and how many said it had a problem: an account once,
+    // however many games with the pair it rated, and a guest once for each game, which is all that
+    // is known of them.
+    const rater = "coalesce('a' || p.account_id, 'g' || r.game_id || ':' || r.player_id)";
     this.#pairsRated = db.prepare(
-      "SELECT json_extract(g.setup, ?) AS pair, count(*) FILTER (WHERE r.rating = 'good') AS good, " +
-        "count(*) FILTER (WHERE r.rating = 'problem') AS problems FROM ratings AS r " +
+      `SELECT json_extract(g.setup, ?) AS pair, count(DISTINCT ${rater}) FILTER (WHERE r.rating = 'good') AS good, ` +
+        `count(DISTINCT ${rater}) FILTER (WHERE r.rating = 'problem') AS problems FROM ratings AS r ` +
         'JOIN replays AS g ON g.game_id = r.game_id ' +
+        'LEFT JOIN game_players AS p ON p.game_id = r.game_id AND p.player_id = r.player_id ' +
         'WHERE g.game = ? AND json_extract(g.setup, ?) IS NOT NULL GROUP BY pair',
     );
     // The games that finished whose words the account set, by the player ID it had as the setter,

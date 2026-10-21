@@ -38,7 +38,7 @@ import {
   type Outcome,
 } from './rules';
 import type { ImpostorData, ImpostorGame, SetterWords } from './state';
-import { offField, viewOf, watcherOf } from './view';
+import { guessing, knownWords, offField, viewOf, watcherOf } from './view';
 
 // The hidden word game as a GameModule: the rules in rules.ts, connected to a room.
 // docs/games/impostor.md describes the game.
@@ -68,6 +68,11 @@ const playersOf = (data: ImpostorData, ctx: GameContext): string[] => {
   const setter = setterOf(data, ctx);
   return data.seats.filter((id) => id !== setter && ctx.isOnline(id));
 };
+
+// Whether the table has no place left: MAX_PLAYERS play at most, the setter, who keeps a place but
+// watches, not among them.
+const tableFull = (data: ImpostorData, ctx: Pick<GameContext, 'chairId'>): boolean =>
+  data.seats.filter((id) => id !== setterOf(data, ctx)).length >= MAX_PLAYERS;
 
 function problemsOf(data: ImpostorData, ctx: GameContext): ImpostorStartProblem[] {
   const players = playersOf(data, ctx);
@@ -117,11 +122,11 @@ type Action<M extends ImpostorMessage> = (
 
 const actions: { [M in ImpostorMessage]: Action<M> } = {
   // In the waiting room, whoever is there plays the next game or watches it; 12 play at most.
-  'impostor:seat': (data, _ctx, playerId, { play }) => {
+  'impostor:seat': (data, ctx, playerId, { play }) => {
     if (data.game && data.game.phase !== 'over') return fail('wrong_phase');
     const seated = data.seats.includes(playerId);
     if (play === seated) return { ok: true, data };
-    if (play && data.seats.length >= MAX_PLAYERS) return { ok: false, error: 'table_full' };
+    if (play && tableFull(data, ctx)) return { ok: false, error: 'table_full' };
     return {
       ok: true,
       data: { ...data, seats: play ? [...data.seats, playerId] : data.seats.filter((id) => id !== playerId) },
@@ -129,6 +134,7 @@ const actions: { [M in ImpostorMessage]: Action<M> } = {
   },
   // The setter gives the two words, the field they are of and whether to be named when the pair is
   // adopted, in the waiting room. The setter needs an account, which a pair adopted is credited to.
+  // The words are kept as checkSetterWords() checked them, cleaned.
   'impostor:words': (data, ctx, playerId, { a, b, field, named }) => {
     if (data.game && data.game.phase !== 'over') return fail('wrong_phase');
     if (setterOf(data, ctx) !== playerId) return { ok: false, error: 'not_setter' };
@@ -145,10 +151,14 @@ const actions: { [M in ImpostorMessage]: Action<M> } = {
   'impostor:report': (data, ctx, playerId, message) => act(data, (game) => report(game, playerId, message, ctx.now())),
   'impostor:judge': (data, ctx, playerId, message) => act(data, (game) => judge(game, playerId, message, ctx.now())),
   'impostor:comeback': (data, ctx, playerId, message) => act(data, (game) => guess(game, playerId, message, ctx.now())),
-  'impostor:say': (data, ctx, playerId, message) =>
-    act(data, (game) =>
-      talk(game, playerId, message, offField(game, watcherOf({ playerId }, setterOf(data, ctx), false, game))),
-    ),
+  // A line off the field, or of the talk after the game, which may name no word the writer knows
+  // (knownWords): the writer is to the game what their view is (views()).
+  'impostor:say': (data, _ctx, playerId, message) =>
+    act(data, (game) => {
+      const setter = game.source.kind === 'setter' ? game.source.setter : null;
+      const watcher = watcherOf({ playerId }, setter, game.settings.godView, game);
+      return talk(game, playerId, message, offField(game, watcher), knownWords(game, watcher));
+    }),
 };
 
 // What the log keeps of each message (docs/architecture.md#game-records): what it carried, as its
@@ -235,9 +245,10 @@ const shapes: GameShapes = {
     if (!Array.isArray(players) || players.length < MIN_PLAYERS || players.length > MAX_PLAYERS) return false;
     const numbers = new Set<number>();
     for (const player of players) {
-      if (!isObject(player) || Object.keys(player).length !== 3 || typeof player.id !== 'string') return false;
+      if (!isObject(player) || Object.keys(player).length !== 4 || typeof player.id !== 'string') return false;
       if (!isWhole(player.number, 1) || (player.number as number) > players.length) return false;
       if (!IMPOSTOR_ROLES.includes(player.role as (typeof IMPOSTOR_ROLES)[number])) return false;
+      if (typeof player.agent !== 'boolean') return false;
       numbers.add(player.number as number);
     }
     if (numbers.size !== players.length) return false;
@@ -316,10 +327,11 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
 
   settingsOf: (data) => data.settings,
   mayBePublic: (data) => mayBePublic(data.settings),
+  players: playersOf,
 
   // A newcomer who has come to play takes a place at the table for the next game, if there is one.
-  join: (data, _ctx, playerId, play) =>
-    play && !data.seats.includes(playerId) && data.seats.length < MAX_PLAYERS
+  join: (data, ctx, playerId, play) =>
+    play && !data.seats.includes(playerId) && !tableFull(data, ctx)
       ? { ...data, seats: [...data.seats, playerId] }
       : data,
 
@@ -417,6 +429,7 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     if (!made.ok) return made;
     return { ok: true, data: { ...data, game: made.game }, guess: made.guess ?? null };
   },
+  guessing: (data, playerId) => data.game !== null && guessing(data.game, playerId),
 
   showReplay: shownReplay,
   recount: recountOf,
@@ -483,7 +496,7 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
   seatAgent(data, ctx, playerId) {
     if (data.game && data.game.phase !== 'over') return fail('wrong_phase');
     if (!data.seats.some((id) => ctx.agentOf(id) === null)) return { ok: false, error: 'needs_human' };
-    if (data.seats.length >= MAX_PLAYERS) return { ok: false, error: 'table_full' };
+    if (tableFull(data, ctx)) return { ok: false, error: 'table_full' };
     return { ok: true, data: { ...data, seats: [...data.seats, playerId] } };
   },
 

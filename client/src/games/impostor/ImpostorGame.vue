@@ -101,12 +101,7 @@ const myTurn = computed(
 const line = ref('');
 const earlier = computed(() => game.value.lines.flatMap((one) => (one.text === null ? [] : [one.text])));
 const lineCheck = computed(() =>
-  checkDescription(
-    line.value,
-    me.value?.word ? { word: me.value.word } : null,
-    earlier.value,
-    data.value.settings.length,
-  ),
+  checkDescription(line.value, me.value?.word ?? null, earlier.value, data.value.settings.length),
 );
 function problemText(problem: LineProblem | null, match: string | null): string | undefined {
   if (problem === null || problem === 'line_empty') return undefined;
@@ -140,7 +135,8 @@ const mayVote = computed(
 );
 const choice = ref<number | 'abstain' | null>(null);
 watch(
-  () => `${game.value.gameId}-${game.value.round}-${game.value.phase}-${game.value.ballots.length}`,
+  () =>
+    `${game.value.gameId}-${game.value.round}-${game.value.phase}-${game.value.ballots.length}-${game.value.reports.length}`,
   () => (choice.value = null),
 );
 const choosable = (seat: SeatView) =>

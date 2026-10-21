@@ -399,10 +399,9 @@ export class Room {
       playerIds: () => [...this.members.keys()],
       hasAccount: (id) => this.#accountIdOf(id) !== null,
       hasField: (field) => this.#words.has(field),
-      customAuthor: () => {
-        if (this.customWords.length === 0) return null;
-        return this.#wordsBy !== null && this.members.has(this.#wordsBy) ? this.#wordsBy : this.chairId;
-      },
+      // Whoever set the words, by the player ID they had, whether or not they are still in the room:
+      // the log knows the ID.
+      customAuthor: () => (this.customWords.length === 0 ? null : this.#wordsBy),
       titleCount: (id, title) => this.#titleCountOf(id, title),
       awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#scoresNothing(),
     };
@@ -846,21 +845,25 @@ export class Room {
     let custom = this.customWords;
     const wanted = this.game.words;
     if (changes.words !== undefined) {
-      // Only a game with a board takes words of the chair's own.
-      if (!wanted || !('board' in wanted)) return changes.words.trim() === '' ? done : fail('bad_words');
-      const parsed = parseCustomWords(changes.words);
-      if (parsed.tooMany || parsed.tooLong.length > 0) return fail('bad_words');
-      if (this.public && parsed.words.length > 0) return fail('custom_words_private');
-      custom = parsed.words.map((word) => {
-        const pinyin = pinyinOf(word);
-        const glosses = this.#words.glossesOf(word);
-        return {
-          word,
-          ...(pinyin === null ? {} : { pinyin }),
-          ...(glosses.length > 0 ? { glosses } : {}),
-          custom: true as const,
-        };
-      });
+      // Only a game with a board takes words of the chair's own; for any other game, none is no
+      // change, and the rest of the message still counts.
+      if (!wanted || !('board' in wanted)) {
+        if (changes.words.trim() !== '') return fail('bad_words');
+      } else {
+        const parsed = parseCustomWords(changes.words);
+        if (parsed.tooMany || parsed.tooLong.length > 0) return fail('bad_words');
+        if (this.public && parsed.words.length > 0) return fail('custom_words_private');
+        custom = parsed.words.map((word) => {
+          const pinyin = pinyinOf(word);
+          const glosses = this.#words.glossesOf(word);
+          return {
+            word,
+            ...(pinyin === null ? {} : { pinyin }),
+            ...(glosses.length > 0 ? { glosses } : {}),
+            custom: true as const,
+          };
+        });
+      }
     }
     const random = changes.randomFields ?? this.randomFields;
     let fields = this.fields;
@@ -955,7 +958,13 @@ export class Room {
       ? drawFields(usableFields(this.#words, this.language, wanted), (below) => this.#rng.int(below))
       : this.fields;
     if ('pair' in wanted) {
-      const accounts = [...this.members.values()].flatMap((member) => (member.account ? [member.account.id] : []));
+      // The draw goes by what those who play the game have had (GameModule.players), not by what
+      // whoever only watches has.
+      const playing = this.game.players?.(this.data, this.context) ?? [...this.members.keys()];
+      const accounts = playing.flatMap((id) => {
+        const account = this.members.get(id)?.account;
+        return account ? [account.id] : [];
+      });
       let records: ReadonlyMap<string, PairRecord> = new Map();
       try {
         records = this.#pairRecords?.(this.game.id, accounts) ?? records;
@@ -1419,6 +1428,15 @@ export class Room {
     if (!member || member.agent || this.#ending !== 'finished' || !this.game.ratings) return false;
     if (!(this.game.rated?.(this.data) ?? false) || this.#ratings.get(id) === null) return false;
     return (this.results() ?? []).some((result) => result.playerId === id);
+  }
+
+  // Whether someone who played in the game that has just ended, by the player IDs they had in it,
+  // still has to guess its AI players before they see who they were (GameModule.guessing): until
+  // then, the replay of the game, which shows them, waits too (docs/architecture.md#replays).
+  guessing(gameId: string, playerIds: Iterable<string>): boolean {
+    if (gameId !== this.gameId || this.phase !== 'ended' || !this.game.guessing) return false;
+    for (const id of playerIds) if (this.game.guessing(this.data, id)) return true;
+    return false;
   }
 
   // Whether a member took part in the game that has just ended, as a player or as one who gave its

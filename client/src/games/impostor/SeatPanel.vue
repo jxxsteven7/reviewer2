@@ -60,7 +60,7 @@ const mayReport = computed(
     !props.game.reported,
 );
 const mayRemove = computed(
-  () => props.isChair && props.game.result === null && seat.value !== null && props.number !== mine.value,
+  () => props.isChair && props.game.phase !== 'over' && seat.value !== null && props.number !== mine.value,
 );
 
 const reporting = ref(false);
@@ -83,8 +83,7 @@ watch(mayReport, (may) => {
   if (!may) reporting.value = false;
 });
 
-const word = computed(() => (props.game.you?.word ? { word: props.game.you.word } : null));
-const checked = computed(() => checkReason(reason.value, word.value));
+const checked = computed(() => checkReason(reason.value, props.game.you?.word ?? null));
 const reasonError = computed(() => {
   const { problem, match } = checked.value;
   if (!problem || problem === 'line_empty') return undefined;
@@ -146,7 +145,7 @@ const title = computed(() => (props.number === null ? '' : t('games.impostor.num
         <UiButton v-if="mayRemove" variant="danger" @click="removing = true">{{ t('lobby.manage.remove') }}</UiButton>
       </div>
       <p v-if="mayRemove" class="hint">{{ t('games.impostor.panel.removeNote') }}</p>
-      <p v-if="game.result === null && !name" class="hint">{{ t('games.impostor.panel.anonymousNote') }}</p>
+      <p v-if="game.phase !== 'over' && !name" class="hint">{{ t('games.impostor.panel.anonymousNote') }}</p>
     </div>
   </UiSheet>
 

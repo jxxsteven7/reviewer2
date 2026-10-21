@@ -74,7 +74,7 @@ useUrgentTitle(() => (props.mustAct ? t('banner.tabTitle') : null));
     </p>
     <p v-else-if="me && me.word" class="words">
       <span class="label">{{ t('games.impostor.strip.word') }}</span>
-      <WordSticker>{{ me.word }}</WordSticker>
+      <WordSticker>{{ me.word.word }}</WordSticker>
       <span class="hint">{{ t('games.impostor.strip.onlyYou') }}</span>
     </p>
     <p v-else-if="me" class="hint">{{ t('games.impostor.strip.noWord') }}</p>

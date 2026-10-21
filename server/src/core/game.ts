@@ -378,10 +378,17 @@ export interface GameModule<Data = unknown, View = unknown> {
   // game's own shape (GameShapes.guess), or a refusal, as from someone who has no guess to make. A
   // game without this takes no guesses.
   guessAgents?(data: Data, ctx: GameContext, playerId: string, guess: unknown): Ack<{ data: Data; guess: unknown }>;
+  // Whether a person who played in the game that has just ended still has to guess the AI players
+  // of it before they see who they were (docs/architecture.md#guessing-the-ai): the replay of the
+  // game waits for them too (Room.guessing). Without this, nobody does.
+  guessing?(data: Data, playerId: string): boolean;
   // Whether the room may be listed for anyone to join with the game as the chair has set it up: a
   // game whose setter needs players who know them, as one with words of a setter, says no. Without
   // this, always.
   mayBePublic?(data: Data): boolean;
+  // Who plays the game about to start, by player ID, for the draw of its words, which goes by what
+  // the players have had (docs/games/impostor.md#the-words). Without this, everyone in the room.
+  players?(data: Data, ctx: GameContext): string[];
   // A game that can be played as a match.
   match?: MatchHooks<Data>;
   // For the log of the game (docs/architecture.md#game-records), which the room keeps from the

@@ -20,7 +20,12 @@ export const IMPOSTOR_MESSAGES = {
   'impostor:seat': z.object({ play: z.boolean() }),
   // The setter's two words, the field they are of and whether the setter is named when the pair
   // is adopted (docs/games/impostor.md#the-setter).
-  'impostor:words': z.object({ a: z.string(), b: z.string(), field: z.string().max(64), named: z.boolean() }),
+  'impostor:words': z.object({
+    a: z.string().max(MAX_LINE_INPUT),
+    b: z.string().max(MAX_LINE_INPUT),
+    field: z.string().max(64),
+    named: z.boolean(),
+  }),
   // Each action names the game and, where it matters, the round it was meant for, so that a late
   // one can't land in a later round.
   'impostor:describe': z.object({ gameId, round, text: z.string() }),
@@ -58,8 +63,11 @@ export const IMPOSTOR_SETTINGS = z.object({
 });
 
 // What the game server and the agent say to each other in a game of the hidden word game
-// (agent.ts), which ../../schemas.ts puts together with every other game's.
-const line = z.string().max(500);
+// (agent.ts), which ../../schemas.ts puts together with every other game's. A line is as long as
+// one the game takes at most (MAX_LINE_INPUT, lines.ts), whatever it is made of: the game counts
+// what is seen, and a line of a few dozen family emoji is hundreds of code points, which is what
+// zod counts.
+const line = z.string().max(MAX_LINE_INPUT);
 const terms = z.array(term).max(50);
 const agentGame = {
   game: z.literal('impostor'),

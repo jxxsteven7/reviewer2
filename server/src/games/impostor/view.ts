@@ -1,14 +1,16 @@
+import type { BoardWord } from '@reviewer2/shared';
 import {
   REPORT_SECONDS,
   type BallotView,
   type ImpostorView,
   type OffFieldLine,
+  type OwnWord,
   type ReportView,
   type SeatView,
 } from '@reviewer2/shared/impostor';
 import type { Viewer } from '../../core/game';
 import { factsOf, pointsShown, scoresFrom } from './results';
-import { agentGuessOpen, candidatesOf, judgedBy, playerOf, reportedThisRound, votersOf } from './rules';
+import { agentGuessOpen, candidatesOf, judgedBy, playerOf, reportedThisRound, votersOf, wordOf } from './rules';
 import type { ImpostorGame, Report } from './state';
 
 // What each viewer sees of a game (docs/games/impostor.md#who-sees-what). Only the server knows the
@@ -73,12 +75,31 @@ function reportView(game: ImpostorGame, report: Report, watcher: Watcher, open: 
 }
 
 // Whether a person who played in a game with AI players still has to guess which they were, before
-// they see whose number was whose.
-const guessing = (game: ImpostorGame, id: string | null): boolean => {
+// they see whose number was whose, in the room and in the replay (Room.guessing).
+export const guessing = (game: ImpostorGame, id: string | null): boolean => {
   if (id === null || !agentGuessOpen(game)) return false;
   const player = playerOf(game, id);
   return player !== undefined && !player.agent && !Object.hasOwn(game.agentGuesses, id);
 };
+
+// The words that the viewer knows, which their lines off the field may not name while the game is
+// on (talk() in rules.ts), as the page knows them too: a player's own, both for the setter and
+// with the god view, none for the PI or for whoever only watches.
+export function knownWords(game: ImpostorGame, watcher: Watcher): BoardWord[] {
+  if (watcher.setter || watcher.godView) return [game.words.student, game.words.reviewer2];
+  const player = watcher.id === null ? undefined : playerOf(game, watcher.id);
+  const word = player && wordOf(game, player.role);
+  return word ? [word] : [];
+}
+
+// A word as the player who has it knows it, with what a line may not give away of it, so that the
+// page checks a line as the server does, and names what it gave away.
+const ownWord = (word: BoardWord): OwnWord => ({
+  word: word.word,
+  ...(word.forms?.length ? { forms: [...word.forms] } : {}),
+  ...(word.translations?.length ? { translations: [...word.translations] } : {}),
+  ...(word.pinyin === undefined ? {} : { pinyin: word.pinyin }),
+});
 
 // Whether the viewer may take part in the off-field chat now: whoever is out, but a Reviewer 2 or a
 // PI whose guess of the students' word is due, watches or set the words, while the game is on;
@@ -135,6 +156,7 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
         const player = playerOf(game, line.by);
         const named = !player || !game.settings.anonymous || revealed;
         return {
+          id: line.id,
           number: player ? player.number : null,
           playerId: named ? line.by : null,
           text: line.text,
@@ -160,7 +182,7 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
       ? {
           number: me.number,
           role: over || me.fate !== 'alive' ? me.role : null,
-          word: me.role === 'pi' ? null : game.words[me.role].word,
+          word: me.role === 'pi' ? null : ownWord(game.words[me.role]),
         }
       : null,
     setterWords: watcher.setter

@@ -1,4 +1,5 @@
 import type { ReplayPerson } from '../../replay';
+import type { BoardWord } from '../../words';
 import type { ImpostorSettings } from './settings';
 
 // The hidden word game (docs/games/impostor.md): most players, the students, get one of two close
@@ -163,9 +164,16 @@ export interface SeatView {
   agent: boolean | null;
 }
 
+// A word as the player who has it knows it: the word, its forms, its terms in the other languages
+// and, for a Chinese word, its pinyin, which a line may not give away (lines.ts), so that the page
+// checks a line as the server does and names what it gave away.
+export type OwnWord = Pick<BoardWord, 'word' | 'forms' | 'translations' | 'pinyin'>;
+
 // A line of the off-field chat, or of the talk after the game, by the number of a player of the
-// game, or the player ID of someone who only watched or set the words.
+// game, or the player ID of someone who only watched or set the words. Its ID goes up from 1 in the
+// game, so that the page tells a new line from the last one kept.
 export interface OffFieldLine {
+  id: number;
   number: number | null;
   playerId: string | null;
   text: string;
@@ -199,8 +207,9 @@ export interface ImpostorView {
   phase: Phase;
   players: number;
   // The viewer's own number, role and word, when they play: the role once they are out or the
-  // game is over, and the word all along, null for the PI. The setter's two words, in no order.
-  you: { number: number; role: ImpostorRole | null; word: string | null } | null;
+  // game is over, and the word all along, with what a line may not give away of it, null for the
+  // PI. The setter's two words, in no order.
+  you: { number: number; role: ImpostorRole | null; word: OwnWord | null } | null;
   setterWords: string[] | null;
   // Who set the words of the game, by player ID, for everyone, as the waiting room showed it, or
   // null for a game of words from the library. The chair may have passed to someone else since.
