@@ -52,7 +52,8 @@
       "id": "watercolor",
       "zh": "水彩",
       "en": "Watercolor",
-      "forms": { "en": ["watercolour"] }
+      "forms": { "en": ["watercolour"] },
+      "related": ["gouache"]
     },
     {
       "id": "gouache",
@@ -115,7 +116,8 @@
     {
       "id": "woodcut",
       "zh": "木刻",
-      "en": "Woodcut"
+      "en": "Woodcut",
+      "related": ["etching"]
     },
     {
       "id": "etching",
@@ -249,7 +251,8 @@
     {
       "id": "gothic",
       "zh": "哥特式",
-      "en": "Gothic"
+      "en": "Gothic",
+      "related": ["romanesque"]
     },
     {
       "id": "byzantine",
@@ -288,7 +291,8 @@
     {
       "id": "art-deco",
       "zh": "装饰艺术",
-      "en": "Art Deco"
+      "en": "Art Deco",
+      "related": ["art-nouveau"]
     },
     {
       "id": "art-nouveau",
@@ -340,17 +344,20 @@
     {
       "id": "the-scream",
       "zh": "呐喊",
-      "en": "The Scream"
+      "en": "The Scream",
+      "related": ["starry-night"]
     },
     {
       "id": "the-thinker",
       "zh": "思想者",
-      "en": "The Thinker"
+      "en": "The Thinker",
+      "related": ["venus-de-milo"]
     },
     {
       "id": "sunflowers",
       "zh": "向日葵",
-      "en": "Sunflowers"
+      "en": "Sunflowers",
+      "related": ["water-lilies"]
     },
     {
       "id": "dunhuang",
@@ -360,7 +367,8 @@
     {
       "id": "relief",
       "zh": "浮雕",
-      "en": "Relief"
+      "en": "Relief",
+      "related": ["statue"]
     },
     {
       "id": "statue",
@@ -402,7 +410,8 @@
     {
       "id": "blue-and-white",
       "zh": "青花瓷",
-      "en": "Blue-and-white"
+      "en": "Blue-and-white",
+      "related": ["celadon"]
     },
     {
       "id": "cloisonne",
@@ -412,7 +421,8 @@
     {
       "id": "stained-glass",
       "zh": "彩绘玻璃",
-      "en": "Stained glass"
+      "en": "Stained glass",
+      "related": ["mosaic"]
     },
     {
       "id": "gold-leaf",
@@ -428,7 +438,8 @@
     {
       "id": "paper-cutting",
       "zh": "剪纸",
-      "en": "Paper cutting"
+      "en": "Paper cutting",
+      "related": ["origami"]
     },
     {
       "id": "origami",
@@ -466,7 +477,8 @@
     {
       "id": "shutter",
       "zh": "快门",
-      "en": "Shutter"
+      "en": "Shutter",
+      "related": ["aperture"]
     },
     {
       "id": "aperture",
@@ -497,7 +509,8 @@
     {
       "id": "wide-angle",
       "zh": "广角",
-      "en": "Wide angle"
+      "en": "Wide angle",
+      "related": ["telephoto"]
     },
     {
       "id": "telephoto",
@@ -533,7 +546,8 @@
       "id": "dslr",
       "zh": "单反",
       "en": "DSLR",
-      "forms": { "en": ["digital single-lens reflex"] }
+      "forms": { "en": ["digital single-lens reflex"] },
+      "related": ["mirrorless"]
     },
     {
       "id": "viewfinder",
@@ -585,7 +599,8 @@
     {
       "id": "time-lapse",
       "zh": "延时摄影",
-      "en": "Time-lapse"
+      "en": "Time-lapse",
+      "related": ["slow-motion"]
     },
     {
       "id": "film",
@@ -596,7 +611,8 @@
     {
       "id": "director",
       "zh": "导演",
-      "en": "Director"
+      "en": "Director",
+      "related": ["screenwriter"]
     },
     {
       "id": "screenwriter",
@@ -621,7 +637,8 @@
     {
       "id": "long-take",
       "zh": "长镜头",
-      "en": "Long take"
+      "en": "Long take",
+      "related": ["montage"]
     },
     {
       "id": "close-up",
@@ -641,7 +658,8 @@
     {
       "id": "jump-cut",
       "zh": "跳切",
-      "en": "Jump cut"
+      "en": "Jump cut",
+      "related": ["dissolve"]
     },
     {
       "id": "flashback",
@@ -671,7 +689,8 @@
     {
       "id": "subtitles",
       "zh": "字幕",
-      "en": "Subtitles"
+      "en": "Subtitles",
+      "related": ["dubbing"]
     },
     {
       "id": "easter-egg",
@@ -701,12 +720,14 @@
     {
       "id": "oscar",
       "zh": "奥斯卡",
-      "en": "Oscar"
+      "en": "Oscar",
+      "related": ["grammy"]
     },
     {
       "id": "hollywood",
       "zh": "好莱坞",
-      "en": "Hollywood"
+      "en": "Hollywood",
+      "related": ["bollywood"]
     },
     {
       "id": "bollywood",
@@ -752,7 +773,8 @@
     {
       "id": "sequel",
       "zh": "续集",
-      "en": "Sequel"
+      "en": "Sequel",
+      "related": ["prequel"]
     },
     {
       "id": "prequel",
@@ -762,7 +784,8 @@
     {
       "id": "remake",
       "zh": "翻拍",
-      "en": "Remake"
+      "en": "Remake",
+      "related": ["cover"]
     },
     {
       "id": "cameo",
@@ -808,13 +831,15 @@
     {
       "id": "chord",
       "zh": "和弦",
-      "en": "Chord"
+      "en": "Chord",
+      "related": ["arpeggio"]
     },
     {
       "id": "melody",
       "zh": "旋律",
       "en": "Melody",
-      "forms": { "en": ["melodic"] }
+      "forms": { "en": ["melodic"] },
+      "related": ["rhythm"]
     },
     {
       "id": "rhythm",
@@ -830,7 +855,8 @@
     {
       "id": "time-signature",
       "zh": "拍号",
-      "en": "Time signature"
+      "en": "Time signature",
+      "related": ["key-signature"]
     },
     {
       "id": "key-signature",
@@ -840,7 +866,8 @@
     {
       "id": "note",
       "zh": "音符",
-      "en": "Note"
+      "en": "Note",
+      "related": ["rest"]
     },
     {
       "id": "rest",
@@ -851,7 +878,8 @@
       "id": "staff",
       "zh": "五线谱",
       "en": "Staff",
-      "forms": { "en": ["stave"] }
+      "forms": { "en": ["stave"] },
+      "related": ["jianpu"]
     },
     {
       "id": "treble-clef",
@@ -861,7 +889,8 @@
     {
       "id": "sharp",
       "zh": "升号",
-      "en": "Sharp"
+      "en": "Sharp",
+      "related": ["flat"]
     },
     {
       "id": "flat",
@@ -921,7 +950,8 @@
     {
       "id": "sonata",
       "zh": "奏鸣曲",
-      "en": "Sonata"
+      "en": "Sonata",
+      "related": ["concerto"]
     },
     {
       "id": "concerto",
@@ -989,7 +1019,8 @@
     {
       "id": "quartet",
       "zh": "四重奏",
-      "en": "Quartet"
+      "en": "Quartet",
+      "related": ["trio"]
     },
     {
       "id": "a-cappella",
@@ -1057,25 +1088,29 @@
       "id": "piano",
       "zh": "钢琴",
       "en": "Piano",
-      "forms": { "en": ["pianist"] }
+      "forms": { "en": ["pianist"] },
+      "related": ["harpsichord"]
     },
     {
       "id": "violin",
       "zh": "小提琴",
       "en": "Violin",
-      "forms": { "en": ["violinist"] }
+      "forms": { "en": ["violinist"] },
+      "related": ["viola"]
     },
     {
       "id": "cello",
       "zh": "大提琴",
       "en": "Cello",
-      "forms": { "en": ["cellist"] }
+      "forms": { "en": ["cellist"] },
+      "related": ["double-bass"]
     },
     {
       "id": "guitar",
       "zh": "吉他",
       "en": "Guitar",
-      "forms": { "en": ["guitarist"] }
+      "forms": { "en": ["guitarist"] },
+      "related": ["ukulele"]
     },
     {
       "id": "drum",
@@ -1099,7 +1134,8 @@
       "id": "trumpet",
       "zh": "小号",
       "en": "Trumpet",
-      "forms": { "en": ["trumpeter"] }
+      "forms": { "en": ["trumpeter"] },
+      "related": ["trombone"]
     },
     {
       "id": "harp",
@@ -1115,12 +1151,14 @@
     {
       "id": "guzheng",
       "zh": "古筝",
-      "en": "Guzheng"
+      "en": "Guzheng",
+      "related": ["guqin"]
     },
     {
       "id": "erhu",
       "zh": "二胡",
-      "en": "Erhu"
+      "en": "Erhu",
+      "related": ["pipa"]
     },
     {
       "id": "pipa",
@@ -1204,12 +1242,14 @@
     {
       "id": "peking-opera",
       "zh": "京剧",
-      "en": "Peking opera"
+      "en": "Peking opera",
+      "related": ["kunqu"]
     },
     {
       "id": "kabuki",
       "zh": "歌舞伎",
-      "en": "Kabuki"
+      "en": "Kabuki",
+      "related": ["noh"]
     },
     {
       "id": "architecture",
@@ -1326,7 +1366,8 @@
     {
       "id": "leading",
       "zh": "行距",
-      "en": "Leading"
+      "en": "Leading",
+      "related": ["kerning"]
     },
     {
       "id": "layout",
@@ -1357,7 +1398,8 @@
     {
       "id": "flat-design",
       "zh": "扁平化",
-      "en": "Flat design"
+      "en": "Flat design",
+      "related": ["skeuomorphism"]
     },
     {
       "id": "skeuomorphism",
@@ -1388,7 +1430,8 @@
     {
       "id": "haute-couture",
       "zh": "高定",
-      "en": "Haute couture"
+      "en": "Haute couture",
+      "related": ["ready-to-wear"]
     },
     {
       "id": "fabric",
@@ -1448,7 +1491,8 @@
     {
       "id": "chiaroscuro",
       "zh": "明暗对照法",
-      "en": "Chiaroscuro"
+      "en": "Chiaroscuro",
+      "related": ["sfumato"]
     },
     {
       "id": "sfumato",
@@ -1473,7 +1517,8 @@
     {
       "id": "ultramarine",
       "zh": "群青",
-      "en": "Ultramarine"
+      "en": "Ultramarine",
+      "related": ["vermilion"]
     },
     {
       "id": "vermilion",
@@ -1485,7 +1530,8 @@
       "id": "warm-colors",
       "zh": "暖色",
       "en": "Warm colors",
-      "forms": { "en": ["warm colours"] }
+      "forms": { "en": ["warm colours"] },
+      "related": ["cool-colors"]
     },
     {
       "id": "cool-colors",
@@ -1517,7 +1563,8 @@
     {
       "id": "gongbi",
       "zh": "工笔",
-      "en": "Gongbi"
+      "en": "Gongbi",
+      "related": ["xieyi"]
     },
     {
       "id": "xieyi",
@@ -1557,7 +1604,8 @@
     {
       "id": "cursive-script",
       "zh": "草书",
-      "en": "Cursive script"
+      "en": "Cursive script",
+      "related": ["regular-script"]
     },
     {
       "id": "regular-script",
@@ -1688,7 +1736,8 @@
     {
       "id": "zoom",
       "zh": "变焦",
-      "en": "Zoom"
+      "en": "Zoom",
+      "related": ["prime-lens"]
     },
     {
       "id": "prime-lens",
@@ -1741,7 +1790,8 @@
       "id": "cinema",
       "zh": "电影院",
       "en": "Cinema",
-      "forms": { "en": ["cinematic"] }
+      "forms": { "en": ["cinematic"] },
+      "related": ["theatre"]
     },
     {
       "id": "blockbuster",
@@ -1751,7 +1801,8 @@
     {
       "id": "thriller",
       "zh": "惊悚片",
-      "en": "Thriller"
+      "en": "Thriller",
+      "related": ["horror-film"]
     },
     {
       "id": "horror-film",
@@ -1844,7 +1895,8 @@
     {
       "id": "major-key",
       "zh": "大调",
-      "en": "Major key"
+      "en": "Major key",
+      "related": ["minor-key"]
     },
     {
       "id": "minor-key",
@@ -1880,7 +1932,8 @@
     {
       "id": "allegro",
       "zh": "快板",
-      "en": "Allegro"
+      "en": "Allegro",
+      "related": ["adagio"]
     },
     {
       "id": "adagio",
@@ -1941,7 +1994,8 @@
     {
       "id": "soprano",
       "zh": "女高音",
-      "en": "Soprano"
+      "en": "Soprano",
+      "related": ["tenor"]
     },
     {
       "id": "tenor",
@@ -2001,7 +2055,8 @@
     {
       "id": "waltz",
       "zh": "圆舞曲",
-      "en": "Waltz"
+      "en": "Waltz",
+      "related": ["minuet"]
     },
     {
       "id": "minuet",
@@ -2088,7 +2143,8 @@
       "id": "clarinet",
       "zh": "单簧管",
       "en": "Clarinet",
-      "forms": { "en": ["clarinetist"] }
+      "forms": { "en": ["clarinetist"] },
+      "related": ["oboe"]
     },
     {
       "id": "oboe",
@@ -2129,7 +2185,8 @@
     {
       "id": "harmonica",
       "zh": "口琴",
-      "en": "Harmonica"
+      "en": "Harmonica",
+      "related": ["accordion"]
     },
     {
       "id": "accordion",
@@ -2175,7 +2232,8 @@
     {
       "id": "gong",
       "zh": "锣",
-      "en": "Gong"
+      "en": "Gong",
+      "related": ["cymbals"]
     },
     {
       "id": "cymbals",
@@ -2205,7 +2263,8 @@
     {
       "id": "album",
       "zh": "专辑",
-      "en": "Album"
+      "en": "Album",
+      "related": ["single"]
     },
     {
       "id": "single",
@@ -2298,7 +2357,8 @@
     {
       "id": "tango",
       "zh": "探戈",
-      "en": "Tango"
+      "en": "Tango",
+      "related": ["flamenco"]
     },
     {
       "id": "flamenco",
@@ -2333,7 +2393,8 @@
     {
       "id": "swan-lake",
       "zh": "天鹅湖",
-      "en": "Swan Lake"
+      "en": "Swan Lake",
+      "related": ["the-nutcracker"]
     },
     {
       "id": "the-nutcracker",
@@ -2378,7 +2439,8 @@
     {
       "id": "xiangsheng",
       "zh": "相声",
-      "en": "Xiangsheng"
+      "en": "Xiangsheng",
+      "related": ["skit"]
     },
     {
       "id": "skit",
@@ -2393,7 +2455,8 @@
     {
       "id": "doric",
       "zh": "多立克柱式",
-      "en": "Doric"
+      "en": "Doric",
+      "related": ["ionic"]
     },
     {
       "id": "ionic",
@@ -2479,7 +2542,8 @@
     {
       "id": "italic",
       "zh": "斜体",
-      "en": "Italic"
+      "en": "Italic",
+      "related": ["bold"]
     },
     {
       "id": "bold",
@@ -2542,7 +2606,8 @@
     {
       "id": "qipao",
       "zh": "旗袍",
-      "en": "Qipao"
+      "en": "Qipao",
+      "related": ["hanfu"]
     },
     {
       "id": "hanfu",
@@ -2578,7 +2643,8 @@
     {
       "id": "batik",
       "zh": "蜡染",
-      "en": "Batik"
+      "en": "Batik",
+      "related": ["tie-dye"]
     },
     {
       "id": "tie-dye",
@@ -2691,7 +2757,8 @@
     {
       "id": "fur-elise",
       "zh": "致爱丽丝",
-      "en": "Für Elise"
+      "en": "Für Elise",
+      "related": ["ode-to-joy"]
     },
     {
       "id": "ode-to-joy",

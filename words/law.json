@@ -35,12 +35,14 @@
     {
       "id": "common-law",
       "zh": "普通法",
-      "en": "Common law"
+      "en": "Common law",
+      "related": ["roman-law"]
     },
     {
       "id": "case-law",
       "zh": "判例法",
-      "en": "Case law"
+      "en": "Case law",
+      "related": ["statute-law"]
     },
     {
       "id": "statute-law",
@@ -56,7 +58,8 @@
     {
       "id": "natural-law",
       "zh": "自然法",
-      "en": "Natural law"
+      "en": "Natural law",
+      "related": ["positive-law"]
     },
     {
       "id": "roman-law",
@@ -66,7 +69,8 @@
     {
       "id": "civil-law",
       "zh": "民法",
-      "en": "Civil law"
+      "en": "Civil law",
+      "related": ["criminal-law"]
     },
     {
       "id": "criminal-law",
@@ -142,7 +146,8 @@
     {
       "id": "loophole",
       "zh": "法律漏洞",
-      "en": "Loophole"
+      "en": "Loophole",
+      "related": ["gray-area"]
     },
     {
       "id": "gray-area",
@@ -153,7 +158,8 @@
     {
       "id": "legal-fiction",
       "zh": "拟制",
-      "en": "Legal fiction"
+      "en": "Legal fiction",
+      "related": ["presumption"]
     },
     {
       "id": "presumption",
@@ -170,7 +176,8 @@
     {
       "id": "right",
       "zh": "权利",
-      "en": "Right"
+      "en": "Right",
+      "related": ["obligation"]
     },
     {
       "id": "obligation",
@@ -193,7 +200,8 @@
     {
       "id": "contract-law",
       "zh": "合同法",
-      "en": "Contract law"
+      "en": "Contract law",
+      "related": ["property-law"]
     },
     {
       "id": "property-law",
@@ -233,7 +241,8 @@
     {
       "id": "natural-person",
       "zh": "自然人",
-      "en": "Natural person"
+      "en": "Natural person",
+      "related": ["legal-person"]
     },
     {
       "id": "lady-justice",
@@ -291,7 +300,8 @@
       "id": "ownership",
       "zh": "所有权",
       "en": "Ownership",
-      "forms": { "en": ["owner"] }
+      "forms": { "en": ["owner"] },
+      "related": ["possession"]
     },
     {
       "id": "real-right",
@@ -316,7 +326,8 @@
     {
       "id": "creditor",
       "zh": "债权人",
-      "en": "Creditor"
+      "en": "Creditor",
+      "related": ["debtor"]
     },
     {
       "id": "debtor",
@@ -359,7 +370,8 @@
     {
       "id": "beneficiary",
       "zh": "受益人",
-      "en": "Beneficiary"
+      "en": "Beneficiary",
+      "related": ["heir"]
     },
     {
       "id": "agency",
@@ -385,7 +397,8 @@
     {
       "id": "good-faith",
       "zh": "善意",
-      "en": "Good faith"
+      "en": "Good faith",
+      "related": ["malice"]
     },
     {
       "id": "malice",
@@ -424,7 +437,8 @@
       "id": "negligence",
       "zh": "过失",
       "en": "Negligence",
-      "forms": { "en": ["negligent"] }
+      "forms": { "en": ["negligent"] },
+      "related": ["intent"]
     },
     {
       "id": "disclaimer",
@@ -435,7 +449,8 @@
       "id": "nda",
       "zh": "保密协议",
       "en": "NDA",
-      "forms": { "en": ["non-disclosure agreement"] }
+      "forms": { "en": ["non-disclosure agreement"] },
+      "related": ["non-compete"]
     },
     {
       "id": "non-compete",
@@ -462,7 +477,8 @@
     {
       "id": "signature",
       "zh": "签名",
-      "en": "Signature"
+      "en": "Signature",
+      "related": ["seal"]
     },
     {
       "id": "seal",
@@ -521,7 +537,8 @@
     {
       "id": "lost-property",
       "zh": "遗失物",
-      "en": "Lost property"
+      "en": "Lost property",
+      "related": ["treasure-trove"]
     },
     {
       "id": "treasure-trove",
@@ -536,7 +553,8 @@
     {
       "id": "landlord",
       "zh": "房东",
-      "en": "Landlord"
+      "en": "Landlord",
+      "related": ["tenant"]
     },
     {
       "id": "tenant",
@@ -600,7 +618,8 @@
       "id": "marriage",
       "zh": "婚姻",
       "en": "Marriage",
-      "forms": { "en": ["marry", "married"] }
+      "forms": { "en": ["marry", "married"] },
+      "related": ["cohabitation"]
     },
     {
       "id": "divorce",
@@ -617,7 +636,8 @@
     {
       "id": "custody",
       "zh": "抚养权",
-      "en": "Custody"
+      "en": "Custody",
+      "related": ["visitation"]
     },
     {
       "id": "child-support",
@@ -628,7 +648,8 @@
       "id": "adoption",
       "zh": "收养",
       "en": "Adoption",
-      "forms": { "en": ["adopt", "adopted", "adoptive"] }
+      "forms": { "en": ["adopt", "adopted", "adoptive"] },
+      "related": ["foster-care"]
     },
     {
       "id": "will",
@@ -638,12 +659,14 @@
     {
       "id": "executor",
       "zh": "遗嘱执行人",
-      "en": "Executor"
+      "en": "Executor",
+      "related": ["testator"]
     },
     {
       "id": "gift",
       "zh": "赠与",
-      "en": "Gift"
+      "en": "Gift",
+      "related": ["bequest"]
     },
     {
       "id": "nationality",
@@ -689,7 +712,8 @@
       "id": "patent",
       "zh": "专利",
       "en": "Patent",
-      "forms": { "en": ["patented"] }
+      "forms": { "en": ["patented"] },
+      "related": ["copyright"]
     },
     {
       "id": "copyright",
@@ -701,7 +725,8 @@
       "id": "trademark",
       "zh": "商标",
       "en": "Trademark",
-      "forms": { "en": ["trademarked"] }
+      "forms": { "en": ["trademarked"] },
+      "related": ["trade-secret"]
     },
     {
       "id": "trade-secret",
@@ -712,7 +737,8 @@
       "id": "piracy",
       "zh": "盗版",
       "en": "Piracy",
-      "forms": { "en": ["pirate", "pirated"] }
+      "forms": { "en": ["pirate", "pirated"] },
+      "related": ["knockoff"]
     },
     {
       "id": "knockoff",
@@ -722,7 +748,8 @@
     {
       "id": "public-domain",
       "zh": "公有领域",
-      "en": "Public domain"
+      "en": "Public domain",
+      "related": ["fair-use"]
     },
     {
       "id": "fair-use",
@@ -763,7 +790,8 @@
     {
       "id": "accomplice",
       "zh": "从犯",
-      "en": "Accomplice"
+      "en": "Accomplice",
+      "related": ["ringleader"]
     },
     {
       "id": "self-defense",
@@ -775,7 +803,8 @@
       "id": "theft",
       "zh": "盗窃",
       "en": "Theft",
-      "forms": { "en": ["thief"] }
+      "forms": { "en": ["thief"] },
+      "related": ["robbery"]
     },
     {
       "id": "robbery",
@@ -787,7 +816,8 @@
       "id": "kidnapping",
       "zh": "绑架",
       "en": "Kidnapping",
-      "forms": { "en": ["kidnap", "kidnapper"] }
+      "forms": { "en": ["kidnap", "kidnapper"] },
+      "related": ["hijacking"]
     },
     {
       "id": "arson",
@@ -805,7 +835,8 @@
       "id": "bribery",
       "zh": "贿赂",
       "en": "Bribery",
-      "forms": { "en": ["bribe"] }
+      "forms": { "en": ["bribe"] },
+      "related": ["embezzlement"]
     },
     {
       "id": "embezzlement",
@@ -844,7 +875,8 @@
       "id": "felony",
       "zh": "重罪",
       "en": "Felony",
-      "forms": { "en": ["felon"] }
+      "forms": { "en": ["felon"] },
+      "related": ["misdemeanor"]
     },
     {
       "id": "misdemeanor",
@@ -904,7 +936,8 @@
     {
       "id": "drunk-driving",
       "zh": "醉驾",
-      "en": "Drunk driving"
+      "en": "Drunk driving",
+      "related": ["speeding"]
     },
     {
       "id": "hit-and-run",
@@ -930,7 +963,8 @@
       "id": "burglary",
       "zh": "入室盗窃",
       "en": "Burglary",
-      "forms": { "en": ["burglar", "burgle"] }
+      "forms": { "en": ["burglar", "burgle"] },
+      "related": ["trespass"]
     },
     {
       "id": "telecom-fraud",
@@ -1000,7 +1034,8 @@
     {
       "id": "judge",
       "zh": "法官",
-      "en": "Judge"
+      "en": "Judge",
+      "related": ["jury"]
     },
     {
       "id": "lawyer",
@@ -1026,7 +1061,8 @@
     {
       "id": "plaintiff",
       "zh": "原告",
-      "en": "Plaintiff"
+      "en": "Plaintiff",
+      "related": ["defendant"]
     },
     {
       "id": "defendant",
@@ -1046,7 +1082,8 @@
     {
       "id": "bailiff",
       "zh": "法警",
-      "en": "Bailiff"
+      "en": "Bailiff",
+      "related": ["prison-guard"]
     },
     {
       "id": "court-clerk",
@@ -1072,7 +1109,8 @@
     {
       "id": "class-action",
       "zh": "集体诉讼",
-      "en": "Class action"
+      "en": "Class action",
+      "related": ["small-claims"]
     },
     {
       "id": "jurisdiction",
@@ -1083,7 +1121,8 @@
       "id": "indictment",
       "zh": "起诉书",
       "en": "Indictment",
-      "forms": { "en": ["indict"] }
+      "forms": { "en": ["indict"] },
+      "related": ["complaint"]
     },
     {
       "id": "subpoena",
@@ -1105,7 +1144,8 @@
       "id": "testimony",
       "zh": "证词",
       "en": "Testimony",
-      "forms": { "en": ["testify"] }
+      "forms": { "en": ["testify"] },
+      "related": ["confession"]
     },
     {
       "id": "confession",
@@ -1148,7 +1188,8 @@
       "id": "conviction",
       "zh": "定罪",
       "en": "Conviction",
-      "forms": { "en": ["convict", "convicted"] }
+      "forms": { "en": ["convict", "convicted"] },
+      "related": ["acquittal"]
     },
     {
       "id": "not-guilty",
@@ -1175,7 +1216,8 @@
     {
       "id": "appeal",
       "zh": "上诉",
-      "en": "Appeal"
+      "en": "Appeal",
+      "related": ["retrial"]
     },
     {
       "id": "retrial",
@@ -1197,7 +1239,8 @@
       "id": "mediation",
       "zh": "调解",
       "en": "Mediation",
-      "forms": { "en": ["mediate", "mediator"] }
+      "forms": { "en": ["mediate", "mediator"] },
+      "related": ["arbitration"]
     },
     {
       "id": "arbitration",
@@ -1213,7 +1256,8 @@
     {
       "id": "arrest",
       "zh": "逮捕",
-      "en": "Arrest"
+      "en": "Arrest",
+      "related": ["detention"]
     },
     {
       "id": "detention",
@@ -1239,7 +1283,8 @@
     {
       "id": "probation",
       "zh": "缓刑",
-      "en": "Probation"
+      "en": "Probation",
+      "related": ["parole"]
     },
     {
       "id": "parole",
@@ -1249,7 +1294,8 @@
     {
       "id": "pardon",
       "zh": "赦免",
-      "en": "Pardon"
+      "en": "Pardon",
+      "related": ["commutation"]
     },
     {
       "id": "prison",
@@ -1317,7 +1363,8 @@
     {
       "id": "handcuffs",
       "zh": "手铐",
-      "en": "Handcuffs"
+      "en": "Handcuffs",
+      "related": ["ankle-monitor"]
     },
     {
       "id": "lie-detector",
@@ -1333,7 +1380,8 @@
     {
       "id": "informant",
       "zh": "线人",
-      "en": "Informant"
+      "en": "Informant",
+      "related": ["undercover"]
     },
     {
       "id": "undercover",
@@ -1395,7 +1443,8 @@
     {
       "id": "embassy",
       "zh": "大使馆",
-      "en": "Embassy"
+      "en": "Embassy",
+      "related": ["consulate"]
     },
     {
       "id": "consulate",
@@ -1740,7 +1789,8 @@
       "id": "abetting",
       "zh": "教唆",
       "en": "Abetting",
-      "forms": { "en": ["abet", "abettor"] }
+      "forms": { "en": ["abet", "abettor"] },
+      "related": ["harboring"]
     },
     {
       "id": "murder",
@@ -1971,7 +2021,8 @@
     {
       "id": "habeas-corpus",
       "zh": "人身保护令",
-      "en": "Habeas corpus"
+      "en": "Habeas corpus",
+      "related": ["miranda-rights"]
     },
     {
       "id": "miranda-rights",
@@ -2062,7 +2113,8 @@
     {
       "id": "public-law",
       "zh": "公法",
-      "en": "Public law"
+      "en": "Public law",
+      "related": ["private-law"]
     },
     {
       "id": "private-law",
@@ -2149,12 +2201,14 @@
     {
       "id": "paralegal",
       "zh": "律师助理",
-      "en": "Paralegal"
+      "en": "Paralegal",
+      "related": ["law-clerk"]
     },
     {
       "id": "barrister",
       "zh": "出庭律师",
-      "en": "Barrister"
+      "en": "Barrister",
+      "related": ["solicitor"]
     },
     {
       "id": "solicitor",

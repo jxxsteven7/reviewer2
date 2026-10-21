@@ -9,17 +9,20 @@
     {
       "id": "primary-energy",
       "zh": "一次能源",
-      "en": "Primary energy"
+      "en": "Primary energy",
+      "related": ["final-energy"]
     },
     {
       "id": "watt",
       "zh": "瓦特",
-      "en": "Watt"
+      "en": "Watt",
+      "related": ["joule"]
     },
     {
       "id": "megawatt",
       "zh": "兆瓦",
-      "en": "Megawatt"
+      "en": "Megawatt",
+      "related": ["kilowatt"]
     },
     {
       "id": "kilovolt",
@@ -105,7 +108,8 @@
     {
       "id": "feed-in-tariff",
       "zh": "上网电价",
-      "en": "Feed-in tariff"
+      "en": "Feed-in tariff",
+      "related": ["net-metering"]
     },
     {
       "id": "lcoe",
@@ -169,7 +173,8 @@
     {
       "id": "pylon",
       "zh": "输电塔",
-      "en": "Pylon"
+      "en": "Pylon",
+      "related": ["utility-pole"]
     },
     {
       "id": "busbar",
@@ -209,7 +214,8 @@
     {
       "id": "grid-connected",
       "zh": "并网",
-      "en": "Grid-connected"
+      "en": "Grid-connected",
+      "related": ["off-grid"]
     },
     {
       "id": "off-grid",
@@ -264,7 +270,8 @@
     {
       "id": "base-load",
       "zh": "基荷",
-      "en": "Base load"
+      "en": "Base load",
+      "related": ["peak-load"]
     },
     {
       "id": "load-leveling",
@@ -304,7 +311,8 @@
     {
       "id": "stator",
       "zh": "定子",
-      "en": "Stator"
+      "en": "Stator",
+      "related": ["rotor"]
     },
     {
       "id": "rotor",
@@ -347,23 +355,27 @@
     {
       "id": "li-ion-battery",
       "zh": "锂电池",
-      "en": "Li-ion battery"
+      "en": "Li-ion battery",
+      "related": ["na-ion-battery"]
     },
     {
       "id": "lfp",
       "zh": "磷酸铁锂",
       "en": "LFP",
-      "forms": { "en": ["lithium iron phosphate"] }
+      "forms": { "en": ["lithium iron phosphate"] },
+      "related": ["nmc"]
     },
     {
       "id": "flow-battery",
       "zh": "液流电池",
-      "en": "Flow battery"
+      "en": "Flow battery",
+      "related": ["supercapacitor"]
     },
     {
       "id": "nimh",
       "zh": "镍氢电池",
-      "en": "NiMH"
+      "en": "NiMH",
+      "related": ["lead-acid"]
     },
     {
       "id": "dry-cell",
@@ -419,7 +431,8 @@
     {
       "id": "energy-density",
       "zh": "能量密度",
-      "en": "Energy density"
+      "en": "Energy density",
+      "related": ["power-density"]
     },
     {
       "id": "power-density",
@@ -429,17 +442,20 @@
     {
       "id": "self-discharge",
       "zh": "自放电",
-      "en": "Self-discharge"
+      "en": "Self-discharge",
+      "related": ["memory-effect"]
     },
     {
       "id": "fast-charging",
       "zh": "快充",
-      "en": "Fast charging"
+      "en": "Fast charging",
+      "related": ["battery-swap"]
     },
     {
       "id": "ev-charger",
       "zh": "充电桩",
-      "en": "EV charger"
+      "en": "EV charger",
+      "related": ["gas-station"]
     },
     {
       "id": "battery-swap",
@@ -464,7 +480,8 @@
     {
       "id": "molten-salt",
       "zh": "熔盐",
-      "en": "Molten salt"
+      "en": "Molten salt",
+      "related": ["ice-storage"]
     },
     {
       "id": "pcm",
@@ -490,7 +507,8 @@
     {
       "id": "fuel-rod",
       "zh": "燃料棒",
-      "en": "Fuel rod"
+      "en": "Fuel rod",
+      "related": ["control-rod"]
     },
     {
       "id": "control-rod",
@@ -500,7 +518,8 @@
     {
       "id": "moderator",
       "zh": "慢化剂",
-      "en": "Moderator"
+      "en": "Moderator",
+      "related": ["coolant"]
     },
     {
       "id": "coolant",
@@ -546,7 +565,8 @@
       "id": "pwr",
       "zh": "压水堆",
       "en": "PWR",
-      "forms": { "en": ["pressurized water reactor"] }
+      "forms": { "en": ["pressurized water reactor"] },
+      "related": ["bwr"]
     },
     {
       "id": "fast-reactor",
@@ -657,7 +677,8 @@
     {
       "id": "offshore-wind",
       "zh": "海上风电",
-      "en": "Offshore wind"
+      "en": "Offshore wind",
+      "related": ["onshore-wind"]
     },
     {
       "id": "wind-farm",
@@ -668,7 +689,8 @@
       "id": "photovoltaics",
       "zh": "光伏",
       "en": "Photovoltaics",
-      "forms": { "en": ["PV"] }
+      "forms": { "en": ["PV"] },
+      "related": ["solar-thermal"]
     },
     {
       "id": "rooftop-solar",
@@ -744,7 +766,8 @@
     {
       "id": "wave-energy",
       "zh": "波浪能",
-      "en": "Wave energy"
+      "en": "Wave energy",
+      "related": ["tidal-stream"]
     },
     {
       "id": "otec",
@@ -759,7 +782,8 @@
     {
       "id": "fuel-ethanol",
       "zh": "燃料乙醇",
-      "en": "Fuel ethanol"
+      "en": "Fuel ethanol",
+      "related": ["biodiesel"]
     },
     {
       "id": "biodiesel",
@@ -769,7 +793,8 @@
     {
       "id": "firewood",
       "zh": "薪柴",
-      "en": "Firewood"
+      "en": "Firewood",
+      "related": ["pellet-fuel"]
     },
     {
       "id": "gasification",
@@ -784,7 +809,8 @@
     {
       "id": "gasoline",
       "zh": "汽油",
-      "en": "Gasoline"
+      "en": "Gasoline",
+      "related": ["diesel"]
     },
     {
       "id": "diesel",
@@ -804,7 +830,8 @@
     {
       "id": "lng",
       "zh": "液化天然气",
-      "en": "LNG"
+      "en": "LNG",
+      "related": ["lpg"]
     },
     {
       "id": "lpg",
@@ -819,7 +846,8 @@
     {
       "id": "shale-gas",
       "zh": "页岩气",
-      "en": "Shale gas"
+      "en": "Shale gas",
+      "related": ["tight-oil"]
     },
     {
       "id": "gas-hydrate",
@@ -829,7 +857,8 @@
     {
       "id": "oil-sands",
       "zh": "油砂",
-      "en": "Oil sands"
+      "en": "Oil sands",
+      "related": ["oil-shale"]
     },
     {
       "id": "tight-oil",
@@ -840,12 +869,14 @@
       "id": "fracking",
       "zh": "水力压裂",
       "en": "Fracking",
-      "forms": { "en": ["hydraulic fracturing"] }
+      "forms": { "en": ["hydraulic fracturing"] },
+      "related": ["waterflooding"]
     },
     {
       "id": "oil-field",
       "zh": "油田",
-      "en": "Oil field"
+      "en": "Oil field",
+      "related": ["gas-field"]
     },
     {
       "id": "oil-reservoir",
@@ -896,7 +927,8 @@
     {
       "id": "oil-tanker",
       "zh": "油轮",
-      "en": "Oil tanker"
+      "en": "Oil tanker",
+      "related": ["oil-pipeline"]
     },
     {
       "id": "gas-station",
@@ -916,7 +948,8 @@
     {
       "id": "firedamp",
       "zh": "瓦斯",
-      "en": "Firedamp"
+      "en": "Firedamp",
+      "related": ["landfill-gas"]
     },
     {
       "id": "coal-gangue",
@@ -926,7 +959,8 @@
     {
       "id": "anthracite",
       "zh": "无烟煤",
-      "en": "Anthracite"
+      "en": "Anthracite",
+      "related": ["lignite"]
     },
     {
       "id": "lignite",
@@ -941,7 +975,8 @@
     {
       "id": "coke",
       "zh": "焦炭",
-      "en": "Coke"
+      "en": "Coke",
+      "related": ["coal-tar"]
     },
     {
       "id": "coal-tar",
@@ -991,7 +1026,8 @@
     {
       "id": "deflagration",
       "zh": "爆燃",
-      "en": "Deflagration"
+      "en": "Deflagration",
+      "related": ["detonation"]
     },
     {
       "id": "detonation",
@@ -1006,7 +1042,8 @@
     {
       "id": "autoignition",
       "zh": "自燃",
-      "en": "Autoignition"
+      "en": "Autoignition",
+      "related": ["flash-point"]
     },
     {
       "id": "flash-point",
@@ -1062,7 +1099,8 @@
     {
       "id": "steam-turbine",
       "zh": "汽轮机",
-      "en": "Steam turbine"
+      "en": "Steam turbine",
+      "related": ["gas-turbine"]
     },
     {
       "id": "gas-turbine",
@@ -1077,7 +1115,8 @@
     {
       "id": "rankine-cycle",
       "zh": "朗肯循环",
-      "en": "Rankine cycle"
+      "en": "Rankine cycle",
+      "related": ["brayton-cycle"]
     },
     {
       "id": "brayton-cycle",
@@ -1087,7 +1126,8 @@
     {
       "id": "otto-cycle",
       "zh": "奥托循环",
-      "en": "Otto cycle"
+      "en": "Otto cycle",
+      "related": ["stirling-cycle"]
     },
     {
       "id": "stirling-cycle",
@@ -1102,7 +1142,8 @@
     {
       "id": "superheater",
       "zh": "过热器",
-      "en": "Superheater"
+      "en": "Superheater",
+      "related": ["economizer"]
     },
     {
       "id": "economizer",
@@ -1127,7 +1168,8 @@
     {
       "id": "condenser",
       "zh": "凝汽器",
-      "en": "Condenser"
+      "en": "Condenser",
+      "related": ["evaporator"]
     },
     {
       "id": "condensate",
@@ -1219,7 +1261,8 @@
     {
       "id": "turbojet",
       "zh": "涡喷",
-      "en": "Turbojet"
+      "en": "Turbojet",
+      "related": ["turboprop"]
     },
     {
       "id": "turboprop",
@@ -1309,7 +1352,8 @@
     {
       "id": "latent-heat",
       "zh": "潜热",
-      "en": "Latent heat"
+      "en": "Latent heat",
+      "related": ["sensible-heat"]
     },
     {
       "id": "sensible-heat",
@@ -1339,7 +1383,8 @@
     {
       "id": "air-cooling",
       "zh": "空冷",
-      "en": "Air cooling"
+      "en": "Air cooling",
+      "related": ["water-cooling"]
     },
     {
       "id": "water-cooling",
@@ -1407,7 +1452,8 @@
       "id": "grey-hydrogen",
       "zh": "灰氢",
       "en": "Grey hydrogen",
-      "forms": { "en": ["gray hydrogen"] }
+      "forms": { "en": ["gray hydrogen"] },
+      "related": ["blue-hydrogen"]
     },
     {
       "id": "blue-hydrogen",
@@ -1470,7 +1516,8 @@
     {
       "id": "grid-forming",
       "zh": "构网型",
-      "en": "Grid-forming"
+      "en": "Grid-forming",
+      "related": ["grid-following"]
     },
     {
       "id": "grid-following",
@@ -1511,7 +1558,8 @@
     {
       "id": "cdte",
       "zh": "碲化镉",
-      "en": "CdTe"
+      "en": "CdTe",
+      "related": ["cigs"]
     },
     {
       "id": "cigs",
@@ -1601,7 +1649,8 @@
     {
       "id": "axial-flow",
       "zh": "轴流",
-      "en": "Axial flow"
+      "en": "Axial flow",
+      "related": ["centrifugal"]
     },
     {
       "id": "centrifugal",
@@ -1651,7 +1700,8 @@
     {
       "id": "time-of-use",
       "zh": "分时电价",
-      "en": "Time-of-use"
+      "en": "Time-of-use",
+      "related": ["tiered-pricing"]
     },
     {
       "id": "tiered-pricing",

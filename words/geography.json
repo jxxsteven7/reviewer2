@@ -15,7 +15,8 @@
       "id": "crust",
       "zh": "地壳",
       "en": "Crust",
-      "forms": { "en": ["crustal"] }
+      "forms": { "en": ["crustal"] },
+      "related": ["mantle"]
     },
     {
       "id": "mantle",
@@ -31,7 +32,8 @@
       "id": "lithosphere",
       "zh": "岩石圈",
       "en": "Lithosphere",
-      "forms": { "en": ["lithospheric"] }
+      "forms": { "en": ["lithospheric"] },
+      "related": ["asthenosphere"]
     },
     {
       "id": "asthenosphere",
@@ -72,7 +74,8 @@
       "id": "fault",
       "zh": "断层",
       "en": "Fault",
-      "forms": { "en": ["faulting"] }
+      "forms": { "en": ["faulting"] },
+      "related": ["fold"]
     },
     {
       "id": "fold",
@@ -83,7 +86,8 @@
     {
       "id": "anticline",
       "zh": "背斜",
-      "en": "Anticline"
+      "en": "Anticline",
+      "related": ["syncline"]
     },
     {
       "id": "syncline",
@@ -103,13 +107,15 @@
     {
       "id": "earthquake",
       "zh": "地震",
-      "en": "Earthquake"
+      "en": "Earthquake",
+      "related": ["volcano"]
     },
     {
       "id": "epicenter",
       "zh": "震中",
       "en": "Epicenter",
-      "forms": { "en": ["epicentre"] }
+      "forms": { "en": ["epicentre"] },
+      "related": ["hypocenter"]
     },
     {
       "id": "hypocenter",
@@ -125,7 +131,8 @@
     {
       "id": "richter-scale",
       "zh": "里氏震级",
-      "en": "Richter scale"
+      "en": "Richter scale",
+      "related": ["beaufort-scale"]
     },
     {
       "id": "seismic-wave",
@@ -140,7 +147,8 @@
     {
       "id": "aftershock",
       "zh": "余震",
-      "en": "Aftershock"
+      "en": "Aftershock",
+      "related": ["foreshock"]
     },
     {
       "id": "seismology",
@@ -151,7 +159,8 @@
     {
       "id": "tsunami",
       "zh": "海啸",
-      "en": "Tsunami"
+      "en": "Tsunami",
+      "related": ["rogue-wave"]
     },
     {
       "id": "volcano",
@@ -174,7 +183,8 @@
       "id": "magma",
       "zh": "岩浆",
       "en": "Magma",
-      "forms": { "en": ["magmatic"] }
+      "forms": { "en": ["magmatic"] },
+      "related": ["lava"]
     },
     {
       "id": "lava",
@@ -184,7 +194,8 @@
     {
       "id": "geyser",
       "zh": "间歇泉",
-      "en": "Geyser"
+      "en": "Geyser",
+      "related": ["hot-spring"]
     },
     {
       "id": "hot-spring",
@@ -211,7 +222,8 @@
       "id": "geology",
       "zh": "地质学",
       "en": "Geology",
-      "forms": { "en": ["geological", "geologic", "geologist"] }
+      "forms": { "en": ["geological", "geologic", "geologist"] },
+      "related": ["geography"]
     },
     {
       "id": "rock",
@@ -245,7 +257,8 @@
     {
       "id": "granite",
       "zh": "花岗岩",
-      "en": "Granite"
+      "en": "Granite",
+      "related": ["basalt"]
     },
     {
       "id": "basalt",
@@ -256,7 +269,8 @@
     {
       "id": "limestone",
       "zh": "石灰岩",
-      "en": "Limestone"
+      "en": "Limestone",
+      "related": ["marble"]
     },
     {
       "id": "marble",
@@ -266,7 +280,8 @@
     {
       "id": "shale",
       "zh": "页岩",
-      "en": "Shale"
+      "en": "Shale",
+      "related": ["slate"]
     },
     {
       "id": "sandstone",
@@ -276,7 +291,8 @@
     {
       "id": "quartz",
       "zh": "石英",
-      "en": "Quartz"
+      "en": "Quartz",
+      "related": ["feldspar"]
     },
     {
       "id": "feldspar",
@@ -291,7 +307,8 @@
     {
       "id": "obsidian",
       "zh": "黑曜石",
-      "en": "Obsidian"
+      "en": "Obsidian",
+      "related": ["pumice"]
     },
     {
       "id": "pumice",
@@ -332,7 +349,8 @@
     {
       "id": "holocene",
       "zh": "全新世",
-      "en": "Holocene"
+      "en": "Holocene",
+      "related": ["pleistocene"]
     },
     {
       "id": "anthropocene",
@@ -368,7 +386,8 @@
     {
       "id": "stalactite",
       "zh": "钟乳石",
-      "en": "Stalactite"
+      "en": "Stalactite",
+      "related": ["stalagmite"]
     },
     {
       "id": "stalagmite",
@@ -435,7 +454,8 @@
       "id": "plateau",
       "zh": "高原",
       "en": "Plateau",
-      "forms": { "en": ["plateaux"] }
+      "forms": { "en": ["plateaux"] },
+      "related": ["plain"]
     },
     {
       "id": "plain",
@@ -455,7 +475,8 @@
     {
       "id": "dune",
       "zh": "沙丘",
-      "en": "Dune"
+      "en": "Dune",
+      "related": ["beach"]
     },
     {
       "id": "oasis",
@@ -472,7 +493,8 @@
     {
       "id": "ice-sheet",
       "zh": "冰盖",
-      "en": "Ice sheet"
+      "en": "Ice sheet",
+      "related": ["ice-shelf"]
     },
     {
       "id": "ice-shelf",
@@ -482,7 +504,8 @@
     {
       "id": "iceberg",
       "zh": "冰山",
-      "en": "Iceberg"
+      "en": "Iceberg",
+      "related": ["ice-floe"]
     },
     {
       "id": "cirque",
@@ -498,7 +521,8 @@
     {
       "id": "snow-line",
       "zh": "雪线",
-      "en": "Snow line"
+      "en": "Snow line",
+      "related": ["tree-line"]
     },
     {
       "id": "tree-line",
@@ -509,7 +533,8 @@
       "id": "delta",
       "zh": "三角洲",
       "en": "Delta",
-      "forms": { "en": ["deltaic"] }
+      "forms": { "en": ["deltaic"] },
+      "related": ["alluvial-fan"]
     },
     {
       "id": "alluvial-fan",
@@ -595,7 +620,8 @@
     {
       "id": "landslide",
       "zh": "滑坡",
-      "en": "Landslide"
+      "en": "Landslide",
+      "related": ["debris-flow"]
     },
     {
       "id": "debris-flow",
@@ -605,13 +631,15 @@
     {
       "id": "avalanche",
       "zh": "雪崩",
-      "en": "Avalanche"
+      "en": "Avalanche",
+      "related": ["rockfall"]
     },
     {
       "id": "flood",
       "zh": "洪水",
       "en": "Flood",
-      "forms": { "en": ["flooding"] }
+      "forms": { "en": ["flooding"] },
+      "related": ["drought"]
     },
     {
       "id": "drought",
@@ -622,7 +650,8 @@
       "id": "erosion",
       "zh": "侵蚀",
       "en": "Erosion",
-      "forms": { "en": ["erode", "eroded", "erosive"] }
+      "forms": { "en": ["erode", "eroded", "erosive"] },
+      "related": ["weathering"]
     },
     {
       "id": "weathering",
@@ -632,7 +661,8 @@
     {
       "id": "peninsula",
       "zh": "半岛",
-      "en": "Peninsula"
+      "en": "Peninsula",
+      "related": ["island"]
     },
     {
       "id": "island",
@@ -647,12 +677,14 @@
     {
       "id": "strait",
       "zh": "海峡",
-      "en": "Strait"
+      "en": "Strait",
+      "related": ["isthmus"]
     },
     {
       "id": "bay",
       "zh": "海湾",
-      "en": "Bay"
+      "en": "Bay",
+      "related": ["cape"]
     },
     {
       "id": "isthmus",
@@ -687,7 +719,8 @@
     {
       "id": "trench",
       "zh": "海沟",
-      "en": "Trench"
+      "en": "Trench",
+      "related": ["seamount"]
     },
     {
       "id": "seamount",
@@ -729,7 +762,8 @@
     {
       "id": "kuroshio",
       "zh": "黑潮",
-      "en": "Kuroshio"
+      "en": "Kuroshio",
+      "related": ["gulf-stream"]
     },
     {
       "id": "gulf-stream",
@@ -760,7 +794,8 @@
     {
       "id": "troposphere",
       "zh": "对流层",
-      "en": "Troposphere"
+      "en": "Troposphere",
+      "related": ["stratosphere"]
     },
     {
       "id": "stratosphere",
@@ -777,12 +812,14 @@
       "id": "meteorology",
       "zh": "气象学",
       "en": "Meteorology",
-      "forms": { "en": ["meteorologist", "meteorological"] }
+      "forms": { "en": ["meteorologist", "meteorological"] },
+      "related": ["climatology"]
     },
     {
       "id": "weather",
       "zh": "天气",
-      "en": "Weather"
+      "en": "Weather",
+      "related": ["climate"]
     },
     {
       "id": "climate",
@@ -842,7 +879,8 @@
       "id": "monsoon",
       "zh": "季风",
       "en": "Monsoon",
-      "forms": { "en": ["monsoonal"] }
+      "forms": { "en": ["monsoonal"] },
+      "related": ["trade-wind"]
     },
     {
       "id": "trade-wind",
@@ -863,7 +901,8 @@
     {
       "id": "typhoon",
       "zh": "台风",
-      "en": "Typhoon"
+      "en": "Typhoon",
+      "related": ["hurricane"]
     },
     {
       "id": "hurricane",
@@ -874,7 +913,8 @@
       "id": "tornado",
       "zh": "龙卷风",
       "en": "Tornado",
-      "forms": { "en": ["tornadoes"] }
+      "forms": { "en": ["tornadoes"] },
+      "related": ["dust-devil"]
     },
     {
       "id": "cyclone",
@@ -900,7 +940,8 @@
     {
       "id": "isobar",
       "zh": "等压线",
-      "en": "Isobar"
+      "en": "Isobar",
+      "related": ["isotherm"]
     },
     {
       "id": "isotherm",
@@ -920,7 +961,8 @@
     {
       "id": "rainfall",
       "zh": "降雨",
-      "en": "Rainfall"
+      "en": "Rainfall",
+      "related": ["snowfall"]
     },
     {
       "id": "rainstorm",
@@ -946,7 +988,8 @@
     {
       "id": "blizzard",
       "zh": "暴风雪",
-      "en": "Blizzard"
+      "en": "Blizzard",
+      "related": ["sandstorm"]
     },
     {
       "id": "snowflake",
@@ -984,7 +1027,8 @@
     {
       "id": "cumulonimbus",
       "zh": "积雨云",
-      "en": "Cumulonimbus"
+      "en": "Cumulonimbus",
+      "related": ["cumulus"]
     },
     {
       "id": "storm-surge",
@@ -999,7 +1043,8 @@
     {
       "id": "cold-wave",
       "zh": "寒潮",
-      "en": "Cold wave"
+      "en": "Cold wave",
+      "related": ["heat-wave"]
     },
     {
       "id": "heat-wave",
@@ -1014,7 +1059,8 @@
     {
       "id": "el-nino",
       "zh": "厄尔尼诺",
-      "en": "El Niño"
+      "en": "El Niño",
+      "related": ["la-nina"]
     },
     {
       "id": "la-nina",
@@ -1034,7 +1080,8 @@
     {
       "id": "weather-vane",
       "zh": "风向标",
-      "en": "Weather vane"
+      "en": "Weather vane",
+      "related": ["anemometer"]
     },
     {
       "id": "rain-gauge",
@@ -1091,7 +1138,8 @@
     {
       "id": "longitude",
       "zh": "经度",
-      "en": "Longitude"
+      "en": "Longitude",
+      "related": ["latitude"]
     },
     {
       "id": "latitude",
@@ -1103,7 +1151,8 @@
       "id": "equator",
       "zh": "赤道",
       "en": "Equator",
-      "forms": { "en": ["equatorial"] }
+      "forms": { "en": ["equatorial"] },
+      "related": ["prime-meridian"]
     },
     {
       "id": "prime-meridian",
@@ -1186,7 +1235,8 @@
     {
       "id": "arctic",
       "zh": "北极",
-      "en": "Arctic"
+      "en": "Arctic",
+      "related": ["antarctica"]
     },
     {
       "id": "antarctica",
@@ -1197,7 +1247,8 @@
     {
       "id": "polar-day",
       "zh": "极昼",
-      "en": "Polar day"
+      "en": "Polar day",
+      "related": ["polar-night"]
     },
     {
       "id": "polar-night",
@@ -1207,7 +1258,8 @@
     {
       "id": "pacific",
       "zh": "太平洋",
-      "en": "Pacific"
+      "en": "Pacific",
+      "related": ["atlantic"]
     },
     {
       "id": "atlantic",
@@ -1227,12 +1279,14 @@
     {
       "id": "sahara",
       "zh": "撒哈拉",
-      "en": "Sahara"
+      "en": "Sahara",
+      "related": ["gobi"]
     },
     {
       "id": "amazon",
       "zh": "亚马孙",
-      "en": "Amazon"
+      "en": "Amazon",
+      "related": ["nile"]
     },
     {
       "id": "nile",
@@ -1247,7 +1301,8 @@
     {
       "id": "yangtze",
       "zh": "长江",
-      "en": "Yangtze"
+      "en": "Yangtze",
+      "related": ["yellow-river"]
     },
     {
       "id": "yellow-river",
@@ -1264,7 +1319,8 @@
       "id": "andes",
       "zh": "安第斯山",
       "en": "Andes",
-      "forms": { "en": ["Andean"] }
+      "forms": { "en": ["Andean"] },
+      "related": ["rockies"]
     },
     {
       "id": "settlement",
@@ -1399,7 +1455,8 @@
       "id": "gondwana",
       "zh": "冈瓦纳",
       "en": "Gondwana",
-      "forms": { "en": ["Gondwanaland"] }
+      "forms": { "en": ["Gondwanaland"] },
+      "related": ["laurasia"]
     },
     {
       "id": "laurasia",
@@ -1566,7 +1623,8 @@
     {
       "id": "mesozoic",
       "zh": "中生代",
-      "en": "Mesozoic"
+      "en": "Mesozoic",
+      "related": ["cenozoic"]
     },
     {
       "id": "cenozoic",
@@ -1841,7 +1899,8 @@
       "id": "dike",
       "zh": "岩墙",
       "en": "Dike",
-      "forms": { "en": ["dyke"] }
+      "forms": { "en": ["dyke"] },
+      "related": ["sill"]
     },
     {
       "id": "sill",
@@ -2103,7 +2162,8 @@
     {
       "id": "runoff",
       "zh": "径流",
-      "en": "Runoff"
+      "en": "Runoff",
+      "related": ["infiltration"]
     },
     {
       "id": "infiltration",
@@ -2184,7 +2244,8 @@
     {
       "id": "cold-current",
       "zh": "寒流",
-      "en": "Cold current"
+      "en": "Cold current",
+      "related": ["warm-current"]
     },
     {
       "id": "warm-current",
@@ -2194,7 +2255,8 @@
     {
       "id": "spring-tide",
       "zh": "大潮",
-      "en": "Spring tide"
+      "en": "Spring tide",
+      "related": ["neap-tide"]
     },
     {
       "id": "neap-tide",
@@ -2209,7 +2271,8 @@
     {
       "id": "arctic-ocean",
       "zh": "北冰洋",
-      "en": "Arctic Ocean"
+      "en": "Arctic Ocean",
+      "related": ["southern-ocean"]
     },
     {
       "id": "southern-ocean",
@@ -2250,7 +2313,8 @@
     {
       "id": "cold-front",
       "zh": "冷锋",
-      "en": "Cold front"
+      "en": "Cold front",
+      "related": ["warm-front"]
     },
     {
       "id": "warm-front",
@@ -2327,7 +2391,8 @@
     {
       "id": "cirrus",
       "zh": "卷云",
-      "en": "Cirrus"
+      "en": "Cirrus",
+      "related": ["stratus"]
     },
     {
       "id": "stratus",
@@ -2347,7 +2412,8 @@
     {
       "id": "drizzle",
       "zh": "毛毛雨",
-      "en": "Drizzle"
+      "en": "Drizzle",
+      "related": ["shower"]
     },
     {
       "id": "sleet",
@@ -2715,7 +2781,8 @@
     {
       "id": "mount-fuji",
       "zh": "富士山",
-      "en": "Mount Fuji"
+      "en": "Mount Fuji",
+      "related": ["kilimanjaro"]
     },
     {
       "id": "vesuvius",

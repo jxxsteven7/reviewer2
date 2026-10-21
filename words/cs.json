@@ -16,7 +16,8 @@
       "id": "compiler",
       "zh": "编译器",
       "en": "Compiler",
-      "forms": { "en": ["compile", "compiled", "compilation"] }
+      "forms": { "en": ["compile", "compiled", "compilation"] },
+      "related": ["interpreter"]
     },
     {
       "id": "recursion",
@@ -34,13 +35,15 @@
       "id": "cache",
       "zh": "缓存",
       "en": "Cache",
-      "forms": { "en": ["cached", "caching"] }
+      "forms": { "en": ["cached", "caching"] },
+      "related": ["buffer"]
     },
     {
       "id": "thread",
       "zh": "线程",
       "en": "Thread",
-      "forms": { "en": ["multithreading", "multithreaded"] }
+      "forms": { "en": ["multithreading", "multithreaded"] },
+      "related": ["process"]
     },
     {
       "id": "kernel",
@@ -56,7 +59,8 @@
       "id": "stack",
       "zh": "栈",
       "en": "Stack",
-      "forms": { "en": ["stacked", "stacking"] }
+      "forms": { "en": ["stacked", "stacking"] },
+      "related": ["queue"]
     },
     {
       "id": "queue",
@@ -74,7 +78,8 @@
       "id": "deadlock",
       "zh": "死锁",
       "en": "Deadlock",
-      "forms": { "en": ["deadlocked"] }
+      "forms": { "en": ["deadlocked"] },
+      "related": ["starvation"]
     },
     {
       "id": "encryption",
@@ -85,18 +90,21 @@
     {
       "id": "firewall",
       "zh": "防火墙",
-      "en": "Firewall"
+      "en": "Firewall",
+      "related": ["antivirus"]
     },
     {
       "id": "cpu",
       "zh": "CPU",
       "en": "CPU",
-      "forms": { "zh": ["中央处理器"], "en": ["central processing unit"] }
+      "forms": { "zh": ["中央处理器"], "en": ["central processing unit"] },
+      "related": ["gpu"]
     },
     {
       "id": "linux",
       "zh": "Linux",
-      "en": "Linux"
+      "en": "Linux",
+      "related": ["windows"]
     },
     {
       "id": "github",
@@ -106,13 +114,15 @@
     {
       "id": "binary",
       "zh": "二进制",
-      "en": "Binary"
+      "en": "Binary",
+      "related": ["hexadecimal"]
     },
     {
       "id": "router",
       "zh": "路由器",
       "en": "Router",
-      "forms": { "en": ["route", "routing"] }
+      "forms": { "en": ["route", "routing"] },
+      "related": ["switch"]
     },
     {
       "id": "hacker",
@@ -139,7 +149,8 @@
     {
       "id": "linked-list",
       "zh": "链表",
-      "en": "Linked list"
+      "en": "Linked list",
+      "related": ["array"]
     },
     {
       "id": "array",
@@ -161,7 +172,8 @@
     {
       "id": "red-black-tree",
       "zh": "红黑树",
-      "en": "Red-black tree"
+      "en": "Red-black tree",
+      "related": ["b-tree"]
     },
     {
       "id": "dictionary",
@@ -187,7 +199,8 @@
     {
       "id": "dynamic-programming",
       "zh": "动态规划",
-      "en": "Dynamic programming"
+      "en": "Dynamic programming",
+      "related": ["greedy"]
     },
     {
       "id": "heuristic",
@@ -443,7 +456,8 @@
     {
       "id": "machine-code",
       "zh": "机器码",
-      "en": "Machine code"
+      "en": "Machine code",
+      "related": ["bytecode"]
     },
     {
       "id": "lambda",
@@ -480,7 +494,8 @@
       "id": "regex",
       "zh": "正则表达式",
       "en": "Regex",
-      "forms": { "zh": ["正则"], "en": ["regular expression"] }
+      "forms": { "zh": ["正则"], "en": ["regular expression"] },
+      "related": ["wildcard"]
     },
     {
       "id": "wildcard",
@@ -523,7 +538,8 @@
     {
       "id": "python",
       "zh": "Python",
-      "en": "Python"
+      "en": "Python",
+      "related": ["java"]
     },
     {
       "id": "java",
@@ -533,13 +549,15 @@
     {
       "id": "c-plus-plus",
       "zh": "C++",
-      "en": "C++"
+      "en": "C++",
+      "related": ["rust"]
     },
     {
       "id": "javascript",
       "zh": "JavaScript",
       "en": "JavaScript",
-      "forms": { "en": ["JS"] }
+      "forms": { "en": ["JS"] },
+      "related": ["typescript"]
     },
     {
       "id": "rust",
@@ -550,7 +568,8 @@
       "id": "html",
       "zh": "HTML",
       "en": "HTML",
-      "forms": { "zh": ["超文本标记语言"], "en": ["hypertext markup language"] }
+      "forms": { "zh": ["超文本标记语言"], "en": ["hypertext markup language"] },
+      "related": ["css"]
     },
     {
       "id": "sql",
@@ -561,7 +580,8 @@
     {
       "id": "vim",
       "zh": "Vim",
-      "en": "Vim"
+      "en": "Vim",
+      "related": ["emacs"]
     },
     {
       "id": "ide",
@@ -583,7 +603,8 @@
       "id": "inheritance",
       "zh": "继承",
       "en": "Inheritance",
-      "forms": { "en": ["inherit", "inherited"] }
+      "forms": { "en": ["inherit", "inherited"] },
+      "related": ["polymorphism"]
     },
     {
       "id": "instance",
@@ -601,7 +622,8 @@
       "id": "encapsulation",
       "zh": "封装",
       "en": "Encapsulation",
-      "forms": { "en": ["encapsulate"] }
+      "forms": { "en": ["encapsulate"] },
+      "related": ["abstraction"]
     },
     {
       "id": "abstraction",
@@ -613,7 +635,8 @@
       "id": "overloading",
       "zh": "重载",
       "en": "Overloading",
-      "forms": { "en": ["overload", "overloaded"] }
+      "forms": { "en": ["overload", "overloaded"] },
+      "related": ["overriding"]
     },
     {
       "id": "design-pattern",
@@ -646,7 +669,8 @@
       "id": "merge",
       "zh": "合并",
       "en": "Merge",
-      "forms": { "en": ["merged", "merging"] }
+      "forms": { "en": ["merged", "merging"] },
+      "related": ["rebase"]
     },
     {
       "id": "code-review",
@@ -753,7 +777,8 @@
     {
       "id": "backup",
       "zh": "备份",
-      "en": "Backup"
+      "en": "Backup",
+      "related": ["snapshot"]
     },
     {
       "id": "snapshot",
@@ -830,13 +855,15 @@
       "id": "interrupt",
       "zh": "中断",
       "en": "Interrupt",
-      "forms": { "en": ["interruption"] }
+      "forms": { "en": ["interruption"] },
+      "related": ["polling"]
     },
     {
       "id": "concurrency",
       "zh": "并发",
       "en": "Concurrency",
-      "forms": { "en": ["concurrent"] }
+      "forms": { "en": ["concurrent"] },
+      "related": ["parallelism"]
     },
     {
       "id": "parallelism",
@@ -853,7 +880,8 @@
       "id": "mutex",
       "zh": "互斥锁",
       "en": "Mutex",
-      "forms": { "en": ["mutual exclusion"] }
+      "forms": { "en": ["mutual exclusion"] },
+      "related": ["semaphore"]
     },
     {
       "id": "lock",
@@ -869,7 +897,8 @@
     {
       "id": "memory",
       "zh": "内存",
-      "en": "Memory"
+      "en": "Memory",
+      "related": ["hard-disk"]
     },
     {
       "id": "virtual-memory",
@@ -891,7 +920,8 @@
       "id": "virtual-machine",
       "zh": "虚拟机",
       "en": "Virtual machine",
-      "forms": { "en": ["VM"] }
+      "forms": { "en": ["VM"] },
+      "related": ["container"]
     },
     {
       "id": "container",
@@ -902,7 +932,8 @@
     {
       "id": "docker",
       "zh": "Docker",
-      "en": "Docker"
+      "en": "Docker",
+      "related": ["kubernetes"]
     },
     {
       "id": "kubernetes",
@@ -934,7 +965,8 @@
     {
       "id": "driver",
       "zh": "驱动",
-      "en": "Driver"
+      "en": "Driver",
+      "related": ["firmware"]
     },
     {
       "id": "firmware",
@@ -971,7 +1003,8 @@
     {
       "id": "hardware",
       "zh": "硬件",
-      "en": "Hardware"
+      "en": "Hardware",
+      "related": ["software"]
     },
     {
       "id": "software",
@@ -1035,12 +1068,14 @@
     {
       "id": "touchscreen",
       "zh": "触摸屏",
-      "en": "Touchscreen"
+      "en": "Touchscreen",
+      "related": ["touchpad"]
     },
     {
       "id": "supercomputer",
       "zh": "超级计算机",
-      "en": "Supercomputer"
+      "en": "Supercomputer",
+      "related": ["mainframe"]
     },
     {
       "id": "data-center",
@@ -1087,7 +1122,8 @@
       "id": "tcp",
       "zh": "TCP",
       "en": "TCP",
-      "forms": { "zh": ["传输控制协议"], "en": ["transmission control protocol"] }
+      "forms": { "zh": ["传输控制协议"], "en": ["transmission control protocol"] },
+      "related": ["udp"]
     },
     {
       "id": "http",
@@ -1104,7 +1140,8 @@
     {
       "id": "ip-address",
       "zh": "IP地址",
-      "en": "IP address"
+      "en": "IP address",
+      "related": ["mac-address"]
     },
     {
       "id": "mac-address",
@@ -1160,7 +1197,8 @@
     {
       "id": "bandwidth",
       "zh": "带宽",
-      "en": "Bandwidth"
+      "en": "Bandwidth",
+      "related": ["latency"]
     },
     {
       "id": "latency",
@@ -1175,7 +1213,8 @@
     {
       "id": "broadcast",
       "zh": "广播",
-      "en": "Broadcast"
+      "en": "Broadcast",
+      "related": ["multicast"]
     },
     {
       "id": "polling",
@@ -1191,12 +1230,14 @@
     {
       "id": "client",
       "zh": "客户端",
-      "en": "Client"
+      "en": "Client",
+      "related": ["server"]
     },
     {
       "id": "front-end",
       "zh": "前端",
-      "en": "Front end"
+      "en": "Front end",
+      "related": ["back-end"]
     },
     {
       "id": "back-end",
@@ -1244,7 +1285,8 @@
       "id": "spam",
       "zh": "垃圾邮件",
       "en": "Spam",
-      "forms": { "en": ["spammer"] }
+      "forms": { "en": ["spammer"] },
+      "related": ["phishing"]
     },
     {
       "id": "login",
@@ -1265,7 +1307,8 @@
       "id": "download",
       "zh": "下载",
       "en": "Download",
-      "forms": { "en": ["downloaded"] }
+      "forms": { "en": ["downloaded"] },
+      "related": ["upload"]
     },
     {
       "id": "upload",
@@ -1288,12 +1331,14 @@
       "id": "cryptography",
       "zh": "密码学",
       "en": "Cryptography",
-      "forms": { "en": ["cryptographic"] }
+      "forms": { "en": ["cryptographic"] },
+      "related": ["steganography"]
     },
     {
       "id": "public-key",
       "zh": "公钥",
-      "en": "Public key"
+      "en": "Public key",
+      "related": ["private-key"]
     },
     {
       "id": "private-key",
@@ -1324,7 +1369,8 @@
     {
       "id": "backdoor",
       "zh": "后门",
-      "en": "Backdoor"
+      "en": "Backdoor",
+      "related": ["trojan"]
     },
     {
       "id": "trojan",
@@ -1334,7 +1380,8 @@
     {
       "id": "worm",
       "zh": "蠕虫",
-      "en": "Worm"
+      "en": "Worm",
+      "related": ["computer-virus"]
     },
     {
       "id": "ransomware",
@@ -1401,7 +1448,8 @@
     {
       "id": "primary-key",
       "zh": "主键",
-      "en": "Primary key"
+      "en": "Primary key",
+      "related": ["foreign-key"]
     },
     {
       "id": "big-data",
@@ -1433,7 +1481,8 @@
     {
       "id": "ray-tracing",
       "zh": "光线追踪",
-      "en": "Ray tracing"
+      "en": "Ray tracing",
+      "related": ["rasterization"]
     },
     {
       "id": "shader",
@@ -1480,7 +1529,8 @@
       "id": "vr",
       "zh": "VR",
       "en": "VR",
-      "forms": { "zh": ["虚拟现实"], "en": ["virtual reality"] }
+      "forms": { "zh": ["虚拟现实"], "en": ["virtual reality"] },
+      "related": ["ar"]
     },
     {
       "id": "metaverse",
@@ -1514,7 +1564,8 @@
       "id": "usability",
       "zh": "可用性",
       "en": "Usability",
-      "forms": { "en": ["usable"] }
+      "forms": { "en": ["usable"] },
+      "related": ["accessibility"]
     },
     {
       "id": "accessibility",
@@ -1580,7 +1631,8 @@
     {
       "id": "quicksort",
       "zh": "快速排序",
-      "en": "Quicksort"
+      "en": "Quicksort",
+      "related": ["bubble-sort"]
     },
     {
       "id": "random-number",
@@ -1650,7 +1702,8 @@
     {
       "id": "deque",
       "zh": "双端队列",
-      "en": "Deque"
+      "en": "Deque",
+      "related": ["priority-queue"]
     },
     {
       "id": "priority-queue",
@@ -1677,7 +1730,8 @@
       "id": "dfs",
       "zh": "DFS",
       "en": "DFS",
-      "forms": { "zh": ["深度优先搜索"], "en": ["depth-first search"] }
+      "forms": { "zh": ["深度优先搜索"], "en": ["depth-first search"] },
+      "related": ["bfs"]
     },
     {
       "id": "bfs",
@@ -1740,7 +1794,8 @@
     {
       "id": "knapsack",
       "zh": "背包问题",
-      "en": "Knapsack"
+      "en": "Knapsack",
+      "related": ["tsp"]
     },
     {
       "id": "tsp",
@@ -1948,7 +2003,8 @@
     {
       "id": "haskell",
       "zh": "Haskell",
-      "en": "Haskell"
+      "en": "Haskell",
+      "related": ["lisp"]
     },
     {
       "id": "lisp",
@@ -1958,7 +2014,8 @@
     {
       "id": "fortran",
       "zh": "Fortran",
-      "en": "Fortran"
+      "en": "Fortran",
+      "related": ["cobol"]
     },
     {
       "id": "cobol",
@@ -1983,7 +2040,8 @@
     {
       "id": "ruby",
       "zh": "Ruby",
-      "en": "Ruby"
+      "en": "Ruby",
+      "related": ["perl"]
     },
     {
       "id": "perl",
@@ -2009,7 +2067,8 @@
     {
       "id": "json",
       "zh": "JSON",
-      "en": "JSON"
+      "en": "JSON",
+      "related": ["xml"]
     },
     {
       "id": "xml",
@@ -2019,7 +2078,8 @@
     {
       "id": "markdown",
       "zh": "Markdown",
-      "en": "Markdown"
+      "en": "Markdown",
+      "related": ["latex"]
     },
     {
       "id": "latex",
@@ -2121,7 +2181,8 @@
     {
       "id": "cloud",
       "zh": "云",
-      "en": "Cloud"
+      "en": "Cloud",
+      "related": ["edge-computing"]
     },
     {
       "id": "edge-computing",
@@ -2313,7 +2374,8 @@
     {
       "id": "rainbow-table",
       "zh": "彩虹表",
-      "en": "Rainbow table"
+      "en": "Rainbow table",
+      "related": ["brute-force"]
     },
     {
       "id": "side-channel",
@@ -2562,7 +2624,8 @@
     {
       "id": "gif",
       "zh": "GIF",
-      "en": "GIF"
+      "en": "GIF",
+      "related": ["jpeg"]
     },
     {
       "id": "jpeg",
@@ -2589,7 +2652,8 @@
     {
       "id": "scroll-bar",
       "zh": "滚动条",
-      "en": "Scroll bar"
+      "en": "Scroll bar",
+      "related": ["progress-bar"]
     },
     {
       "id": "tab",

@@ -29,7 +29,8 @@
     {
       "id": "shear-wall",
       "zh": "剪力墙",
-      "en": "Shear wall"
+      "en": "Shear wall",
+      "related": ["rigid-frame"]
     },
     {
       "id": "rigid-frame",
@@ -106,7 +107,8 @@
     {
       "id": "live-load",
       "zh": "活荷载",
-      "en": "Live load"
+      "en": "Live load",
+      "related": ["dead-load"]
     },
     {
       "id": "dead-load",
@@ -127,7 +129,8 @@
       "id": "prestressing",
       "zh": "预应力",
       "en": "Prestressing",
-      "forms": { "en": ["prestressed"] }
+      "forms": { "en": ["prestressed"] },
+      "related": ["precast"]
     },
     {
       "id": "concrete-cover",
@@ -147,12 +150,14 @@
     {
       "id": "thin-shell",
       "zh": "薄壳",
-      "en": "Thin shell"
+      "en": "Thin shell",
+      "related": ["space-frame"]
     },
     {
       "id": "stay-cable",
       "zh": "斜拉索",
-      "en": "Stay cable"
+      "en": "Stay cable",
+      "related": ["main-cable"]
     },
     {
       "id": "pontoon-bridge",
@@ -167,7 +172,8 @@
     {
       "id": "pier",
       "zh": "桥墩",
-      "en": "Pier"
+      "en": "Pier",
+      "related": ["abutment"]
     },
     {
       "id": "abutment",
@@ -223,17 +229,20 @@
     {
       "id": "soil-mechanics",
       "zh": "土力学",
-      "en": "Soil mechanics"
+      "en": "Soil mechanics",
+      "related": ["rock-mechanics"]
     },
     {
       "id": "pore-pressure",
       "zh": "孔隙水压力",
-      "en": "Pore pressure"
+      "en": "Pore pressure",
+      "related": ["earth-pressure"]
     },
     {
       "id": "consolidation",
       "zh": "固结",
-      "en": "Consolidation"
+      "en": "Consolidation",
+      "related": ["compaction"]
     },
     {
       "id": "liquefaction",
@@ -248,7 +257,8 @@
     {
       "id": "piping",
       "zh": "管涌",
-      "en": "Piping"
+      "en": "Piping",
+      "related": ["quicksand"]
     },
     {
       "id": "shear-strength",
@@ -283,7 +293,8 @@
     {
       "id": "water-content",
       "zh": "含水率",
-      "en": "Water content"
+      "en": "Water content",
+      "related": ["void-ratio"]
     },
     {
       "id": "void-ratio",
@@ -298,7 +309,8 @@
     {
       "id": "rock-bolt",
       "zh": "锚杆",
-      "en": "Rock bolt"
+      "en": "Rock bolt",
+      "related": ["soil-nail"]
     },
     {
       "id": "soil-nail",
@@ -318,12 +330,14 @@
     {
       "id": "caisson",
       "zh": "沉井",
-      "en": "Caisson"
+      "en": "Caisson",
+      "related": ["cofferdam"]
     },
     {
       "id": "mat-foundation",
       "zh": "筏板基础",
-      "en": "Mat foundation"
+      "en": "Mat foundation",
+      "related": ["strip-footing"]
     },
     {
       "id": "strip-footing",
@@ -348,7 +362,8 @@
     {
       "id": "geotextile",
       "zh": "土工布",
-      "en": "Geotextile"
+      "en": "Geotextile",
+      "related": ["geogrid"]
     },
     {
       "id": "geogrid",
@@ -394,7 +409,8 @@
     {
       "id": "shoulder",
       "zh": "路肩",
-      "en": "Shoulder"
+      "en": "Shoulder",
+      "related": ["sidewalk"]
     },
     {
       "id": "guardrail",
@@ -415,7 +431,8 @@
     {
       "id": "pothole",
       "zh": "坑槽",
-      "en": "Pothole"
+      "en": "Pothole",
+      "related": ["rutting"]
     },
     {
       "id": "rutting",
@@ -426,7 +443,8 @@
     {
       "id": "superelevation",
       "zh": "超高",
-      "en": "Superelevation"
+      "en": "Superelevation",
+      "related": ["camber"]
     },
     {
       "id": "sight-distance",
@@ -446,7 +464,8 @@
     {
       "id": "rail",
       "zh": "钢轨",
-      "en": "Rail"
+      "en": "Rail",
+      "related": ["sleeper"]
     },
     {
       "id": "sleeper",
@@ -481,7 +500,8 @@
     {
       "id": "apron",
       "zh": "停机坪",
-      "en": "Apron"
+      "en": "Apron",
+      "related": ["taxiway"]
     },
     {
       "id": "wharf",
@@ -491,12 +511,14 @@
     {
       "id": "breakwater",
       "zh": "防波堤",
-      "en": "Breakwater"
+      "en": "Breakwater",
+      "related": ["seawall"]
     },
     {
       "id": "ship-lock",
       "zh": "船闸",
-      "en": "Ship lock"
+      "en": "Ship lock",
+      "related": ["dry-dock"]
     },
     {
       "id": "parking-lot",
@@ -557,7 +579,8 @@
     {
       "id": "hydraulic-jump",
       "zh": "水跃",
-      "en": "Hydraulic jump"
+      "en": "Hydraulic jump",
+      "related": ["water-hammer"]
     },
     {
       "id": "water-supply",
@@ -622,7 +645,8 @@
     {
       "id": "plywood",
       "zh": "胶合板",
-      "en": "Plywood"
+      "en": "Plywood",
+      "related": ["glulam"]
     },
     {
       "id": "glulam",
@@ -637,7 +661,8 @@
     {
       "id": "roof-tile",
       "zh": "瓦",
-      "en": "Roof tile"
+      "en": "Roof tile",
+      "related": ["ceramic-tile"]
     },
     {
       "id": "adobe",
@@ -682,7 +707,8 @@
     {
       "id": "mixer-truck",
       "zh": "搅拌车",
-      "en": "Mixer truck"
+      "en": "Mixer truck",
+      "related": ["dump-truck"]
     },
     {
       "id": "tower-crane",
@@ -724,7 +750,8 @@
     {
       "id": "topping-out",
       "zh": "封顶",
-      "en": "Topping out"
+      "en": "Topping out",
+      "related": ["groundbreaking"]
     },
     {
       "id": "groundbreaking",
@@ -837,7 +864,8 @@
     {
       "id": "attic",
       "zh": "阁楼",
-      "en": "Attic"
+      "en": "Attic",
+      "related": ["basement"]
     },
     {
       "id": "basement",
@@ -857,7 +885,8 @@
     {
       "id": "elevator",
       "zh": "电梯",
-      "en": "Elevator"
+      "en": "Elevator",
+      "related": ["escalator"]
     },
     {
       "id": "escalator",
@@ -867,7 +896,8 @@
     {
       "id": "porch",
       "zh": "门廊",
-      "en": "Porch"
+      "en": "Porch",
+      "related": ["balcony"]
     },
     {
       "id": "balcony",
@@ -877,7 +907,8 @@
     {
       "id": "windowsill",
       "zh": "窗台",
-      "en": "Windowsill"
+      "en": "Windowsill",
+      "related": ["lintel"]
     },
     {
       "id": "lintel",
@@ -893,7 +924,8 @@
     {
       "id": "bearing-wall",
       "zh": "承重墙",
-      "en": "Bearing wall"
+      "en": "Bearing wall",
+      "related": ["partition"]
     },
     {
       "id": "partition",
@@ -908,7 +940,8 @@
     {
       "id": "skylight",
       "zh": "天窗",
-      "en": "Skylight"
+      "en": "Skylight",
+      "related": ["dormer"]
     },
     {
       "id": "louver",
@@ -939,7 +972,8 @@
     {
       "id": "daylighting",
       "zh": "采光",
-      "en": "Daylighting"
+      "en": "Daylighting",
+      "related": ["shading"]
     },
     {
       "id": "mortise-tenon",
@@ -959,7 +993,8 @@
     {
       "id": "apartment",
       "zh": "公寓",
-      "en": "Apartment"
+      "en": "Apartment",
+      "related": ["villa"]
     },
     {
       "id": "villa",
@@ -969,7 +1004,8 @@
     {
       "id": "high-rise",
       "zh": "高层建筑",
-      "en": "High-rise"
+      "en": "High-rise",
+      "related": ["bungalow"]
     },
     {
       "id": "bungalow",
@@ -989,7 +1025,8 @@
     {
       "id": "fire-hydrant",
       "zh": "消防栓",
-      "en": "Fire hydrant"
+      "en": "Fire hydrant",
+      "related": ["sprinkler"]
     },
     {
       "id": "sprinkler",
@@ -1105,7 +1142,8 @@
     {
       "id": "natural-period",
       "zh": "自振周期",
-      "en": "Natural period"
+      "en": "Natural period",
+      "related": ["mode-shape"]
     },
     {
       "id": "mode-shape",
@@ -1228,7 +1266,8 @@
     {
       "id": "rockburst",
       "zh": "岩爆",
-      "en": "Rockburst"
+      "en": "Rockburst",
+      "related": ["cave-in"]
     },
     {
       "id": "cave-in",
@@ -1248,7 +1287,8 @@
     {
       "id": "cut-and-cover",
       "zh": "明挖",
-      "en": "Cut-and-cover"
+      "en": "Cut-and-cover",
+      "related": ["immersed-tube"]
     },
     {
       "id": "pipe-jacking",
@@ -1303,7 +1343,8 @@
     {
       "id": "siltation",
       "zh": "淤积",
-      "en": "Siltation"
+      "en": "Siltation",
+      "related": ["scour"]
     },
     {
       "id": "scour",
@@ -1323,7 +1364,8 @@
     {
       "id": "fly-ash",
       "zh": "粉煤灰",
-      "en": "Fly ash"
+      "en": "Fly ash",
+      "related": ["slag"]
     },
     {
       "id": "slag",
@@ -1333,7 +1375,8 @@
     {
       "id": "tempered-glass",
       "zh": "钢化玻璃",
-      "en": "Tempered glass"
+      "en": "Tempered glass",
+      "related": ["double-glazing"]
     },
     {
       "id": "wrought-iron",
@@ -1406,7 +1449,8 @@
     {
       "id": "plumb-line",
       "zh": "铅垂线",
-      "en": "Plumb line"
+      "en": "Plumb line",
+      "related": ["chalk-line"]
     },
     {
       "id": "chalk-line",
@@ -1441,7 +1485,8 @@
     {
       "id": "road-marking",
       "zh": "道路标线",
-      "en": "Road marking"
+      "en": "Road marking",
+      "related": ["traffic-sign"]
     },
     {
       "id": "speed-bump",
@@ -1492,7 +1537,8 @@
     {
       "id": "purlin",
       "zh": "檩条",
-      "en": "Purlin"
+      "en": "Purlin",
+      "related": ["rafter"]
     },
     {
       "id": "rafter",
@@ -1640,7 +1686,8 @@
     {
       "id": "vertical-curve",
       "zh": "竖曲线",
-      "en": "Vertical curve"
+      "en": "Vertical curve",
+      "related": ["clothoid"]
     },
     {
       "id": "clothoid",
@@ -1783,7 +1830,8 @@
     {
       "id": "segregation",
       "zh": "离析",
-      "en": "Segregation"
+      "en": "Segregation",
+      "related": ["bleeding"]
     },
     {
       "id": "bleeding",
@@ -1808,7 +1856,8 @@
     {
       "id": "grader",
       "zh": "平地机",
-      "en": "Grader"
+      "en": "Grader",
+      "related": ["paver"]
     },
     {
       "id": "paver",
@@ -1925,7 +1974,8 @@
     {
       "id": "plinth",
       "zh": "勒脚",
-      "en": "Plinth"
+      "en": "Plinth",
+      "related": ["skirting-board"]
     },
     {
       "id": "skirting-board",
@@ -1935,7 +1985,8 @@
     {
       "id": "sliding-door",
       "zh": "推拉门",
-      "en": "Sliding door"
+      "en": "Sliding door",
+      "related": ["revolving-door"]
     },
     {
       "id": "revolving-door",
@@ -2000,7 +2051,8 @@
     {
       "id": "riprap",
       "zh": "抛石",
-      "en": "Riprap"
+      "en": "Riprap",
+      "related": ["gabion"]
     },
     {
       "id": "gabion",
@@ -2060,7 +2112,8 @@
     {
       "id": "tread",
       "zh": "踏步",
-      "en": "Tread"
+      "en": "Tread",
+      "related": ["riser"]
     },
     {
       "id": "riser",

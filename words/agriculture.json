@@ -111,7 +111,8 @@
     {
       "id": "bumper-harvest",
       "zh": "丰收",
-      "en": "Bumper harvest"
+      "en": "Bumper harvest",
+      "related": ["crop-failure"]
     },
     {
       "id": "crop-failure",
@@ -156,12 +157,14 @@
     {
       "id": "rice",
       "zh": "水稻",
-      "en": "Rice"
+      "en": "Rice",
+      "related": ["wheat"]
     },
     {
       "id": "wheat",
       "zh": "小麦",
-      "en": "Wheat"
+      "en": "Wheat",
+      "related": ["barley"]
     },
     {
       "id": "maize",
@@ -171,12 +174,14 @@
     {
       "id": "soybean",
       "zh": "大豆",
-      "en": "Soybean"
+      "en": "Soybean",
+      "related": ["peanut"]
     },
     {
       "id": "sorghum",
       "zh": "高粱",
-      "en": "Sorghum"
+      "en": "Sorghum",
+      "related": ["foxtail-millet"]
     },
     {
       "id": "foxtail-millet",
@@ -191,7 +196,8 @@
     {
       "id": "oat",
       "zh": "燕麦",
-      "en": "Oat"
+      "en": "Oat",
+      "related": ["rye"]
     },
     {
       "id": "rye",
@@ -201,7 +207,8 @@
     {
       "id": "buckwheat",
       "zh": "荞麦",
-      "en": "Buckwheat"
+      "en": "Buckwheat",
+      "related": ["quinoa"]
     },
     {
       "id": "quinoa",
@@ -246,7 +253,8 @@
     {
       "id": "cotton",
       "zh": "棉花",
-      "en": "Cotton"
+      "en": "Cotton",
+      "related": ["flax"]
     },
     {
       "id": "flax",
@@ -261,7 +269,8 @@
     {
       "id": "sugarcane",
       "zh": "甘蔗",
-      "en": "Sugarcane"
+      "en": "Sugarcane",
+      "related": ["sugar-beet"]
     },
     {
       "id": "sugar-beet",
@@ -301,7 +310,8 @@
     {
       "id": "mung-bean",
       "zh": "绿豆",
-      "en": "Mung bean"
+      "en": "Mung bean",
+      "related": ["broad-bean"]
     },
     {
       "id": "broad-bean",
@@ -311,7 +321,8 @@
     {
       "id": "tomato",
       "zh": "番茄",
-      "en": "Tomato"
+      "en": "Tomato",
+      "related": ["eggplant"]
     },
     {
       "id": "cucumber",
@@ -357,7 +368,8 @@
     {
       "id": "garlic",
       "zh": "大蒜",
-      "en": "Garlic"
+      "en": "Garlic",
+      "related": ["ginger"]
     },
     {
       "id": "ginger",
@@ -428,7 +440,8 @@
     {
       "id": "walnut",
       "zh": "核桃",
-      "en": "Walnut"
+      "en": "Walnut",
+      "related": ["chestnut"]
     },
     {
       "id": "chestnut",
@@ -443,7 +456,8 @@
     {
       "id": "shiitake",
       "zh": "香菇",
-      "en": "Shiitake"
+      "en": "Shiitake",
+      "related": ["enoki"]
     },
     {
       "id": "enoki",
@@ -523,7 +537,8 @@
     {
       "id": "thinning",
       "zh": "间伐",
-      "en": "Thinning"
+      "en": "Thinning",
+      "related": ["clear-cutting"]
     },
     {
       "id": "topping",
@@ -558,7 +573,8 @@
     {
       "id": "lodging",
       "zh": "倒伏",
-      "en": "Lodging"
+      "en": "Lodging",
+      "related": ["wilting"]
     },
     {
       "id": "tiller",
@@ -590,7 +606,8 @@
     {
       "id": "gibberellin",
       "zh": "赤霉素",
-      "en": "Gibberellin"
+      "en": "Gibberellin",
+      "related": ["cytokinin"]
     },
     {
       "id": "cytokinin",
@@ -640,7 +657,8 @@
     {
       "id": "tuber",
       "zh": "块茎",
-      "en": "Tuber"
+      "en": "Tuber",
+      "related": ["bulb"]
     },
     {
       "id": "bulb",
@@ -655,7 +673,8 @@
     {
       "id": "rootstock",
       "zh": "砧木",
-      "en": "Rootstock"
+      "en": "Rootstock",
+      "related": ["scion"]
     },
     {
       "id": "scion",
@@ -665,7 +684,8 @@
     {
       "id": "cutting",
       "zh": "扦插",
-      "en": "Cutting"
+      "en": "Cutting",
+      "related": ["layering"]
     },
     {
       "id": "layering",
@@ -686,7 +706,8 @@
     {
       "id": "waterlogging",
       "zh": "涝害",
-      "en": "Waterlogging"
+      "en": "Waterlogging",
+      "related": ["freeze-injury"]
     },
     {
       "id": "freeze-injury",
@@ -814,7 +835,8 @@
     {
       "id": "loam",
       "zh": "壤土",
-      "en": "Loam"
+      "en": "Loam",
+      "related": ["clay"]
     },
     {
       "id": "clay",
@@ -824,7 +846,8 @@
     {
       "id": "black-soil",
       "zh": "黑土",
-      "en": "Black soil"
+      "en": "Black soil",
+      "related": ["red-soil"]
     },
     {
       "id": "red-soil",
@@ -907,7 +930,8 @@
     {
       "id": "micronutrient",
       "zh": "微量元素",
-      "en": "Micronutrient"
+      "en": "Micronutrient",
+      "related": ["macronutrient"]
     },
     {
       "id": "macronutrient",
@@ -967,7 +991,8 @@
     {
       "id": "insecticide",
       "zh": "杀虫剂",
-      "en": "Insecticide"
+      "en": "Insecticide",
+      "related": ["herbicide"]
     },
     {
       "id": "herbicide",
@@ -1028,7 +1053,8 @@
     {
       "id": "powdery-mildew",
       "zh": "白粉病",
-      "en": "Powdery mildew"
+      "en": "Powdery mildew",
+      "related": ["downy-mildew"]
     },
     {
       "id": "downy-mildew",
@@ -1068,7 +1094,8 @@
     {
       "id": "aphid",
       "zh": "蚜虫",
-      "en": "Aphid"
+      "en": "Aphid",
+      "related": ["whitefly"]
     },
     {
       "id": "corn-borer",
@@ -1113,7 +1140,8 @@
     {
       "id": "cutworm",
       "zh": "地老虎",
-      "en": "Cutworm"
+      "en": "Cutworm",
+      "related": ["grub"]
     },
     {
       "id": "mole-cricket",
@@ -1168,7 +1196,8 @@
     {
       "id": "sticky-trap",
       "zh": "粘虫板",
-      "en": "Sticky trap"
+      "en": "Sticky trap",
+      "related": ["light-trap"]
     },
     {
       "id": "light-trap",
@@ -1189,7 +1218,8 @@
     {
       "id": "livestock",
       "zh": "家畜",
-      "en": "Livestock"
+      "en": "Livestock",
+      "related": ["poultry"]
     },
     {
       "id": "poultry",
@@ -1204,7 +1234,8 @@
     {
       "id": "dairy-cow",
       "zh": "奶牛",
-      "en": "Dairy cow"
+      "en": "Dairy cow",
+      "related": ["beef-cattle"]
     },
     {
       "id": "beef-cattle",
@@ -1239,7 +1270,8 @@
     {
       "id": "sheep",
       "zh": "绵羊",
-      "en": "Sheep"
+      "en": "Sheep",
+      "related": ["goat"]
     },
     {
       "id": "goat",
@@ -1249,12 +1281,14 @@
     {
       "id": "alpaca",
       "zh": "羊驼",
-      "en": "Alpaca"
+      "en": "Alpaca",
+      "related": ["camel"]
     },
     {
       "id": "horse",
       "zh": "马",
-      "en": "Horse"
+      "en": "Horse",
+      "related": ["donkey"]
     },
     {
       "id": "donkey",
@@ -1279,7 +1313,8 @@
     {
       "id": "rooster",
       "zh": "公鸡",
-      "en": "Rooster"
+      "en": "Rooster",
+      "related": ["hen"]
     },
     {
       "id": "hen",
@@ -1294,7 +1329,8 @@
     {
       "id": "duck",
       "zh": "鸭",
-      "en": "Duck"
+      "en": "Duck",
+      "related": ["goose"]
     },
     {
       "id": "goose",
@@ -1354,7 +1390,8 @@
     {
       "id": "silage",
       "zh": "青贮",
-      "en": "Silage"
+      "en": "Silage",
+      "related": ["hay"]
     },
     {
       "id": "hay",
@@ -1364,7 +1401,8 @@
     {
       "id": "concentrate",
       "zh": "精饲料",
-      "en": "Concentrate"
+      "en": "Concentrate",
+      "related": ["roughage"]
     },
     {
       "id": "roughage",
@@ -1395,7 +1433,8 @@
     {
       "id": "lysine",
       "zh": "赖氨酸",
-      "en": "Lysine"
+      "en": "Lysine",
+      "related": ["methionine"]
     },
     {
       "id": "methionine",
@@ -1426,7 +1465,8 @@
       "id": "ruminant",
       "zh": "反刍动物",
       "en": "Ruminant",
-      "forms": { "en": ["rumination"] }
+      "forms": { "en": ["rumination"] },
+      "related": ["monogastric"]
     },
     {
       "id": "monogastric",
@@ -1492,7 +1532,8 @@
     {
       "id": "free-range",
       "zh": "散养",
-      "en": "Free-range"
+      "en": "Free-range",
+      "related": ["battery-cage"]
     },
     {
       "id": "battery-cage",
@@ -1538,7 +1579,8 @@
     {
       "id": "honey",
       "zh": "蜂蜜",
-      "en": "Honey"
+      "en": "Honey",
+      "related": ["royal-jelly"]
     },
     {
       "id": "royal-jelly",
@@ -1637,7 +1679,8 @@
     {
       "id": "tick",
       "zh": "蜱",
-      "en": "Tick"
+      "en": "Tick",
+      "related": ["flea"]
     },
     {
       "id": "flea",
@@ -1737,7 +1780,8 @@
     {
       "id": "oyster",
       "zh": "牡蛎",
-      "en": "Oyster"
+      "en": "Oyster",
+      "related": ["scallop"]
     },
     {
       "id": "scallop",
@@ -1752,7 +1796,8 @@
     {
       "id": "kelp",
       "zh": "海带",
-      "en": "Kelp"
+      "en": "Kelp",
+      "related": ["laver"]
     },
     {
       "id": "laver",
@@ -1824,12 +1869,14 @@
     {
       "id": "chinese-fir",
       "zh": "杉木",
-      "en": "Chinese fir"
+      "en": "Chinese fir",
+      "related": ["pine"]
     },
     {
       "id": "poplar",
       "zh": "杨树",
-      "en": "Poplar"
+      "en": "Poplar",
+      "related": ["eucalyptus"]
     },
     {
       "id": "eucalyptus",
@@ -1864,7 +1911,8 @@
     {
       "id": "tractor",
       "zh": "拖拉机",
-      "en": "Tractor"
+      "en": "Tractor",
+      "related": ["combine"]
     },
     {
       "id": "combine",
@@ -1874,13 +1922,15 @@
     {
       "id": "seeder",
       "zh": "播种机",
-      "en": "Seeder"
+      "en": "Seeder",
+      "related": ["transplanter"]
     },
     {
       "id": "plow",
       "zh": "犁",
       "en": "Plow",
-      "forms": { "en": ["plough"] }
+      "forms": { "en": ["plough"] },
+      "related": ["harrow"]
     },
     {
       "id": "harrow",
@@ -1895,7 +1945,8 @@
     {
       "id": "sickle",
       "zh": "镰刀",
-      "en": "Sickle"
+      "en": "Sickle",
+      "related": ["hoe"]
     },
     {
       "id": "hoe",
@@ -2011,7 +2062,8 @@
     {
       "id": "malt",
       "zh": "麦芽",
-      "en": "Malt"
+      "en": "Malt",
+      "related": ["hops"]
     },
     {
       "id": "hops",
@@ -2026,7 +2078,8 @@
     {
       "id": "black-tea",
       "zh": "红茶",
-      "en": "Black tea"
+      "en": "Black tea",
+      "related": ["oolong"]
     },
     {
       "id": "oolong",
@@ -2036,7 +2089,8 @@
     {
       "id": "soy-sauce",
       "zh": "酱油",
-      "en": "Soy sauce"
+      "en": "Soy sauce",
+      "related": ["vinegar"]
     },
     {
       "id": "vinegar",
@@ -2067,7 +2121,8 @@
       "id": "pasteurization",
       "zh": "巴氏杀菌",
       "en": "Pasteurization",
-      "forms": { "en": ["pasteurisation", "pasteurize"] }
+      "forms": { "en": ["pasteurisation", "pasteurize"] },
+      "related": ["uht"]
     },
     {
       "id": "uht",
@@ -2079,7 +2134,8 @@
       "id": "freeze-drying",
       "zh": "冷冻干燥",
       "en": "Freeze-drying",
-      "forms": { "zh": ["冻干"], "en": ["freeze-dried"] }
+      "forms": { "zh": ["冻干"], "en": ["freeze-dried"] },
+      "related": ["spray-drying"]
     },
     {
       "id": "spray-drying",
@@ -2105,7 +2161,8 @@
     {
       "id": "emulsifier",
       "zh": "乳化剂",
-      "en": "Emulsifier"
+      "en": "Emulsifier",
+      "related": ["thickener"]
     },
     {
       "id": "cling-film",
@@ -2231,7 +2288,8 @@
     {
       "id": "pectin",
       "zh": "果胶",
-      "en": "Pectin"
+      "en": "Pectin",
+      "related": ["gelatin"]
     },
     {
       "id": "gelatin",
@@ -2261,7 +2319,8 @@
     {
       "id": "sucrose",
       "zh": "蔗糖",
-      "en": "Sucrose"
+      "en": "Sucrose",
+      "related": ["fructose"]
     },
     {
       "id": "fructose",
@@ -2276,7 +2335,8 @@
     {
       "id": "trans-fat",
       "zh": "反式脂肪",
-      "en": "Trans fat"
+      "en": "Trans fat",
+      "related": ["saturated-fat"]
     },
     {
       "id": "saturated-fat",
@@ -2351,7 +2411,8 @@
     {
       "id": "salmonella",
       "zh": "沙门氏菌",
-      "en": "Salmonella"
+      "en": "Salmonella",
+      "related": ["listeria"]
     },
     {
       "id": "listeria",

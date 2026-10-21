@@ -21,7 +21,8 @@
     {
       "id": "semantics",
       "zh": "语义",
-      "en": "Semantics"
+      "en": "Semantics",
+      "related": ["pragmatics"]
     },
     {
       "id": "pragmatics",
@@ -38,13 +39,15 @@
       "id": "tone",
       "zh": "声调",
       "en": "Tone",
-      "forms": { "en": ["tonal"] }
+      "forms": { "en": ["tonal"] },
+      "related": ["intonation"]
     },
     {
       "id": "phonetics",
       "zh": "语音学",
       "en": "Phonetics",
-      "forms": { "en": ["phonetician"] }
+      "forms": { "en": ["phonetician"] },
+      "related": ["phonology"]
     },
     {
       "id": "corpus",
@@ -56,7 +59,8 @@
       "id": "vowel",
       "zh": "元音",
       "en": "Vowel",
-      "forms": { "en": ["vocalic"] }
+      "forms": { "en": ["vocalic"] },
+      "related": ["consonant"]
     },
     {
       "id": "consonant",
@@ -113,7 +117,8 @@
     {
       "id": "plosive",
       "zh": "塞音",
-      "en": "Plosive"
+      "en": "Plosive",
+      "related": ["fricative"]
     },
     {
       "id": "fricative",
@@ -175,7 +180,8 @@
     {
       "id": "voiceless",
       "zh": "清音",
-      "en": "Voiceless"
+      "en": "Voiceless",
+      "related": ["voiced"]
     },
     {
       "id": "voiced",
@@ -185,7 +191,8 @@
     {
       "id": "sonorant",
       "zh": "响音",
-      "en": "Sonorant"
+      "en": "Sonorant",
+      "related": ["obstruent"]
     },
     {
       "id": "obstruent",
@@ -195,7 +202,8 @@
     {
       "id": "bilabial",
       "zh": "双唇音",
-      "en": "Bilabial"
+      "en": "Bilabial",
+      "related": ["alveolar"]
     },
     {
       "id": "alveolar",
@@ -211,7 +219,8 @@
       "id": "velar",
       "zh": "软腭音",
       "en": "Velar",
-      "forms": { "en": ["velum"] }
+      "forms": { "en": ["velum"] },
+      "related": ["uvular"]
     },
     {
       "id": "uvular",
@@ -260,7 +269,8 @@
       "id": "epenthesis",
       "zh": "增音",
       "en": "Epenthesis",
-      "forms": { "en": ["epenthetic"] }
+      "forms": { "en": ["epenthetic"] },
+      "related": ["elision"]
     },
     {
       "id": "elision",
@@ -508,7 +518,8 @@
       "id": "morphology",
       "zh": "形态学",
       "en": "Morphology",
-      "forms": { "en": ["morphological"] }
+      "forms": { "en": ["morphological"] },
+      "related": ["syntax"]
     },
     {
       "id": "morpheme",
@@ -530,7 +541,8 @@
     {
       "id": "prefix",
       "zh": "前缀",
-      "en": "Prefix"
+      "en": "Prefix",
+      "related": ["suffix"]
     },
     {
       "id": "suffix",
@@ -556,7 +568,8 @@
       "id": "inflection",
       "zh": "屈折",
       "en": "Inflection",
-      "forms": { "en": ["inflectional", "inflect", "inflexion"] }
+      "forms": { "en": ["inflectional", "inflect", "inflexion"] },
+      "related": ["derivation"]
     },
     {
       "id": "derivation",
@@ -584,7 +597,8 @@
     {
       "id": "noun",
       "zh": "名词",
-      "en": "Noun"
+      "en": "Noun",
+      "related": ["verb"]
     },
     {
       "id": "verb",
@@ -595,7 +609,8 @@
       "id": "adjective",
       "zh": "形容词",
       "en": "Adjective",
-      "forms": { "en": ["adjectival"] }
+      "forms": { "en": ["adjectival"] },
+      "related": ["adverb"]
     },
     {
       "id": "adverb",
@@ -612,7 +627,8 @@
       "id": "preposition",
       "zh": "介词",
       "en": "Preposition",
-      "forms": { "en": ["prepositional"] }
+      "forms": { "en": ["prepositional"] },
+      "related": ["conjunction"]
     },
     {
       "id": "conjunction",
@@ -663,7 +679,8 @@
     {
       "id": "infinitive",
       "zh": "不定式",
-      "en": "Infinitive"
+      "en": "Infinitive",
+      "related": ["gerund"]
     },
     {
       "id": "participle",
@@ -690,7 +707,8 @@
     {
       "id": "content-word",
       "zh": "实词",
-      "en": "Content word"
+      "en": "Content word",
+      "related": ["function-word"]
     },
     {
       "id": "function-word",
@@ -700,7 +718,8 @@
     {
       "id": "tense",
       "zh": "时态",
-      "en": "Tense"
+      "en": "Tense",
+      "related": ["aspect"]
     },
     {
       "id": "passive-voice",
@@ -720,7 +739,8 @@
     {
       "id": "perfective",
       "zh": "完成体",
-      "en": "Perfective"
+      "en": "Perfective",
+      "related": ["progressive"]
     },
     {
       "id": "progressive",
@@ -730,7 +750,8 @@
     {
       "id": "nominative",
       "zh": "主格",
-      "en": "Nominative"
+      "en": "Nominative",
+      "related": ["accusative"]
     },
     {
       "id": "accusative",
@@ -740,7 +761,8 @@
     {
       "id": "genitive",
       "zh": "属格",
-      "en": "Genitive"
+      "en": "Genitive",
+      "related": ["dative"]
     },
     {
       "id": "dative",
@@ -772,7 +794,8 @@
     {
       "id": "calque",
       "zh": "仿译词",
-      "en": "Calque"
+      "en": "Calque",
+      "related": ["loanword"]
     },
     {
       "id": "loanword",
@@ -810,13 +833,15 @@
       "id": "lexicography",
       "zh": "词典学",
       "en": "Lexicography",
-      "forms": { "en": ["lexicographer", "lexicographic"] }
+      "forms": { "en": ["lexicographer", "lexicographic"] },
+      "related": ["lexicology"]
     },
     {
       "id": "synonym",
       "zh": "同义词",
       "en": "Synonym",
-      "forms": { "en": ["synonymous", "synonymy"] }
+      "forms": { "en": ["synonymous", "synonymy"] },
+      "related": ["antonym"]
     },
     {
       "id": "antonym",
@@ -828,7 +853,8 @@
       "id": "homophone",
       "zh": "同音词",
       "en": "Homophone",
-      "forms": { "en": ["homophonous", "homophony"] }
+      "forms": { "en": ["homophonous", "homophony"] },
+      "related": ["homograph"]
     },
     {
       "id": "homograph",
@@ -845,7 +871,8 @@
       "id": "hypernym",
       "zh": "上位词",
       "en": "Hypernym",
-      "forms": { "en": ["hypernymy"] }
+      "forms": { "en": ["hypernymy"] },
+      "related": ["hyponym"]
     },
     {
       "id": "hyponym",
@@ -868,7 +895,8 @@
     {
       "id": "subject",
       "zh": "主语",
-      "en": "Subject"
+      "en": "Subject",
+      "related": ["predicate"]
     },
     {
       "id": "predicate",
@@ -1019,7 +1047,8 @@
     {
       "id": "signifier",
       "zh": "能指",
-      "en": "Signifier"
+      "en": "Signifier",
+      "related": ["signified"]
     },
     {
       "id": "signified",
@@ -1042,7 +1071,8 @@
       "id": "synchrony",
       "zh": "共时",
       "en": "Synchrony",
-      "forms": { "en": ["synchronic"] }
+      "forms": { "en": ["synchronic"] },
+      "related": ["diachrony"]
     },
     {
       "id": "diachrony",
@@ -1071,7 +1101,8 @@
       "id": "entailment",
       "zh": "蕴涵",
       "en": "Entailment",
-      "forms": { "en": ["entail"] }
+      "forms": { "en": ["entail"] },
+      "related": ["presupposition"]
     },
     {
       "id": "presupposition",
@@ -1094,7 +1125,8 @@
       "id": "illocution",
       "zh": "言外行为",
       "en": "Illocution",
-      "forms": { "en": ["illocutionary"] }
+      "forms": { "en": ["illocutionary"] },
+      "related": ["perlocution"]
     },
     {
       "id": "performative",
@@ -1126,7 +1158,8 @@
       "id": "metonymy",
       "zh": "转喻",
       "en": "Metonymy",
-      "forms": { "en": ["metonymic"] }
+      "forms": { "en": ["metonymic"] },
+      "related": ["synecdoche"]
     },
     {
       "id": "synecdoche",
@@ -1184,7 +1217,8 @@
     {
       "id": "sociolect",
       "zh": "社会方言",
-      "en": "Sociolect"
+      "en": "Sociolect",
+      "related": ["idiolect"]
     },
     {
       "id": "idiolect",
@@ -1211,7 +1245,8 @@
       "id": "prescriptivism",
       "zh": "规定主义",
       "en": "Prescriptivism",
-      "forms": { "en": ["prescriptive", "prescriptivist"] }
+      "forms": { "en": ["prescriptive", "prescriptivist"] },
+      "related": ["descriptivism"]
     },
     {
       "id": "descriptivism",
@@ -1379,7 +1414,8 @@
     {
       "id": "interrogative",
       "zh": "疑问句",
-      "en": "Interrogative"
+      "en": "Interrogative",
+      "related": ["declarative"]
     },
     {
       "id": "declarative",
@@ -1389,7 +1425,8 @@
     {
       "id": "count-noun",
       "zh": "可数名词",
-      "en": "Count noun"
+      "en": "Count noun",
+      "related": ["proper-noun"]
     },
     {
       "id": "proper-noun",
@@ -1432,7 +1469,8 @@
     {
       "id": "kana",
       "zh": "假名",
-      "en": "Kana"
+      "en": "Kana",
+      "related": ["hangul"]
     },
     {
       "id": "hangul",

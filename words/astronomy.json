@@ -20,7 +20,8 @@
       "id": "galaxy",
       "zh": "星系",
       "en": "Galaxy",
-      "forms": { "en": ["galactic"] }
+      "forms": { "en": ["galactic"] },
+      "related": ["nebula"]
     },
     {
       "id": "planet",
@@ -32,7 +33,8 @@
       "id": "comet",
       "zh": "彗星",
       "en": "Comet",
-      "forms": { "en": ["cometary"] }
+      "forms": { "en": ["cometary"] },
+      "related": ["asteroid"]
     },
     {
       "id": "asteroid",
@@ -54,7 +56,8 @@
       "id": "supernova",
       "zh": "超新星",
       "en": "Supernova",
-      "forms": { "en": ["supernovae"] }
+      "forms": { "en": ["supernovae"] },
+      "related": ["kilonova"]
     },
     {
       "id": "light-year",
@@ -70,7 +73,8 @@
       "id": "venus",
       "zh": "金星",
       "en": "Venus",
-      "forms": { "en": ["Venusian"] }
+      "forms": { "en": ["Venusian"] },
+      "related": ["mars"]
     },
     {
       "id": "mars",
@@ -82,7 +86,8 @@
       "id": "jupiter",
       "zh": "木星",
       "en": "Jupiter",
-      "forms": { "en": ["Jovian"] }
+      "forms": { "en": ["Jovian"] },
+      "related": ["saturn"]
     },
     {
       "id": "saturn",
@@ -92,7 +97,8 @@
     {
       "id": "uranus",
       "zh": "天王星",
-      "en": "Uranus"
+      "en": "Uranus",
+      "related": ["neptune"]
     },
     {
       "id": "neptune",
@@ -102,7 +108,8 @@
     {
       "id": "pluto",
       "zh": "冥王星",
-      "en": "Pluto"
+      "en": "Pluto",
+      "related": ["eris"]
     },
     {
       "id": "dwarf-planet",
@@ -112,7 +119,8 @@
     {
       "id": "io",
       "zh": "木卫一",
-      "en": "Io"
+      "en": "Io",
+      "related": ["europa"]
     },
     {
       "id": "europa",
@@ -122,12 +130,14 @@
     {
       "id": "ganymede",
       "zh": "木卫三",
-      "en": "Ganymede"
+      "en": "Ganymede",
+      "related": ["callisto"]
     },
     {
       "id": "titan",
       "zh": "土卫六",
-      "en": "Titan"
+      "en": "Titan",
+      "related": ["enceladus"]
     },
     {
       "id": "asteroid-belt",
@@ -137,7 +147,8 @@
     {
       "id": "meteoroid",
       "zh": "流星体",
-      "en": "Meteoroid"
+      "en": "Meteoroid",
+      "related": ["meteorite"]
     },
     {
       "id": "meteorite",
@@ -177,7 +188,8 @@
     {
       "id": "gas-giant",
       "zh": "气态巨行星",
-      "en": "Gas giant"
+      "en": "Gas giant",
+      "related": ["ice-giant"]
     },
     {
       "id": "ice-giant",
@@ -242,13 +254,15 @@
     {
       "id": "ceres",
       "zh": "谷神星",
-      "en": "Ceres"
+      "en": "Ceres",
+      "related": ["vesta"]
     },
     {
       "id": "heliocentrism",
       "zh": "日心说",
       "en": "Heliocentrism",
-      "forms": { "en": ["heliocentric"] }
+      "forms": { "en": ["heliocentric"] },
+      "related": ["geocentrism"]
     },
     {
       "id": "geocentrism",
@@ -270,7 +284,8 @@
     {
       "id": "perihelion",
       "zh": "近日点",
-      "en": "Perihelion"
+      "en": "Perihelion",
+      "related": ["aphelion"]
     },
     {
       "id": "aphelion",
@@ -280,7 +295,8 @@
     {
       "id": "perigee",
       "zh": "近地点",
-      "en": "Perigee"
+      "en": "Perigee",
+      "related": ["apogee"]
     },
     {
       "id": "apogee",
@@ -311,7 +327,8 @@
     {
       "id": "zenith",
       "zh": "天顶",
-      "en": "Zenith"
+      "en": "Zenith",
+      "related": ["nadir"]
     },
     {
       "id": "nadir",
@@ -326,7 +343,8 @@
     {
       "id": "precession",
       "zh": "岁差",
-      "en": "Precession"
+      "en": "Precession",
+      "related": ["nutation"]
     },
     {
       "id": "nutation",
@@ -336,7 +354,8 @@
     {
       "id": "sidereal-day",
       "zh": "恒星日",
-      "en": "Sidereal day"
+      "en": "Sidereal day",
+      "related": ["solar-day"]
     },
     {
       "id": "tidal-locking",
@@ -362,7 +381,8 @@
     {
       "id": "gravity-assist",
       "zh": "引力弹弓",
-      "en": "Gravity assist"
+      "en": "Gravity assist",
+      "related": ["aerobraking"]
     },
     {
       "id": "three-body-problem",
@@ -409,7 +429,8 @@
     {
       "id": "sextant",
       "zh": "六分仪",
-      "en": "Sextant"
+      "en": "Sextant",
+      "related": ["astrolabe"]
     },
     {
       "id": "opposition",
@@ -429,7 +450,8 @@
     {
       "id": "leap-year",
       "zh": "闰年",
-      "en": "Leap year"
+      "en": "Leap year",
+      "related": ["leap-second"]
     },
     {
       "id": "leap-second",
@@ -449,7 +471,8 @@
     {
       "id": "sundial",
       "zh": "日晷",
-      "en": "Sundial"
+      "en": "Sundial",
+      "related": ["water-clock"]
     },
     {
       "id": "astrolabe",
@@ -491,7 +514,8 @@
     {
       "id": "new-moon",
       "zh": "新月",
-      "en": "New moon"
+      "en": "New moon",
+      "related": ["full-moon"]
     },
     {
       "id": "full-moon",
@@ -511,7 +535,8 @@
     {
       "id": "lunar-eclipse",
       "zh": "月食",
-      "en": "Lunar eclipse"
+      "en": "Lunar eclipse",
+      "related": ["solar-eclipse"]
     },
     {
       "id": "solar-eclipse",
@@ -527,7 +552,8 @@
     {
       "id": "photosphere",
       "zh": "光球",
-      "en": "Photosphere"
+      "en": "Photosphere",
+      "related": ["chromosphere"]
     },
     {
       "id": "chromosphere",
@@ -605,7 +631,8 @@
     {
       "id": "brown-dwarf",
       "zh": "褐矮星",
-      "en": "Brown dwarf"
+      "en": "Brown dwarf",
+      "related": ["red-dwarf"]
     },
     {
       "id": "red-dwarf",
@@ -615,7 +642,8 @@
     {
       "id": "white-dwarf",
       "zh": "白矮星",
-      "en": "White dwarf"
+      "en": "White dwarf",
+      "related": ["neutron-star"]
     },
     {
       "id": "supergiant",
@@ -640,12 +668,14 @@
     {
       "id": "star-cluster",
       "zh": "星团",
-      "en": "Star cluster"
+      "en": "Star cluster",
+      "related": ["galaxy-cluster"]
     },
     {
       "id": "magnetar",
       "zh": "磁星",
-      "en": "Magnetar"
+      "en": "Magnetar",
+      "related": ["pulsar"]
     },
     {
       "id": "nova",
@@ -681,7 +711,8 @@
     {
       "id": "orion",
       "zh": "猎户座",
-      "en": "Orion"
+      "en": "Orion",
+      "related": ["scorpius"]
     },
     {
       "id": "andromeda",
@@ -691,12 +722,14 @@
     {
       "id": "sirius",
       "zh": "天狼星",
-      "en": "Sirius"
+      "en": "Sirius",
+      "related": ["canopus"]
     },
     {
       "id": "vega",
       "zh": "织女星",
-      "en": "Vega"
+      "en": "Vega",
+      "related": ["altair"]
     },
     {
       "id": "altair",
@@ -706,7 +739,8 @@
     {
       "id": "betelgeuse",
       "zh": "参宿四",
-      "en": "Betelgeuse"
+      "en": "Betelgeuse",
+      "related": ["rigel"]
     },
     {
       "id": "pleiades",
@@ -789,7 +823,8 @@
       "id": "blueshift",
       "zh": "蓝移",
       "en": "Blueshift",
-      "forms": { "en": ["blueshifted"] }
+      "forms": { "en": ["blueshifted"] },
+      "related": ["redshift"]
     },
     {
       "id": "spectral-line",
@@ -815,7 +850,8 @@
     {
       "id": "big-crunch",
       "zh": "大挤压",
-      "en": "Big Crunch"
+      "en": "Big Crunch",
+      "related": ["big-rip"]
     },
     {
       "id": "big-rip",
@@ -887,7 +923,8 @@
     {
       "id": "transit",
       "zh": "凌日",
-      "en": "Transit"
+      "en": "Transit",
+      "related": ["occultation"]
     },
     {
       "id": "occultation",
@@ -972,7 +1009,8 @@
     {
       "id": "star-chart",
       "zh": "星图",
-      "en": "Star chart"
+      "en": "Star chart",
+      "related": ["star-catalog"]
     },
     {
       "id": "star-catalog",
@@ -993,7 +1031,8 @@
     {
       "id": "refractor",
       "zh": "折射望远镜",
-      "en": "Refractor"
+      "en": "Refractor",
+      "related": ["reflector"]
     },
     {
       "id": "reflector",
@@ -1008,7 +1047,8 @@
     {
       "id": "eyepiece",
       "zh": "目镜",
-      "en": "Eyepiece"
+      "en": "Eyepiece",
+      "related": ["objective"]
     },
     {
       "id": "objective",
@@ -1150,7 +1190,8 @@
     {
       "id": "heat-shield",
       "zh": "隔热罩",
-      "en": "Heat shield"
+      "en": "Heat shield",
+      "related": ["parachute"]
     },
     {
       "id": "parachute",
@@ -1165,7 +1206,8 @@
     {
       "id": "lander",
       "zh": "着陆器",
-      "en": "Lander"
+      "en": "Lander",
+      "related": ["rover"]
     },
     {
       "id": "rover",
@@ -1237,12 +1279,14 @@
     {
       "id": "apollo",
       "zh": "阿波罗",
-      "en": "Apollo"
+      "en": "Apollo",
+      "related": ["artemis"]
     },
     {
       "id": "voyager",
       "zh": "旅行者号",
-      "en": "Voyager"
+      "en": "Voyager",
+      "related": ["new-horizons"]
     },
     {
       "id": "new-horizons",
@@ -1252,12 +1296,14 @@
     {
       "id": "tiangong",
       "zh": "天宫",
-      "en": "Tiangong"
+      "en": "Tiangong",
+      "related": ["iss"]
     },
     {
       "id": "shenzhou",
       "zh": "神舟",
-      "en": "Shenzhou"
+      "en": "Shenzhou",
+      "related": ["soyuz"]
     },
     {
       "id": "jade-rabbit",
@@ -1267,12 +1313,14 @@
     {
       "id": "tianwen",
       "zh": "天问",
-      "en": "Tianwen"
+      "en": "Tianwen",
+      "related": ["chang-e"]
     },
     {
       "id": "launch",
       "zh": "发射",
-      "en": "Launch"
+      "en": "Launch",
+      "related": ["landing"]
     },
     {
       "id": "landing",
@@ -1312,7 +1360,8 @@
     {
       "id": "perseverance",
       "zh": "毅力号",
-      "en": "Perseverance"
+      "en": "Perseverance",
+      "related": ["zhurong"]
     },
     {
       "id": "zhurong",
@@ -1471,7 +1520,8 @@
       "id": "grb",
       "zh": "伽马射线暴",
       "en": "GRB",
-      "forms": { "zh": ["伽马暴"], "en": ["gamma-ray burst"] }
+      "forms": { "zh": ["伽马暴"], "en": ["gamma-ray burst"] },
+      "related": ["frb"]
     },
     {
       "id": "frb",
@@ -1575,7 +1625,8 @@
     {
       "id": "umbra",
       "zh": "本影",
-      "en": "Umbra"
+      "en": "Umbra",
+      "related": ["penumbra"]
     },
     {
       "id": "penumbra",
@@ -1690,7 +1741,8 @@
     {
       "id": "phobos",
       "zh": "火卫一",
-      "en": "Phobos"
+      "en": "Phobos",
+      "related": ["deimos"]
     },
     {
       "id": "deimos",
@@ -1961,7 +2013,8 @@
     {
       "id": "ursa-major",
       "zh": "大熊座",
-      "en": "Ursa Major"
+      "en": "Ursa Major",
+      "related": ["ursa-minor"]
     },
     {
       "id": "ursa-minor",

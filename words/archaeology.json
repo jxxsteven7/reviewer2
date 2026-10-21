@@ -15,7 +15,8 @@
     {
       "id": "test-trench",
       "zh": "探沟",
-      "en": "Test trench"
+      "en": "Test trench",
+      "related": ["grid-square"]
     },
     {
       "id": "grid-square",
@@ -26,7 +27,8 @@
       "id": "stratigraphy",
       "zh": "地层学",
       "en": "Stratigraphy",
-      "forms": { "en": ["stratigraphic"] }
+      "forms": { "en": ["stratigraphic"] },
+      "related": ["typology"]
     },
     {
       "id": "cultural-layer",
@@ -62,7 +64,8 @@
     {
       "id": "flotation",
       "zh": "浮选",
-      "en": "Flotation"
+      "en": "Flotation",
+      "related": ["sieving"]
     },
     {
       "id": "sieving",
@@ -181,7 +184,8 @@
       "id": "carbon-14",
       "zh": "碳十四",
       "en": "Carbon-14",
-      "forms": { "en": ["C-14"] }
+      "forms": { "en": ["C-14"] },
+      "related": ["k-ar-dating"]
     },
     {
       "id": "k-ar-dating",
@@ -234,7 +238,8 @@
     {
       "id": "zooarchaeology",
       "zh": "动物考古",
-      "en": "Zooarchaeology"
+      "en": "Zooarchaeology",
+      "related": ["archaeobotany"]
     },
     {
       "id": "archaeobotany",
@@ -250,7 +255,8 @@
     {
       "id": "epigraphy",
       "zh": "碑铭学",
-      "en": "Epigraphy"
+      "en": "Epigraphy",
+      "related": ["numismatics"]
     },
     {
       "id": "numismatics",
@@ -260,7 +266,8 @@
     {
       "id": "egyptology",
       "zh": "埃及学",
-      "en": "Egyptology"
+      "en": "Egyptology",
+      "related": ["assyriology"]
     },
     {
       "id": "assyriology",
@@ -281,7 +288,8 @@
       "id": "paleolithic",
       "zh": "旧石器时代",
       "en": "Paleolithic",
-      "forms": { "en": ["palaeolithic"] }
+      "forms": { "en": ["palaeolithic"] },
+      "related": ["neolithic"]
     },
     {
       "id": "mesolithic",
@@ -311,7 +319,8 @@
     {
       "id": "hand-axe",
       "zh": "手斧",
-      "en": "Hand axe"
+      "en": "Hand axe",
+      "related": ["chopper"]
     },
     {
       "id": "flake",
@@ -378,7 +387,8 @@
     {
       "id": "bone-flute",
       "zh": "骨笛",
-      "en": "Bone flute"
+      "en": "Bone flute",
+      "related": ["xun"]
     },
     {
       "id": "spindle-whorl",
@@ -399,7 +409,8 @@
     {
       "id": "painted-pottery",
       "zh": "彩陶",
-      "en": "Painted ware"
+      "en": "Painted ware",
+      "related": ["black-pottery"]
     },
     {
       "id": "black-pottery",
@@ -466,7 +477,8 @@
     {
       "id": "black-figure",
       "zh": "黑绘",
-      "en": "Black-figure"
+      "en": "Black-figure",
+      "related": ["red-figure"]
     },
     {
       "id": "red-figure",
@@ -476,12 +488,14 @@
     {
       "id": "ding",
       "zh": "鼎",
-      "en": "Ding"
+      "en": "Ding",
+      "related": ["li"]
     },
     {
       "id": "jue",
       "zh": "爵",
-      "en": "Jue"
+      "en": "Jue",
+      "related": ["gu"]
     },
     {
       "id": "zun",
@@ -527,7 +541,8 @@
     {
       "id": "lost-wax",
       "zh": "失蜡法",
-      "en": "Lost wax"
+      "en": "Lost wax",
+      "related": ["piece-mold"]
     },
     {
       "id": "piece-mold",
@@ -553,7 +568,8 @@
     {
       "id": "dagger-axe",
       "zh": "戈",
-      "en": "Dagger-axe"
+      "en": "Dagger-axe",
+      "related": ["halberd"]
     },
     {
       "id": "halberd",
@@ -574,7 +590,8 @@
       "id": "gilding",
       "zh": "鎏金",
       "en": "Gilding",
-      "forms": { "en": ["gilt", "gild"] }
+      "forms": { "en": ["gilt", "gild"] },
+      "related": ["gold-inlay"]
     },
     {
       "id": "gold-inlay",
@@ -600,7 +617,8 @@
     {
       "id": "knife-money",
       "zh": "刀币",
-      "en": "Knife money"
+      "en": "Knife money",
+      "related": ["spade-money"]
     },
     {
       "id": "spade-money",
@@ -625,7 +643,8 @@
     {
       "id": "cong",
       "zh": "玉琮",
-      "en": "Cong"
+      "en": "Cong",
+      "related": ["bi-disc"]
     },
     {
       "id": "bi-disc",
@@ -660,7 +679,8 @@
     {
       "id": "cinnabar",
       "zh": "朱砂",
-      "en": "Cinnabar"
+      "en": "Cinnabar",
+      "related": ["ochre"]
     },
     {
       "id": "ochre",
@@ -686,7 +706,8 @@
     {
       "id": "papyrus",
       "zh": "莎草纸",
-      "en": "Papyrus"
+      "en": "Papyrus",
+      "related": ["parchment"]
     },
     {
       "id": "parchment",
@@ -701,7 +722,8 @@
     {
       "id": "bamboo-slip",
       "zh": "竹简",
-      "en": "Bamboo slip"
+      "en": "Bamboo slip",
+      "related": ["wooden-tablet"]
     },
     {
       "id": "wooden-tablet",
@@ -945,7 +967,8 @@
     {
       "id": "peking-man",
       "zh": "北京人",
-      "en": "Peking Man"
+      "en": "Peking Man",
+      "related": ["yuanmou-man"]
     },
     {
       "id": "yuanmou-man",
@@ -955,12 +978,14 @@
     {
       "id": "banpo",
       "zh": "半坡",
-      "en": "Banpo"
+      "en": "Banpo",
+      "related": ["hemudu"]
     },
     {
       "id": "yangshao",
       "zh": "仰韶",
-      "en": "Yangshao"
+      "en": "Yangshao",
+      "related": ["longshan"]
     },
     {
       "id": "longshan",
@@ -975,7 +1000,8 @@
     {
       "id": "liangzhu",
       "zh": "良渚",
-      "en": "Liangzhu"
+      "en": "Liangzhu",
+      "related": ["hongshan"]
     },
     {
       "id": "hongshan",
@@ -1015,7 +1041,8 @@
     {
       "id": "erlitou",
       "zh": "二里头",
-      "en": "Erlitou"
+      "en": "Erlitou",
+      "related": ["erligang"]
     },
     {
       "id": "erligang",
@@ -1030,7 +1057,8 @@
     {
       "id": "sanxingdui",
       "zh": "三星堆",
-      "en": "Sanxingdui"
+      "en": "Sanxingdui",
+      "related": ["jinsha"]
     },
     {
       "id": "jinsha",
@@ -1081,7 +1109,8 @@
     {
       "id": "lascaux",
       "zh": "拉斯科洞窟",
-      "en": "Lascaux"
+      "en": "Lascaux",
+      "related": ["altamira"]
     },
     {
       "id": "altamira",
@@ -1091,7 +1120,8 @@
     {
       "id": "knossos",
       "zh": "克诺索斯",
-      "en": "Knossos"
+      "en": "Knossos",
+      "related": ["mycenae"]
     },
     {
       "id": "mycenae",
@@ -1137,7 +1167,8 @@
     {
       "id": "teotihuacan",
       "zh": "特奥蒂瓦坎",
-      "en": "Teotihuacan"
+      "en": "Teotihuacan",
+      "related": ["chichen-itza"]
     },
     {
       "id": "chichen-itza",
@@ -1157,7 +1188,8 @@
     {
       "id": "angkor-wat",
       "zh": "吴哥窟",
-      "en": "Angkor Wat"
+      "en": "Angkor Wat",
+      "related": ["borobudur"]
     },
     {
       "id": "borobudur",
