@@ -16,8 +16,8 @@ vi.mock('../socket', () => ({
 vi.mock('../fields', () => ({ fields: { value: null }, loadFields: vi.fn() }));
 vi.mock('../../games', async () => {
   const { defaultSettings } = await import('@reviewer2/shared/keywords');
-  const RulesSheet = (await import('../../games/keywords/RulesSheet.vue')).default;
-  return { games: { keywords: { Rules: RulesSheet, defaultSettings } } };
+  const RulesSheet = (await import('../../games/keywords/KeywordsRules.vue')).default;
+  return { games: { keywords: { Rules: RulesSheet, defaultSettings, guide: {} } } };
 });
 vi.mock('../account', () => ({ account: { loaded: true, summary: null, mail: false }, loadAccount: vi.fn() }));
 vi.mock('../friends', () => ({ askToJoin: vi.fn(), friendsVersion: { value: 0 } }));

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type Language } from '@reviewer2/shared';
-import { BOARD_SIZE, defaultSettings } from '@reviewer2/shared/keywords';
+import { defaultSettings } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FieldFold from '../../../core/components/FieldFold.vue';
@@ -44,7 +44,7 @@ useSpot(root, (): SpotTarget | null => {
         v-model:random="random"
         :fields="fields"
         :language="language"
-        :needed="BOARD_SIZE"
+        game="keywords"
         each-game
       />
     </section>

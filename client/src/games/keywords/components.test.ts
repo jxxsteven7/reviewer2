@@ -25,7 +25,7 @@ import { seenIn } from './chat';
 import { toasts } from '../../core/toast';
 import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
-import ClockBar from './ClockBar.vue';
+import ClockBar from '../../core/components/ClockBar.vue';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
@@ -38,11 +38,11 @@ import KeywordsGame from './KeywordsGame.vue';
 import { missedLine } from './missed';
 import { heroLine } from './heroes';
 import ReplayViewer from './ReplayViewer.vue';
-import RulesSheet from './RulesSheet.vue';
+import RulesSheet from './KeywordsRules.vue';
 import SettingsForm from './SettingsForm.vue';
 import TurnStrip from './TurnStrip.vue';
 import { HOLD_MS } from './useCardGestures';
-import { useChatLine } from './useChatLine';
+import { useChatLine } from '../../core/useChatLine';
 import { TURN_MS } from './useTurnedCard';
 
 const send = vi.hoisted(() =>
@@ -263,7 +263,7 @@ describe('GroupChat', () => {
   test('keeps the input and its focus after sending, so that a phone keeps its keyboard open', async () => {
     const wrapper = mount(chatOf(room('bob', [])), { global: { plugins: [i18n()] }, attachTo: document.body });
     await wrapper.get('button').trigger('click');
-    const input = document.body.querySelector<HTMLInputElement>('#chat-text');
+    const input = document.body.querySelector<HTMLInputElement>('[role=dialog] form input');
     if (!input) throw new Error('no input');
     input.focus();
     input.value = 'hello';
@@ -274,7 +274,7 @@ describe('GroupChat', () => {
     document.body.querySelector('form')?.dispatchEvent(new Event('submit'));
     await flushPromises();
     expect(send).toHaveBeenCalledWith('keywords:say', { gameId: 'g1', text: 'hello' });
-    expect(document.body.querySelector('#chat-text')).toBe(input);
+    expect(document.body.querySelector('[role=dialog] form input')).toBe(input);
     expect(input.value).toBe('');
     expect(document.activeElement).toBe(input);
     wrapper.unmount();
@@ -472,7 +472,7 @@ describe('DecisionLetter', () => {
     const { t } = i18n().global;
     const set = (name: string) =>
       [1, 2, 3].map((n) =>
-        t(`game.letter.bodies.oral.${name}.${n}`, { group: 'Blue group', other: 'Red group', left: 4 }),
+        t(`games.keywords.letter.bodies.oral.${name}.${n}`, { group: 'Blue group', other: 'Red group', left: 4 }),
       );
     const luck = set('reviewer2');
     const finish = set('found');
@@ -1159,7 +1159,7 @@ describe('KeywordsBoard', () => {
         selectable: false,
         selected: null,
         lang: 'en',
-        float: { key: 1, text: '+1', team: 'red', card: 7 },
+        float: { key: 1, text: '+1', tint: 'red', card: 7 },
       },
       global: global(),
     });
@@ -1604,7 +1604,7 @@ describe('ClueLog', () => {
   });
 });
 
-describe('RulesSheet', () => {
+describe('KeywordsRules', () => {
   // The lines of the rules' section on time, once the sheet is open, in a room with these time
   // limits.
   const timeLines = async (times: Partial<KeywordsSettings>) => {
@@ -1837,7 +1837,7 @@ describe('GameRosters', () => {
   });
 
   test('raises the numbers that the floats give, on the avatars of their players', () => {
-    const floats = new Map([['bob', { key: 1, text: '+1', team: 'red' as const }]]);
+    const floats = new Map([['bob', { key: 1, text: '+1', tint: 'red' as const }]]);
     const wrapper = mount(GameRosters, { props: { room: room('bob'), floats }, global: global() });
     expect(wrapper.findAll('.score-float').map((float) => float.text())).toEqual(['+1']);
     expect(wrapper.get('.score-float').attributes('aria-hidden')).toBe('true');

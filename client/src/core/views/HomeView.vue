@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { isLanguage, REPOSITORY_URL } from '@reviewer2/shared';
-import { BOARD_SIZE } from '@reviewer2/shared/keywords';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import tipCode from '../../assets/wechat-tip.jpg';
 import AccountEntry from '../components/AccountEntry.vue';
 import AcknowledgmentsList from '../components/AcknowledgmentsList.vue';
+import BetaPill from '../components/BetaPill.vue';
 import ContributionsList from '../components/ContributionsList.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import LinkArrow from '../components/LinkArrow.vue';
@@ -16,6 +16,7 @@ import SponsorsList from '../components/SponsorsList.vue';
 import UiButton from '../components/UiButton.vue';
 import UiSheet from '../components/UiSheet.vue';
 import { games } from '../../games';
+import { GAME_INFO } from '../../games/info';
 import { account, loadAccount } from '../account';
 import { GUIDE_PATH } from '../guide/progress';
 import { siteAddress, usePageHead } from '../head';
@@ -33,8 +34,8 @@ import PublicRooms from './PublicRooms.vue';
 
 // The home page: the way back to any room where the player still has a seat, the tagline, a line
 // on how to play, the ways into a room, by its number, by the rooms that friends are in or from the
-// list of public rooms, the first game on a big sticker, with the way to play it with
-// Reviewer 1, the games to come below it, the feedback contributions, the sponsors and the
+// list of public rooms, each game on a big sticker, with the way to play it with Reviewer 1, the
+// games to come below them, the feedback contributions, the sponsors and the
 // acknowledgments, folded, and footnotes, which offer a way to buy the author a cola and the way to send
 // them feedback, each with a drawing, and name the build's version, which leads to the history up
 // to it on GitHub. The author, linked to their page, follows the line on how to play, or on a
@@ -45,14 +46,19 @@ import PublicRooms from './PublicRooms.vue';
 // or recompressed copy could spoil. Below it, a note tells tippers how to ask to be on the list of
 // sponsors: by a name, or "list me", in the tip's message.
 //
+// A game's card names the game, with "Beta" beside a game in beta (BetaPill.vue), and its rules,
+// as a new room in the page's language has them, and says how many play it. The cards come from
+// the games (games/info.ts, games/index.ts), in their order.
+//
 // The first game's card leads into the tutorial (docs/architecture.md#the-tutorial): a guest, and an
 // account that hasn't played the game, get the tutorial's green sticker above the button for a new
 // room, and an account that has played it a small "Tutorial" beside the rules instead, once the
 // page knows which it is. The account is asked for again whenever the page opens, so that a player
 // back from their first game finds the small word at once. The tutorial's last steps lead here with
-// the room setup open (?create=1), or the practice sheet open with who plays and the role chosen
-// (?practice=friends, or a role), which the address then drops, and the sheet takes once: it
-// doesn't open again when the room setup, which stands in its place, is closed.
+// the first game's room setup open (?create=1), or its practice sheet open with who plays and the
+// role chosen (?practice=friends, or a role), which the address then drops, and the sheet takes
+// once: it doesn't open again when the room setup, which stands in its place, is closed. One room
+// setup is open at a time, in its game's card.
 const { t } = useI18n();
 const version = __APP_VERSION__;
 const versionUrl = `${REPOSITORY_URL}/commits/${__APP_COMMIT__ ?? 'main'}`;
@@ -72,27 +78,33 @@ const practice = ref(
       ? { who: 'me' as const, role: askedRole }
       : null,
 );
-const creating = ref(route.query.create === '1');
+const creating = ref<string | null>(route.query.create === '1' ? 'keywords' : null);
 if (linked || 'practice' in route.query || 'create' in route.query) {
   const query = { ...route.query };
   for (const key of [LANGUAGE_QUERY, 'practice', 'create']) delete query[key];
   void router.replace({ query });
 }
 const chosen = ref(linked !== null || storedLanguage() !== null);
-// The rules of the first game, beside its name, as a new room in the page's language has them.
-const keywords = games.keywords;
+// The games with their screens, as the home page shows them.
+const cards = GAME_INFO.flatMap((info) => {
+  const screens = games[info.id];
+  return screens ? [{ info, screens }] : [];
+});
 const language = useLanguage();
 const tipping = ref(false);
 const played = computed(() => (account.loaded ? (account.summary?.played.includes('keywords') ?? false) : null));
 // The room setup that the tutorial opened comes into sight, below the masthead, once the router has
 // scrolled the page to its top.
 const firstGame = ref<HTMLElement | null>(null);
+const keepFirst = (game: string) => (element: unknown) => {
+  if (game === 'keywords') firstGame.value = element instanceof HTMLElement ? element : null;
+};
 onMounted(() => {
   if (account.loaded) void loadAccount();
   if (creating.value) requestAnimationFrame(() => firstGame.value?.scrollIntoView({ block: 'start' }));
 });
 
-const forthcoming = ['impostor', 'titles', 'abstracts'];
+const forthcoming = ['titles', 'abstracts'];
 
 // The home page's title and description in its language, and its address in it; the language gate
 // keeps the head that the page came with, which is in both languages unless the page was opened in
@@ -152,37 +164,46 @@ usePageHead(() =>
 
       <section class="contents">
         <ol>
-          <li ref="firstGame" class="entry">
+          <li
+            v-for="{ info, screens } in cards"
+            :key="info.id"
+            :ref="keepFirst(info.id)"
+            class="entry"
+            :data-game="info.id"
+          >
             <div class="line">
               <span class="title"
-                >{{ t('home.games.keywords.name')
-                }}<component
-                  :is="keywords.Rules"
-                  v-if="keywords"
+                >{{ t(`games.${info.id}.name`) }}<BetaPill v-if="info.beta" :game="info.id" /><component
+                  :is="screens.Rules"
                   link
                   defaults
-                  :settings="keywords.defaultSettings(language)"
+                  :settings="screens.defaultSettings(language)"
                   :language="language"
-                /><RouterLink v-if="played" class="guide-link" :to="GUIDE_PATH">{{
+                /><RouterLink v-if="screens.guide && played" class="guide-link" :to="GUIDE_PATH">{{
                   t('guide.entry.link')
                 }}</RouterLink></span
               >
-              <UiButton v-if="!creating" variant="primary" size="large" @click="creating = true">
+              <UiButton v-if="creating !== info.id" variant="primary" size="large" @click="creating = info.id">
                 {{ t('home.newRoom') }}
               </UiButton>
             </div>
-            <p class="summary">{{ t('home.games.keywords.summary') }}</p>
-            <p class="meta">{{ t('home.players') }}</p>
-            <GuideEntry v-if="!creating && played === false" />
-            <PracticeRoom v-if="!creating" :preset="practice" @taken="practice = null" />
-            <CreateRoom v-if="creating" game="keywords" :words-needed="BOARD_SIZE" @cancel="creating = false" />
+            <p class="summary">{{ t(`games.${info.id}.summary`) }}</p>
+            <p class="meta">{{ t(`games.${info.id}.players`) }}</p>
+            <GuideEntry v-if="screens.guide && creating !== info.id && played === false" />
+            <PracticeRoom
+              v-if="creating !== info.id"
+              :game="info.id"
+              :preset="info.id === 'keywords' ? practice : null"
+              @taken="practice = null"
+            />
+            <CreateRoom v-if="creating === info.id" :game="info.id" @cancel="creating = null" />
           </li>
           <li v-for="game in forthcoming" :key="game" class="entry forthcoming">
             <div class="line">
-              <span class="title">{{ t(`home.games.${game}.name`) }}</span>
+              <span class="title">{{ t(`home.forthcomingGames.${game}.name`) }}</span>
               <span class="status">{{ t('home.forthcoming') }}</span>
             </div>
-            <p class="summary">{{ t(`home.games.${game}.summary`) }}</p>
+            <p class="summary">{{ t(`home.forthcomingGames.${game}.summary`) }}</p>
           </li>
         </ol>
       </section>
@@ -315,7 +336,7 @@ ol {
   list-style: none;
 }
 
-/* The first game is a big sticker that takes the row: its name and players on one row, the
+/* Each game is a big sticker that takes the row: its name and players on one row, the
    summary below, the button and the way to practice at the bottom, and the room setup in the
    place of the way to practice when it opens. The dashed stickers of the games to come follow,
    with room above them. */

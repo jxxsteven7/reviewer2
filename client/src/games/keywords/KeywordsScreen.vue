@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { formatCode, type RoomView } from '@reviewer2/shared';
+import type { RoomView } from '@reviewer2/shared';
 import { type KeywordsView } from '@reviewer2/shared/keywords';
 import { computed, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
-import QrCode from '../../core/components/QrCode.vue';
+import ScreenJoin from '../../core/components/ScreenJoin.vue';
 import StreakNotices from '../../core/components/StreakNotices.vue';
 import { HTML_LANG } from '../../core/i18n';
-import { roomLink } from '../../core/room';
 import ClueLog from './ClueLog.vue';
 import DecisionLetter from './DecisionLetter.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
@@ -31,8 +30,6 @@ import { useTurnedCard } from './useTurnedCard';
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const { data, groups, spectators } = useKeywords(toRef(props, 'room'));
-const link = computed(() => roomLink(props.room.code));
-const number = computed(() => formatCode(props.room.code));
 const game = computed(() => data.value.game as KeywordsView | null);
 useMissedDeadlines(
   game,
@@ -49,19 +46,15 @@ const turned = useTurnedCard(game);
 
 <template>
   <section v-if="room.phase === 'lobby' || !game" class="screen">
-    <div class="join">
-      <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
-      <p class="code num">{{ number }}</p>
-      <p class="hint">{{ t('room.qrHint', { code: number }) }}</p>
-    </div>
+    <ScreenJoin :code="room.code" />
     <div class="people">
-      <p class="kicker">{{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
+      <p class="kicker">{{ t('games.keywords.name') }} &middot; {{ t('lobby.kicker') }}</p>
       <section v-for="group in groups" :key="group.team" class="group" :class="group.team">
-        <h2>{{ t(`lobby.group.${group.team}`) }}</h2>
-        <p class="role">{{ t('lobby.roles.captain') }}</p>
+        <h2>{{ t(`games.keywords.groups.${group.team}`) }}</h2>
+        <p class="role">{{ t('games.keywords.seats.captain') }}</p>
         <PlayerName v-if="group.captain" :player="group.captain" :me="false" :chair="false" />
         <p v-else class="vacant">{{ t('lobby.vacant') }}</p>
-        <p class="role">{{ t('lobby.roles.guesser') }}</p>
+        <p class="role">{{ t('games.keywords.seats.guesser') }}</p>
         <ul>
           <li v-for="player in group.guessers" :key="player.id">
             <PlayerName :player="player" :me="false" :chair="false" />
@@ -101,10 +94,7 @@ const turned = useTurnedCard(game);
       />
     </div>
     <aside class="side">
-      <div class="join small">
-        <QrCode :text="link" :label="t('room.qrHint', { code: number })" />
-        <p class="code num">{{ number }}</p>
-      </div>
+      <ScreenJoin :code="room.code" small />
       <template v-if="room.match">
         <MatchResults v-if="room.match.status !== 'on'" :room="room" />
         <MatchTable v-else :room="room" :endable="false" />
@@ -119,41 +109,6 @@ const turned = useTurnedCard(game);
   display: grid;
   gap: var(--space-6);
   padding: var(--space-5) 0;
-}
-
-.join {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border: var(--line-strong) solid var(--ink);
-  border-radius: var(--radius-panel);
-  background: var(--paper);
-  box-shadow: var(--shadow-2);
-  text-align: center;
-}
-
-.join :deep(.qr) {
-  max-width: 20rem;
-}
-
-.join.small {
-  padding: var(--space-4);
-}
-
-.join.small :deep(.qr) {
-  max-width: 10rem;
-}
-
-.code {
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-display);
-  letter-spacing: 0.06em;
-}
-
-.hint {
-  font-weight: var(--weight-bold);
 }
 
 .people {

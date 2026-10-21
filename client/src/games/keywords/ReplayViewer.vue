@@ -9,7 +9,8 @@ import {
 } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import UiButton from '../../core/components/UiButton.vue';
+import ReplaySteps from '../../core/components/ReplaySteps.vue';
+import ReplayTalk from '../../core/components/ReplayTalk.vue';
 import { formatList, HTML_LANG } from '../../core/i18n';
 import { nameOf } from '../../core/names';
 import { provideOpenPlayer } from '../../core/playerPanel';
@@ -54,7 +55,7 @@ const cards = computed<CardView[]>(() =>
 );
 // A step to the next reveal turns its card over, as the game did (useTurnedCard.ts).
 const turned = useTurnedSteps(cards);
-const group = (team: 'red' | 'blue') => t(`lobby.group.${team}`);
+const group = (team: 'red' | 'blue') => t(`games.keywords.groups.${team}`);
 // How many cards each group had still to find at the step.
 const remaining = computed(
   () =>
@@ -135,22 +136,7 @@ const lines = computed(() => {
 
 <template>
   <div class="replay">
-    <p class="position num">{{ t('replay.step', { step: at + 1, steps: steps.length }) }}</p>
-    <div class="controls">
-      <UiButton size="small" :disabled="at === 0" @click="at -= 1">{{ t('replay.previous') }}</UiButton>
-      <input
-        v-model.number="at"
-        type="range"
-        min="0"
-        :max="steps.length - 1"
-        step="1"
-        :aria-label="t('replay.slider')"
-      />
-      <UiButton size="small" :disabled="last" @click="at += 1">{{ t('replay.next') }}</UiButton>
-    </div>
-    <div class="step" :class="step.team ?? 'start'" aria-live="polite">
-      <p v-for="line in lines" :key="line">{{ line }}</p>
-    </div>
+    <ReplaySteps v-model="at" :steps="steps.length" :lines="lines" :tint="step.team" />
     <GroupBars :groups="groups" :remaining="remaining" :me="replay.me" />
     <KeywordsBoard
       :cards="cards"
@@ -161,13 +147,7 @@ const lines = computed(() => {
       :turned="turned"
       :lang="HTML_LANG[replay.language]"
     />
-    <section v-if="talk.length > 0" class="talk">
-      <h3 class="section-title">{{ t('replay.talk') }}</h3>
-      <p v-for="line in talk" :key="line.id" class="line">
-        <span class="name">{{ line.name }}</span>
-        <span>{{ line.text }}</span>
-      </p>
-    </section>
+    <ReplayTalk :talk="talk" />
     <ReplayPanel :replay="replay" :player-id="opened" @close="opened = null" @go="go" />
   </div>
 </template>
@@ -177,66 +157,5 @@ const lines = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.position {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-input[type='range'] {
-  flex: 1;
-  min-width: 0;
-  accent-color: var(--ink);
-}
-
-/* The step's lines on a block in the group's tint, as a clue is in the log. */
-.step {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-height: 4.5em;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-card);
-  background: var(--paper-2);
-  font-size: var(--text-sm);
-}
-
-.step p:first-child {
-  font-weight: var(--weight-black);
-}
-
-.step.red {
-  background: var(--red-tint);
-}
-
-.step.blue {
-  background: var(--blue-tint);
-}
-
-/* What the group said after the game, as the chat shows it. */
-.talk {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.talk .line {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-card);
-  background: var(--paper-2);
-  font-size: var(--text-sm);
-  overflow-wrap: anywhere;
-}
-
-.talk .name {
-  margin-right: var(--space-2);
-  font-weight: var(--weight-black);
 }
 </style>

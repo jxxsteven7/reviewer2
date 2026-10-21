@@ -8,21 +8,22 @@ import {
   FEEDBACK_KINDS,
   FRIEND_ERRORS,
   RANKS,
+  RATINGS,
   REPORT_ERRORS,
   ROOM_ERRORS,
   SPONSOR_KINDS,
   MATCH_TITLES,
   STREAK_KINDS,
 } from '@reviewer2/shared';
-import { KEYWORDS_ERRORS, KEYWORDS_TITLES, SEAT_ERRORS, START_PROBLEMS, VERDICTS } from '@reviewer2/shared/keywords';
+import { FATES, IMPOSTOR_ERRORS, IMPOSTOR_ROLES, IMPOSTOR_START_PROBLEMS, REASONS } from '@reviewer2/shared/impostor';
+import { KEYWORDS_ERRORS, SEAT_ERRORS, START_PROBLEMS, VERDICTS } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { DUO_LINES } from '../core/duos';
 import { CLIENT_ERRORS } from '../core/errors';
+import { GAME_INFO } from '../games/info';
 import { LINES_PER_TIER, STREAK_TIERS } from '../core/streaks';
 import { MISSED_LINES } from '../games/keywords/missed';
 import { HERO_LINES } from '../games/keywords/heroes';
-
-const TITLES = [...MATCH_TITLES, ...KEYWORDS_TITLES];
 
 // Every interface string exists in both languages (docs/rules/constraints.md). The files are
 // read as plain JSON: importing them would hand back the compiled messages instead.
@@ -73,6 +74,7 @@ describe('locale files', () => {
       ...ACCOUNT_ERRORS,
       ...KEYWORDS_ERRORS,
       ...SEAT_ERRORS,
+      ...IMPOSTOR_ERRORS,
       ...CLIENT_ERRORS,
     ]) {
       expect(en.has(`errors.${code}`), code).toBe(true);
@@ -81,7 +83,10 @@ describe('locale files', () => {
 
   test('say every state of an email address, and name every title and every rank', () => {
     for (const state of EMAIL_STATES) expect(en.has(`account.profile.emailStates.${state}`), state).toBe(true);
-    for (const title of TITLES) expect(en.has(`account.profile.titleNames.${title}`), title).toBe(true);
+    for (const title of MATCH_TITLES) expect(en.has(`account.profile.titleNames.${title}`), title).toBe(true);
+    for (const game of GAME_INFO) {
+      for (const title of game.titles) expect(en.has(`games.${game.id}.titles.names.${title}`), title).toBe(true);
+    }
     for (const rank of RANKS) expect(en.has(`ranks.names.${rank}`), rank).toBe(true);
   });
 
@@ -120,15 +125,18 @@ describe('locale files', () => {
   });
 
   test('explain every title that a tap opens', () => {
-    for (const title of TITLES) expect(en.has(`titles.award.${title}`), title).toBe(true);
+    for (const title of MATCH_TITLES) expect(en.has(`titles.award.${title}`), title).toBe(true);
+    for (const game of GAME_INFO) {
+      for (const title of game.titles) expect(en.has(`games.${game.id}.titles.explain.${title}`), title).toBe(true);
+    }
     for (const kind of STREAK_KINDS) {
       expect(en.has(`titles.streak.${kind}`), kind).toBe(true);
       expect(en.has(`titles.streakNow.${kind}`), kind).toBe(true);
     }
     for (const kind of FEEDBACK_KINDS) expect(en.has(`titles.contribution.${kind}`), kind).toBe(true);
     for (const verdict of VERDICTS) {
-      expect(en.has(`game.letter.verdicts.${verdict}`), verdict).toBe(true);
-      expect(en.has(`game.letter.explain.${verdict}`), verdict).toBe(true);
+      expect(en.has(`games.keywords.letter.verdicts.${verdict}`), verdict).toBe(true);
+      expect(en.has(`games.keywords.letter.explain.${verdict}`), verdict).toBe(true);
     }
   });
 
@@ -145,5 +153,21 @@ describe('locale files', () => {
     for (const problem of START_PROBLEMS) {
       expect(en.has(`lobby.problems.${problem}`), problem).toBe(true);
     }
+    for (const problem of IMPOSTOR_START_PROBLEMS) {
+      expect(en.has(`games.impostor.problems.${problem}`), problem).toBe(true);
+    }
+  });
+
+  test('name every role, fate and ending of the second game, and every rating', () => {
+    for (const role of IMPOSTOR_ROLES) expect(en.has(`games.impostor.roles.${role}`), role).toBe(true);
+    for (const fate of FATES) {
+      expect(en.has(`games.impostor.letter.verdicts.${fate}`), fate).toBe(true);
+      expect(en.has(`games.impostor.letter.short.${fate}`), fate).toBe(true);
+    }
+    for (const reason of [...REASONS, 'withdrawn']) {
+      expect(en.has(`games.impostor.letter.results.${reason}`), reason).toBe(true);
+      expect(en.has(`games.impostor.letter.bodies.${reason}`), reason).toBe(true);
+    }
+    for (const rating of RATINGS) expect(en.has(`rating.options.${rating}`), rating).toBe(true);
   });
 });

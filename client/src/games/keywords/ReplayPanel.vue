@@ -111,7 +111,7 @@ function linesOf(action: ReplayAction): string[] {
       <li v-for="action in actions" :key="action.step">
         <button type="button" class="move" :class="action.team" @click="emit('go', action.step)">
           <span class="turn">{{
-            t('replay.turn', { turn: action.turn, group: t(`lobby.group.${action.team}`) })
+            t('replay.turn', { turn: action.turn, group: t(`games.keywords.groups.${action.team}`) })
           }}</span>
           <span v-for="line in linesOf(action)" :key="line">{{ line }}</span>
         </button>

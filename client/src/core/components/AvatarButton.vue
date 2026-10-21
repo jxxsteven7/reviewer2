@@ -15,7 +15,9 @@ import PlayerAvatar from './PlayerAvatar.vue';
 // the same everywhere. `name` is the player's name as the page gives it, `username` an account's
 // username where the name is the viewer's own for a friend (names.ts), which the default avatar is
 // drawn from all the same, `initial` what the default avatar shows in place of its first character,
-// and `guest` a guest's number, for the default avatar's color (PlayerAvatar.vue).
+// and `guest` a guest's number, for the default avatar's color (PlayerAvatar.vue). In a game that
+// shows its players by number, a number's avatar `opens` the game's own panel for the seat, under
+// the `label` that names it.
 const props = withDefaults(
   defineProps<{
     playerId?: string | null;
@@ -29,6 +31,10 @@ const props = withDefaults(
     size?: 'small' | 'medium' | 'large';
     // Faded, with the dots of someone the room waits for (PlayerAvatar.vue).
     waiting?: boolean;
+    // Faded under the veil alone, as a player who is out of a game (PlayerAvatar.vue).
+    faded?: boolean;
+    opens?: (() => void) | null;
+    label?: string | null;
   }>(),
   {
     playerId: null,
@@ -40,6 +46,9 @@ const props = withDefaults(
     agent: false,
     size: 'small',
     waiting: false,
+    faded: false,
+    opens: null,
+    label: null,
   },
 );
 const open = useOpenPlayer();
@@ -50,7 +59,27 @@ const drawnFrom = computed(() => props.username ?? props.name);
 
 <template>
   <button
-    v-if="handle"
+    v-if="opens"
+    type="button"
+    class="avatar-button press-host"
+    :aria-label="label ?? name"
+    aria-haspopup="dialog"
+    @click="opens()"
+  >
+    <PlayerAvatar
+      class="press-part"
+      :name="drawnFrom"
+      :initial="initial"
+      :guest="guest"
+      :avatar="avatar"
+      :agent="agent"
+      :size="size"
+      :waiting="waiting"
+      :faded="faded"
+    />
+  </button>
+  <button
+    v-else-if="handle"
     type="button"
     class="avatar-button press-host"
     :aria-label="t('room.viewProfile', { name })"
@@ -66,6 +95,7 @@ const drawnFrom = computed(() => props.username ?? props.name);
       :agent="agent"
       :size="size"
       :waiting="waiting"
+      :faded="faded"
     />
   </button>
   <button
@@ -84,6 +114,7 @@ const drawnFrom = computed(() => props.username ?? props.name);
       :agent="agent"
       :size="size"
       :waiting="waiting"
+      :faded="faded"
     />
   </button>
   <PlayerAvatar
@@ -95,6 +126,7 @@ const drawnFrom = computed(() => props.username ?? props.name);
     :agent="agent"
     :size="size"
     :waiting="waiting"
+    :faded="faded"
   />
 </template>
 

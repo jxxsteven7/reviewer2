@@ -11,6 +11,12 @@ import MatchTable from './MatchTable.vue';
 
 const act = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
 vi.mock('../socket', () => ({ act }));
+// The first game's matches, without the rest of its screens.
+vi.mock('../../games', async () => {
+  const { defaultMatchRules, keywordsMatchRules } = await import('@reviewer2/shared/keywords');
+  const { default: Options } = await import('../../games/keywords/MatchOptions.vue');
+  return { games: { keywords: { match: { Options, defaults: defaultMatchRules, restore: keywordsMatchRules } } } };
+});
 
 const global = (locale: 'en' | 'zh' = 'en') => ({
   plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })],

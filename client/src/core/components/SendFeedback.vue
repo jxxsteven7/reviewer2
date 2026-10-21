@@ -45,7 +45,9 @@ import UiSheet from './UiSheet.vue';
 // then asks for. A guest is asked to log in first, by a way to the account page that brings them
 // back to their room, if they are in one, and may send it all the same. Feedback that the server
 // couldn't sign with the account makes the page ask again who the browser is, so that the form
-// follows. Each kind gets a word on what to write, under the kinds.
+// follows. Each kind gets a word on what to write, under the kinds. Sent from the card that asks
+// how a game was (RatingCard.vue), the feedback names the game (`gameId`), which a line in the
+// panel says, so that the author can watch it again (docs/architecture.md#ratings).
 //
 // What is being written is kept outside the component, so that it survives the panel's closing
 // and the component's going with it, as it does when the room menu that holds it closes.
@@ -62,8 +64,13 @@ const draft = reactive({
 
 <script setup lang="ts">
 const props = withDefaults(
-  defineProps<{ page: FeedbackPage; variant?: 'primary' | 'quiet'; size?: 'normal' | 'small' }>(),
-  { variant: 'quiet', size: 'small' },
+  defineProps<{
+    page: FeedbackPage;
+    variant?: 'primary' | 'secondary' | 'quiet';
+    size?: 'normal' | 'small';
+    gameId?: string;
+  }>(),
+  { variant: 'quiet', size: 'small', gameId: undefined },
 );
 const { t } = useI18n();
 const name = useId();
@@ -133,6 +140,7 @@ function submit() {
       version: __APP_VERSION__.slice(0, 64),
       language: currentLanguage(),
       page: props.page,
+      ...(props.gameId === undefined ? {} : { gameId: props.gameId }),
     };
     const reply = await send('meta:feedback', message);
     if (!reply.ok) {
@@ -220,6 +228,7 @@ function submit() {
       />
       <p v-else-if="signature === 'anonymous'" class="note">{{ t('feedback.anonymousHint') }}</p>
       <p v-if="kind === 'bug'" class="note">{{ t('feedback.bugNote') }}</p>
+      <p v-if="gameId !== undefined" class="attached">{{ t('feedback.attached') }}</p>
 
       <p v-if="refused" class="problem" role="alert">{{ refused }}</p>
       <UiButton variant="primary" type="submit" :disabled="busy || !ready">{{ t('feedback.submit') }}</UiButton>
@@ -237,6 +246,15 @@ function submit() {
 .note {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* What goes with the feedback by itself, on a beige row. */
+.attached {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .choices {

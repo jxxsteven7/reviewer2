@@ -50,7 +50,7 @@ const studentsOf = (team: Team) => {
   <p class="scores">
     <span v-for="team in TEAMS" :key="team" class="score num" :class="team">
       <span class="faces">
-        <span class="sr-only">{{ t(`lobby.group.${team}`) }}</span>
+        <span class="sr-only">{{ t(`games.keywords.groups.${team}`) }}</span>
         <span v-if="piOf(team)" class="pi">
           <AvatarButton
             :player-id="piOf(team)!.id"

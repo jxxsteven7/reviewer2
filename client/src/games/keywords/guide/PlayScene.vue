@@ -43,7 +43,7 @@ const groups = computed(() => {
   ];
 });
 const waiting = computed(() => {
-  const group = t(`lobby.group.${game.value.team}`);
+  const group = t(`games.keywords.groups.${game.value.team}`);
   return game.value.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group });
 });
 const counts = computed(() => clueCounts(settings.value.guessRule, game.value.remaining.red));

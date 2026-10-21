@@ -62,7 +62,11 @@ afterEach(() => {
 
 // The home page's button, pressed, and the sheet it opens.
 async function opened() {
-  const wrapper = mount(PracticeRoom, { attachTo: document.body, global: { plugins: [i18n] } });
+  const wrapper = mount(PracticeRoom, {
+    attachTo: document.body,
+    props: { game: 'keywords' },
+    global: { plugins: [i18n] },
+  });
   await flushPromises();
   await wrapper.get('button.entry').trigger('click');
   await flushPromises();
@@ -199,7 +203,7 @@ describe('practicing with Reviewer 1', () => {
     agents.value = 'up';
     const wrapper = mount(PracticeRoom, {
       attachTo: document.body,
-      props: { preset: { who: 'me', role: 'guesser' } },
+      props: { game: 'keywords', preset: { who: 'me', role: 'guesser' } },
       global: { plugins: [i18n] },
     });
     await flushPromises();
@@ -214,7 +218,7 @@ describe('practicing with Reviewer 1', () => {
 
     const friends = mount(PracticeRoom, {
       attachTo: document.body,
-      props: { preset: { who: 'friends' } },
+      props: { game: 'keywords', preset: { who: 'friends' } },
       global: { plugins: [i18n] },
     });
     await flushPromises();
@@ -228,7 +232,7 @@ describe('practicing with Reviewer 1', () => {
     const mounted = () =>
       mount(PracticeRoom, {
         attachTo: document.body,
-        props: { preset: { who: 'me', role: 'guesser' } },
+        props: { game: 'keywords', preset: { who: 'me', role: 'guesser' } },
         global: { plugins: [i18n] },
       });
     // Until the server has answered, nothing opens and the choice is kept.
@@ -281,7 +285,11 @@ describe('practicing with Reviewer 1', () => {
 
   test('is grey while Reviewer 1 is offline, and says why when the server turns a room down', async () => {
     socket.replies['meta:agents'] = { ok: true, available: false };
-    const wrapper = mount(PracticeRoom, { attachTo: document.body, global: { plugins: [i18n] } });
+    const wrapper = mount(PracticeRoom, {
+      attachTo: document.body,
+      props: { game: 'keywords' },
+      global: { plugins: [i18n] },
+    });
     await flushPromises();
     const entry = wrapper.get<HTMLButtonElement>('button.entry');
     expect(entry.element.disabled).toBe(true);
@@ -305,7 +313,11 @@ describe('practicing with Reviewer 1', () => {
 
   test('shows nothing on a server without an agent', async () => {
     socket.replies['meta:agents'] = { ok: true, available: null };
-    const wrapper = mount(PracticeRoom, { attachTo: document.body, global: { plugins: [i18n] } });
+    const wrapper = mount(PracticeRoom, {
+      attachTo: document.body,
+      props: { game: 'keywords' },
+      global: { plugins: [i18n] },
+    });
     await flushPromises();
     expect(wrapper.find('.practice').exists()).toBe(false);
     wrapper.unmount();

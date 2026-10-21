@@ -47,7 +47,7 @@ const meant = (record: ClueRecord) => {
 };
 
 const eventText = (event: GameEvent) =>
-  t(`game.events.${event.kind}`, { group: event.team ? t(`lobby.group.${event.team}`) : '' });
+  t(`game.events.${event.kind}`, { group: event.team ? t(`games.keywords.groups.${event.team}`) : '' });
 </script>
 
 <template>

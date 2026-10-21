@@ -58,7 +58,7 @@ describe('TitleInfo', () => {
     expect(tone({ kind: 'contribution', contribution: 'bug' })).toEqual(['good']);
     // A decision takes its group's color where it stands, the pills have no news, and the titles
     // of two friends, good and bad among them, none yet.
-    expect(tone({ kind: 'verdict', verdict: 'oral' })).toEqual([]);
+    expect(tone({ kind: 'verdict', game: 'keywords', verdict: 'oral' })).toEqual([]);
     expect(tone({ kind: 'author' })).toEqual([]);
     expect(tone({ kind: 'agents' })).toEqual([]);
     expect(tone({ kind: 'duo', duo: 'corejected' })).toEqual([]);
@@ -72,7 +72,7 @@ describe('TitleInfo', () => {
 
   test('shows a title as plain text where nobody taps, as on a screen', () => {
     const wrapper = mount(TitleInfo, {
-      props: { title: { kind: 'verdict', verdict: 'oral' }, still: true },
+      props: { title: { kind: 'verdict', game: 'keywords', verdict: 'oral' }, still: true },
       global: global(),
     });
     expect(wrapper.find('button').exists()).toBe(false);

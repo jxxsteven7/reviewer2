@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { type MatchRules } from '@reviewer2/shared';
-import { defaultMatchRules, keywordsMatchRules, type KeywordsMatchRules } from '@reviewer2/shared/keywords';
+import { MATCH_GAMES, type MatchRules } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { games } from '../../games';
 import { points } from '../points';
 import type { ShownMatch, ShownRoom } from '../room';
 import { act } from '../socket';
@@ -29,9 +29,11 @@ const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 
 const choosing = ref(false);
-// The rules of the match that ended, for the form to start from.
-const played = () => keywordsMatchRules(match.value.rules) ?? defaultMatchRules();
-const rules = ref<KeywordsMatchRules>(played());
+// The rules of the match that ended, for the form to start from, as the room's game reads them.
+const matchOf = computed(() => games[props.room.game]?.match);
+const played = (): MatchRules =>
+  matchOf.value?.restore(match.value.rules) ?? matchOf.value?.defaults() ?? { games: MATCH_GAMES.default };
+const rules = ref<MatchRules>(played());
 const rulesValid = ref(true);
 
 function chooseAgain() {
@@ -93,7 +95,7 @@ async function next(nextRules: MatchRules | null) {
 
     <UiSheet :open="choosing" :title="t('match.again')" @close="choosing = false">
       <form class="again" @submit.prevent="rulesValid && next(rules)">
-        <MatchForm v-model="rules" v-model:valid="rulesValid" />
+        <MatchForm v-model="rules" v-model:valid="rulesValid" :game="room.game" />
         <UiButton variant="primary" type="submit" :disabled="busy || !rulesValid">{{
           t('match.againSubmit')
         }}</UiButton>

@@ -28,13 +28,13 @@ export interface GuideChapter {
 }
 
 // The site's chapter on the waiting room shows the first game's.
-const firstGame = games.keywords;
+const firstGame = games.keywords?.guide;
 
 const SITE_CHAPTERS: GuideChapter[] = [
   { id: 'account', game: null, steps: 4, scene: AccountScene, end: { try: 'account' } },
   { id: 'rooms', game: null, steps: 6, scene: RoomsScene, end: { try: 'create' } },
   ...(firstGame
-    ? [{ id: 'lobby', game: null, steps: 4, scene: firstGame.guide.Lobby, end: { try: 'friends' as const } }]
+    ? [{ id: 'lobby', game: null, steps: 4, scene: firstGame.Lobby, end: { try: 'friends' as const } }]
     : []),
   { id: 'more', game: null, steps: 4, scene: MoreScene, end: { try: 'account' } },
   { id: 'feedback', game: null, steps: 2, scene: FeedbackScene, end: { try: 'feedback' } },
@@ -42,7 +42,7 @@ const SITE_CHAPTERS: GuideChapter[] = [
 
 export const chapters: GuideChapter[] = [
   ...Object.entries(games).flatMap(([game, screens]) =>
-    screens.guide.chapters.map((chapter) => ({ ...chapter, game })),
+    (screens.guide?.chapters ?? []).map((chapter) => ({ ...chapter, game })),
   ),
   ...SITE_CHAPTERS,
 ];

@@ -44,9 +44,9 @@ async function takeOver() {
   <section class="rosters">
     <h2 class="section-title">{{ t('game.groups') }}</h2>
     <div v-for="group in groups" :key="group.team" class="group" :class="group.team">
-      <h3>{{ t(`lobby.group.${group.team}`) }}</h3>
+      <h3>{{ t(`games.keywords.groups.${group.team}`) }}</h3>
       <div class="seat">
-        <p class="role">{{ t('lobby.roles.captain') }}</p>
+        <p class="role">{{ t('games.keywords.seats.captain') }}</p>
         <PlayerName
           v-if="group.captain"
           :player="group.captain"
@@ -63,7 +63,7 @@ async function takeOver() {
         </p>
       </div>
       <div class="seat">
-        <p class="role">{{ t('lobby.roles.guesser') }}</p>
+        <p class="role">{{ t('games.keywords.seats.guesser') }}</p>
         <ul v-if="group.guessers.length" class="names">
           <li v-for="player in group.guessers" :key="player.id">
             <PlayerName
@@ -82,7 +82,7 @@ async function takeOver() {
         size="small"
         @click="sit(group.team, 'guesser')"
       >
-        {{ t('game.playFor', { group: t(`lobby.group.${group.team}`) }) }}
+        {{ t('game.playFor', { group: t(`games.keywords.groups.${group.team}`) }) }}
       </UiButton>
     </div>
     <div v-if="spectators.length" class="seat spectators">

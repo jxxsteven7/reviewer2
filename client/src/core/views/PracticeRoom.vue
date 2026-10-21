@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { type Language } from '@reviewer2/shared';
-import { BOARD_SIZE } from '@reviewer2/shared/keywords';
 import { computed, nextTick, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
+import { gameInfo } from '../../games/info';
 import { account } from '../account';
 import FieldFold from '../components/FieldFold.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
@@ -23,20 +23,23 @@ import {
   storePractice,
   type PracticeRole,
 } from '../practice';
+import BetaNote from '../components/BetaNote.vue';
 import { keepRoomSetup, keptFields, lastPractice } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
-// "Play with Reviewer 1", in the first game's card on the home page
-// (docs/architecture.md#practice-rooms): a button that opens a sheet, where an account says who
-// plays. Just the player, which is the first choice: they pick their role, the language and the
-// word lists, and start a game in a new private room, where Reviewer 1 takes the three other seats,
-// which the sheet shows. Or the player with friends: they pick the language and the word lists
-// alone, and open the waiting room of such a room, to send friends its link, sit, and have Reviewer
-// 1 take the seats nobody takes. The role and the lists are those of the account's last practice
-// room (RoomSetup), or of the browser's from before accounts kept it, or the PI and the general
-// list; the lists fold into one line, which names them, so that the whole sheet fits on a phone's
-// screen (FieldFold.vue). A guest is asked to log in or register. While the AI players don't
+// "Play with Reviewer 1", in a game's card on the home page (docs/architecture.md#practice-rooms):
+// a button that opens a sheet, where an account says who plays. Just the player, which is the first
+// choice: they pick their role, in a game that has more than one to pick (GameInfo.practiceRoles),
+// the language and the word lists, and start a game in a new private room, where Reviewer 1 takes
+// the other seats, which the sheet shows: those of the two groups in the first game, and a row of
+// avatars in a game where everyone plays alone. Or the player with friends: they pick the language
+// and the word lists alone, and open the waiting room of such a room, to send friends its link,
+// sit, and have Reviewer 1 take the seats nobody takes. The role and the lists are those of the
+// account's last practice room of the game (RoomSetup), or of the browser's from before accounts
+// kept it, or the PI and the general list; the lists fold into one line, which names them, so that
+// the whole sheet fits on a phone's screen (FieldFold.vue). A game in beta says so (BetaNote.vue).
+// A guest is asked to log in or register. While the AI players don't
 // answer, the button says so and can't be pressed; on a server without an agent, there is no
 // button at all. The tutorial may lead here with who plays, and the role, chosen as a chapter
 // taught them (`preset`): once the server has said that the AI players answer, the sheet opens
@@ -44,25 +47,30 @@ import { useBusy } from '../useBusy';
 // offline, the button, which says so, comes into sight instead. Either way the page is told that
 // the preset was `taken`, so that it offers it once.
 const { t, locale } = useI18n();
-// The first game, whose practice rooms these are.
-const GAME = 'keywords';
 // Who plays: the player alone, with Reviewer 1 in the other seats, or the player with friends.
 const WHO = ['me', 'friends'] as const;
 type Who = (typeof WHO)[number];
-const props = defineProps<{ preset?: { who: Who; role?: PracticeRole } | null }>();
+const props = defineProps<{ game: string; preset?: { who: Who; role?: PracticeRole } | null }>();
 const emit = defineEmits<{ taken: [] }>();
+const info = computed(() => gameInfo(props.game));
+// The first game's roles, which the browser also remembers, or the one that the game offers.
+const keywords = computed(() => props.game === 'keywords');
+const roles = computed(() => info.value?.practiceRoles ?? []);
 
 const router = useRouter();
 const id = useId();
 const open = ref(false);
-// The account's last practice room, as the server keeps it, or the browser's.
-const lastRole = (): PracticeRole => PRACTICE_ROLES.find((known) => known === lastPractice(GAME)?.role) ?? storedRole();
+// The account's last practice room of the game, as the server keeps it, or the browser's.
+const lastRole = (): string =>
+  keywords.value
+    ? (PRACTICE_ROLES.find((known) => known === lastPractice(props.game)?.role) ?? storedRole())
+    : (roles.value.find((known) => known === lastPractice(props.game)?.role) ?? roles.value[0] ?? '');
 const lastFields = (): string[] | null => {
-  const kept = lastPractice(GAME)?.fields;
+  const kept = lastPractice(props.game)?.fields;
   return kept && kept.length > 0 ? kept : storedFields();
 };
 const who = ref<Who>('me');
-const role = ref<PracticeRole>(lastRole());
+const role = ref<string>(lastRole());
 const chosen = ref<string[]>([]);
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
@@ -78,7 +86,10 @@ checkAgents();
 // chosen list that hasn't enough words in the new one, as in the room setup. They are chosen again
 // each time the sheet opens, from what the account has kept since.
 const usable = computed(
-  () => new Set((fields.value ?? []).filter((field) => field.counts[language.value] >= BOARD_SIZE).map(({ id }) => id)),
+  () =>
+    new Set(
+      (fields.value ?? []).filter((field) => info.value?.usable(field, language.value) ?? false).map(({ id }) => id),
+    ),
 );
 let chosenOnce = false;
 watch(
@@ -91,20 +102,27 @@ watch(
   { immediate: true },
 );
 
-// Who sits where when the player plays alone: the player in the red group as the role chosen,
-// Reviewer 1 everywhere else.
+// Who sits where when the player plays alone: in the first game, the player in the red group as
+// the role chosen, Reviewer 1 everywhere else; in a game where everyone plays alone, the player and
+// as many Reviewer 1s as the game has.
+const me = computed(() => ({ name: account.summary?.username ?? '', avatar: account.summary?.avatar ?? null }));
+const others = computed(() => Array.from({ length: info.value?.practiceAgents ?? 0 }, (_, index) => index));
 const seats = computed(() => {
-  const me = { name: account.summary?.username ?? '', avatar: account.summary?.avatar ?? null, you: true };
+  const player = { ...me.value, you: true };
   const ai = { name: persona.value, avatar: null, you: false };
   return [
-    { team: 'red', captain: role.value === 'captain' ? me : ai, guesser: role.value === 'guesser' ? me : ai },
+    {
+      team: 'red',
+      captain: role.value === 'captain' ? player : ai,
+      guesser: role.value === 'guesser' ? player : ai,
+    },
     { team: 'blue', captain: ai, guesser: ai },
   ] as const;
 });
 
 const ready = computed(() => account.summary !== null && !offline.value && chosen.value.length > 0);
 
-function show(preset?: { who: Who; role?: PracticeRole }) {
+function show(preset?: { who: Who; role?: string }) {
   formError.value = undefined;
   who.value = preset?.who ?? 'me';
   role.value = preset?.role ?? lastRole();
@@ -135,7 +153,7 @@ async function start() {
   formError.value = undefined;
   const reply = await run(() =>
     send<{ code: string }>('room:create', {
-      game: GAME,
+      game: props.game,
       language: currentLanguage(),
       fields: chosen.value,
       practice: who.value === 'me' ? { who: 'me', role: role.value } : { who: 'friends' },
@@ -148,10 +166,12 @@ async function start() {
     return;
   }
   // What the next sheet starts from, as the server keeps it: the lists, and the role when the
-  // player played alone; a room with friends leaves the role as it was.
+  // player played alone; a room with friends leaves the role as it was. The browser keeps the first
+  // game's role.
   const alone = who.value === 'me';
-  storePractice(alone ? role.value : null, chosen.value);
-  keepRoomSetup(GAME, { practice: { ...(alone ? { role: role.value } : {}), fields: [...chosen.value] } });
+  const kept = PRACTICE_ROLES.find((known) => known === role.value);
+  storePractice(alone && kept ? kept : null, chosen.value);
+  keepRoomSetup(props.game, { practice: { ...(alone ? { role: role.value } : {}), fields: [...chosen.value] } });
   await router.push(`/room/${reply.code}`);
 }
 </script>
@@ -195,12 +215,14 @@ async function start() {
           </label>
         </fieldset>
 
-        <template v-if="who === 'me'">
+        <BetaNote v-if="info?.beta" :game="game" text="beta.short" />
+
+        <template v-if="who === 'me' && keywords">
           <div class="seats">
             <section v-for="group in seats" :key="group.team" :class="['group', group.team]">
-              <h3>{{ t(`lobby.group.${group.team}`) }}</h3>
+              <h3>{{ t(`games.keywords.groups.${group.team}`) }}</h3>
               <div v-for="seat in PRACTICE_ROLES" :key="seat" class="seat">
-                <span class="role">{{ t(`home.practice.roles.${seat}`) }}</span>
+                <span class="role">{{ t(`games.keywords.practice.roles.${seat}`) }}</span>
                 <span class="who">
                   <PlayerAvatar :name="group[seat].name" :avatar="group[seat].avatar" :agent="!group[seat].you" />
                   <span class="name">{{ group[seat].name }}</span>
@@ -212,13 +234,21 @@ async function start() {
 
           <fieldset class="choices roles" :aria-labelledby="`${id}-role`">
             <legend :id="`${id}-role`">{{ t('home.practice.roleTitle') }}</legend>
-            <label v-for="option in PRACTICE_ROLES" :key="option">
+            <label v-for="option in roles" :key="option">
               <input v-model="role" type="radio" :name="`${id}-role`" :value="option" />
-              <span class="option">{{ t(`home.practice.roles.${option}`) }}</span>
-              <span class="hint">{{ t(`home.practice.roleHints.${option}`) }}</span>
+              <span class="option">{{ t(`games.keywords.practice.roles.${option}`) }}</span>
+              <span class="hint">{{ t(`games.keywords.practice.roleHints.${option}`) }}</span>
             </label>
           </fieldset>
         </template>
+        <div v-else-if="who === 'me'" class="table" :aria-label="t('home.practice.table')" role="group">
+          <span class="who">
+            <PlayerAvatar :name="me.name" :avatar="me.avatar" />
+            <span class="you">{{ t('home.practice.you') }}</span>
+          </span>
+          <PlayerAvatar v-for="index in others" :key="index" :name="persona" agent />
+        </div>
+        <p v-if="who === 'me' && !keywords" class="hint">{{ t(`games.${game}.practice.alone`) }}</p>
 
         <div class="language">
           <span
@@ -227,7 +257,7 @@ async function start() {
           <LanguageSwitch />
         </div>
 
-        <FieldFold v-model="chosen" :fields="fields" :language="language" :needed="BOARD_SIZE" />
+        <FieldFold v-model="chosen" :fields="fields" :language="language" :game="game" />
         <p v-if="fields && usable.size > 0 && chosen.length === 0" class="hint">{{ t('home.practice.chooseField') }}</p>
 
         <p class="note">{{ t('home.practice.note') }}</p>
@@ -425,6 +455,19 @@ async function start() {
   font-size: var(--text-xs);
   font-weight: var(--weight-black);
   line-height: 1.6;
+}
+
+/* The table of a game where everyone plays alone: the player, marked, and Reviewer 1 in every other
+   seat. */
+.table {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--radius-card);
+  background: var(--paper-2);
 }
 
 /* Who plays, and the role, as the room setup draws its choices. */

@@ -7,11 +7,11 @@ import { fnv1a } from '../../core/hash';
 // client's alone.
 export { verdictFor, type Verdict } from '@reviewer2/shared/keywords';
 
-// How many letters each verdict has to choose from, under game.letter.bodies in the locale files,
+// How many letters each verdict has to choose from, under games.keywords.letter.bodies in the locale files,
 // numbered from 1.
 export const LETTERS_PER_VERDICT = 3;
 
-// Where a group's letters are, under game.letter.bodies in the locale files. The loser's and a
+// Where a group's letters are, under games.keywords.letter.bodies in the locale files. The loser's and a
 // withdrawn game's go by the verdict alone. The winner's also go by how the game ended: a group
 // that found every keyword is written to about its finish, and a group whose rivals revealed
 // Reviewer 2 about its luck, since it may not have found a keyword at all.

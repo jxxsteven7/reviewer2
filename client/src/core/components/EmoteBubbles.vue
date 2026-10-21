@@ -15,7 +15,7 @@ defineProps<{ large?: boolean }>();
   <TransitionGroup tag="div" name="bubble" class="bubbles" :class="{ large }" aria-live="polite">
     <p v-for="bubble in bubbles" :key="bubble.id" class="bubble" :class="{ call: 'call' in bubble }">
       <template v-if="'call' in bubble">
-        <span v-if="bubble.team" class="group-mark" :class="bubble.team" aria-hidden="true"></span>
+        <span v-if="bubble.tint" class="group-mark" :class="bubble.tint" aria-hidden="true"></span>
         <PlayerAvatar v-else :name="bubble.username ?? bubble.name" :guest="bubble.guest" :avatar="bubble.avatar" />
         <span>{{ bubble.call }}</span>
       </template>

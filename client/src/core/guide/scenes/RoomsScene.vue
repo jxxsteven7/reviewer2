@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { type Language } from '@reviewer2/shared';
-import { BOARD_SIZE } from '@reviewer2/shared/keywords';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../../games';
@@ -18,7 +17,7 @@ import ScenePart from './ScenePart.vue';
 const props = defineProps<{ chapter: string; step: number }>();
 const { t, locale } = useI18n();
 const [game] = Object.keys(games);
-const room = computed(() => (game ? games[game]?.guide.room(t, locale.value as Language) : null));
+const room = computed(() => (game ? games[game]?.guide?.room(t, locale.value as Language) : null));
 
 // The setup's last three parts are the kind of room, who may join and whether its creator plays.
 const SPOTS: Record<number, SpotTarget> = {
@@ -36,7 +35,7 @@ useSpot(root, () => SPOTS[props.step] ?? null);
 <template>
   <div ref="root" class="rooms-scene" inert>
     <ScenePart v-if="step < 5 && game">
-      <CreateRoom :game="game" :words-needed="BOARD_SIZE" fresh />
+      <CreateRoom :game="game" fresh />
     </ScenePart>
     <ScenePart v-else-if="room">
       <ManuscriptId :code="room.code" />

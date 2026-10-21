@@ -7,6 +7,7 @@ import {
   type StreakKind,
   type Title,
 } from '@reviewer2/shared';
+import { gameOfTitle } from '../games/info';
 import { streakTitle } from './streaks';
 
 // Every title that a page shows, which a tap explains (TitleInfo.vue,
@@ -15,7 +16,7 @@ import { streakTitle } from './streaks';
 // the mark of a game on the record that an AI played in, and the titles that friends hold among an
 // account's friends. The academic rank opens its ladder instead
 // (RankLadder.vue). What each title is and how it is won is under titles, duos and
-// game.letter.explain in the locale files. A streak is the longest of its kind on the record,
+// games.<id>.letter.explain in the locale files. A streak is the longest of its kind on the record,
 // `best`, as the pills on the account page and the public profile show it, or else the run that
 // the game which has just ended brought the player to, which may fall short of their record.
 export type TitleRef =
@@ -23,7 +24,7 @@ export type TitleRef =
   | { kind: 'streak'; streak: StreakKind; length: number; best: boolean }
   | { kind: 'contribution'; contribution: FeedbackKind }
   | { kind: 'author' }
-  | { kind: 'verdict'; verdict: string }
+  | { kind: 'verdict'; game: string; verdict: string }
   | { kind: 'agents' }
   | { kind: 'duo'; duo: DuoTitle };
 
@@ -57,11 +58,23 @@ export function titleTone(title: TitleRef): 'good' | 'bad' | null {
   }
 }
 
+// Where the locale files name and explain a title that matches award or games bring: a game's own
+// under games.<id>.titles, with the game it is of, and a match's, which a match of any game may
+// bring, under account.profile.titleNames and titles.award.
+function awardKeys(title: Title): { name: string; explain: string; game: string | undefined } {
+  const game = gameOfTitle(title);
+  return game
+    ? { name: `games.${game}.titles.names.${title}`, explain: `games.${game}.titles.explain.${title}`, game }
+    : { name: `account.profile.titleNames.${title}`, explain: `titles.award.${title}`, game };
+}
+
+export const awardName = (t: Translate, title: Title): string => t(awardKeys(title).name);
+
 // The title's name, as its pill or its line shows it.
 export function titleName(t: Translate, title: TitleRef, language: Language): string {
   switch (title.kind) {
     case 'award':
-      return t(`account.profile.titleNames.${title.title}`);
+      return awardName(t, title.title);
     case 'streak':
       return streakTitle(t, title.streak, title.length, language);
     case 'contribution':
@@ -69,7 +82,7 @@ export function titleName(t: Translate, title: TitleRef, language: Language): st
     case 'author':
       return t('playerPage.author');
     case 'verdict':
-      return t(`game.letter.verdicts.${title.verdict}`);
+      return t(`games.${title.game}.letter.verdicts.${title.verdict}`);
     case 'agents':
       return t('account.profile.agentsGame');
     case 'duo':
@@ -80,8 +93,11 @@ export function titleName(t: Translate, title: TitleRef, language: Language): st
 // What the title is and how it is won, a paragraph to a line.
 export function titleExplanation(t: Translate, title: TitleRef): string[] {
   switch (title.kind) {
-    case 'award':
-      return [t(`titles.award.${title.title}`)];
+    case 'award': {
+      // A game's title says which game brings it: the records of two games are kept apart.
+      const { explain, game } = awardKeys(title.title);
+      return [t(explain), ...(game ? [t('titles.ofGame', { game: t(`games.${game}.name`) })] : [])];
+    }
     case 'streak':
       return [
         t(`titles.${title.best ? 'streak' : 'streakNow'}.${title.streak}`, { n: title.length }),
@@ -92,7 +108,7 @@ export function titleExplanation(t: Translate, title: TitleRef): string[] {
     case 'author':
       return [t('titles.author')];
     case 'verdict':
-      return [t(`game.letter.explain.${title.verdict}`)];
+      return [t(`games.${title.game}.letter.explain.${title.verdict}`)];
     case 'agents':
       return [t('titles.agents'), t('lobby.agentNote')];
     case 'duo':

@@ -1,14 +1,26 @@
-import { type Language } from '@reviewer2/shared';
-import { defaultSettings, restoreSettings } from '@reviewer2/shared/keywords';
+import { type Language, type MatchRules } from '@reviewer2/shared';
+import {
+  defaultSettings as impostorDefaults,
+  restoreSettings as restoreImpostorSettings,
+} from '@reviewer2/shared/impostor';
+import { defaultMatchRules, defaultSettings, keywordsMatchRules, restoreSettings } from '@reviewer2/shared/keywords';
 import type { Component } from 'vue';
 import type { GuideChapter } from '../core/guide/chapters';
 import type { ShownRoom } from '../core/room';
+import ImpostorGame from './impostor/ImpostorGame.vue';
+import ImpostorLobby from './impostor/ImpostorLobby.vue';
+import ImpostorRules from './impostor/ImpostorRules.vue';
+import ImpostorScreen from './impostor/ImpostorScreen.vue';
+import ImpostorReplay from './impostor/ReplayViewer.vue';
+import ImpostorSettings from './impostor/SettingsForm.vue';
+import SourceChoice from './impostor/SourceChoice.vue';
 import * as keywordsGuide from './keywords/guide';
 import KeywordsGame from './keywords/KeywordsGame.vue';
 import KeywordsLobby from './keywords/KeywordsLobby.vue';
 import KeywordsScreen from './keywords/KeywordsScreen.vue';
+import MatchOptions from './keywords/MatchOptions.vue';
 import ReplayViewer from './keywords/ReplayViewer.vue';
-import RulesSheet from './keywords/RulesSheet.vue';
+import KeywordsRules from './keywords/KeywordsRules.vue';
 import SettingsForm from './keywords/SettingsForm.vue';
 
 // Each game's screens: the waiting room, the game itself (with its result), the view for a big
@@ -18,9 +30,14 @@ import SettingsForm from './keywords/SettingsForm.vue';
 // for the settings that the form starts with in a room's language: the defaults, or those of the
 // creator's last room, which was in the language `from`, if known, as far as they still will do.
 // The home page shows the rules beside the game's name, as a `link` with the `defaults`, for the
-// settings and the language given. The game's chapters of the tutorial come before the site's
-// (core/guide/chapters.ts), whose chapter on the waiting room shows the first game's, as the game's
-// `Lobby` scene draws it, and whose chapter on rooms shares the game's invented `room`.
+// settings and the language given. A game whose words may come from elsewhere than the word lists,
+// as from a setter, has its `Source`, the choice of where they come from, which the room setup
+// shows before the lists and binds with v-model to the settings. A game with a tutorial has its
+// chapters, which come before the site's (core/guide/chapters.ts), whose chapter on the waiting
+// room shows the first game's, as the game's `Lobby` scene draws it, and whose chapter on rooms
+// shares the game's invented `room`. A game with matches has its `match`: the form of its own
+// options, which binds with v-model to them, the rules a new match starts from, and the rules of an
+// earlier match, as far as they still will do, or null.
 export interface GameScreens {
   Lobby: Component;
   Game: Component;
@@ -28,9 +45,15 @@ export interface GameScreens {
   Replay: Component;
   Settings: Component;
   Rules: Component;
+  Source?: Component;
   defaultSettings(language: Language): object;
   restoreSettings(saved: unknown, language: Language, from?: Language | null): object;
-  guide: {
+  match?: {
+    Options: Component;
+    defaults(): MatchRules;
+    restore(saved: unknown): MatchRules | null;
+  };
+  guide?: {
     chapters: Omit<GuideChapter, 'game'>[];
     Lobby: Component;
     room(t: (key: string) => string, language: Language): ShownRoom;
@@ -44,9 +67,21 @@ export const games: Record<string, GameScreens> = {
     Screen: KeywordsScreen,
     Replay: ReplayViewer,
     Settings: SettingsForm,
-    Rules: RulesSheet,
+    Rules: KeywordsRules,
     defaultSettings,
     restoreSettings,
+    match: { Options: MatchOptions, defaults: defaultMatchRules, restore: keywordsMatchRules },
     guide: keywordsGuide,
+  },
+  impostor: {
+    Lobby: ImpostorLobby,
+    Game: ImpostorGame,
+    Screen: ImpostorScreen,
+    Replay: ImpostorReplay,
+    Settings: ImpostorSettings,
+    Rules: ImpostorRules,
+    Source: SourceChoice,
+    defaultSettings: impostorDefaults,
+    restoreSettings: restoreImpostorSettings,
   },
 };

@@ -137,7 +137,7 @@ describe('FieldPicker', () => {
 
   test('offers only the lists with enough words in the language', async () => {
     const wrapper = mount(FieldPicker, {
-      props: { fields, language: 'en', needed: 25, modelValue: [], 'onUpdate:modelValue': () => {} },
+      props: { fields, language: 'en', game: 'keywords', modelValue: [], 'onUpdate:modelValue': () => {} },
       global: global(),
     });
     const boxes = wrapper.findAll('input');
@@ -159,12 +159,12 @@ describe('FieldFold', () => {
   test('unfolds and folds its lists with their height eased, and hides them once they have folded', async () => {
     vi.useFakeTimers();
     const wrapper = mount(FieldFold, {
-      props: { fields, language: 'en', needed: 25, modelValue: ['general'], 'onUpdate:modelValue': () => {} },
+      props: { fields, language: 'en', game: 'keywords', modelValue: ['general'], 'onUpdate:modelValue': () => {} },
       global: { ...global(), stubs: { transition: false } },
       attachTo: document.body,
     });
     const toggle = wrapper.get('.toggle');
-    const lists = wrapper.get('.lists').element as HTMLElement;
+    const lists = wrapper.get('.body').element as HTMLElement;
     expect(lists.style.display).toBe('none');
     await toggle.trigger('click');
     expect(toggle.attributes('aria-expanded')).toBe('true');

@@ -10,25 +10,22 @@ import {
 } from '@reviewer2/shared/keywords';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { RouterLink } from 'vue-router';
 import FieldFold from '../../core/components/FieldFold.vue';
+import LobbyHead from '../../core/components/LobbyHead.vue';
 import InviteFriends from '../../core/components/InviteFriends.vue';
 import InvitedFriends from '../../core/components/InvitedFriends.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
-import ShareTools from '../../core/components/ShareTools.vue';
+import StartDock from '../../core/components/StartDock.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import UiButton from '../../core/components/UiButton.vue';
-import UiSheet from '../../core/components/UiSheet.vue';
 import { account } from '../../core/account';
 import { fields, loadFields } from '../../core/fields';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
-import { act, reconnecting } from '../../core/socket';
+import { act } from '../../core/socket';
 import { ROOM_ACTIONS } from '../../core/useRoomPage';
-import { useStuck } from '../../core/useStuck';
-import { useStickyHeight } from '../../core/useStickyHeight';
 import InviteAgent from './InviteAgent.vue';
 import SettingsForm from './SettingsForm.vue';
 import SettingsSummary from './SettingsSummary.vue';
@@ -37,14 +34,15 @@ import { useKeywords } from './useKeywords';
 // The waiting room: the two groups with their PI and students, the viewer marked among them, the
 // spectators and the screens, the room's settings, and the chair's desk with the word lists, the
 // chair's own words and the settings. The reaction button is in the room's masthead, which stays at
-// the top of the screen in the waiting room (RoomPage.vue). The chair's start bar stands above it
-// all and stays under the masthead as the page scrolls, so that the start button is at hand
-// from the first screen to the foot of the desk: whether everyone needed is seated, or the first
-// thing still missing, and under it the shuffle, the invitation to friends for an account, and the
-// start button, sharing their row evenly however many there are. A member with an account who
-// doesn't chair the room has a bar of their own there, on one row where it fits, with the same
+// the top of the screen in the waiting room (RoomPage.vue). The chair's start bar (StartDock.vue)
+// stands above it all and stays under the masthead as the page scrolls, so that the start button is
+// at hand from the first screen to the foot of the desk: whether everyone needed is seated, or the
+// first thing still missing, and under it the shuffle, the invitation to friends for an account,
+// and the start button, sharing their row evenly however many there are. A member with an account
+// who doesn't chair the room has a bar of their own there, on one row where it fits, with the same
 // line and the invitation alone; a guest, who can't invite anyone, has none. The tag beside the
-// heading says whether the room is public, and the chair switches it there, as in the room menu.
+// heading says whether the room is public, and the chair switches it there, as in the room menu
+// (LobbyHead.vue).
 //
 // In the groups and among the spectators, a name takes two lines, the rank and the marks under it
 // (PlayerName.vue), held to the width of its list. The roles' labels stand left of the seats on a
@@ -85,7 +83,7 @@ function mayTake(team: Team): boolean {
 const problemText = (item: StartProblem) => {
   if (item.problem === 'needs_players') return t('lobby.problems.needs_players', { missing: item.missing });
   if (!('team' in item)) return t(`lobby.problems.${item.problem}`);
-  return t(`lobby.problems.${item.problem}`, { group: t(`lobby.group.${item.team}`) });
+  return t(`lobby.problems.${item.problem}`, { group: t(`games.keywords.groups.${item.team}`) });
 };
 const problemKey = (item: StartProblem) =>
   [item.problem, 'team' in item ? item.team : 'missing' in item ? item.missing : ''].join('-');
@@ -203,25 +201,6 @@ const readiness = computed(() => {
   if (first) return problemText(first);
   return t(unsavable.value ? 'lobby.unsavable' : 'lobby.ready');
 });
-// The bar's height goes into the page's scroll padding, so that a field of the desk that takes the
-// focus comes into view below it, however many rows the bar has.
-const dock = ref<HTMLElement | null>(null);
-useStickyHeight(dock);
-const stuck = useStuck(dock);
-
-// The chair switches the room between public and private from the tag beside the heading, as in
-// the room menu, and without asking again. Listing it takes an account: a guest is told so, with
-// the way to log in or register and come back to the room (AccountPage), where the server finds
-// them in their seat, the chair's included.
-const needsAccount = ref(false);
-const signIn = computed(() => ({ path: '/account', query: { next: `/room/${props.room.code}` } }));
-function switchVisibility() {
-  if (!props.room.public && !account.summary) {
-    needsAccount.value = true;
-    return;
-  }
-  void act('room:public', { public: !props.room.public });
-}
 const isMe = (player: PlayerView) => player.id === props.room.me;
 const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 </script>
@@ -231,44 +210,27 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
     <Teleport defer :to="`#${ROOM_ACTIONS}`">
       <EmoteButton />
     </Teleport>
-    <header class="lobby-head">
-      <p class="kicker">
-        {{ t('home.games.keywords.name') }} &middot; {{ t('lobby.kicker') }}
-        <button v-if="isChair" type="button" class="visibility press-host" @click="switchVisibility">
-          <span class="tag" :class="{ listed: room.public, 'press-part': !room.public }">{{
-            t(room.public ? 'room.public' : 'room.private')
-          }}</span>
-          <span class="sr-only">{{ t(room.public ? 'room.makePrivate' : 'room.makePublic') }}</span>
-        </button>
-        <span v-else-if="room.public" class="public">{{ t('room.public') }}</span>
-      </p>
-      <ShareTools :room="room" />
-    </header>
+    <LobbyHead :room="room" :is-chair="isChair" />
 
-    <div
+    <StartDock
       v-if="(isChair || mayInviteFriends) && !finished"
-      ref="dock"
-      class="start-dock"
-      :class="{ 'below-banner': reconnecting, stuck }"
+      :readiness="readiness"
+      :ready="ready"
+      :member="!isChair"
     >
-      <div class="start-bar" :class="{ member: !isChair }">
-        <div class="ready-line">
-          <p class="readiness" :class="{ ready }">{{ readiness }}</p>
-          <InvitedFriends v-if="mayInviteFriends" :room="room" @open="invitingFriends = true" />
-        </div>
-        <div class="start-actions">
-          <UiButton v-if="isChair && lineup === 'free'" size="small" @click="act('room:shuffle')">{{
-            t('lobby.shuffle')
-          }}</UiButton>
-          <UiButton v-if="mayInviteFriends" class="invite-friends" size="small" @click="invitingFriends = true">
-            {{ t('friends.invite') }}
-          </UiButton>
-          <UiButton v-if="isChair" variant="primary" size="small" :disabled="!ready || starting" @click="start">
-            {{ t('lobby.start') }}
-          </UiButton>
-        </div>
-      </div>
-    </div>
+      <template #line>
+        <InvitedFriends v-if="mayInviteFriends" :room="room" @open="invitingFriends = true" />
+      </template>
+      <UiButton v-if="isChair && lineup === 'free'" size="small" @click="act('room:shuffle')">{{
+        t('lobby.shuffle')
+      }}</UiButton>
+      <UiButton v-if="mayInviteFriends" class="invite-friends" size="small" @click="invitingFriends = true">
+        {{ t('friends.invite') }}
+      </UiButton>
+      <UiButton v-if="isChair" variant="primary" size="small" :disabled="!ready || starting" @click="start">
+        {{ t('lobby.start') }}
+      </UiButton>
+    </StartDock>
     <InviteFriends :open="invitingFriends" :room="room" @close="invitingFriends = false" />
 
     <MatchResults v-if="finished" :room="room" />
@@ -291,9 +253,9 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
 
         <div v-else class="groups">
           <section v-for="group in groups" :key="group.team" class="group" :class="group.team">
-            <h2 class="section-title">{{ t(`lobby.group.${group.team}`) }}</h2>
+            <h2 class="section-title">{{ t(`games.keywords.groups.${group.team}`) }}</h2>
             <dl>
-              <dt>{{ t('lobby.roles.captain') }}</dt>
+              <dt>{{ t('games.keywords.seats.captain') }}</dt>
               <dd class="seat-line">
                 <PlayerName
                   v-if="group.captain"
@@ -312,7 +274,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
                   <InviteAgent v-if="canInvite" :name="agentName" @click="invite(group.team, 'captain')" />
                 </template>
               </dd>
-              <dt>{{ t('lobby.roles.guesser') }}</dt>
+              <dt>{{ t('games.keywords.seats.guesser') }}</dt>
               <dd>
                 <ul v-if="group.guessers.length" class="names">
                   <li v-for="player in group.guessers" :key="player.id">
@@ -376,7 +338,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
               v-model:random="chosenRandom"
               :fields="fields"
               :language="room.language"
-              :needed="BOARD_SIZE"
+              game="keywords"
               each-game
             />
             <h3 class="label">
@@ -427,227 +389,10 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
         </section>
       </div>
     </div>
-
-    <UiSheet :open="needsAccount" :title="t('room.makePublic')" @close="needsAccount = false">
-      <div class="needs-account">
-        <p>{{ t('room.publicNeedsAccount') }}</p>
-        <RouterLink v-slot="{ href, navigate }" :to="signIn" custom>
-          <UiButton variant="primary" :href="href" @click="navigate">{{ t('room.signIn') }}</UiButton>
-        </RouterLink>
-      </div>
-    </UiSheet>
   </section>
 </template>
 
 <style scoped>
-.lobby-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-4) 0;
-}
-
-.lobby-head .kicker {
-  font-family: var(--font-display);
-  font-size: var(--text-xl);
-  font-weight: var(--weight-display);
-  font-synthesis: none;
-}
-
-.public,
-.tag {
-  display: inline-block;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--on-ink);
-  font-family: var(--font-sans);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  line-height: 1.6;
-}
-
-.public {
-  margin-left: var(--space-1);
-  vertical-align: middle;
-}
-
-/* The chair's tag is a sticker to tap, 44 px high to the finger (docs/rules/display.md): white while the
-   room is private, when it lifts and presses as a sticker does (`press-part` in base.css), and ink
-   and flat once it is listed, as the others see it. */
-.visibility {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  margin: calc(-1 * var(--space-2)) 0;
-  padding: 0 var(--space-1);
-  border: 0;
-  background: none;
-  color: inherit;
-  vertical-align: middle;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.visibility .tag {
-  padding: 2px var(--space-3);
-  border: var(--line-thin) solid var(--ink);
-  background: var(--paper);
-  box-shadow: var(--shadow-1);
-  color: var(--ink);
-}
-
-.visibility .tag.listed {
-  background: var(--ink);
-  box-shadow: none;
-  color: var(--on-ink);
-}
-
-/* The chair's start bar, which stays at the top of the screen as the page scrolls, under the
-   room's masthead, which stays there too in the waiting room (--pinned-height, PageMasthead.vue),
-   and under the banner while the page reconnects, as the game's clock does. Its background reaches
-   the edges of the screen, as a masthead's does (PageMasthead.vue), and covers its own sticker's
-   shadow, so that nothing shows through beside it, and nothing below it, where the shade falls on
-   what passes under the bar. A field of the desk that the page brings into view stays below it: the
-   bar's height, as measured (useStickyHeight), and the banner's go into the page's scroll padding. */
-.start-dock {
-  position: sticky;
-  top: var(--pinned-height, 0px);
-  z-index: 5;
-  margin-bottom: var(--space-2);
-  padding: var(--space-2) 0 var(--space-3);
-  background: var(--bg);
-  border-image: linear-gradient(var(--bg), var(--bg)) 0 fill / 0 / 0 100vmax;
-}
-
-/* The soft shadow under the bar while it is stuck under the masthead with the page passing under
-   it, as under a page's masthead (PageMasthead.vue), which draws none while this bar stays under
-   it: the lowest bar that stays has the shade. */
-.start-dock::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  height: 12px;
-  border-image: linear-gradient(var(--shade), transparent) 0 fill / 0 / 0 100vmax;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--motion);
-}
-
-.start-dock.stuck::after {
-  opacity: 1;
-}
-
-.start-dock.below-banner {
-  top: calc(var(--banner-height) + var(--pinned-height, 0px));
-}
-
-:global(html:has(.start-dock)) {
-  scroll-padding-top: calc(var(--banner-height) + var(--pinned-height, 0px) + var(--sticky-height, 8rem));
-}
-
-/* One line for whether the room is ready, and the buttons under it, or beside it where there is
-   room. The chair's buttons share their row evenly, two or three of them, or one that takes the
-   row, and a long word wraps inside its button; on a wide screen they stand beside the line, all
-   as wide. A member's bar keeps its line and its one button on one row where they fit, the line
-   wrapping rather than cut off. */
-.start-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: var(--line-strong) solid var(--ink);
-  border-radius: var(--radius-panel);
-  background: var(--paper);
-  box-shadow: var(--shadow-2);
-}
-
-/* The line, with the avatars of the friends invited at its right end. */
-.ready-line {
-  display: flex;
-  flex: 1 1 14rem;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.readiness {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--red-deep);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.readiness.ready {
-  color: var(--ink);
-}
-
-.start-actions {
-  display: grid;
-  flex: 1 1 100%;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
-  gap: var(--space-2);
-}
-
-.start-bar:not(.member) .ready-line {
-  flex-basis: 100%;
-}
-
-.start-actions > .button {
-  padding: 0 var(--space-2);
-  white-space: normal;
-  text-align: center;
-}
-
-.start-bar.member {
-  column-gap: var(--space-2);
-  padding-right: var(--space-3);
-  padding-left: var(--space-3);
-}
-
-.member .ready-line {
-  flex: 1 1 8rem;
-}
-
-.member .readiness {
-  white-space: normal;
-}
-
-.member .start-actions {
-  flex: none;
-}
-
-.member .start-actions > .button {
-  padding: 0 var(--space-3);
-}
-
-@media (min-width: 40rem) {
-  .start-bar:not(.member) .ready-line {
-    flex: 1 1 14rem;
-  }
-
-  .start-bar:not(.member) .start-actions {
-    flex: 0 1 auto;
-    grid-auto-columns: 10rem;
-  }
-}
-
-.needs-account {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 /* The sections, one under another, each as wide as the page and no wider: what can't fit in one,
    as the word lists' summary in the chair's desk, is cut short there rather than widening the
    page. */
