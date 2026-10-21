@@ -1,4 +1,5 @@
 import type { AgentAnswer } from '@reviewer2/shared';
+import { AGENT_REQUEST } from '@reviewer2/shared/schemas';
 import { describe, expect, it } from 'vitest';
 import type { GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';
@@ -98,6 +99,28 @@ describe('the AI players', () => {
     expect(rounds.size).toBeLessThan(12);
     expect(Math.max(...rounds)).toBe(12);
     expect(Math.min(...question.ballots.map((ballot) => ballot.round))).toBe(Math.min(...rounds));
+  });
+
+  it('are told a line of family emoji as the game took it, however many code points it is', () => {
+    // The game counts what is seen, 60 by default in English: a line of 60 family emoji passes its
+    // check and is 600 code points, which the request's schema counts.
+    const family = String.fromCodePoint(
+      0x1f9d1,
+      0x1f3fb,
+      0x200d,
+      0x2764,
+      0xfe0f,
+      0x200d,
+      0x1f48b,
+      0x200d,
+      0x1f9d1,
+      0x1f3fc,
+    );
+    const game = accepted(rules.describe(dealt('SSSR'), 'p1', { ...at(dealt('SSSR')), text: family.repeat(60) }, 0));
+    expect(game.lines[0]?.text).toHaveLength(900);
+    const task = agentTask(dataOf(game, ['p2']), context(['p2']), 'p2');
+    const request = { v: 1, persona: 'reviewer1', waitMs: 1, ...task?.question };
+    expect(AGENT_REQUEST.safeParse(request)).toMatchObject({ success: true });
   });
 
   it('vote, each for its own seat, among those it may vote for', () => {
