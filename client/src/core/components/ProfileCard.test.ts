@@ -60,15 +60,26 @@ const profile = (changes: Partial<ProfileView> = {}): ProfileView => ({
   avatar: null,
   rank: 'professor',
   createdAt: '2026-10-01',
-  titles: [{ title: 'best_paper', count: 2 }],
-  streaks: { wins: 3, losses: 0 },
+  titles: [
+    { game: 'keywords', title: 'best_paper', count: 2 },
+    { game: 'other', title: 'heavenly_hand', count: 1 },
+  ],
+  streaks: { keywords: { wins: 3, losses: 0 } },
   link: 'https://ann.example/(me)',
   bio: '<script>alert(1)</script> & co',
   record: {
-    ordinary: { games: 8, wins: 5 },
-    inMatches: { games: 4, wins: 2 },
-    roles: { captain: { games: 6, wins: 4 }, guesser: { games: 6, wins: 3 } },
-    matches: { played: 3, won: 1 },
+    keywords: {
+      ordinary: { games: 8, wins: 5 },
+      inMatches: { games: 4, wins: 2 },
+      roles: { captain: { games: 6, wins: 4 }, guesser: { games: 6, wins: 3 } },
+      matches: { played: 3, won: 1 },
+    },
+    other: {
+      ordinary: { games: 40, wins: 40 },
+      inMatches: { games: 0, wins: 0 },
+      roles: {},
+      matches: { played: 0, won: 0 },
+    },
   },
   contributions: [{ kind: 'bug', count: 1 }],
   likes: 4,
@@ -105,6 +116,8 @@ describe('ProfileCard', () => {
     expect(text).toContain('Registered Oct 1, 2026');
     expect(text).toContain('Best Paper Award ×2');
     expect(text).toContain('Three Submissions, Three Acceptances');
+    // Only the first game's titles and record, until the page has a tab for each game.
+    expect(text).not.toContain('Heavenly Hand');
     expect(text).toContain('<script>alert(1)</script> & co');
     expect(wrapper.find('script').exists()).toBe(false);
     const link = wrapper.find('a.link');
@@ -138,7 +151,7 @@ describe('ProfileCard', () => {
   test('shows a friend what the two have played together, and nothing of it to anyone else', async () => {
     signedIn.account.summary = { handle: 'b1b2c3d4e5f6' };
     const duo = { wonTogether: 5, lostTogether: 2, against: 4, beat: 1, beaten: 3, titles: ['coauthor' as const] };
-    signedIn.request.mockResolvedValue({ ok: true, profile: profile({ duo }) });
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile({ duo: { keywords: duo } }) });
     const wrapper = mount(ProfileCard, {
       props: { handle: 'a1b2c3d4e5f6' },
       global: global(),
@@ -169,7 +182,7 @@ describe('ProfileCard', () => {
     signedIn.account.summary = { handle: 'b1b2c3d4e5f6' };
     knowAliases([{ handle: 'a1b2c3d4e5f6', alias: 'Prof. A' }]);
     const duo = { wonTogether: 5, lostTogether: 2, against: 4, beat: 1, beaten: 3, titles: [] };
-    signedIn.request.mockResolvedValue({ ok: true, profile: profile({ duo }) });
+    signedIn.request.mockResolvedValue({ ok: true, profile: profile({ duo: { keywords: duo } }) });
     const wrapper = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });
     await flushPromises();
     expect(wrapper.get('.name').text()).toBe('Prof. A Ann');
@@ -196,7 +209,7 @@ describe('ProfileCard', () => {
         record: null,
         contributions: null,
         titles: [],
-        streaks: { wins: 2, losses: 0 },
+        streaks: { keywords: { wins: 2, losses: 0 } },
       }),
     });
     const wrapper = mount(ProfileCard, { props: { handle: 'a1b2c3d4e5f6' }, global: global() });

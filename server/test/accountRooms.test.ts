@@ -13,8 +13,8 @@ import { jpeg } from './images';
 
 const NO_MATCHES = { played: 0, won: 0, recent: [] };
 const NONE = { games: 0, wins: 0 };
-const NO_ROLES = { captain: NONE, guesser: NONE };
-const NO_RECORDS = { ordinary: NONE, inMatches: NONE, roles: NO_ROLES, recent: [], matches: NO_MATCHES };
+// The record of an account that has finished no game of any game.
+const NO_RECORDS = {};
 
 // Accounts in rooms: who a connection is, the name and seat of a player with an account, the
 // guests beside them and those who log in, what happens to connections when a login ends or the
@@ -361,17 +361,20 @@ describe('the record of games', () => {
       side: 'all',
       role: 'player',
       winner: 'all',
-      won: true,
+      result: 'won',
+      place: 1,
       verdict: 'pressed 1',
       match: null,
       agents: false,
     };
     const one = {
-      ordinary: { games: 1, wins: 1 },
-      inMatches: NONE,
-      roles: NO_ROLES,
-      recent: [record],
-      matches: NO_MATCHES,
+      test: {
+        ordinary: { games: 1, wins: 1 },
+        inMatches: NONE,
+        roles: { player: { games: 1, wins: 1 } },
+        recent: [record],
+        matches: NO_MATCHES,
+      },
     };
     expect(await records(ann)).toEqual(one);
     expect(await records(bob)).toEqual(one);
@@ -388,7 +391,7 @@ describe('the record of games', () => {
     await chair.waitFor((state) => state.phase === 'playing');
     await chair.send('test:finish');
     await chair.waitFor((state) => state.phase === 'ended');
-    expect((await records(ann)).ordinary.games).toBe(2);
+    expect((await records(ann)).test?.ordinary.games).toBe(2);
   });
 
   test('keeps nothing of a game that the chair withdrew on the records, and the game only as withdrawn', async () => {
@@ -462,7 +465,7 @@ describe('a replay', () => {
     await chair.waitFor((state) => state.phase === 'ended');
     await until(() => server.db.prepare('SELECT count(*) AS count FROM game_records').get()?.count === 1, 'the record');
     expect(server.db.prepare('SELECT count(*) AS count FROM replays').get()).toEqual({ count: 1 });
-    expect((await records(ann)).recent[0]).toMatchObject({ gameId });
+    expect((await records(ann)).test?.recent[0]).toMatchObject({ gameId });
     expect(await replay(ann, gameId)).toMatchObject({ status: 200 });
   });
 

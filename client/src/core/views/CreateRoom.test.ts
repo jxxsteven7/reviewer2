@@ -134,7 +134,7 @@ describe('the room setup', () => {
         keywords: {
           fields: ['ml', 'gone'],
           randomFields: false,
-          match: { games: 5, teams: 'switch', grouping: 'random' },
+          match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
           public: true,
           play: false,
         },
@@ -153,7 +153,7 @@ describe('the room setup', () => {
     const payload = socket.send.mock.calls[0]?.[1];
     expect(payload).toMatchObject({
       fields: ['ml'],
-      match: { games: 5, teams: 'switch', grouping: 'random' },
+      match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
       play: false,
     });
     expect(payload).not.toHaveProperty('public');
@@ -162,11 +162,37 @@ describe('the room setup', () => {
         language: 'en',
         fields: ['ml'],
         randomFields: false,
-        match: { games: 5, teams: 'switch', grouping: 'random' },
+        match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
         public: false,
         play: false,
       },
       chess: { fields: ['openings'], play: true },
+    });
+  });
+
+  test("reads a guest's rules of a match kept before they carried the game's options as if they had", async () => {
+    writeStored(
+      'r2.roomSetup',
+      JSON.stringify({
+        keywords: {
+          fields: ['ml'],
+          randomFields: false,
+          match: { games: 5, teams: 'fixed', grouping: 'choose' },
+          public: false,
+          play: true,
+        },
+      }),
+    );
+    const wrapper = await opened();
+    expect(wrapper.get<HTMLInputElement>('.match-form input[inputmode="numeric"]').element.value).toBe('5');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+    expect(socket.send.mock.calls[0]?.[1]).toMatchObject({
+      fields: ['ml'],
+      match: { games: 5, options: { teams: 'fixed', grouping: 'choose' } },
+    });
+    expect(JSON.parse(readStored('r2.roomSetup') ?? 'null')).toMatchObject({
+      keywords: { match: { games: 5, options: { teams: 'fixed', grouping: 'choose' } } },
     });
   });
 
@@ -177,7 +203,7 @@ describe('the room setup', () => {
         keywords: {
           fields: ['ml'],
           randomFields: true,
-          match: { games: 5, teams: 'switch', grouping: 'random' },
+          match: { games: 5, options: { teams: 'switch', grouping: 'random' } },
           public: true,
           play: false,
         },
@@ -354,7 +380,7 @@ describe('the room setup', () => {
     await flushPromises();
     expect(socket.send).toHaveBeenCalledWith(
       'room:create',
-      expect.objectContaining({ match: { games: 5, teams: 'switch', grouping: 'choose' } }),
+      expect.objectContaining({ match: { games: 5, options: { teams: 'switch', grouping: 'choose' } } }),
     );
   });
 

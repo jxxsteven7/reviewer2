@@ -111,8 +111,8 @@ describe('TitlePills', () => {
     const wrapper = mount(TitlePills, {
       props: {
         titles: [
-          { title: 'best_paper', count: 2 },
-          { title: 'black_hole', count: 1 },
+          { game: 'keywords', title: 'best_paper', count: 2 },
+          { game: 'keywords', title: 'black_hole', count: 1 },
         ],
         streaks: [{ kind: 'wins', length: 5, title: 'Five Submissions, Five Acceptances' }],
         contributions: [
@@ -150,9 +150,9 @@ describe('TitlePills', () => {
 
   test('shows the titles that games bring as often as they were won, each explained, in both languages', async () => {
     const titles = [
-      { title: 'heavenly_hand' as const, count: 1 },
-      { title: 'missed_deadline' as const, count: 3 },
-      { title: 'opening_record' as const, count: 2 },
+      { game: 'keywords', title: 'heavenly_hand' as const, count: 1 },
+      { game: 'keywords', title: 'missed_deadline' as const, count: 3 },
+      { game: 'keywords', title: 'opening_record' as const, count: 2 },
     ];
     const wrapper = mount(TitlePills, { props: { titles }, global: global(), attachTo: document.body });
     const pills = wrapper.findAll('li > button.pill');

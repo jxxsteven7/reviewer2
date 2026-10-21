@@ -1,7 +1,21 @@
 import { describe, expect, test } from 'vitest';
-import { DUO_MIN, DUO_TITLES, duoChanges, duoGame, duoHolders, duoViews, NO_GAMES, type DuoCounts } from './duos';
+import {
+  DUO_MIN,
+  DUO_TITLES,
+  duoChanges,
+  duoGame,
+  duoHolders,
+  duoViews,
+  NO_GAMES,
+  type DuoCounts,
+  type DuoPart,
+} from './duos';
 
 const counts = (some: Partial<DuoCounts>): DuoCounts => ({ ...NO_GAMES, ...some });
+// A part in a game of two sides or more, which one side won in the first place, the others level
+// in the second.
+const WON = (side: string): DuoPart => ({ side, result: 'won', place: 1 });
+const LOST = (side: string): DuoPart => ({ side, result: 'lost', place: 2 });
 
 describe('friend duos', () => {
   test('give each title to the friend with the most of its count, from DUO_MIN games on', () => {
@@ -45,15 +59,32 @@ describe('friend duos', () => {
     expect(views.get('cat')).toEqual({ ...counts({ wonTogether: 1 }), titles: [] });
   });
 
-  test('count a game by the sides, so that a game of more than two sides counts too', () => {
-    expect(duoGame({ side: 'red', won: true }, { side: 'red', won: true })).toEqual(counts({ wonTogether: 1 }));
-    expect(duoGame({ side: 'red', won: false }, { side: 'red', won: false })).toEqual(counts({ lostTogether: 1 }));
-    expect(duoGame({ side: 'red', won: true }, { side: 'blue', won: false })).toEqual(counts({ against: 1, beat: 1 }));
-    expect(duoGame({ side: 'red', won: false }, { side: 'blue', won: true })).toEqual(
+  test('count a game by the sides, and between opponents by their places, so that a game of more than two sides counts too', () => {
+    expect(duoGame(WON('red'), WON('red'))).toEqual(counts({ wonTogether: 1 }));
+    expect(duoGame(LOST('red'), LOST('red'))).toEqual(counts({ lostTogether: 1 }));
+    expect(duoGame(WON('red'), LOST('blue'))).toEqual(counts({ against: 1, beat: 1 }));
+    expect(duoGame(LOST('red'), WON('blue'))).toEqual(counts({ against: 1, beaten: 1 }));
+    // Two of three sides lost, level in the second place.
+    expect(duoGame(LOST('red'), LOST('green'))).toEqual(counts({ against: 1 }));
+  });
+
+  test('go by place between opponents, whether they won or not', () => {
+    // Each for themselves: second beats third, though neither won.
+    expect(duoGame({ side: 'ann', result: 'lost', place: 2 }, { side: 'bob', result: 'lost', place: 3 })).toEqual(
+      counts({ against: 1, beat: 1 }),
+    );
+    expect(duoGame({ side: 'ann', result: 'lost', place: 4 }, { side: 'bob', result: 'won', place: 1 })).toEqual(
       counts({ against: 1, beaten: 1 }),
     );
-    // Two of three sides lost.
-    expect(duoGame({ side: 'red', won: false }, { side: 'green', won: false })).toEqual(counts({ against: 1 }));
+    // Drawn against each other: level, so neither beat the other.
+    expect(duoGame({ side: 'red', result: 'drawn', place: 1 }, { side: 'blue', result: 'drawn', place: 1 })).toEqual(
+      counts({ against: 1 }),
+    );
+  });
+
+  test('count a game drawn together as neither won nor lost together', () => {
+    const drawn = { side: 'all', result: 'drawn', place: 1 } as const;
+    expect(duoGame(drawn, drawn)).toEqual(NO_GAMES);
   });
 
   test('tell of a title that the game brought a friend who played in it', () => {
@@ -84,8 +115,8 @@ describe('friend duos', () => {
       ['dan', counts({ wonTogether: 6 })],
     ]);
     const played = new Map([
-      ['bob', duoGame({ side: 'red', won: false }, { side: 'blue', won: true })],
-      ['cat', duoGame({ side: 'red', won: false }, { side: 'red', won: false })],
+      ['bob', duoGame(LOST('red'), WON('blue'))],
+      ['cat', duoGame(LOST('red'), LOST('red'))],
     ]);
     expect(duoChanges(after, played)).toEqual([
       { friend: 'cat', title: 'corejected', count: 3 },

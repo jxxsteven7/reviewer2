@@ -1,6 +1,7 @@
 import type { ContributionCount } from './contributions';
 import type { DuoView } from './duos';
 import type { Language } from './language';
+import { KEYWORDS_TITLES } from './games/keywords/titles';
 import type { MatchRules } from './match';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
@@ -144,28 +145,18 @@ export const EMAIL_STATES = ['none', 'pending', 'bound'] as const;
 export type EmailState = (typeof EMAIL_STATES)[number];
 
 // The titles that an account keeps and shows (docs/architecture.md#titles), each as often as it
-// was won. A match that runs its course awards its two to the top and the bottom of its ranking
-// (MATCH_TITLES); a game brings the others to the players with accounts whose game goes on the
-// record, each time they earn one (docs/games/keywords.md#titles): a PI who gives no clue in time
-// misses the deadline, one whose last-second clue the students follow to the letter, and a student
-// who finds one of the group's cards in the last seconds of the guesses, is a deadline hero; a
-// group's first clue may make the opening record, or win the game outright for the heavenly hand,
-// and a group whose first card is Reviewer 2 is desk rejected on the spot, or falls at the first
-// hurdle when Reviewer 2 comes later in the turn of its first clue.
+// was won, by the game it was won in. A match of any game that runs its course awards its two to
+// the top and the bottom of its ranking (MATCH_TITLES); a game brings the players with accounts
+// whose game goes on the record titles of its own, each time they earn one, which each game
+// declares (for the team word guessing game, KEYWORDS_TITLES). The records keep a title by its ID
+// alone, so no two games declare the same one (accounts.test.ts).
 export const MATCH_TITLES = ['best_paper', 'black_hole'] as const;
 export type MatchTitle = (typeof MATCH_TITLES)[number];
-export const TITLES = [
-  ...MATCH_TITLES,
-  'missed_deadline',
-  'deadline_hero',
-  'opening_record',
-  'heavenly_hand',
-  'instant_reject',
-  'first_turn_reject',
-] as const;
+export const TITLES = [...MATCH_TITLES, ...KEYWORDS_TITLES] as const;
 export type Title = (typeof TITLES)[number];
 
 export interface TitleCount {
+  game: string;
   title: Title;
   count: number;
 }
@@ -182,15 +173,16 @@ export interface ProfileSettings {
 // What the owner of an account sees of it. `id` is the account's number, from 1 up in the order
 // of registration, and `handle` the key of its public profile. `avatar` is the address of the
 // uploaded avatar, or null for the default one, which the client draws from the username. `points`
-// are those of every game finished, from which the client tells the rank (ranks.ts). `streaks` are
-// the longest runs of wins and of losses on the record, which the page shows as titles
-// (streaks.ts). `contributions` is how much of its feedback of each kind was adopted
-// (contributions.ts). `profile` is what the owner put on the public profile, with `banned` for
-// an account that the operator has barred from writing a link or a bio there. `likes` is how many
-// accounts like the profile, and `requests` how many friend requests wait for the owner's answer
-// (friends.ts). `roomSetup` is how the account last set up a room and a practice room. `played`
-// names the games that the account has finished at least one game of in a seat, practice games
-// included, by the game's ID, from which the home page tells whether to offer the game's tutorial.
+// are those of every game finished, of every game, from which the client tells the rank (ranks.ts).
+// `streaks` are the longest runs of wins and of losses on the record of each game the account has
+// finished one of, by the game's ID, which the page shows as titles (streaks.ts). `contributions`
+// is how much of its feedback of each kind was adopted (contributions.ts). `profile` is what the
+// owner put on the public profile, with `banned` for an account that the operator has barred from
+// writing a link or a bio there. `likes` is how many accounts like the profile, and `requests` how
+// many friend requests wait for the owner's answer (friends.ts). `roomSetup` is how the account
+// last set up a room and a practice room. `played` names the games that the account has finished
+// at least one game of in a seat, practice games included, by the game's ID, from which the home
+// page tells whether to offer the game's tutorial.
 export interface AccountSummary {
   id: number;
   handle: string;
@@ -200,7 +192,7 @@ export interface AccountSummary {
   email: EmailState;
   points: number;
   titles: TitleCount[];
-  streaks: BestStreaks;
+  streaks: Record<string, BestStreaks>;
   contributions: ContributionCount[];
   profile: ProfileSettings & { banned: boolean };
   likes: number;
@@ -241,12 +233,12 @@ export const MAX_ROOM_SETUP = 4096;
 
 // A public profile, as anyone sees it (docs/architecture.md#public-profiles): the account's
 // number, username, avatar, rank, the day it registered (`createdAt`, as YYYY-MM-DD in UTC, and
-// never the time), its titles and its streaks, which the page shows as titles too (streaks.ts);
-// the link and the bio its owner wrote, if any; its record and its contributions, if its owner
-// shows them, else null; and how many accounts like it. `liked` says whether the viewer likes it,
-// and `mine` whether the viewer is its owner; both are false for a guest. `duo` is what the viewer
-// has played with the owner, for a viewer who is the owner's friend and shares a game with them,
-// else null (duos.ts): nobody else learns of it.
+// never the time), its titles and its streaks of each game, which the page shows as titles too
+// (streaks.ts); the link and the bio its owner wrote, if any; its record and its contributions, if
+// its owner shows them, else null; and how many accounts like it. `liked` says whether the viewer
+// likes it, and `mine` whether the viewer is its owner; both are false for a guest. `duo` is what
+// the viewer has played with the owner in each game they share, by the game's ID, for a viewer who
+// is the owner's friend and shares a game with them, else null (duos.ts): nobody else learns of it.
 export interface ProfileView {
   id: number;
   handle: string;
@@ -255,7 +247,7 @@ export interface ProfileView {
   rank: Rank;
   createdAt: string;
   titles: TitleCount[];
-  streaks: BestStreaks;
+  streaks: Record<string, BestStreaks>;
   link: string | null;
   bio: string | null;
   record: RecordCounts | null;
@@ -263,7 +255,7 @@ export interface ProfileView {
   likes: number;
   liked: boolean;
   mine: boolean;
-  duo: DuoView | null;
+  duo: Record<string, DuoView> | null;
 }
 
 // An account that likes a profile, as the profile's owner sees it, with whether the two are
@@ -282,20 +274,27 @@ export interface AccountState {
   mail: boolean;
 }
 
+// How a game came out for a player (docs/architecture.md#game-records): won, drawn or lost.
+export const RECORD_RESULTS = ['won', 'drawn', 'lost'] as const;
+export type RecordResult = (typeof RECORD_RESULTS)[number];
+
 // One game on an account's record, as the game module described the player's part in it. For
-// the team word guessing game, `side` is the group and `role` is captain or guesser. Every game on
-// the record can be watched again (docs/architecture.md#replays), which the page asks for with the
-// game's ID. `match` says which game of a match it was, from 1, and how many games the match was to
-// have, or is null for a game outside a match. `agents` says that an AI played in it, as a player
-// or for someone who was offline, which brought nobody points (docs/architecture.md#ai-players).
+// the team word guessing game, `side` is the group and `role` is captain or guesser. `winner` is
+// the side that won, or null for a game that no one side won, and `place` the player's, 1 and one
+// more for each player who did better, so that players level share it. Every game on the record
+// can be watched again (docs/architecture.md#replays), which the page asks for with the game's ID.
+// `match` says which game of a match it was, from 1, and how many games the match was to have, or
+// is null for a game outside a match. `agents` says that an AI played in it, as a player or for
+// someone who was offline, which brought nobody points (docs/architecture.md#ai-players).
 export interface GameRecord {
   game: string;
   gameId: string;
   endedAt: string;
   side: string;
   role: string;
-  winner: string;
-  won: boolean;
+  winner: string | null;
+  result: RecordResult;
+  place: number;
   verdict: string;
   match: { game: number; games: number } | null;
   agents: boolean;
@@ -313,23 +312,39 @@ export interface MatchRecord {
   title: MatchTitle | null;
 }
 
-// How many games the account has finished and won, outside matches and in them, in each role of
-// the first game, as a group's PI (`captain`) and as a student (`guesser`), counting every game as
-// the total does, and how many matches it has finished, and finished first in, alone or level with
-// others (docs/architecture.md#accounts).
-export interface RecordCounts {
+// How many games of one game the account has finished and won, outside matches and in them, in
+// each of the game's roles, by the role's ID, as the game names them (for the team word guessing
+// game, a group's PI, `captain`, and a student, `guesser`), counting every game as the total does,
+// and how many matches of the game it has finished, and finished first in, alone or level with
+// others (docs/architecture.md#accounts). A role it has never played in isn't there.
+export interface GameCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };
-  roles: Record<'captain' | 'guesser', { games: number; wins: number }>;
+  roles: Record<string, { games: number; wins: number }>;
   matches: { played: number; won: number };
 }
 
-// The account's own record: the counts, the latest games, and the latest matches, the latest
-// first.
-export interface RecordsView extends RecordCounts {
+// The counts of a game that the account has finished no game or match of.
+export const emptyGameCounts = (): GameCounts => ({
+  ordinary: { games: 0, wins: 0 },
+  inMatches: { games: 0, wins: 0 },
+  roles: {},
+  matches: { played: 0, won: 0 },
+});
+
+// The counts of each game that the account has finished a game or a match of, by the game's ID.
+// The records of two games are never added up (docs/architecture.md#game-records).
+export type RecordCounts = Record<string, GameCounts>;
+
+// The account's own record of one game: the counts, the latest games, and the latest matches, the
+// latest first.
+export interface GameRecords extends GameCounts {
   recent: GameRecord[];
-  matches: RecordCounts['matches'] & { recent: MatchRecord[] };
+  matches: GameCounts['matches'] & { recent: MatchRecord[] };
 }
+
+// The account's own record, of each game it has finished a game or a match of, by the game's ID.
+export type RecordsView = Record<string, GameRecords>;
 
 // How many games the record page lists.
 export const RECENT_RECORDS = 20;

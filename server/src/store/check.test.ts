@@ -39,11 +39,22 @@ beforeEach(async () => {
           fields: ['general'],
           randomFields: false,
           settings: { level: 2 },
-          match: { games: 1, teams: 'switch', grouping: 'random' },
+          match: null,
           public: false,
           play: true,
         },
         practice: { role: 'player', fields: ['general'] },
+      },
+      // A match room of the first game, whose rules of a match have the game's own options.
+      keywords: {
+        room: {
+          language: 'en',
+          fields: ['general'],
+          randomFields: false,
+          match: { games: 3, options: { teams: 'switch', grouping: 'random' } },
+          public: false,
+          play: true,
+        },
       },
     }),
   );
@@ -104,7 +115,7 @@ beforeEach(async () => {
   );
   replays.add(
     kept('g3', {
-      log: log('g3', { agents: { a: 'reviewer1' } }),
+      log: log('g3', { start: { p1: 'player', p2: 'player', a: 'player' }, agents: { a: 'reviewer1' } }),
       agentLog: { v: 1, gameId: 'g3', steps: [{ t: 1, by: 'a', persona: 'reviewer1', kind: 'press', answer: {} }] },
       counts: { accounts: 2, guests: 0, agents: 1 },
       takeover: true,
@@ -116,8 +127,9 @@ beforeEach(async () => {
           accountId: null,
           side: 'all',
           role: 'player',
-          won: true,
-          feats: { presses: 2 } as never,
+          result: 'won' as const,
+          place: 1,
+          feats: { presses: 1 },
         },
         {
           playerId: 'p2',
@@ -126,7 +138,8 @@ beforeEach(async () => {
           accountId: bob.id,
           side: 'all',
           role: 'player',
-          won: true,
+          result: 'won' as const,
+          place: 1,
           feats: null,
         },
       ],
@@ -146,7 +159,8 @@ beforeEach(async () => {
     gameId,
     side: 'all',
     role: 'player',
-    won: true,
+    result: 'won' as const,
+    place: 1,
     verdict: 'pressed 1',
     points: 0,
     ...more,
@@ -290,6 +304,44 @@ describe('the check of the data', () => {
       `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.fields', json('["${'x'.repeat(4100)}"]')) WHERE id = 1`,
       ['1'],
     ],
+    // The rules of a match, whose options the game checks (MatchHooks.options): options it doesn't
+    // take, the old shape with the groups beside the games, a number of games there is not, and a
+    // match of a game that plays none.
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.keywords.room.match.options.teams', 'mixed') WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.keywords.room.match.options.rounds', 2) WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_remove(room_setup, '$.keywords.room.match.options') WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.keywords.room.match', json('{"games":3,"teams":"switch","grouping":"random"}')) WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.keywords.room.match.games', 11) WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.keywords.room.match.rounds', 2) WHERE id = 1`,
+      ['1'],
+    ],
+    [
+      'accounts whose last room setup is not in its shape',
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.match', json('{"games":1}')) WHERE id = 1`,
+      ['1'],
+    ],
     [
       'accounts that agreed to no version of the records notice there is',
       'UPDATE accounts SET consent_version = 9 WHERE id = 1',
@@ -350,23 +402,8 @@ describe('the check of the data', () => {
       ['g3:a'],
     ],
     [
-      'AI plays for someone offline that keep counts, or AI seats that keep none, or no side, role or result',
-      "UPDATE agent_plays SET feats = '{}' WHERE player_id = 'p2'",
-      ['g3:p2'],
-    ],
-    [
       'AI seats in a game whose record counts no AI player',
       "UPDATE replays SET agents = 0 WHERE game_id = 'g3'",
-      ['g3:a'],
-    ],
-    [
-      "AI seats whose counts are not in the game's shape",
-      `UPDATE agent_plays SET feats = '{"presses":"two"}' WHERE player_id = 'a'`,
-      ['g3:a'],
-    ],
-    [
-      'AI plays in a role the game does not have',
-      "UPDATE agent_plays SET role = 'spectator' WHERE player_id = 'a'",
       ['g3:a'],
     ],
     ['feedback of a kind there is not', "UPDATE feedback SET kind = 'rant' WHERE id = 4", ['4']],
@@ -465,7 +502,7 @@ describe('the check of the data', () => {
     ['records of games whose titles are not what their record brings', 'DELETE FROM titles WHERE id = 1', ['3']],
     [
       'records of games whose titles are not what their record brings',
-      "INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (1, 'test', 'opening_record', 'g1', 1)",
+      "INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (1, 'test', 'deadline_hero', 'g1', 1)",
       ['1'],
     ],
     [
@@ -496,7 +533,7 @@ describe('the check of the data', () => {
   test.each([
     [
       'records of games that disagree with the record of the game',
-      'UPDATE game_records SET won = 0 WHERE id = 1',
+      "UPDATE game_records SET result = 'lost', place = 2 WHERE id = 1",
       ['1'],
     ],
     ['records of games that an AI played in, with points', 'UPDATE game_records SET points = 3 WHERE id = 4', ['4']],
@@ -510,6 +547,144 @@ describe('the check of the data', () => {
       { rule, count: ids.length, ids },
       { rule: 'records of games that are not what their record counts', count: ids.length, ids },
     ]);
+  });
+
+  // What an AI did that is not in the form that agent_plays keeps it in is not what the game
+  // counts of it either.
+  test.each([
+    [
+      'AI plays for someone offline that keep counts, or AI seats with no side, role or result',
+      "UPDATE agent_plays SET feats = '{}' WHERE player_id = 'p2'",
+      ['g3:p2'],
+    ],
+    [
+      'AI plays for someone offline that keep counts, or AI seats with no side, role or result',
+      "UPDATE agent_plays SET side = NULL WHERE player_id = 'a'",
+      ['g3:a'],
+    ],
+    [
+      "AI seats whose counts are not in the game's shape",
+      "UPDATE agent_plays SET feats = NULL WHERE player_id = 'a'",
+      ['g3:a'],
+    ],
+    [
+      "AI seats whose counts are not in the game's shape",
+      `UPDATE agent_plays SET feats = '{"presses":"two"}' WHERE player_id = 'a'`,
+      ['g3:a'],
+    ],
+    [
+      'AI plays in a role the game does not have',
+      "UPDATE agent_plays SET role = 'spectator' WHERE player_id = 'a'",
+      ['g3:a'],
+    ],
+  ])('finds %s, and the AI play not what its record counts', (rule, sql, ids) => {
+    expect(brokenBy(sql)).toEqual([
+      { rule: 'AI plays that are not what the record of their game counts', count: ids.length, ids },
+      { rule, count: ids.length, ids },
+    ]);
+  });
+
+  // What the game counts of each AI player in a seat, and how the game came out for it and for each
+  // person it played for, against the count of the game (recount.ts).
+  test.each([
+    ["UPDATE agent_plays SET result = 'lost', place = 2 WHERE player_id = 'a'", ['g3:a']],
+    ["UPDATE agent_plays SET place = 2 WHERE player_id = 'p2'", ['g3:p2']],
+    [`UPDATE agent_plays SET feats = '{"presses":3}' WHERE player_id = 'a'`, ['g3:a']],
+    ["UPDATE agent_plays SET side = 'other' WHERE player_id = 'a'", ['g3:a']],
+    // An AI player in a seat that the log doesn't seat at the end.
+    [`UPDATE replays SET log = json_remove(log, '$.start.a') WHERE game_id = 'g3'`, ['g3:a']],
+  ])('finds AI plays that are not what the record of their game counts: %s', (sql, ids) => {
+    expect(broken(sql)).toEqual({
+      rule: 'AI plays that are not what the record of their game counts',
+      count: ids.length,
+      ids,
+    });
+  });
+
+  test("finds records whose detail is not in the game's shape, which is not what the record counts either", () => {
+    expect(brokenBy(`UPDATE game_records SET detail = '{"presses":1}' WHERE id = 1`)).toEqual([
+      { rule: "records of games whose detail is not in the game's shape", count: 1, ids: ['1'] },
+      { rule: 'records of games that are not what their record counts', count: 1, ids: ['1'] },
+    ]);
+  });
+
+  test('finds records of games that are not what their record counts in how the game came out or the place', () => {
+    expect(broken('UPDATE game_records SET place = 2 WHERE id = 1')).toEqual({
+      rule: 'records of games that are not what their record counts',
+      count: 1,
+      ids: ['1'],
+    });
+    // A game that no one side won says nothing of who won it, but its count still does, of the game
+    // and of its records.
+    expect(
+      brokenBy(
+        "UPDATE replays SET winner = NULL WHERE game_id = 'g1'; UPDATE game_records SET result = 'drawn' WHERE id = 1",
+      ),
+    ).toEqual([
+      { rule: 'finished games whose outcome is not what their record counts', count: 1, ids: ['g1'] },
+      { rule: 'records of games that are not what their record counts', count: 1, ids: ['1'] },
+    ]);
+  });
+
+  test.each([
+    "UPDATE replays SET winner = NULL WHERE game_id = 'g1'",
+    "UPDATE replays SET reason = 'level' WHERE game_id = 'g1'",
+  ])('finds finished games whose outcome is not what their record counts: %s', (sql) => {
+    expect(broken(sql)).toEqual({
+      rule: 'finished games whose outcome is not what their record counts',
+      count: 1,
+      ids: ['g1'],
+    });
+  });
+
+  test('holds no record against a game that no one side won', () => {
+    // The fake game under rules by which no one side wins, so that the records say nothing of who
+    // won, and the record of each game says so too.
+    const level: typeof fakeGame = {
+      ...fakeGame,
+      recount: (kept) => {
+        const count = fakeGame.recount?.(kept) ?? null;
+        return count && { ...count, outcome: null };
+      },
+    };
+    const checkLevel = () => checkData(db, { games: [keywordsGame, level], now: () => NOW });
+    db.exec("UPDATE replays SET winner = NULL, reason = NULL WHERE game = 'test' AND ending = 'finished'");
+    expect(checkLevel()).toEqual([]);
+    db.exec("UPDATE game_records SET result = 'drawn' WHERE id = 1");
+    expect(checkLevel()).toEqual([
+      { rule: 'records of games that are not what their record counts', count: 1, ids: ['1'] },
+    ]);
+  });
+
+  test("finds titles of a game that the game does not bring, and match titles that are not a match's", () => {
+    expect(
+      brokenBy(
+        "INSERT INTO titles (account_id, game, title, game_id, turn) VALUES (1, 'test', 'opening_record', 'g1', 1)",
+      ),
+    ).toEqual([
+      { rule: 'titles of a game that the game does not bring', count: 1, ids: ['2'] },
+      { rule: 'records of games whose titles are not what their record brings', count: 1, ids: ['1'] },
+    ]);
+    db.exec('DELETE FROM titles WHERE id = 2');
+    expect(
+      brokenBy("INSERT INTO titles (account_id, game, title, match_id) VALUES (1, 'test', 'deadline_hero', 'm1')"),
+    ).toEqual([
+      { rule: "titles of a match that are not a match's", count: 1, ids: ['3'] },
+      { rule: 'records of matches whose title is not what their games award', count: 1, ids: ['1'] },
+    ]);
+  });
+
+  test('takes the rules of a match without options for a game whose matches have none, and only those', () => {
+    const plain = { ...fakeGame, match: { setup: (data: unknown) => data, score: () => null, lineup: () => [] } };
+    const checked = () => checkData(db, { games: [keywordsGame, plain], now: () => NOW });
+    db.exec(
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.match', json('{"games":2}')) WHERE id = 1`,
+    );
+    expect(checked()).toEqual([]);
+    db.exec(
+      `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.match.options', json('{}')) WHERE id = 1`,
+    );
+    expect(checked()).toEqual([{ rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] }]);
   });
 
   test('finds a game whose language is none', () => {
@@ -535,6 +710,7 @@ describe('the check of the data', () => {
   test('finds a title that is not one, which the record does not bring either', () => {
     expect(brokenBy("UPDATE titles SET title = 'worst_paper'")).toEqual([
       { rule: 'titles that are not ones there are', count: 1, ids: ['1'] },
+      { rule: 'titles of a game that the game does not bring', count: 1, ids: ['1'] },
       { rule: 'records of games whose titles are not what their record brings', count: 1, ids: ['3'] },
     ]);
   });
@@ -554,13 +730,14 @@ describe('the check of the data', () => {
     const many = Array.from(
       { length: 15 },
       (_, i) =>
-        `('g3', 'x${String(i).padStart(2, '0')}', 'test', 'reviewer3', 0, NULL, 'all', 'player', 1, '{"presses":1}')`,
+        `('g3', 'x${String(i).padStart(2, '0')}', 'test', 'reviewer3', 0, NULL, 'all', 'player', 'won', 1, '{"presses":1}')`,
     ).join(', ');
-    expect(broken(`INSERT INTO agent_plays VALUES ${many}`)).toEqual({
-      rule: 'AI plays of a persona there is not',
-      count: 15,
-      ids: Array.from({ length: IDS_SHOWN }, (_, i) => `g3:x${String(i).padStart(2, '0')}`),
-    });
+    // Players the log doesn't seat either.
+    const ids = Array.from({ length: IDS_SHOWN }, (_, i) => `g3:x${String(i).padStart(2, '0')}`);
+    expect(brokenBy(`INSERT INTO agent_plays VALUES ${many}`)).toEqual([
+      { rule: 'AI plays that are not what the record of their game counts', count: 15, ids },
+      { rule: 'AI plays of a persona there is not', count: 15, ids },
+    ]);
   });
 
   test('looks for the avatar files where it is told to, and names a file that no account shows by its start', () => {

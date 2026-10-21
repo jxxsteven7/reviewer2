@@ -20,8 +20,8 @@ const { t, locale } = useI18n();
 const POINTS = 260;
 const rank = computed(() => t(`ranks.names.${rankFor(POINTS)}`));
 const TITLES: TitleCount[] = [
-  { title: 'heavenly_hand', count: 1 },
-  { title: 'deadline_hero', count: 2 },
+  { game: 'keywords', title: 'heavenly_hand', count: 1 },
+  { game: 'keywords', title: 'deadline_hero', count: 2 },
 ];
 const streaks = computed(() => streakTitles(t, { wins: 3, losses: 0 }, locale.value as Language));
 const DUO: DuoTitle[] = ['coauthor'];

@@ -7,7 +7,8 @@ import {
   type RoomView,
   type Team,
 } from '@reviewer2/shared';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import type { AgentLogData } from '../src/core/agentLog';
 import { FRESH_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
 import type { GameLogData } from '../src/core/gameLog';
 import { WordLibrary } from '../src/core/words';
@@ -32,6 +33,14 @@ import {
 // what a game with them leaves on the record. The agent plays by a script (ScriptedAgent), and the
 // server's clock moves only when a test moves it, so every pace and every wait is exact.
 
+// The certified versions of the AI, as the room sees them (server/src/core/agentLog.ts): none, as
+// in the code, but in the test that certifies the script.
+const versions = vi.hoisted(() => ({ certified: [] as { prompt: string; model: string }[] }));
+vi.mock('../src/core/agentLog', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../src/core/agentLog')>();
+  return { ...original, certifiedPlay: (log: AgentLogData | null) => original.certifiedPlay(log, versions.certified) };
+});
+
 let server: TestServer;
 let agent: ScriptedAgent;
 let clients: TestClient[];
@@ -45,6 +54,7 @@ beforeEach(async () => {
 afterEach(async () => {
   for (const client of clients) client.close();
   await server.close();
+  versions.certified = [];
 });
 
 // Sixty words of which no two clash, as in keywords.test.ts.
@@ -85,7 +95,7 @@ const guessQuestions = () => agent.questions.filter((request) => request.kind ==
 // A moment for the answers of the agent, which come at once, to be sent on.
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 const NO_TIMERS: Partial<KeywordsSettings> = { firstClueTime: 0, clueTime: 0, guessTime: 0 };
-const RULES = { games: 2, teams: 'switch', grouping: 'random' };
+const RULES = { games: 2, options: { teams: 'switch', grouping: 'random' } };
 
 async function expectOk(reply: Promise<Reply>) {
   expect(await reply).toEqual({ ok: true });
@@ -730,10 +740,10 @@ describe('a game that an AI played in', () => {
     await ann.waitFor((state) => state.phase === 'ended', 'the end');
     const account = server.accounts.byName('Ann');
     const records = server.db
-      .prepare('SELECT points, won FROM game_records WHERE account_id = ?')
+      .prepare('SELECT points, result, place FROM game_records WHERE account_id = ?')
       .all(account?.id ?? 0);
-    expect(records).toEqual([{ points: 0, won: 1 }]);
-    expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
+    expect(records).toEqual([{ points: 0, result: 'won', place: 1 }]);
+    expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({});
     // A game with AI players counts as one the account has played, for the home page's tutorial.
     expect((await browser.account())?.played).toEqual(['keywords']);
     const [row] = kept();
@@ -753,23 +763,25 @@ describe('a game that an AI played in', () => {
         persona: 'reviewer1',
         number: 0,
         live: { players: 2, rooms: 1 },
-        games: 1,
-        seats: 2,
-        wins: 0,
-        roles: { captain: { seats: 1, wins: 0 }, guesser: { seats: 1, wins: 0 } },
-        clues: 1,
-        found: 0,
-        reviewer2: 1,
-        takeovers: 0,
-        best: null,
-        you: { wonTogether: 0, lostTogether: 0, beat: 1, beaten: 0, takenOver: 0 },
+        // What it did in the first game, the only one it has played, which adds up its seats.
+        games: {
+          keywords: {
+            games: 1,
+            seats: 2,
+            wins: 0,
+            roles: { captain: { seats: 1, wins: 0 }, guesser: { seats: 1, wins: 0 } },
+            takeovers: 0,
+            feats: { clues: 1, found: 0, reviewer2: 1, best: null },
+            you: { wonTogether: 0, lostTogether: 0, beat: 1, beaten: 0, takenOver: 0 },
+          },
+        },
       },
     });
     // Anyone may read it, and a guest is told nothing of their own.
     const guest = new Browser(server.url);
     expect((await guest.request('/api/agent/reviewer1')).body).toMatchObject({
       ok: true,
-      profile: { games: 1, you: null },
+      profile: { games: { keywords: { games: 1, you: null } } },
     });
     expect(await guest.request('/api/agent/reviewer9')).toMatchObject({
       status: 404,
@@ -782,6 +794,32 @@ describe('a game that an AI played in', () => {
     const [after] = kept();
     expect({ ...after, log: null }).toEqual({ ...row, log: null });
     expect(JSON.parse(after?.log ?? '{}')).toEqual({ ...JSON.parse(row?.log ?? '{}'), deleted: [ann.me] });
+  });
+
+  test('brings points once every answer the AI gave came from a certified version', async () => {
+    versions.certified = [{ model: SCRIPT_NOTE.model, prompt: SCRIPT_NOTE.prompt }];
+    // As above: the AI student reveals Reviewer 2 at once, and Ann's group wins.
+    agent.play = (request) => {
+      if (request.kind === 'clue') return scriptedPlay(request);
+      const cards = (server.app.rooms.all()[0]?.data as KeywordsData).game?.cards ?? [];
+      const reviewer2 = cards.findIndex((card) => card.color === 'reviewer2');
+      return { ok: true, kind: 'guess', picks: [reviewer2], reason: 'A hunch.', note: SCRIPT_NOTE };
+    };
+    const { ann, code } = await againstAi();
+    server.advance(CLUE_PACE_MS);
+    await until(() => truth(code).phase === 'guess', 'the clue');
+    await until(() => agent.questions.some((request) => request.kind === 'guess'), 'the guess question');
+    server.advance(GUESS_PACE_MS);
+    const ended = await ann.waitFor((state) => state.phase === 'ended', 'the end');
+    // The snapshot that ends the game carries the points, as for a game without AI players, and
+    // the record keeps Ann's; the record of the game still says that an AI played.
+    const mine = ended.points.find(({ playerId }) => playerId === ann.me);
+    expect(mine?.points).toBeGreaterThan(0);
+    const account = server.accounts.byName('Ann');
+    expect(server.db.prepare('SELECT points FROM game_records WHERE account_id = ?').all(account?.id ?? 0)).toEqual([
+      { points: mine?.points },
+    ]);
+    expect(server.db.prepare('SELECT agents FROM replays').all()).toEqual([{ agents: 2 }]);
   });
 
   test('keeps in the AI log an answer that came too late, and none from the game before', async () => {
@@ -858,12 +896,12 @@ describe('a game that an AI played in', () => {
     expect(
       server.db
         .prepare(
-          'SELECT r.points, r.won, g.takeover FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-            'WHERE r.account_id = ?',
+          'SELECT r.points, r.result, r.place, g.takeover FROM game_records AS r ' +
+            'JOIN replays AS g ON g.game_id = r.game_id WHERE r.account_id = ?',
         )
         .all(account?.id ?? 0),
-    ).toEqual([{ points: 0, won: 1, takeover: 1 }]);
-    expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({ wins: 0, losses: 0 });
+    ).toEqual([{ points: 0, result: 'won', place: 1, takeover: 1 }]);
+    expect(server.accounts.records.streaks(account?.id ?? 0)).toEqual({});
     const [row] = kept();
     const log = JSON.parse(row?.log ?? '{}') as GameLogData;
     expect(log.agents).toBeUndefined();
@@ -881,11 +919,14 @@ describe('a game that an AI played in', () => {
     // The AI's page counts the game it played in for Cat, a guest, and no game as an AI player.
     expect(
       server.db
-        .prepare('SELECT player_id AS id, takeover, account_id AS account, side, role, won FROM agent_plays')
+        .prepare('SELECT player_id AS id, takeover, account_id AS account, side, role, result, place FROM agent_plays')
         .all(),
-    ).toEqual([{ id: catId, takeover: 1, account: null, side: 'red', role: 'captain', won: 0 }]);
+    ).toEqual([{ id: catId, takeover: 1, account: null, side: 'red', role: 'captain', result: 'lost', place: 2 }]);
     const page = await new Browser(server.url).request('/api/agent/reviewer1');
-    expect(page.body).toMatchObject({ ok: true, profile: { games: 0, takeovers: 1, best: null } });
+    expect(page.body).toMatchObject({
+      ok: true,
+      profile: { games: { keywords: { games: 0, takeovers: 1, feats: null } } },
+    });
   });
 
   test('brings nobody a title, not the instant desk reject of a group whose first card was Reviewer 2', async () => {
@@ -908,9 +949,9 @@ describe('a game that an AI played in', () => {
     await expectOk(bob.send('keywords:reveal', { gameId: blue.gameId, turn: blue.turn, card: reviewer2 }));
     await ann.waitFor((state) => state.phase === 'ended', 'the end');
     const account = server.accounts.byName('Ann');
-    expect(server.db.prepare('SELECT won FROM game_records WHERE account_id = ?').all(account?.id ?? 0)).toEqual([
-      { won: 0 },
-    ]);
+    expect(
+      server.db.prepare('SELECT result, place FROM game_records WHERE account_id = ?').all(account?.id ?? 0),
+    ).toEqual([{ result: 'lost', place: 2 }]);
     expect(server.db.prepare('SELECT count(*) AS n FROM titles').get()).toEqual({ n: 0 });
     expect((ann.state?.data as KeywordsRoomData).titles).toEqual({});
   });
@@ -938,15 +979,16 @@ describe('a game that an AI played in', () => {
     expect(page.body).toMatchObject({
       ok: true,
       profile: {
-        games: 1,
-        seats: 2,
-        wins: 2,
-        roles: { captain: { seats: 1, wins: 1 }, guesser: { seats: 1, wins: 1 } },
-        clues: 1,
-        found: 2,
-        reviewer2: 0,
-        best: { word: 'zebra', found: 2 },
-        you: { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 1, takenOver: 0 },
+        games: {
+          keywords: {
+            games: 1,
+            seats: 2,
+            wins: 2,
+            roles: { captain: { seats: 1, wins: 1 }, guesser: { seats: 1, wins: 1 } },
+            feats: { clues: 1, found: 2, reviewer2: 0, best: { word: 'zebra', found: 2 } },
+            you: { wonTogether: 0, lostTogether: 0, beat: 0, beaten: 1, takenOver: 0 },
+          },
+        },
       },
     });
   });

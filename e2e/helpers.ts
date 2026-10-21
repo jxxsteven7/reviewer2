@@ -13,9 +13,9 @@ import {
   checkClue,
   PROFILE_PATH,
   type CardColor,
+  type KeywordsMatchRules,
   type KeywordsRoomData,
   type KeywordsView,
-  type MatchRules,
   type RoomView,
   type Team,
 } from '@reviewer2/shared';
@@ -340,13 +340,13 @@ export async function setSetting(page: Page, label: string, value: number): Prom
 }
 
 // Makes the room a match on the room setup, with these rules.
-export async function chooseMatch(page: Page, language: Language, rules: MatchRules): Promise<void> {
+export async function chooseMatch(page: Page, language: Language, rules: KeywordsMatchRules): Promise<void> {
   const text = TEXT[language];
   await page.getByRole('radio', { name: new RegExp(`^${text.match.match}`) }).check();
   const form = page.locator('.match-form');
   await form.getByLabel(text.match.games).fill(String(rules.games));
-  await form.getByLabel(text.match.teamsChoice[rules.teams], { exact: true }).check();
-  await form.getByLabel(text.match.groupingChoice[rules.grouping], { exact: true }).check();
+  await form.getByLabel(text.match.teamsChoice[rules.options.teams], { exact: true }).check();
+  await form.getByLabel(text.match.groupingChoice[rules.options.grouping], { exact: true }).check();
 }
 
 // Whether the page, or the project a test runs in, is a phone's: narrower than the three columns

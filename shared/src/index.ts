@@ -25,6 +25,7 @@ export * from './games/keywords/custom';
 export * from './games/keywords/replay';
 export * from './games/keywords/chat';
 export * from './games/keywords/letters';
+export * from './games/keywords/match';
 export * from './games/keywords/settings';
 export * from './games/keywords/score';
 export * from './games/keywords/titles';

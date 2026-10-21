@@ -1,8 +1,8 @@
-import { defaultSettings, type AgentAnswer, type Seat } from '@reviewer2/shared';
+import { defaultSettings, type AgentAnswer, type CardColor, type ClueRecord, type Seat } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
 import type { AgentTask, GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';
-import { agentMove, agentProblems, agentTask } from './agents';
+import { agentMove, agentProblems, agentTask, featsOf, totalsOf } from './agents';
 import type { KeywordsData } from './index';
 import { emptySeating, shuffleGroups } from './seats';
 import type { KeywordsState } from './state';
@@ -10,7 +10,7 @@ import { gameState } from './testing';
 
 // What the game makes of AI players (docs/games/keywords.md#ai-players): what keeps a game with them
 // from starting, what each seat is asked and what it is told, the messages an answer makes, and the
-// chair's shuffle around them.
+// chair's shuffle around them, and what its page counts of the games they played.
 
 const NOTE = { model: 'm', prompt: 'p', ms: 1 };
 
@@ -177,5 +177,46 @@ describe('the shuffle with AI players', () => {
       expect(red.every((id) => shuffled.seats.get(id)?.role === 'guesser')).toBe(true);
       expect(blue.filter((id) => shuffled.seats.get(id)?.role === 'captain')).toHaveLength(1);
     }
+  });
+});
+
+describe('what the page of an AI counts', () => {
+  const guess = (card: number, color: CardColor, player: string) => ({ card, color, player, at: 0 });
+  const clue = (turn: number, word: string, captain: string, guesses: ClueRecord['guesses']): ClueRecord => ({
+    turn,
+    team: 'red',
+    at: 0,
+    word,
+    count: 2,
+    guesses,
+    captain,
+  });
+
+  test("counts the clues of a seat, the group's cards they found, its best clue and the Reviewer 2 it revealed", () => {
+    const history: ClueRecord[] = [
+      clue(1, 'Pair', 'ai-pi', [guess(0, 'red', 'rob'), guess(1, 'red', 'ai-student')]),
+      // A clue that found nothing is no best one, and the next clue that finds as many is not.
+      clue(3, 'Dud', 'ai-pi', [guess(10, 'blue', 'rob')]),
+      clue(5, 'Same', 'ai-pi', [guess(2, 'red', 'rob'), guess(3, 'red', 'rob'), guess(4, 'reviewer2', 'ai-student')]),
+      // The turn in which the time ran out has no clue.
+      { turn: 7, team: 'red', at: 0, word: null, count: null, guesses: [], timedOut: true, captain: 'ai-pi' },
+    ];
+    const game = { ...gameState(), history };
+    expect(featsOf(game, 'ai-pi')).toEqual({ clues: 3, found: 4, reviewer2: 0, best: { word: 'Pair', found: 2 } });
+    expect(featsOf(game, 'ai-student')).toEqual({ clues: 0, found: 0, reviewer2: 1, best: null });
+    expect(featsOf(null, 'ai-pi')).toEqual({ clues: 0, found: 0, reviewer2: 0, best: null });
+  });
+
+  test('adds up its seats, the earliest of the clues that found the most being the best', () => {
+    expect(totalsOf([])).toEqual({ clues: 0, found: 0, reviewer2: 0, best: null });
+    expect(
+      totalsOf([
+        { clues: 2, found: 3, reviewer2: 0, best: { word: 'One', found: 2 } },
+        { clues: 0, found: 0, reviewer2: 1, best: null },
+        { clues: 1, found: 2, reviewer2: 0, best: { word: 'Two', found: 2 } },
+        { clues: 4, found: 5, reviewer2: 2, best: { word: 'Three', found: 3 } },
+        { clues: 1, found: 3, reviewer2: 0, best: { word: 'Four', found: 3 } },
+      ]),
+    ).toEqual({ clues: 8, found: 13, reviewer2: 3, best: { word: 'Three', found: 3 } });
   });
 });

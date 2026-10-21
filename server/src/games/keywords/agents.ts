@@ -1,14 +1,56 @@
-import { TEAMS, type AgentAnswer, type AgentGame, type StartProblem } from '@reviewer2/shared';
+import {
+  emptyKeywordsFeats,
+  TEAMS,
+  type AgentAnswer,
+  type AgentGame,
+  type KeywordsAgentFeats,
+  type StartProblem,
+} from '@reviewer2/shared';
 import { KEYWORDS_MESSAGES } from '@reviewer2/shared/schemas';
 import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
 import type { KeywordsData } from './index';
 import { seatOf, type Seating } from './seats';
+import type { KeywordsState } from './state';
 import { viewFor } from './view';
 
 // The AI players' part of the game (docs/games/keywords.md#ai-players): where an AI player may sit,
 // what its seat is to do in each phase, and the messages that the agent's answer makes, which the
 // rules judge as they judge anyone's. Whatever the agent is told comes from the seat's own view
 // (view.ts), so an AI student knows no more of the key than a student does.
+
+// What an AI player did in a game that finished, for its page (GameModule.agentFeats): the clues it
+// gave as its group's PI, with how many of the group's cards were found in each of their turns, the
+// clue that found the most, and how often it revealed Reviewer 2 as a student. The same is worked
+// out again from the record of the game when the rules change (replay.ts).
+export function featsOf(game: KeywordsState | null, playerId: string): KeywordsAgentFeats {
+  const feats = emptyKeywordsFeats();
+  for (const record of game?.history ?? []) {
+    if (record.captain === playerId && record.word !== null) {
+      const found = record.guesses.filter(({ color }) => color === record.team).length;
+      feats.clues += 1;
+      feats.found += found;
+      if (found > 0 && (feats.best === null || found > feats.best.found)) feats.best = { word: record.word, found };
+    }
+    feats.reviewer2 += record.guesses.filter(
+      ({ player, color }) => player === playerId && color === 'reviewer2',
+    ).length;
+  }
+  return feats;
+}
+
+// What an AI player did in all its seats, from what featsOf() gave for each, in the order the games
+// ended, for its page (GameModule.agentTotals): the counts added up, and the earliest of the clues
+// that found the most.
+export function totalsOf(seats: readonly unknown[]): KeywordsAgentFeats {
+  const totals = emptyKeywordsFeats();
+  for (const seat of seats as readonly KeywordsAgentFeats[]) {
+    totals.clues += seat.clues;
+    totals.found += seat.found;
+    totals.reviewer2 += seat.reviewer2;
+    if (seat.best !== null && (totals.best === null || seat.best.found > totals.best.found)) totals.best = seat.best;
+  }
+  return totals;
+}
 
 // How long an AI waits before its moves, in milliseconds, so that people can follow it: a PI gives
 // the clue no sooner than this after the turn began, and a student reveals its first card no sooner

@@ -7,6 +7,22 @@ import type { ClueRecord, GameResult, Team } from './types';
 // Two pairs: the heavenly hand outdoes the opening record, and the instant desk reject the fall at
 // the first hurdle, so a group gets one of each pair at most.
 
+// The game's titles (docs/architecture.md#titles), which a game brings the players with accounts
+// whose game goes on the record, each time they earn one: a PI who gives no clue in time misses the
+// deadline, one whose last-second clue the students follow to the letter, and a student who finds
+// one of the group's cards in the last seconds of the guesses, is a deadline hero; a group's first
+// clue may make the opening record, or win the game outright for the heavenly hand, and a group
+// whose first card is Reviewer 2 is desk rejected on the spot, or falls at the first hurdle when
+// Reviewer 2 comes later in the turn of its first clue.
+export const KEYWORDS_TITLES = [
+  'missed_deadline',
+  'deadline_hero',
+  'opening_record',
+  'heavenly_hand',
+  'instant_reject',
+  'first_turn_reject',
+] as const;
+
 // The least number of the first clue that can make the opening record.
 export const OPENING_RECORD = 4;
 

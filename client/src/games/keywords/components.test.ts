@@ -1849,7 +1849,7 @@ describe('GameRosters', () => {
     const data = view.data as KeywordsRoomData;
     const match: RoomView['match'] = {
       id: 'm1',
-      rules: { games: 3, teams: 'fixed', grouping: 'choose' },
+      rules: { games: 3, options: { teams: 'fixed', grouping: 'choose' } },
       played: 1,
       status: 'on',
       game: 2,
@@ -2815,7 +2815,7 @@ describe('KeywordsGame', () => {
     });
     const match: RoomView['match'] = {
       id: 'm1',
-      rules: { games: 3, teams: 'fixed', grouping: 'choose' },
+      rules: { games: 3, options: { teams: 'fixed', grouping: 'choose' } },
       played: 1,
       status: 'on',
       game: 2,
@@ -2886,7 +2886,7 @@ describe('KeywordsGame', () => {
     });
     const match: RoomView['match'] = {
       id: 'm1',
-      rules: { games: 2, teams: 'fixed', grouping: 'choose' },
+      rules: { games: 2, options: { teams: 'fixed', grouping: 'choose' } },
       played: 1,
       status: 'on',
       game: 1,
@@ -2930,7 +2930,7 @@ describe('KeywordsGame', () => {
     });
     const match: MatchView = {
       id: 'm1',
-      rules: { games: 2, teams: 'fixed', grouping: 'random' },
+      rules: { games: 2, options: { teams: 'fixed', grouping: 'random' } },
       played: 1,
       status: 'on',
       game: 1,

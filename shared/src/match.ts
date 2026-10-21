@@ -8,29 +8,14 @@ import type { MatchTitle } from './accounts';
 // How many games a match has, which the chair chooses when creating it.
 export const MATCH_GAMES = { min: 1, max: 10, default: 3 } as const;
 
-// 'fixed': the groups stay the same for the whole match. 'switch': they may change after every
-// game.
-export const MATCH_TEAMS = ['fixed', 'switch'] as const;
-export type MatchTeams = (typeof MATCH_TEAMS)[number];
-
-// How the groups are made: drawn at random by the server, or chosen by the players in the waiting
-// room. With fixed groups, this is how the first game's groups are made; with groups that may
-// change, how they are made for every game.
-export const MATCH_GROUPINGS = ['random', 'choose'] as const;
-export type MatchGrouping = (typeof MATCH_GROUPINGS)[number];
-
+// The rules of a match: how many games it has, which are the room's, and the game's own options,
+// such as how its players are grouped from one game to the next (for the team word guessing game,
+// KeywordsMatchOptions), which the game checks (MatchHooks.options on the server); a game with no
+// options of its own has none.
 export interface MatchRules {
   games: number;
-  teams: MatchTeams;
-  grouping: MatchGrouping;
+  options?: unknown;
 }
-
-// By default the groups are drawn again for every game.
-export const defaultMatchRules = (): MatchRules => ({
-  games: MATCH_GAMES.default,
-  teams: 'switch',
-  grouping: 'random',
-});
 
 // Whether the number of games will do: a whole number in range. The room setup checks it with
 // this, and the server's schema (schemas.ts) by MATCH_GAMES.

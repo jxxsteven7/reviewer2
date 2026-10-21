@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { defaultMatchRules, LANGUAGES, type Language, type MatchRules } from '@reviewer2/shared';
+import {
+  defaultMatchRules,
+  keywordsMatchRules,
+  LANGUAGES,
+  type KeywordsMatchRules,
+  type Language,
+} from '@reviewer2/shared';
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
@@ -14,7 +20,7 @@ import { errorKey } from '../errors';
 import { fields, loadFields } from '../fields';
 import { currentLanguage } from '../i18n';
 import { DEFAULT_FIELDS } from '../practice';
-import { keepRoomSetup, keptFields, keptMatch, lastRoom } from '../roomSetup';
+import { keepRoomSetup, keptFields, lastRoom } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
@@ -60,9 +66,10 @@ const settings = ref<object | undefined>(
 );
 const settingsValid = ref(true);
 // An ordinary room, or a match by these rules.
-const lastMatch = keptMatch(last?.match);
+// The first game's, the only one with matches so far.
+const lastMatch = keywordsMatchRules(last?.match);
 const isMatch = ref(lastMatch !== null);
-const match = ref<MatchRules>(lastMatch ?? defaultMatchRules());
+const match = ref<KeywordsMatchRules>(lastMatch ?? defaultMatchRules());
 const matchValid = ref(true);
 const group = useId();
 // Private, as rooms always were, or public (docs/architecture.md#public-rooms).

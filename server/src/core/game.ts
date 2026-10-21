@@ -6,6 +6,7 @@ import type {
   BoardWord,
   Language,
   MatchRules,
+  RecordResult,
   RoomPhase,
   Title,
 } from '@reviewer2/shared';
@@ -36,11 +37,12 @@ export interface GameContext {
   playerIds(): string[];
   // How many times the account of a player, also of one who has left during the current game, has
   // won a title, as its record has it, or null when there is no count to give: for a guest, who
-  // keeps none, in a game that an AI has played in, which awards none
+  // keeps none, in a game that awards none, as one that an AI has played in
   // (docs/architecture.md#ai-players), and when the record can't be read.
   titleCount(playerId: string, title: Title): number | null;
   // Whether the game's titles go to a player, also to one who has left during the current game:
-  // to one with an account, where the server keeps accounts, in a game that no AI has played in.
+  // to one with an account, where the server keeps accounts, in a game that awards them, which one
+  // that an AI has played in doesn't (docs/architecture.md#ai-players).
   awardsTitles(playerId: string): boolean;
 }
 
@@ -75,24 +77,30 @@ export interface KeptCount extends KeptGame {
 }
 
 // What a kept game that finished counts under the rules of today (GameModule.recount): everyone's
-// part in it as it ended, as results() gave it then, by the player ID each had at the end, and the
+// part in it as it ended, as results() gave it then, by the player ID each had at the end, the
 // points of everyone who played for a side, by member key, as the match scores a game
-// (MatchHooks.score).
+// (MatchHooks.score), how it came out, as outcome() gave it then, or null for a game that can't
+// say, and what the game counts of an AI player in a seat, as agentFeats() gave it then, which a
+// game that counts that gives, and one that doesn't never does (store/recount.ts).
 export interface Recount {
   results: PlayerResult[];
   scores: MatchScore[];
+  outcome: GameOutcome | null;
+  feats?(playerId: string): object;
 }
 
 // What the rows of a game's data hold in the game's own shape (GameModule.shapes), for the check of
 // the data (store/check.ts), which names no game: whether a value is how one of its games began
 // (`setup`, as GameModule.setup gives it), the game's settings as a room setup keeps them
 // (`settings`, as GameModule.settingsOf gives them), one of the roles that its records name
-// (`role`), and what it counts of an AI player in a seat (`feats`, as GameModule.agentFeats gives
-// it).
+// (`role`), what a record counts of a player's game (`detail`, as PlayerResult.detail gives it),
+// and what it counts of an AI player in a seat (`feats`, as GameModule.agentFeats gives it, or null
+// for a game that counts nothing of them).
 export interface GameShapes {
   setup(value: unknown): boolean;
   settings(value: unknown): boolean;
   role(role: string): boolean;
+  detail(value: unknown): boolean;
   feats(value: unknown): boolean;
 }
 
@@ -104,24 +112,31 @@ export type Viewer = { playerId: string } | { screen: true };
 export type GameUpdate<Data> = Ack<{ data: Data }>;
 
 // One player's part in a game that has ended, as the game describes it, for the record of a player
-// with an account: which side they played for and in what role, which side won, whether they did,
-// the game's own word for how it went, such as the verdict of a decision letter, and the titles
-// that the game brought them, if any.
+// with an account (docs/architecture.md#game-records): which side they played for, those who win or
+// lose together, and in what role; whether they won, drew or lost; their place, 1 and one more for
+// each player who did better, so that players level share it; the game's own word for how it went,
+// such as the verdict of a decision letter; what the game counts of their game, if anything, in its
+// own shape (GameShapes.detail), an object, which the record keeps as JSON, such as where their
+// points came from; and the titles that the game brought them, if any. In a game of two sides, the
+// winners have place 1 and the others 2; in one where each plays for themselves, each is their own
+// side; in one that everyone plays together, all are one side, and win or lose together in place 1.
 export interface PlayerResult {
   playerId: string;
   side: string;
   role: string;
-  winner: string;
-  won: boolean;
+  result: RecordResult;
+  place: number;
   verdict: string;
+  detail?: object;
   titles?: GameTitle[];
 }
 
 // How a game that finished came out (docs/architecture.md#game-records), for its record: which side
-// won, in the game's own words, and how, such as by finding every card of its own or because the
-// other side revealed Reviewer 2, so that games can be told apart by it without the replay.
+// won, in the game's own words, or null when no one side did, as when two players share the first
+// place or everyone loses together, and how, such as by finding every card of its own or because
+// the other side revealed Reviewer 2, so that games can be told apart by it without the replay.
 export interface GameOutcome {
-  winner: string;
+  winner: string | null;
   reason: string;
 }
 
@@ -131,17 +146,6 @@ export interface GameOutcome {
 export interface GameTitle {
   title: Title;
   turn: number;
-}
-
-// What an AI player did in a game that finished, in the game's own counts, for its page
-// (docs/architecture.md#ai-players): the clues it gave as a PI and how many of its group's cards
-// they found, how often it revealed Reviewer 2 as a student, and the clue that found the most, if
-// any found one.
-export interface AgentFeats {
-  clues: number;
-  found: number;
-  reviewer2: number;
-  best: { word: string; found: number } | null;
 }
 
 // What the log of a game keeps of one of the game's messages that changed the game
@@ -209,8 +213,12 @@ export interface MatchScore {
 // match: the number of games, the totals and the ranking. The game decides how its players are
 // grouped from one game to the next, and how each of them scores.
 export interface MatchHooks<Data> {
+  // The game's own options of a match (MatchRules.options), as the chair's message or a room setup
+  // carried them: whole and checked, or null when they won't do, which the room refuses with
+  // bad_match. A game without this has none, and takes only rules without options.
+  options?(value: unknown): unknown;
   // A match begins with these rules, or the room stops being one, with null. The game forgets
-  // whatever it remembered of an earlier match.
+  // whatever it remembered of an earlier match. The rules' options are as options() gave them.
   setup(data: Data, ctx: GameContext, rules: MatchRules | null): Data;
   // Each player's points in the current game as they stand, the game's end included once it has
   // ended, or null for a game that counts for nothing, as one that the chair withdrew. Everyone
@@ -329,9 +337,15 @@ export interface GameModule<Data = unknown, View = unknown> {
   // How the game that has just finished came out, for its record: who won and how, or null when
   // the game can't say. Without this, the record says how the game ended and nothing of who won.
   outcome?(data: Data): GameOutcome | null;
-  // What an AI player did in the game that has just finished, for its page; without this, its
-  // page counts its games alone.
-  agentFeats?(data: Data, playerId: string): AgentFeats;
+  // What an AI player did in the game that has just finished, for its page, in the game's own shape
+  // (GameShapes.feats), an object, which the record keeps as JSON, and what it did in all its
+  // seats, from what this gave for each, in the order the games ended (agentTotals); without these,
+  // its page counts its games alone. A game with this counts the same again (Recount.feats).
+  agentFeats?(data: Data, playerId: string): object;
+  agentTotals?(feats: readonly unknown[]): unknown;
+  // The titles that the game brings (docs/architecture.md#titles), which no other game has: those
+  // that results() may give. A match of any game awards the match's titles besides.
+  titles?: readonly Title[];
   // The version of the game's rules and scoring, which goes on the record of every game, so that a
   // game played under other rules can be told apart. It goes up by one whenever they change.
   rulesVersion?: number;

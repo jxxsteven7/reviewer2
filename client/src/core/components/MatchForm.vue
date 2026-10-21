@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { MATCH_GAMES, MATCH_GROUPINGS, MATCH_TEAMS, matchGamesValid, type MatchRules } from '@reviewer2/shared';
+import {
+  MATCH_GAMES,
+  MATCH_GROUPINGS,
+  MATCH_TEAMS,
+  matchGamesValid,
+  type KeywordsMatchOptions,
+  type KeywordsMatchRules,
+} from '@reviewer2/shared';
 import { computed, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiField from './UiField.vue';
 
-// The rules of a match, for the room setup and for the chair's next match: how many games, whether
-// the groups stay the same, and how they are made, for the first game or after every game. The
-// number is typed, so it can be wrong while it is being typed: the form says so, and `valid` says
-// whether the rules can be sent. The server checks them again.
-const model = defineModel<MatchRules>({ required: true });
+// The rules of a match, for the room setup and for the chair's next match: how many games, and the
+// first game's options (shared/src/games/keywords/match.ts), whether the groups stay the same, and
+// how they are made, for the first game or after every game. The number is typed, so it can be
+// wrong while it is being typed: the form says so, and `valid` says whether the rules can be sent.
+// The server checks them again.
+const model = defineModel<KeywordsMatchRules>({ required: true });
 const valid = defineModel<boolean>('valid', { default: true });
 const { t } = useI18n();
 const id = useId();
@@ -31,7 +39,8 @@ watch(model, (rules) => {
 const gamesValid = computed(() => matchGamesValid(model.value.games));
 watch(gamesValid, (ok) => (valid.value = ok), { immediate: true });
 
-const choose = (changes: Partial<MatchRules>) => (model.value = { ...model.value, ...changes });
+const choose = (changes: Partial<KeywordsMatchOptions>) =>
+  (model.value = { ...model.value, options: { ...model.value.options, ...changes } });
 </script>
 
 <template>
@@ -51,35 +60,39 @@ const choose = (changes: Partial<MatchRules>) => (model.value = { ...model.value
     <fieldset>
       <legend>{{ t('match.teams') }}</legend>
       <div class="options">
-        <label v-for="teams in MATCH_TEAMS" :key="teams" :class="{ chosen: model.teams === teams }">
+        <label v-for="teams in MATCH_TEAMS" :key="teams" :class="{ chosen: model.options.teams === teams }">
           <input
             type="radio"
             :name="`${id}-teams`"
             :value="teams"
-            :checked="model.teams === teams"
+            :checked="model.options.teams === teams"
             @change="choose({ teams })"
           />
           {{ t(`match.teamsChoice.${teams}`) }}
         </label>
       </div>
-      <p class="hint">{{ t(`match.teamsHint.${model.teams}`) }}</p>
+      <p class="hint">{{ t(`match.teamsHint.${model.options.teams}`) }}</p>
     </fieldset>
 
     <fieldset>
-      <legend>{{ t(`match.grouping.${model.teams}`) }}</legend>
+      <legend>{{ t(`match.grouping.${model.options.teams}`) }}</legend>
       <div class="options">
-        <label v-for="grouping in MATCH_GROUPINGS" :key="grouping" :class="{ chosen: model.grouping === grouping }">
+        <label
+          v-for="grouping in MATCH_GROUPINGS"
+          :key="grouping"
+          :class="{ chosen: model.options.grouping === grouping }"
+        >
           <input
             type="radio"
             :name="`${id}-grouping`"
             :value="grouping"
-            :checked="model.grouping === grouping"
+            :checked="model.options.grouping === grouping"
             @change="choose({ grouping })"
           />
           {{ t(`match.groupingChoice.${grouping}`) }}
         </label>
       </div>
-      <p class="hint">{{ t(`match.groupingHint.${model.grouping}`) }}</p>
+      <p class="hint">{{ t(`match.groupingHint.${model.options.grouping}`) }}</p>
     </fieldset>
   </div>
 </template>

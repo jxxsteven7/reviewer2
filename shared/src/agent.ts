@@ -20,30 +20,46 @@ export type AgentPersona = (typeof AGENT_PERSONAS)[number];
 
 // The page of an AI player (docs/architecture.md#ai-players), which anyone may open from a room:
 // player number 0, how many of it are in the rooms right now, as AI players and playing for
-// someone offline, and what it has done in the games that finished, as counts only. `games` counts
-// each game once; `seats` and `wins` count the seats it took in them and those it won in, since it
-// may sit in both groups of one game, as it does in a practice room, where counting the game as
-// won whenever one of its seats won would make it win every one; `roles` counts the same as a
-// group's PI (`captain`) and as a student (`guesser`). `found` is how many of its group's cards
-// its clues found, of `clues` given; `best` is the clue that found the most. `you` is what the
-// viewer has played with it, for an account alone: the games in which it was in the viewer's group
-// and won or lost with them, those in which it was in the other group and the viewer won or lost,
-// and how often it played for the viewer while they were offline.
+// someone offline, and what it has done in the games of each game that finished, by the game's ID,
+// as counts only.
 export interface AgentProfileView {
   persona: AgentPersona;
   number: 0;
   live: { players: number; rooms: number };
+  games: Record<string, AgentGameCounts>;
+}
+
+// What an AI player has done in the games of one game that finished. `games` counts each game once;
+// `seats` and `wins` count the seats it took in them and those it won in, since it may sit in two
+// groups of one game, as it does in a practice room, where counting the game as won whenever one of
+// its seats won would make it win every one; `roles` counts the same in each of the game's roles, by
+// the role's ID. `takeovers` is how many games it played in for someone offline. `feats` is what the
+// game counts of its seats, added up as the game adds them up (for the team word guessing game,
+// KeywordsAgentFeats). `you` is what the viewer has played with it, for an account alone: the games
+// in which it was on the viewer's side and they won or lost together, those in which it was on
+// another and the viewer finished in a better place or a worse one, and how often it played for
+// the viewer while they were offline.
+export interface AgentGameCounts {
   games: number;
   seats: number;
   wins: number;
-  roles: Record<'captain' | 'guesser', { seats: number; wins: number }>;
-  clues: number;
-  found: number;
-  reviewer2: number;
+  roles: Record<string, { seats: number; wins: number }>;
   takeovers: number;
-  best: { word: string; found: number } | null;
+  feats: unknown;
   you: { wonTogether: number; lostTogether: number; beat: number; beaten: number; takenOver: number } | null;
 }
+
+// What an AI player has done in a game it has played none of, with what the viewer has played with
+// it, if the viewer is an account.
+export const emptyAgentCounts = (you: AgentGameCounts['you'] = null): AgentGameCounts => ({
+  games: 0,
+  seats: 0,
+  wins: 0,
+  roles: {},
+  takeovers: 0,
+  feats: null,
+  you,
+});
 
 // A clue that a group was given earlier in the game, as everyone saw it.
 export interface AgentClue {

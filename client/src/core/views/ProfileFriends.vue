@@ -24,6 +24,7 @@ import { duoLine } from '../duos';
 import { errorKey } from '../errors';
 import { answerFriend, askToJoin } from '../friends';
 import { openProfile } from '../profilePanel';
+import { shownDuo } from '../records';
 import { send, whenConnected } from '../socket';
 import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
@@ -117,15 +118,21 @@ async function foundDone() {
   searchForm.value?.querySelector('input')?.focus();
 }
 
+// What a friend and the player have done together in the game shown (records.ts).
+const duoOf = (friend: FriendView) => shownDuo(friend.duo);
+
 // Each title that a friend holds, with the friends who hold it, in the order of the titles.
 const board = computed(() =>
   DUO_TITLES.flatMap((title) => {
-    const holders = (view.value?.friends ?? []).filter((friend) => friend.duo?.titles.includes(title));
+    const holders = (view.value?.friends ?? []).filter((friend) => duoOf(friend)?.titles.includes(title));
     return holders.length > 0 ? [{ title, holders }] : [];
   }),
 );
 
-const games = (friend: FriendView) => (friend.duo ? duoLine(t, friend.duo) : '');
+const games = (friend: FriendView) => {
+  const duo = duoOf(friend);
+  return duo ? duoLine(t, duo) : '';
+};
 
 // The answers to a request in the list, and taking one back, as the panels answer (friends.ts).
 async function answer(reply: 'accept' | 'decline' | 'remove', name: string) {
@@ -279,9 +286,9 @@ function closeAll() {
                 </svg>
               </button>
             </span>
-            <div v-if="games(friend) || friend.duo?.titles.length" class="rest">
+            <div v-if="games(friend) || duoOf(friend)?.titles.length" class="rest">
               <p v-if="games(friend)" class="games">{{ games(friend) }}</p>
-              <FoldedTitles v-if="friend.duo?.titles.length" :titles="friend.duo.titles" />
+              <FoldedTitles v-if="duoOf(friend)?.titles.length" :titles="duoOf(friend)?.titles ?? []" />
             </div>
           </li>
         </ul>

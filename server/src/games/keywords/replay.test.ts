@@ -431,6 +431,7 @@ describe('the replay of a random game', () => {
       const keyOf = keyFor(who, record.log);
       const count = recountOf({ setup: record.setup, log: record.log, language: room.language, keyOf });
       if (!count) throw new Error(`game ${seed} cannot be counted`);
+      expect(count.outcome, `game ${seed}`).toEqual(record.outcome);
       const points = new Map(count.scores.map(({ key, points: won }) => [key, won]));
       const live = room.points();
       for (const result of room.results() ?? []) {
@@ -440,8 +441,10 @@ describe('the replay of a random game', () => {
         expect(again, `game ${seed}, ${result.playerId}`).toMatchObject({
           side: result.side,
           role: result.role,
-          won: result.won,
+          result: result.result,
+          place: result.place,
           verdict: result.verdict,
+          detail: result.detail,
           titles: result.titles,
         });
         expect(points.get(keyOf(result.playerId)), `game ${seed}, ${result.playerId}`).toBe(live?.get(member.key) ?? 0);

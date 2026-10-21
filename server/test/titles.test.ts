@@ -45,7 +45,8 @@ describe('Forgot to Submit', () => {
       gameId: 'earlier',
       side: 'red',
       role: 'captain',
-      won: true,
+      result: 'won',
+      place: 1,
       verdict: 'oral',
       points: 0,
     });
@@ -104,8 +105,8 @@ describe('Forgot to Submit', () => {
     const reviewer2 = board(cat).cards.findIndex((card) => card.color === 'reviewer2');
     await expectOk(dan.send('keywords:reveal', { ...moment(board(dan)), card: reviewer2 }));
     for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
-    await until(() => server.accounts.records.view(1).ordinary.games === 2, "Ann's record");
-    expect((await anns.account())?.titles).toEqual([{ title: 'missed_deadline', count: 3 }]);
+    await until(() => server.accounts.records.view(1).keywords?.ordinary.games === 2, "Ann's record");
+    expect((await anns.account())?.titles).toEqual([{ game: 'keywords', title: 'missed_deadline', count: 3 }]);
     expect((await bobs.account())?.titles).toEqual([]);
 
     // The next game is withdrawn after Ann misses again: the room hears of it, counted, but her
@@ -123,7 +124,7 @@ describe('Forgot to Submit', () => {
     expect(missedBy(ann)).toMatchObject([{ count: 4 }]);
     await expectOk(ann.send('room:end', { gameId: board(ann).gameId }));
     for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
-    expect((await anns.account())?.titles).toEqual([{ title: 'missed_deadline', count: 3 }]);
+    expect((await anns.account())?.titles).toEqual([{ game: 'keywords', title: 'missed_deadline', count: 3 }]);
     expect(server.db.prepare("SELECT count(*) AS n FROM titles WHERE title = 'missed_deadline'").get()).toEqual({
       n: 3,
     });
@@ -144,7 +145,8 @@ describe('Deadline Hero', () => {
       gameId: 'earlier',
       side: 'red',
       role: 'captain',
-      won: true,
+      result: 'won',
+      place: 1,
       verdict: 'oral',
       points: 0,
     });
@@ -214,8 +216,8 @@ describe('Deadline Hero', () => {
     const reviewer2 = board(cat).cards.findIndex((card) => card.color === 'reviewer2');
     await expectOk(dan.send('keywords:reveal', { ...moment(board(dan)), card: reviewer2 }));
     for (const client of everyone) await client.waitFor((state) => state.phase === 'ended', 'the end');
-    await until(() => server.accounts.records.view(1).ordinary.games === 2, "Ann's record");
-    expect((await anns.account())?.titles).toEqual([{ title: 'deadline_hero', count: 2 }]);
-    expect((await bobs.account())?.titles).toEqual([{ title: 'deadline_hero', count: 1 }]);
+    await until(() => server.accounts.records.view(1).keywords?.ordinary.games === 2, "Ann's record");
+    expect((await anns.account())?.titles).toEqual([{ game: 'keywords', title: 'deadline_hero', count: 2 }]);
+    expect((await bobs.account())?.titles).toEqual([{ game: 'keywords', title: 'deadline_hero', count: 1 }]);
   });
 });

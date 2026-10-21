@@ -1,6 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
+import { RECORDS_NOTICE_VERSION, type RecordResult } from '@reviewer2/shared';
 import { AccountStore } from './accounts';
 import { openDatabase } from './database';
 import { FriendStore } from './friends';
@@ -8,8 +8,9 @@ import { DUOS_SQL, RecordStore } from './records';
 import { keepGame } from '../../test/keptGame';
 
 // What friends have played together (docs/architecture.md#friend-duos), counted from the records
-// of the games that both played in: teammates on the same side, opponents on another, friends
-// alone, whenever the two played.
+// of the games that both played in, each game apart: teammates on the same side, opponents on
+// another, the one who finished in the better place beating the other, friends alone, whenever the
+// two played.
 
 let db: DatabaseSync;
 let accounts: AccountStore;
@@ -38,9 +39,13 @@ const befriend = (a: number, b: number) => {
 };
 
 let games = 0;
-// One game with the accounts on each of its sides, which `winner` won; red and blue as a rule, but
-// a game may have more sides.
-function game(sides: Record<string, number[]>, winner: string, name = 'keywords', agents = false) {
+// One game, with each account's side, how it came out for them and their place.
+function placed(
+  players: { accountId: number; side: string; result: RecordResult; place: number }[],
+  winner: string | null,
+  name = 'keywords',
+  agents = false,
+) {
   games += 1;
   const gameId = `game-${games}`;
   keepGame(db, gameId, {
@@ -48,20 +53,26 @@ function game(sides: Record<string, number[]>, winner: string, name = 'keywords'
     outcome: { winner, reason: 'found' },
     counts: { accounts: 1, guests: 0, agents: agents ? 1 : 0 },
   });
-  for (const [side, players] of Object.entries(sides)) {
-    for (const accountId of players) {
-      records.add(accountId, {
-        game: name,
-        gameId,
-        side,
-        role: 'guesser',
-        won: side === winner,
-        verdict: 'v',
-        points: 0,
-      });
-    }
+  for (const { accountId, side, result, place } of players) {
+    records.add(accountId, { game: name, gameId, side, role: 'guesser', result, place, verdict: 'v', points: 0 });
   }
 }
+
+// One game with the accounts on each of its sides, which `winner` won in the first place, every
+// other side level in the second; red and blue as a rule, but a game may have more sides.
+function game(sides: Record<string, number[]>, winner: string, name = 'keywords', agents = false) {
+  const players = Object.entries(sides).flatMap(([side, accounts]) =>
+    accounts.map((accountId) =>
+      side === winner
+        ? { accountId, side, result: 'won' as const, place: 1 }
+        : { accountId, side, result: 'lost' as const, place: 2 },
+    ),
+  );
+  placed(players, winner, name, agents);
+}
+
+// The duos of an account in the first game alone.
+const keywordsDuos = (accountId: number) => records.duos(accountId).get('keywords') ?? new Map();
 
 const NONE = { wonTogether: 0, lostTogether: 0, against: 0, beat: 0, beaten: 0 };
 
@@ -72,9 +83,9 @@ describe('friend duos', () => {
     game({ red: [ann, bob], blue: [] }, 'red', 'keywords', true);
     game({ red: [ann, bob], blue: [] }, 'red', 'keywords', true);
     game({ red: [ann, bob], blue: [] }, 'red');
-    expect(records.duos(ann)).toEqual(new Map([[bob, { ...NONE, wonTogether: 1 }]]));
-    expect(records.counts(ann)).toMatchObject({ ordinary: { games: 3, wins: 3 } });
-    expect(records.streaks(ann)).toMatchObject({ wins: 1 });
+    expect(records.duos(ann)).toEqual(new Map([['keywords', new Map([[bob, { ...NONE, wonTogether: 1 }]])]]));
+    expect(records.counts(ann)).toMatchObject({ keywords: { ordinary: { games: 3, wins: 3 } } });
+    expect(records.streaks(ann)).toMatchObject({ keywords: { wins: 1 } });
   });
 
   test('count the games two friends played together and against each other', () => {
@@ -85,17 +96,23 @@ describe('friend duos', () => {
     game({ red: [ann, bob], blue: [cat] }, 'blue');
     game({ red: [ann, cat], blue: [bob] }, 'red');
     game({ red: [ann], blue: [bob, cat] }, 'blue');
-    // A game of another kind counts the same.
+    // A game of another kind counts the same, but apart.
     game({ red: [bob], blue: [ann] }, 'red', 'test');
     expect(records.duos(ann)).toEqual(
       new Map([
-        [bob, { wonTogether: 1, lostTogether: 1, against: 3, beat: 1, beaten: 2 }],
-        [cat, { wonTogether: 1, lostTogether: 0, against: 3, beat: 1, beaten: 2 }],
+        [
+          'keywords',
+          new Map([
+            [bob, { wonTogether: 1, lostTogether: 1, against: 2, beat: 1, beaten: 1 }],
+            [cat, { wonTogether: 1, lostTogether: 0, against: 3, beat: 1, beaten: 2 }],
+          ]),
+        ],
+        ['test', new Map([[bob, { ...NONE, against: 1, beaten: 1 }]])],
       ]),
     );
     // From Bob's side: Ann is his only friend, and Cat isn't counted.
-    expect(records.duos(bob)).toEqual(
-      new Map([[ann, { wonTogether: 1, lostTogether: 1, against: 3, beat: 2, beaten: 1 }]]),
+    expect(keywordsDuos(bob)).toEqual(
+      new Map([[ann, { wonTogether: 1, lostTogether: 1, against: 2, beat: 1, beaten: 1 }]]),
     );
   });
 
@@ -110,19 +127,19 @@ describe('friend duos', () => {
     expect(records.duos(ann)).toEqual(new Map());
     // Friends since the game: it counts.
     befriend(bob, ann);
-    expect(records.duos(ann)).toEqual(new Map([[bob, { ...NONE, wonTogether: 1 }]]));
+    expect(keywordsDuos(ann)).toEqual(new Map([[bob, { ...NONE, wonTogether: 1 }]]));
   });
 
   test('go when the friendship ends, and come back with it', () => {
     const [ann, bob] = [account('Ann'), account('Bob')];
     befriend(ann, bob);
     game({ red: [ann], blue: [bob] }, 'red');
-    expect(records.duos(ann).get(bob)).toEqual({ ...NONE, against: 1, beat: 1 });
+    expect(keywordsDuos(ann).get(bob)).toEqual({ ...NONE, against: 1, beat: 1 });
     const row = friends.between(ann, bob);
     if (row) friends.delete(row.id);
     expect(records.duos(ann)).toEqual(new Map());
     befriend(bob, ann);
-    expect(records.duos(ann).get(bob)).toEqual({ ...NONE, against: 1, beat: 1 });
+    expect(keywordsDuos(ann).get(bob)).toEqual({ ...NONE, against: 1, beat: 1 });
   });
 
   test('go with an account that is deleted', () => {
@@ -138,11 +155,61 @@ describe('friend duos', () => {
     for (const friend of [bob, cat, dan]) befriend(ann, friend);
     // Green wins: Ann and Bob lost together, Cat lost against Ann, and Dan beat her.
     game({ red: [ann, bob], blue: [cat], green: [dan] }, 'green');
-    expect(records.duos(ann)).toEqual(
+    expect(keywordsDuos(ann)).toEqual(
       new Map([
         [bob, { ...NONE, lostTogether: 1 }],
         [cat, { ...NONE, against: 1 }],
         [dan, { ...NONE, against: 1, beaten: 1 }],
+      ]),
+    );
+  });
+
+  test('go by place between opponents, whoever won, and level opponents beat neither', () => {
+    const [ann, bob, cat, dan] = [account('Ann'), account('Bob'), account('Cat'), account('Dan')];
+    for (const friend of [bob, cat, dan]) befriend(ann, friend);
+    // Each for themselves, no one side winning: Bob first, Ann and Cat level second, Dan last.
+    placed(
+      [
+        { accountId: bob, side: 'b', result: 'won', place: 1 },
+        { accountId: ann, side: 'a', result: 'lost', place: 2 },
+        { accountId: cat, side: 'c', result: 'lost', place: 2 },
+        { accountId: dan, side: 'd', result: 'lost', place: 4 },
+      ],
+      null,
+      'test',
+    );
+    expect(records.duos(ann).get('test')).toEqual(
+      new Map([
+        [bob, { ...NONE, against: 1, beaten: 1 }],
+        [cat, { ...NONE, against: 1 }],
+        [dan, { ...NONE, against: 1, beat: 1 }],
+      ]),
+    );
+  });
+
+  test('count a game drawn together as neither won nor lost together, and one drawn against each other as no win', () => {
+    const [ann, bob, cat] = [account('Ann'), account('Bob'), account('Cat')];
+    befriend(ann, bob);
+    befriend(ann, cat);
+    placed(
+      [
+        { accountId: ann, side: 'all', result: 'drawn', place: 1 },
+        { accountId: bob, side: 'all', result: 'drawn', place: 1 },
+      ],
+      null,
+      'test',
+    );
+    placed(
+      [
+        { accountId: ann, side: 'red', result: 'drawn', place: 1 },
+        { accountId: cat, side: 'blue', result: 'drawn', place: 1 },
+      ],
+      null,
+    );
+    expect(records.duos(ann)).toEqual(
+      new Map([
+        ['test', new Map([[bob, NONE]])],
+        ['keywords', new Map([[cat, { ...NONE, against: 1 }]])],
       ]),
     );
   });

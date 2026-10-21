@@ -23,6 +23,7 @@ import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { useLanguage } from '../i18n';
 import { wayUp } from '../ranks';
+import { shownStreaks, shownTitles } from '../records';
 import { streakTitles as titlesOf } from '../streaks';
 import { toast, toastError } from '../toast';
 import { useBusy } from '../useBusy';
@@ -80,7 +81,9 @@ const ladder = ref(false);
 // The streak titles (streaks.ts): the longest run of wins and of losses, from three games on, with
 // the number in the words of the language.
 const language = useLanguage();
-const streakTitles = computed(() => titlesOf(t, props.summary.streaks, language.value));
+const streakTitles = computed(() => titlesOf(t, shownStreaks(props.summary.streaks), language.value));
+// The titles of the game shown (records.ts).
+const titles = computed(() => shownTitles(props.summary.titles));
 
 // Sends a change, and shows what the server had against it.
 async function change(path: string, body: object): Promise<boolean> {
@@ -192,12 +195,12 @@ async function logOut() {
     </section>
 
     <section
-      v-if="summary.titles.length || streakTitles.length || summary.contributions.length"
+      v-if="titles.length || streakTitles.length || summary.contributions.length"
       class="part"
       aria-labelledby="profile-titles"
     >
       <h2 id="profile-titles">{{ t('account.profile.titles') }}</h2>
-      <TitlePills :titles="summary.titles" :streaks="streakTitles" :contributions="summary.contributions" />
+      <TitlePills :titles="titles" :streaks="streakTitles" :contributions="summary.contributions" />
     </section>
 
     <section class="part" aria-labelledby="profile-public">

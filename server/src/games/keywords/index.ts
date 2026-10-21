@@ -4,11 +4,14 @@ import {
   checkChat,
   cleanClue,
   defaultSettings,
+  KEYWORDS_TITLES,
+  keywordsMatchOptions,
   otherTeam,
   sameSettings,
   settingsProblems,
   SPECTATOR,
   TEAMS,
+  type KeywordsMatchRules,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
@@ -28,18 +31,12 @@ import {
   agentProblems,
   agentSeat,
   agentTask,
+  featsOf,
   personSeated,
   practiceSeats,
+  totalsOf,
 } from './agents';
-import type {
-  AgentFeats,
-  GameContext,
-  GameLogNote,
-  GameModule,
-  GameShapes,
-  GameUpdate,
-  LogNote,
-} from '../../core/game';
+import type { GameContext, GameLogNote, GameModule, GameShapes, GameUpdate, LogNote } from '../../core/game';
 import {
   dropSelection,
   expire,
@@ -351,14 +348,15 @@ function titlesSoFar(data: KeywordsData, ctx: GameContext): Record<string, Title
     for (const { title } of titlesOf(game, seat.team, ctx.keyOf(playerId), ctx.keyOf)) {
       tally.set(title, (tally.get(title) ?? 0) + 1);
     }
-    if (tally.size > 0) earned[playerId] = [...tally].map(([title, count]) => ({ title, count }));
+    if (tally.size > 0) earned[playerId] = [...tally].map(([title, count]) => ({ game: 'keywords', title, count }));
   }
   return earned;
 }
 
 // The shapes of the game's own in its data, for the check of the data (GameModule.shapes): how a
 // game began (setup), the settings as a room setup keeps them, the roles that its records name,
-// and what it counts of an AI player in a seat (agentFeats).
+// where a player's points came from (KeywordsScoreDetail, as a record's detail), and what it counts
+// of an AI player in a seat (agentFeats).
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const COLORS: readonly string[] = [...TEAMS, 'neutral', 'reviewer2'];
@@ -380,6 +378,14 @@ const shapes: GameShapes = {
     Object.keys(value).length === 3,
   settings: (value) => KEYWORDS_SETTINGS.strict().safeParse(value).success,
   role: (role) => role === 'captain' || role === 'guesser',
+  detail: (value) =>
+    isObject(value) &&
+    (value.role === 'captain' || value.role === 'guesser') &&
+    ['found', 'irrelevant', 'wrong', 'reviewer2', 'bigClues', 'missed'].every((count) =>
+      Number.isInteger(value[count]),
+    ) &&
+    ['won', 'openingRecord', 'heavenlyHand'].every((flag) => typeof value[flag] === 'boolean') &&
+    Object.keys(value).length === 10,
   feats: (value) =>
     isObject(value) &&
     Number.isInteger(value.clues) &&
@@ -393,6 +399,7 @@ const shapes: GameShapes = {
 export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   rulesVersion: RULES_VERSION,
+  titles: KEYWORDS_TITLES,
   wordsNeeded: BOARD_SIZE,
   // Two words of which one lies inside the other would give each other away: "Gene" and "Gene
   // editing" can't share a board.
@@ -569,24 +576,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     return result && result.winner !== null ? { winner: result.winner, reason: result.reason } : null;
   },
 
-  // What an AI player did: the clues it gave as its group's PI, with how many of the group's cards
-  // were found in each of their turns, the clue that found the most, and how often it revealed
-  // Reviewer 2 as a student.
-  agentFeats(data, playerId) {
-    const feats: AgentFeats = { clues: 0, found: 0, reviewer2: 0, best: null };
-    for (const record of data.game?.history ?? []) {
-      if (record.captain === playerId && record.word !== null) {
-        const found = record.guesses.filter(({ color }) => color === record.team).length;
-        feats.clues += 1;
-        feats.found += found;
-        if (found > 0 && (feats.best === null || found > feats.best.found)) feats.best = { word: record.word, found };
-      }
-      feats.reviewer2 += record.guesses.filter(
-        ({ player, color }) => player === playerId && color === 'reviewer2',
-      ).length;
-    }
-    return feats;
-  },
+  // What an AI player did, and in all its seats (agents.ts).
+  agentFeats: (data, playerId) => featsOf(data.game, playerId),
+  agentTotals: totalsOf,
 
   // Whom the game is waiting for: the PI of the group on turn while its clue is due, and its
   // students while they guess. Nobody while the game is paused or over.
@@ -604,7 +596,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   participants: (data) => [...data.seating.sides.keys()],
 
   match: {
-    setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules) }),
+    // Whether the groups stay the same and how they are made (KeywordsMatchOptions).
+    options: keywordsMatchOptions,
+    setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules as KeywordsMatchRules) }),
     score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
     lineup: (data) => [...data.seating.seats].filter(([, seat]) => seat.team !== null).map(([id]) => id),
   },

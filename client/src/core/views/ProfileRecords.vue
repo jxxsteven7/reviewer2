@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ACCOUNT_API, type GameRecord, type RecordsView } from '@reviewer2/shared';
+import { ACCOUNT_API, emptyGameCounts, type GameRecord, type GameRecords, type RecordsView } from '@reviewer2/shared';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
@@ -12,25 +12,31 @@ import UiSheet from '../components/UiSheet.vue';
 import { formatStamp } from '../dates';
 import { errorKey } from '../errors';
 import { points } from '../points';
+import { RECORDS_GAME } from '../records';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 
-// The account's record: the numbers of games, wins and matches (RecordStats.vue); then the last 20
-// games, a line each: when it ended, in numbers, whether it was an ordinary game or which game of
-// its match, or, for a game that an AI played in, which is never one of a match, the robot's head
-// and "AI" in their place, which a tap explains, the role on a chip in the group's tint, and the
-// decision that the group got, by its short English name in every language, with a round button
-// on the right to watch it again; then
-// the last 20 matches, in the same look, each with its games, its place and total, and its title on
-// the right. The columns of a list line up from one line to the next where the browser has
-// subgrids. What doesn't fit, a long decision or title, is cut short with an ellipsis; a tap on it
-// says what it means, in full (TitleInfo.vue). A record that can't be fetched says so, with a way
-// to try again. A game that the server kept to watch again opens in a sheet, in the game's own
-// replay viewer.
+// The account's record of the first game (RECORDS_GAME): the numbers of games, wins and matches
+// (RecordStats.vue); then the last 20 games, a line each: when it ended, in numbers, whether it
+// was an ordinary game or which game of its match, or, for a game that an AI played in, which is
+// never one of a match, the robot's head and "AI" in their place, which a tap explains, the role
+// on a chip in the group's tint, and the decision that the group got, by its short English name in
+// every language, with a round button on the right to watch it again; then the last 20 matches, in
+// the same look, each with its games, its place and total, and its title on the right. The columns
+// of a list line up from one line to the next where the browser has subgrids. What doesn't fit, a
+// long decision or title, is cut short with an ellipsis; a tap on it says what it means, in full
+// (TitleInfo.vue). A record that can't be fetched says so, with a way to try again. A game that
+// the server kept to watch again opens in a sheet, in the game's own replay viewer.
 const { t, te } = useI18n();
 const records = ref<RecordsView | null>(null);
+// The record of the game shown, which is empty for an account that has finished none of it.
+const emptyRecords = (): GameRecords => {
+  const counts = emptyGameCounts();
+  return { ...counts, recent: [], matches: { ...counts.matches, recent: [] } };
+};
+const shown = computed<GameRecords | null>(() => records.value && (records.value[RECORDS_GAME] ?? emptyRecords()));
 // Every game on the record, in matches or not.
-const played = computed(() => (records.value ? records.value.ordinary.games + records.value.inMatches.games : 0));
+const played = computed(() => (shown.value ? shown.value.ordinary.games + shown.value.inMatches.games : 0));
 const failed = ref<string | undefined>();
 const { busy, run } = useBusy();
 
@@ -79,17 +85,17 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
 </script>
 
 <template>
-  <div v-if="records" class="records">
-    <RecordStats :counts="records" />
+  <div v-if="shown" class="records">
+    <RecordStats :counts="shown" />
     <p v-if="played === 0" class="note">{{ t('account.profile.noRecords') }}</p>
     <template v-else>
       <h3>{{ t('account.profile.recent') }}</h3>
       <ol class="list games">
         <li
-          v-for="(record, index) in records.recent"
+          v-for="(record, index) in shown.recent"
           :key="index"
           class="record"
-          :class="[record.side, { won: record.won }]"
+          :class="[record.side, { won: record.result === 'won' }]"
         >
           <span class="when num"
             ><span>{{ stamp(record.endedAt).day }}</span> <span>{{ stamp(record.endedAt).time }}</span></span
@@ -133,11 +139,11 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
         </li>
       </ol>
     </template>
-    <template v-if="records.matches.played > 0">
+    <template v-if="shown.matches.played > 0">
       <h3>{{ t('account.profile.recentMatches') }}</h3>
       <ol class="list matches">
         <li
-          v-for="(match, index) in records.matches.recent"
+          v-for="(match, index) in shown.matches.recent"
           :key="`match-${index}`"
           class="record match"
           :class="{ won: match.title === 'best_paper' }"

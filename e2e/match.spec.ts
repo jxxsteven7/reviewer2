@@ -87,7 +87,7 @@ test('players with accounts and guests play a whole match, and find its title on
   // The groups are drawn for the first game and stay the same: the PI's seat goes round, so Ann and
   // her teammate are each their group's PI once, which plays for higher stakes, and finish level.
   const url = await createRoom(ann, 'en', (page) =>
-    chooseMatch(page, 'en', { games: 2, teams: 'fixed', grouping: 'random' }),
+    chooseMatch(page, 'en', { games: 2, options: { teams: 'fixed', grouping: 'random' } }),
   );
   const join = async (account?: string) => {
     const page = await newPlayer(browser, 'en');
@@ -168,7 +168,7 @@ test('a match whose groups may change draws them again for every game', async ({
   const text = TEXT.en;
   const ann = await newPlayer(browser, 'en');
   const url = await createRoom(ann, 'en', (page) =>
-    chooseMatch(page, 'en', { games: 2, teams: 'switch', grouping: 'random' }),
+    chooseMatch(page, 'en', { games: 2, options: { teams: 'switch', grouping: 'random' } }),
   );
   const join = async () => {
     const page = await newPlayer(browser, 'en');
@@ -209,7 +209,7 @@ test('a match whose groups may change draws them again for every game', async ({
 test('a match whose groups stay the same keeps them, and passes the PI on', async ({ browser }) => {
   const text = TEXT.zh;
   const table = await seatTable(browser, 'zh', undefined, (page) =>
-    chooseMatch(page, 'zh', { games: 2, teams: 'fixed', grouping: 'choose' }),
+    chooseMatch(page, 'zh', { games: 2, options: { teams: 'fixed', grouping: 'choose' } }),
   );
   const ann = table.captains.red;
   const players = [ann, table.guessers.red, table.captains.blue, table.guessers.blue];

@@ -89,7 +89,7 @@ describe('the room page', () => {
       ],
       match: {
         id: 'm1',
-        rules: { games: 3, teams: 'switch' as const, grouping: 'random' as const },
+        rules: { games: 3, options: { teams: 'switch' as const, grouping: 'random' as const } },
         played: 0,
         status: 'on' as const,
         game: 1,
@@ -148,7 +148,7 @@ describe('the room page', () => {
       ],
       match: {
         id: 'm1',
-        rules: { games: 3, teams: 'switch' as const, grouping: 'random' as const },
+        rules: { games: 3, options: { teams: 'switch' as const, grouping: 'random' as const } },
         played: 0,
         status: 'on' as const,
         game: 1,

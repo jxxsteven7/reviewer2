@@ -1,18 +1,20 @@
 // Streaks (docs/architecture.md#streaks): how many games in a row an account has won, and lost, at
-// most, over every game on its record, whichever game it was and in a match or not, in the order
-// they ended. A streak of STREAK_MIN games or more earns a title, named with the number in words
-// (numbers.ts): "Three Submissions, Three Acceptances" for wins and "Three Submissions, Three
-// Rejections" for losses, and the same in Chinese with the number in Chinese characters. The server
-// counts the streaks from the record whenever they are asked for (server/src/store/records.ts) and
-// tells the room of them when a game ends.
+// most, over the games of one game on its record, in a match or not, in the order they ended; a
+// drawn game ends a streak of either kind, and the streaks of two games are never added up. A
+// streak of STREAK_MIN games or more earns a title, named with the number in words (numbers.ts):
+// "Three Submissions, Three Acceptances" for wins and "Three Submissions, Three Rejections" for
+// losses, and the same in Chinese with the number in Chinese characters. The server counts the
+// streaks from the record whenever they are asked for (server/src/store/records.ts) and tells the
+// room of them when a game ends.
 
 export const STREAK_MIN = 3;
 
 export const STREAK_KINDS = ['wins', 'losses'] as const;
 export type StreakKind = (typeof STREAK_KINDS)[number];
 
-// The longest streak of each kind on an account's record, which the account page and the public
-// profile show as titles from STREAK_MIN on. Zero for an account that has never won, or never lost.
+// The longest streak of each kind on an account's record of a game, which the account page and the
+// public profile show as titles from STREAK_MIN on. Zero for an account that has never won, or
+// never lost.
 export interface BestStreaks {
   wins: number;
   losses: number;

@@ -385,7 +385,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     const points = room.points();
     // Those whose game went on the record, by account ID, with their player ID, side and result.
     const recorded = new Map<number, DuoPart & { playerId: string }>();
-    for (const { playerId, side, role, won, verdict, titles } of results ?? []) {
+    for (const { playerId, side, role, result, place, verdict, detail, titles } of results ?? []) {
       const member = room.members.get(playerId);
       const account = member?.account && accounts.store.byId(member.account.id);
       if (!member || !account) continue;
@@ -397,15 +397,17 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
           gameId,
           side,
           role,
-          won,
+          result,
+          place,
           verdict,
+          detail,
           points: points?.get(member.key) ?? 0,
           titles,
         };
-        const streak = accounts.record(account.id, record);
-        if (streak) {
-          room.noteStreak(member.id, streak);
-          recorded.set(account.id, { playerId: member.id, side, won });
+        const kept = accounts.record(account.id, record);
+        if (kept) {
+          if (kept.streak) room.noteStreak(member.id, kept.streak);
+          recorded.set(account.id, { playerId: member.id, side, result, place });
         }
         room.updateAccount(
           member.id,
@@ -458,7 +460,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // account itself is told: who is friends with whom is nobody else's business.
   function noteDuos(room: Room, recorded: ReadonlyMap<number, DuoPart & { playerId: string }>): void {
     for (const [accountId, { playerId }] of recorded) {
-      const brought = (accounts as Accounts).duosBrought(accountId, recorded);
+      const brought = (accounts as Accounts).duosBrought(accountId, room.game.id, recorded);
       const notices = brought.flatMap(({ friend, title, count }) => {
         const theirs = recorded.get(friend);
         return theirs ? [{ playerId: theirs.playerId, title, count }] : [];
@@ -805,7 +807,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   function friendView(
     viewerId: number,
     { id, handle, username, avatar, alias }: FriendRow,
-    duo: DuoView | null,
+    duo: Record<string, DuoView> | null,
   ): FriendView {
     const online = isOnline(id);
     const room = online ? roomOf(id) : undefined;
@@ -1265,9 +1267,9 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       });
       enter(socket, room, member);
       // The account's next room setup starts from this one (RoomSetup in shared/src/accounts.ts),
-      // with the game's settings as the game took them; a practice room with friends keeps its
-      // fields and leaves the role of the last one alone. The room is made whatever comes of
-      // keeping it.
+      // with the game's settings and the match's rules as the game took them; a practice room with
+      // friends keeps its fields and leaves the role of the last one alone. The room is made
+      // whatever comes of keeping it.
       if (account) {
         safely('room_setup', () =>
           accounts?.rememberRoomSetup(
@@ -1281,7 +1283,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
                     fields: room.fields,
                     randomFields: room.randomFields,
                     ...(settings === undefined ? {} : { settings: room.gameSettings ?? settings }),
-                    match: match ?? null,
+                    match: room.match ? { ...room.match.rules } : null,
                     public: room.public,
                     play: play ?? false,
                   },

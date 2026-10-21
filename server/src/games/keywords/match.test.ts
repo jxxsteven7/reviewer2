@@ -7,7 +7,8 @@ import {
   type CardColor,
   type ClueRecord,
   type KeywordsScoreDetail,
-  type MatchRules,
+  type KeywordsMatchOptions,
+  type KeywordsMatchRules,
   type RoomPhase,
   type Seat,
   type Team,
@@ -372,8 +373,8 @@ describe('the score of a game', () => {
 });
 
 describe('the lineup of the waiting room', () => {
-  const rules = (teams: MatchRules['teams'], grouping: MatchRules['grouping']): MatchSeating =>
-    newMatchSeating({ games: 3, teams, grouping });
+  const rules = (teams: KeywordsMatchOptions['teams'], grouping: KeywordsMatchOptions['grouping']): MatchSeating =>
+    newMatchSeating({ games: 3, options: { teams, grouping } });
 
   test('is free outside a match, and when the players choose', () => {
     expect(lineupOf(null)).toBe('free');
@@ -399,7 +400,7 @@ describe('the PI of a fixed group', () => {
   });
   const members = (ids: string[]) => ids.map((id) => ({ id, key: keyOf(id) }));
   const match = (captained: Record<string, number>, locked: Record<string, Team>): MatchSeating => ({
-    ...newMatchSeating({ games: 3, teams: 'fixed', grouping: 'choose' }),
+    ...newMatchSeating({ games: 3, options: { teams: 'fixed', grouping: 'choose' } }),
     captained: new Map(Object.entries(captained).map(([id, times]) => [keyOf(id), times])),
     locked: sides(locked),
   });
@@ -461,7 +462,7 @@ describe('groups drawn at random', () => {
     sides: new Map(),
   };
   const match = (groups: Record<string, Team>[], captained: Record<string, number> = {}): MatchSeating => ({
-    ...newMatchSeating({ games: 5, teams: 'switch', grouping: 'random' }),
+    ...newMatchSeating({ games: 5, options: { teams: 'switch', grouping: 'random' } }),
     groups: groups.map(sides),
     captained: new Map(Object.entries(captained).map(([id, times]) => [keyOf(id), times])),
   });
@@ -516,8 +517,8 @@ describe('a match of the game', () => {
   const WORDS = Array.from({ length: 25 }, (_, i) => ({ word: `Word${i}` }));
   const ids = ['ann', 'bob', 'cat', 'dee', 'eve'];
 
-  function withMatch(rules: Omit<MatchRules, 'games'>, seats: Record<string, Seat> = {}): KeywordsData {
-    const data = keywordsGame.match?.setup(keywordsGame.create('en'), context(ids), { games: 3, ...rules });
+  function withMatch(options: KeywordsMatchOptions, seats: Record<string, Seat> = {}): KeywordsData {
+    const data = keywordsGame.match?.setup(keywordsGame.create('en'), context(ids), { games: 3, options });
     if (!data) throw new Error('no match');
     return { ...data, seating: { ...data.seating, seats: new Map(Object.entries(seats)) } };
   }
@@ -584,8 +585,7 @@ describe('a match of the game', () => {
     const ctx = context(players, { rng });
     let data = keywordsGame.match?.setup(keywordsGame.create('en'), ctx, {
       games,
-      teams: 'switch',
-      grouping: 'random',
+      options: { teams: 'switch', grouping: 'random' },
     }) as KeywordsData;
     data = { ...data, seating: { ...data.seating, seats: new Map(players.map((id) => [id, red])) } };
     const seatings: Seating[] = [];
@@ -778,8 +778,7 @@ describe('fixed groups', () => {
   function afterFirstGame(): KeywordsData {
     const setup = keywordsGame.match?.setup(keywordsGame.create('en'), context(ids), {
       games: 3,
-      teams: 'fixed',
-      grouping: 'choose',
+      options: { teams: 'fixed', grouping: 'choose' },
     }) as KeywordsData;
     const seats = new Map(Object.entries({ ann: redPI, bob: red, cat: bluePI, dee: blue }));
     const started = keywordsGame.start({ ...setup, seating: { ...setup.seating, seats } }, context(ids), WORDS, 'g1');
@@ -857,7 +856,7 @@ describe('fixed groups', () => {
 });
 
 describe('rekeying a match', () => {
-  const rules: MatchRules = { games: 3, teams: 'fixed', grouping: 'choose' };
+  const rules: KeywordsMatchRules = { games: 3, options: { teams: 'fixed', grouping: 'choose' } };
   const remembered = (
     locked: Record<string, Team>,
     captained: Record<string, number> = {},

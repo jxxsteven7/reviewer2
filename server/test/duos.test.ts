@@ -43,19 +43,21 @@ const listOf = async (client: TestClient): Promise<FriendsView> => {
   return reply as unknown as FriendsView;
 };
 
-// Earlier games that the accounts won together, on the same side.
+// Earlier games of a game, the fake one unless it says, that the accounts won together, on the
+// same side.
 let earlier = 0;
-function wonTogether(accountIds: number[], games: number) {
+function wonTogether(accountIds: number[], games: number, game = 'test') {
   for (let i = 0; i < games; i += 1) {
     earlier += 1;
-    keepGame(server.db, `earlier-${earlier}`, { game: 'test', outcome: { winner: 'all', reason: 'finish' } });
+    keepGame(server.db, `earlier-${earlier}`, { game, outcome: { winner: 'all', reason: 'finish' } });
     for (const accountId of accountIds) {
       server.accounts.records.add(accountId, {
-        game: 'test',
+        game,
         gameId: `earlier-${earlier}`,
         side: 'all',
         role: 'player',
-        won: true,
+        result: 'won',
+        place: 1,
         verdict: 'v',
         points: 0,
       });
@@ -118,7 +120,12 @@ describe('friend duos', () => {
     await befriend(ann.client, bob.client, 'Bob', 'Ann');
     await befriend(ann.client, cat.client, 'Cat', 'Ann');
     wonTogether([ann.id, bob.id], 3);
-    const coauthor: DuoView = { ...NONE, wonTogether: 3, titles: ['coauthor'] };
+    // Two of the first game too, which are counted apart, and make nobody a co-first author yet.
+    wonTogether([ann.id, bob.id], 2, 'keywords');
+    const coauthor: Record<string, DuoView> = {
+      test: { ...NONE, wonTogether: 3, titles: ['coauthor'] },
+      keywords: { ...NONE, wonTogether: 2, titles: [] },
+    };
     expect((await listOf(ann.client)).friends).toEqual([
       expect.objectContaining({ username: 'Bob', duo: coauthor }),
       // Friends who share no game have nothing to show.
@@ -147,6 +154,8 @@ describe('friend duos', () => {
     const cat = await person('Cat');
     await befriend(ann.client, bob.client, 'Bob', 'Ann');
     wonTogether([ann.id, bob.id], 2);
+    // Their five of the first game, counted apart, are nothing to the duos of this one.
+    wonTogether([ann.id, bob.id], 5, 'keywords');
     const everyone = await roomOf(ann.client, [bob.client, cat.client], ['Dan']);
 
     // The third game won together makes each the other's co-first author, which each is told of,
@@ -160,7 +169,12 @@ describe('friend duos', () => {
     ]);
     // A fourth changes nothing that is worth telling.
     expect(await game(ann.client, everyone)).toEqual([[], [], [], [], []]);
-    expect(server.accounts.records.duos(ann.id)).toEqual(new Map([[bob.id, { ...NONE, wonTogether: 4 }]]));
+    expect(server.accounts.records.duos(ann.id)).toEqual(
+      new Map([
+        ['test', new Map([[bob.id, { ...NONE, wonTogether: 4 }]])],
+        ['keywords', new Map([[bob.id, { ...NONE, wonTogether: 5 }]])],
+      ]),
+    );
   });
 
   test('tell of a friend who draws level with the holder of a title, who is told nothing', async () => {
@@ -183,8 +197,8 @@ describe('friend duos', () => {
       [],
     ]);
     expect((await listOf(ann.client)).friends).toEqual([
-      expect.objectContaining({ username: 'Bob', duo: { ...NONE, wonTogether: 3, titles: ['coauthor'] } }),
-      expect.objectContaining({ username: 'Cat', duo: { ...NONE, wonTogether: 3, titles: ['coauthor'] } }),
+      expect.objectContaining({ username: 'Bob', duo: { test: { ...NONE, wonTogether: 3, titles: ['coauthor'] } } }),
+      expect.objectContaining({ username: 'Cat', duo: { test: { ...NONE, wonTogether: 3, titles: ['coauthor'] } } }),
     ]);
   });
 
@@ -197,7 +211,9 @@ describe('friend duos', () => {
     const everyone = await roomOf(ann.client, [bob.client]);
     // The chair withdraws the game that would have been their third: it counts for nobody.
     expect(await game(ann.client, everyone, true)).toEqual([[], [], []]);
-    expect(server.accounts.records.duos(ann.id)).toEqual(new Map([[bob.id, { ...NONE, wonTogether: 2 }]]));
+    expect(server.accounts.records.duos(ann.id)).toEqual(
+      new Map([['test', new Map([[bob.id, { ...NONE, wonTogether: 2 }]])]]),
+    );
     // The next one does.
     expect(await game(ann.client, everyone)).toEqual([
       [{ playerId: bob.client.me, title: 'coauthor', count: 3 }],
@@ -228,7 +244,7 @@ describe('friend duos', () => {
     expect(await duoOn(new Browser(server.url), bob.handle)).toBeNull();
     expect(await duoOn(bob.browser, bob.handle)).toBeNull();
     expect(counted).not.toHaveBeenCalled();
-    expect(await duoOn(ann.browser, bob.handle)).toEqual({ ...NONE, wonTogether: 1, titles: [] });
+    expect(await duoOn(ann.browser, bob.handle)).toEqual({ test: { ...NONE, wonTogether: 1, titles: [] } });
     expect(counted).toHaveBeenCalledTimes(1);
     expect(counted).toHaveBeenCalledWith(ann.id);
   });

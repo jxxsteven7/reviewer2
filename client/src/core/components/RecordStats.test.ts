@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { RecordCounts } from '@reviewer2/shared';
+import type { GameCounts } from '@reviewer2/shared';
 import { mount } from '@vue/test-utils';
 import { describe, expect, test } from 'vitest';
 import { createI18n } from 'vue-i18n';
@@ -12,14 +12,14 @@ import RecordStats from './RecordStats.vue';
 // matches won, on six blocks.
 
 const NONE = { games: 0, wins: 0 };
-const counts = (changes: Partial<RecordCounts> = {}): RecordCounts => ({
+const counts = (changes: Partial<GameCounts> = {}): GameCounts => ({
   ordinary: NONE,
   inMatches: NONE,
   roles: { captain: NONE, guesser: NONE },
   matches: { played: 0, won: 0 },
   ...changes,
 });
-const stats = (record: RecordCounts, locale: 'en' | 'zh' = 'en') =>
+const stats = (record: GameCounts, locale: 'en' | 'zh' = 'en') =>
   mount(RecordStats, {
     props: { counts: record },
     global: { plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })] },

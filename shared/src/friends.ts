@@ -98,9 +98,9 @@ export function checkFriendNote(text: string | undefined): {
 // button leads, or of one where the account has a seat itself; and without the code for any other
 // private room, which only an invitation leads into, and whose way in is to ask the friend for one
 // (friends:ask). `asked` says that the account has asked the friend so, and the request stands.
-// `duo` is what the account has played with the friend and the titles the friend holds among its
-// friends (duos.ts), or null when the two share no game. `alias` is the name the account gives the
-// friend, if any (checkAlias()).
+// `duo` is what the account has played with the friend in each game they share, by the game's ID,
+// and the titles the friend holds among its friends in it (duos.ts), or null when the two share no
+// game. `alias` is the name the account gives the friend, if any (checkAlias()).
 export interface FriendView {
   handle: string;
   username: string;
@@ -109,7 +109,7 @@ export interface FriendView {
   online: boolean;
   room: { code: string | null } | null;
   asked?: true;
-  duo: DuoView | null;
+  duo: Record<string, DuoView> | null;
 }
 
 // A room that friends of the account are in, as the home page shows it (friends:rooms): the friends

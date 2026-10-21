@@ -10,8 +10,7 @@ import {
   GITHUB_LOGIN,
   HANDLE,
   isLanguage,
-  MATCH_GROUPINGS,
-  MATCH_TEAMS,
+  MATCH_TITLES,
   matchGamesValid,
   MAX_ROOM_SETUP,
   RECORDS_NOTICE_VERSION,
@@ -226,12 +225,16 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
 
   // What accounts keep of the games (docs/architecture.md#accounts), each row against the record
   // of its game, which the foreign keys tie it to, and against what the game counts of the record
-  // of the game under the rules of today (recount.ts): the points, the verdict and the titles of
-  // each record of a game, and the place, the total and the title of each record of a match.
+  // of the game under the rules of today (recount.ts): who won and how, as the record of the game
+  // says it came out, how the game came out for each account, the place, the points, the verdict,
+  // the game's own detail and the titles of each record of a game, what each AI did in it, and the
+  // place, the total and the title of each record of a match. A game that one side won has its
+  // records won on that side and not won on any other; one that no one side won says nothing of
+  // its records.
   sql(
     'records of games that disagree with the record of the game',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-      "WHERE g.ending <> 'finished' OR r.won <> (r.side = g.winner)",
+      "WHERE g.ending <> 'finished' OR (g.winner IS NOT NULL AND (r.result = 'won') <> (r.side = g.winner))",
   );
   sql(
     'records of games that an AI played in, with points',
@@ -244,6 +247,14 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     ({ game, role }) => {
       const shapes = known.get(String(game))?.shapes;
       return shapes !== undefined && !shapes.role(String(role));
+    },
+  );
+  each(
+    "records of games whose detail is not in the game's shape",
+    'SELECT id, game, detail FROM game_records',
+    ({ game, detail }) => {
+      const shapes = known.get(String(game))?.shapes;
+      return shapes !== undefined && !shapes.detail(parse(detail));
     },
   );
   sql(
@@ -259,6 +270,21 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
         .all(...TITLES) as Row[]
     ).map((row) => String(row.id)),
   );
+  each(
+    'titles of a game that the game does not bring',
+    'SELECT id, game, title FROM titles WHERE game_id IS NOT NULL',
+    ({ game, title }) => {
+      const module = known.get(String(game));
+      return module !== undefined && !(module.titles ?? []).includes(title as (typeof TITLES)[number]);
+    },
+  );
+  sql(
+    "titles of a match that are not a match's",
+    'SELECT id FROM titles WHERE match_id IS NOT NULL AND title NOT IN (' +
+      MATCH_TITLES.map(() => '?').join(', ') +
+      ')',
+    ...MATCH_TITLES,
+  );
   sql(
     'titles of another game than the record they go with',
     'SELECT t.id FROM titles AS t WHERE ' +
@@ -273,6 +299,8 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   const wrongTitles: number[] = [];
   const misranked: number[] = [];
   const wrongMatchTitles: number[] = [];
+  const misplayed: string[] = [];
+  const wrongOutcomes: string[] = [];
   const held = new HeldRecords(db);
   for (const module of games) {
     if (module.recount === undefined) continue;
@@ -283,9 +311,13 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     }
     uncounted.push(...counted.uncounted.map(({ gameId }) => gameId));
     for (const game of counted.counted) {
+      if (held.outcomeDiffers(game)) wrongOutcomes.push(game.gameId);
       for (const { id, count, fact, counted: differs, titles } of held.game(game)) {
         if (!count || fact || differs) miscounted.push(id);
         if (titles) wrongTitles.push(id);
+      }
+      for (const { playerId, count, fact, counted: differs } of held.plays(game)) {
+        if (!count || fact || differs) misplayed.push(`${game.gameId}:${playerId}`);
       }
     }
     // The records of a match whose games are all kept and counted, against what they add up to; a
@@ -314,8 +346,10 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   }
   found("games whose records are counted under other rules than today's", otherRules);
   found('finished games whose records cannot be counted again from their record', uncounted);
+  found('finished games whose outcome is not what their record counts', wrongOutcomes);
   found('records of games that are not what their record counts', miscounted);
   found('records of games whose titles are not what their record brings', wrongTitles);
+  found('AI plays that are not what the record of their game counts', misplayed);
   found('records of matches that are not what their games add up to', misranked);
   found('records of matches whose title is not what their games award', wrongMatchTitles);
 
@@ -331,10 +365,10 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     ).map((row) => String(Object.values(row)[0])),
   );
   sql(
-    'AI plays for someone offline that keep counts, or AI seats that keep none, or no side, role or result',
+    'AI plays for someone offline that keep counts, or AI seats with no side, role or result',
     play(
       'WHERE (takeover = 1 AND feats IS NOT NULL) OR ' +
-        '(takeover = 0 AND (feats IS NULL OR side IS NULL OR role IS NULL OR won IS NULL))',
+        '(takeover = 0 AND (side IS NULL OR role IS NULL OR result IS NULL))',
     ),
   );
   sql(
@@ -536,7 +570,7 @@ function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): bo
       ) {
         return false;
       }
-      if (!(room.match === null || isMatchRules(room.match))) return false;
+      if (!(room.match === null || isMatchRules(room.match, game))) return false;
       if (room.settings !== undefined && game.shapes !== undefined && !game.shapes.settings(room.settings))
         return false;
       const fields = ['language', 'fields', 'randomFields', 'settings', 'match', 'public', 'play'];
@@ -554,9 +588,12 @@ function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): bo
   });
 }
 
-const isMatchRules = (value: unknown): boolean =>
-  isObject(value) &&
-  matchGamesValid(value.games) &&
-  MATCH_TEAMS.includes(value.teams as (typeof MATCH_TEAMS)[number]) &&
-  MATCH_GROUPINGS.includes(value.grouping as (typeof MATCH_GROUPINGS)[number]) &&
-  Object.keys(value).length === 3;
+// Whether a value is the rules of a match of the game (MatchRules): the number of games, and the
+// game's own options, as the game takes them (MatchHooks.options), or none for a game that has
+// none.
+const isMatchRules = (value: unknown, game: GameModule): boolean => {
+  const hooks = game.match;
+  if (!isObject(value) || hooks === undefined || !matchGamesValid(value.games)) return false;
+  if (!Object.keys(value).every((key) => key === 'games' || key === 'options')) return false;
+  return hooks.options ? hooks.options(value.options) !== null : value.options === undefined;
+};

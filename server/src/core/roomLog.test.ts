@@ -282,7 +282,7 @@ describe('the record of a game', () => {
       },
     };
     const { room, ann, bob } = table(matchGame);
-    expect(room.startMatch({ games: 3, teams: 'switch', grouping: 'choose' })).toEqual({ ok: true });
+    expect(room.startMatch({ games: 3 })).toEqual({ ok: true });
     // Nothing of a match in the record of an ordinary game: one that nobody is numbered in yet.
     room.start(0);
     room.act(ann.id, 'test:finish', undefined);

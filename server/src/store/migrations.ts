@@ -1233,4 +1233,89 @@ export const MIGRATIONS: readonly string[] = [
     CHECK (login IS NOT NULL OR named = 0)
   ) STRICT;
   `,
+  // 26: how a game came out for each player is more than whether they won
+  // (docs/architecture.md#game-records), so that a game where each plays for themselves, one that can
+  // be drawn and one that everyone plays together are kept as the first game is, as the maintainers
+  // decided before the second game. The tables are rebuilt as migration 24 rebuilt them, every row
+  // kept with its id and the count that AUTOINCREMENT goes on from:
+  //
+  // - game_records keeps how the game came out for the player, won, drawn or lost, in place of
+  //   whether they won; their place, 1 and one more for each player who did better; and what the
+  //   game counts of their game, as JSON in the game's own shape (GameShapes.detail), such as where
+  //   their points came from. The first game, the only one there is, has two sides, one of which
+  //   wins: a record that was won is won in the first place, one that wasn't is lost in the second.
+  //   The detail is left for the count of every game below.
+  // - agent_plays keeps the same of each AI player in a seat and each person an AI played for, both
+  //   or neither: a person who had no part in the game at its end has neither.
+  // - accounts' last room setup keeps the rules of a match as a match of any game has them
+  //   (MatchRules in shared/src/match.ts): the number of games, and the game's own options, which
+  //   are how the first game's groups are made.
+  // - The settings forget the rules that every game's records were counted under, so that the
+  //   server counts every kept game again as it starts (recount.ts), right after this migration:
+  //   how each game came out for each player, their place, their points, the verdict, the detail
+  //   and the titles, and what each AI player did, are the count's, and only who played where is
+  //   held against the log. Nothing that the records showed changes but the detail they gain.
+  `
+  CREATE TABLE new_game_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
+    game TEXT NOT NULL,
+    game_id TEXT NOT NULL,
+    side TEXT NOT NULL,
+    role TEXT NOT NULL,
+    result TEXT NOT NULL CHECK (result IN ('won', 'drawn', 'lost')),
+    place INTEGER NOT NULL CHECK (place >= 1),
+    verdict TEXT NOT NULL,
+    detail TEXT CHECK (detail IS NULL OR json_type(detail) = 'object'),
+    points INTEGER NOT NULL,
+    UNIQUE (account_id, game_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+  INSERT INTO new_game_records (id, account_id, game, game_id, side, role, result, place, verdict, detail, points)
+    SELECT id, account_id, game, game_id, side, role,
+      CASE won WHEN 1 THEN 'won' ELSE 'lost' END, CASE won WHEN 1 THEN 1 ELSE 2 END, verdict, NULL, points
+    FROM game_records;
+  DELETE FROM sqlite_sequence WHERE name = 'new_game_records';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_game_records', seq FROM sqlite_sequence WHERE name = 'game_records';
+  DROP TABLE game_records;
+  ALTER TABLE new_game_records RENAME TO game_records;
+  CREATE INDEX game_records_recent ON game_records (account_id, id DESC);
+  CREATE INDEX game_records_game ON game_records (game_id);
+
+  CREATE TABLE new_agent_plays (
+    game_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    game TEXT NOT NULL,
+    persona TEXT NOT NULL,
+    takeover INTEGER NOT NULL CHECK (takeover IN (0, 1)),
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    side TEXT,
+    role TEXT,
+    result TEXT CHECK (result IN ('won', 'drawn', 'lost')),
+    place INTEGER CHECK (place >= 1),
+    feats TEXT CHECK (feats IS NULL OR json_type(feats) = 'object'),
+    CHECK ((result IS NULL) = (place IS NULL)),
+    PRIMARY KEY (game_id, player_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+  INSERT INTO new_agent_plays (game_id, player_id, game, persona, takeover, account_id, side, role, result, place,
+      feats)
+    SELECT game_id, player_id, game, persona, takeover, account_id, side, role,
+      CASE won WHEN 1 THEN 'won' WHEN 0 THEN 'lost' END, CASE won WHEN 1 THEN 1 WHEN 0 THEN 2 END, feats
+    FROM agent_plays;
+  DROP TABLE agent_plays;
+  ALTER TABLE new_agent_plays RENAME TO agent_plays;
+  CREATE INDEX agent_plays_persona ON agent_plays (persona);
+  CREATE INDEX agent_plays_account ON agent_plays (account_id);
+
+  UPDATE accounts SET room_setup = json_set(room_setup, '$.keywords.room.match', json_object(
+    'games', json_extract(room_setup, '$.keywords.room.match.games'),
+    'options', json_object(
+      'teams', json_extract(room_setup, '$.keywords.room.match.teams'),
+      'grouping', json_extract(room_setup, '$.keywords.room.match.grouping')
+    )
+  )) WHERE json_type(room_setup, '$.keywords.room.match') = 'object';
+
+  DELETE FROM settings WHERE key GLOB 'rules_counted:*';
+  `,
 ];

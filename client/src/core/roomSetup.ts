@@ -1,4 +1,4 @@
-import { MATCH_GROUPINGS, MATCH_TEAMS, matchGamesValid, type GameRoomSetup, type MatchRules } from '@reviewer2/shared';
+import type { GameRoomSetup } from '@reviewer2/shared';
 import { account } from './account';
 import { readStored, writeStored } from './storage';
 
@@ -29,9 +29,18 @@ function storedRooms(): Record<string, unknown> {
   }
 }
 
+// The room of the game that the browser last set up, if it kept one. The rules of a match kept
+// before they carried the game's own options, as `{games, teams, grouping}`, are read as
+// `{games, options: {teams, grouping}}`, which is what they meant.
 function storedRoom(game: string): Partial<LastRoom> | null {
   const room = storedRooms()[game];
-  return isObject(room) ? (room as Partial<LastRoom>) : null;
+  if (!isObject(room)) return null;
+  const { match } = room;
+  if (isObject(match) && !('options' in match) && ('teams' in match || 'grouping' in match)) {
+    const { games, ...options } = match;
+    return { ...room, match: { games, options } } as Partial<LastRoom>;
+  }
+  return room as Partial<LastRoom>;
 }
 
 // The last setup of a room of the game `game`, as far as it can be read: anything may be missing
@@ -67,13 +76,3 @@ export const keptFields = (fields: unknown, usable?: ReadonlySet<string>): strin
   Array.isArray(fields)
     ? fields.filter((id): id is string => typeof id === 'string' && (usable === undefined || usable.has(id)))
     : [];
-
-// The match rules of a setup, if they still hold.
-export function keptMatch(rules: unknown): MatchRules | null {
-  if (!isObject(rules)) return null;
-  const { games, teams, grouping } = rules;
-  if (!matchGamesValid(games)) return null;
-  const team = MATCH_TEAMS.find((known) => known === teams);
-  const group = MATCH_GROUPINGS.find((known) => known === grouping);
-  return team && group ? { games: games as number, teams: team, grouping: group } : null;
-}

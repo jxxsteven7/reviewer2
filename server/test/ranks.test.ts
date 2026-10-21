@@ -45,7 +45,8 @@ describe('academic ranks', () => {
       gameId: 'earlier',
       side: 'red',
       role: 'captain',
-      won: true,
+      result: 'won',
+      place: 1,
       verdict: 'oral',
       points: RANK_POINTS.master - 1,
     });
@@ -115,7 +116,7 @@ describe('academic ranks', () => {
     await until(() => records.points(1) === RANK_POINTS.master - 1 + points.Ann, "Ann's points");
     expect(records.points(2)).toBe(points.Bob);
     // The game went on the records with its points, and once to the replays, to watch again.
-    expect(records.view(1).recent[0]).toMatchObject({ game: 'keywords', won: true });
+    expect(records.view(1).keywords?.recent[0]).toMatchObject({ game: 'keywords', result: 'won', place: 1 });
     expect(server.db.prepare("SELECT count(*) AS count FROM replays WHERE game_id <> 'earlier'").get()).toEqual({
       count: 1,
     });
@@ -126,6 +127,6 @@ describe('academic ranks', () => {
     expect((await anns.account())?.points).toBe(records.points(1));
     // A withdrawn game would have counted for nothing, and a game is counted once however often its
     // end is told: the record holds one game from today.
-    expect(records.view(1).ordinary.games).toBe(2);
+    expect(records.view(1).keywords?.ordinary.games).toBe(2);
   });
 });
