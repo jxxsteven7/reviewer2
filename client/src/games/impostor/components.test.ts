@@ -19,6 +19,7 @@ import AgentGuess from './AgentGuess.vue';
 import ImpostorGame from './ImpostorGame.vue';
 import ImpostorLobby from './ImpostorLobby.vue';
 import JudgeSheet from './JudgeSheet.vue';
+import OffField from './OffField.vue';
 import ReplayViewer from './ReplayViewer.vue';
 import RevealList from './RevealList.vue';
 import RoundLog from './RoundLog.vue';
@@ -394,6 +395,28 @@ describe('ImpostorGame', () => {
   });
 });
 
+describe('OffField', () => {
+  test('names the writer of a line wherever the view says who they are, with how they stand', () => {
+    // A game that isn't anonymous names the players while it is on; an anonymous one gives only
+    // their numbers until the reveal.
+    const game = view({
+      you: { number: 3, role: 'student', word: { word: 'preprint' } },
+      offField: [
+        { id: 1, number: 1, playerId: 'bob', text: 'it was not me', after: false },
+        { id: 2, number: 2, playerId: null, text: 'nor me', after: false },
+        { id: 3, number: null, playerId: 'eve', text: 'good game', after: false },
+      ],
+      mayTalk: true,
+    });
+    const wrapper = mount(OffField, {
+      props: { room: room(game), game, setterId: 'eve', sending: false, open: () => {}, draft: '' },
+      global: global(),
+    });
+    const names = wrapper.findAll('.message .name').map((name) => name.text());
+    expect(names).toEqual(['#1 Bob', '#2', 'Eve \u00b7 setter']);
+  });
+});
+
 describe('RoundLog', () => {
   test('folds each round, with its lines and its votes, the newest voted round open', () => {
     const wrapper = mount(RoundLog, { props: { game: view() }, global: global() });
@@ -451,6 +474,12 @@ describe('SeatPanel', () => {
     await remove.at(-1)!.trigger('click');
     await flushPromises();
     expect(send).toHaveBeenCalledWith('room:remove', { seat: { gameId: 'g1', number: 2 } });
+    // Once the game is over, a withdrawn one included, there is no game to remove a player from.
+    const over = mount(SeatPanel, {
+      props: { game: view({ phase: 'over', result: null }), number: 2, isChair: true },
+      global: global(),
+    });
+    expect(over.findAll('button').some((button) => button.text() === 'Remove from the room')).toBe(false);
   });
 });
 
