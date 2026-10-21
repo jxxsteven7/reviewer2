@@ -262,6 +262,8 @@ export class Room {
   // The chair's own words, which the games draw from along with the fields, each with its
   // pinyin when it is Chinese (docs/games/keywords.md#custom-words). A private room's alone.
   customWords: BoardWord[] = [];
+  // The member who set the room's own words, the chair then (GameContext.customAuthor).
+  #wordsBy: string | null = null;
   public: boolean;
   // A practice room (docs/architecture.md#practice-rooms), made to play with AI players. It stays
   // one whoever chairs it, and may have AI players whatever the chair's account.
@@ -396,6 +398,10 @@ export class Room {
       playerIds: () => [...this.members.keys()],
       hasAccount: (id) => this.#accountIdOf(id) !== null,
       hasField: (field) => this.#words.has(field),
+      customAuthor: () => {
+        if (this.customWords.length === 0) return null;
+        return this.#wordsBy !== null && this.members.has(this.#wordsBy) ? this.#wordsBy : this.chairId;
+      },
       titleCount: (id, title) => this.#titleCountOf(id, title),
       awardsTitles: (id) => this.#accountIdOf(id) !== null && this.#titleCount !== null && !this.#scoresNothing(),
     };
@@ -872,6 +878,7 @@ export class Room {
     if (data === this.data && sameFields(fields, this.fields) && sameWords && random === this.randomFields) return done;
     this.fields = fields;
     this.randomFields = random;
+    if (!sameWords) this.#wordsBy = custom.length > 0 ? this.chairId : null;
     this.customWords = custom;
     this.data = data;
     this.changed();
@@ -1406,6 +1413,14 @@ export class Room {
     return (this.results() ?? []).some((result) => result.playerId === id);
   }
 
+  // Whether a member took part in the game that has just ended, as a player or as one who gave its
+  // words (GameModule.contributors), for feedback about it.
+  tookPart(id: string, gameId: string): boolean {
+    const member = this.members.get(id);
+    if (!member || gameId !== this.gameId || this.phase !== 'ended') return false;
+    return this.#participants().has(member.key) || this.#contributors().includes(member.key);
+  }
+
   // A player's guess of who the AI players of the game that has just ended were, or their skip, by
   // null (docs/architecture.md#guessing-the-ai), as the game takes it (GameModule.guessAgents),
   // which then shows them the answer. Returns the guess as the record keeps it, for the socket layer
@@ -1468,7 +1483,7 @@ export class Room {
   record(): GameRecordData | null {
     if (this.#ending === null || !this.#log) return null;
     const keys = this.#participants();
-    const accounts = this.#accountsOf(keys);
+    const accounts = this.#accountsOf(new Set([...keys, ...this.#contributors()]));
     const kinds = new Map<string, keyof GameRecordData['counts']>();
     for (const member of this.members.values()) {
       kinds.set(member.key, member.agent ? 'agents' : member.account ? 'accounts' : 'guests');
@@ -1507,6 +1522,11 @@ export class Room {
       rules: this.game.rulesVersion ?? null,
       words: this.#words.hash,
     };
+  }
+
+  // The member keys of those who took part in the game without playing in it (GameModule.contributors).
+  #contributors(): string[] {
+    return this.game.contributors?.(this.data, this.context) ?? [];
   }
 
   // The member keys of everyone who played in the game.
@@ -1584,7 +1604,7 @@ export class Room {
     return {
       gameId: log.gameId,
       entries,
-      accounts: this.#accountsOf(this.#participants()),
+      accounts: this.#accountsOf(new Set([...this.#participants(), ...this.#contributors()])),
       match: this.#matchNumbers(),
     };
   }

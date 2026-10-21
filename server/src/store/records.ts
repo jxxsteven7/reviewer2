@@ -463,11 +463,11 @@ export class ReplayStore {
       'INSERT OR IGNORE INTO game_players (game_id, player_id, game, account_id) ' +
         'SELECT ?, ?, ?, id FROM accounts WHERE id = ?',
     );
-    // Only an account that has the game on its record may read it, and only a game that finished
-    // has a replay.
+    // Only an account that took part in the game may read it, as a player or as the setter who
+    // gave its words (game_players, migration 27), and only a game that finished has a replay.
     this.#read = db.prepare(
       "SELECT game, setup, log, language FROM replays WHERE game_id = ? AND ending = 'finished' AND " +
-        'EXISTS (SELECT 1 FROM game_records WHERE account_id = ? AND game_id = replays.game_id)',
+        'EXISTS (SELECT 1 FROM game_players WHERE account_id = ? AND game_id = replays.game_id)',
     );
     this.#players = db.prepare(
       'SELECT player_id AS playerId, account_id AS accountId FROM game_players WHERE game_id = ? ORDER BY rowid',
@@ -592,8 +592,8 @@ export class ReplayStore {
     return true;
   }
 
-  // What it takes to show the replay of a game that finished, for an account that played in it, or
-  // null.
+  // What it takes to show the replay of a game that finished, for an account that took part in it,
+  // or null.
   read(accountId: number, gameId: string): StoredGame | null {
     const row = this.#read.get(gameId, accountId) as
       { game: string; setup: string | null; log: string; language: Language } | undefined;

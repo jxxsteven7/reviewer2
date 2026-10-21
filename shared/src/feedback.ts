@@ -67,7 +67,9 @@ export type ReportError = (typeof REPORT_ERRORS)[number];
 // rather than listing as anonymous a player who chose to sign. `version` is the build of the page,
 // which may be older than the server's. Pages from before carried a link for the name and whether
 // the player agreed to a public issue, which the server ignores, and no `linkProfile`, which is
-// then no.
+// then no. `gameId` names the game that has just ended in the player's room, when they send the
+// feedback from its end, which the server keeps it with if the player took part in the game and
+// the game is kept.
 export interface FeedbackMessage {
   kind: FeedbackKind;
   text: string;
@@ -77,6 +79,7 @@ export interface FeedbackMessage {
   version: string;
   language: Language;
   page: FeedbackPage;
+  gameId?: string;
 }
 
 // Feedback as it is kept. Unlike a chat message it keeps its line breaks, because the steps that

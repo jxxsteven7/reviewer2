@@ -68,6 +68,8 @@ describe('a database in DATA_DIR', () => {
     expect(tables(database.db)).toEqual([
       'accounts',
       'agent_plays',
+      'ai_guesses',
+      'content_contributions',
       'email_tokens',
       'feedback',
       'friendships',
@@ -76,6 +78,7 @@ describe('a database in DATA_DIR', () => {
       'github_contributions',
       'likes',
       'match_records',
+      'ratings',
       'replays',
       'reports',
       'sessions',
@@ -2004,6 +2007,145 @@ describe('a database in DATA_DIR', () => {
     after.close();
   });
 
+  // A database of the twenty-sixth release: two accounts; three games of the first game, one with
+  // words of the chair's own on its board, one without, and one abandoned before it began; and
+  // feedback, signed and adopted, anonymous, and some deleted since, so that its ids go on from 3.
+  // Gives the feedback as it was.
+  async function twentySixth(changes = '') {
+    const database = await open(dir, MIGRATIONS.slice(0, 26));
+    const board = (custom: boolean) =>
+      `{"settings":{"language":"en"},"startingTeam":"red","cards":[{"word":"Lamp","color":"red","custom":${custom}},` +
+      '{"word":"Kite","color":"blue","custom":false}]}';
+    const kept = (id: string, ending: string, setup: string | null) =>
+      `('${id}', 'keywords', 'now', '{"v":2,"game":"keywords","gameId":"${id}","start":null,"entries":[]}', NULL, ` +
+      `'${ending}', ${ending === 'finished' ? "'red', 'found'" : 'NULL, NULL'}, 'now', ` +
+      `${setup === null ? 'NULL' : `'${setup}'`}, 1, 0, 0, 0, 0, 0, 'en', '["general"]', 'v', 6, 'w', NULL, NULL, NULL)`;
+    database.db.exec(`
+      INSERT INTO accounts (id, handle, username, username_key, password, consent_version, consented_at, created_at) VALUES
+        (1, 'aaaaaaaaaaaa', 'Ann', 'ann', 'h', 1, 'now', 'now'),
+        (2, 'bbbbbbbbbbbb', 'Bob', 'bob', 'h', 1, 'now', 'now');
+      INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, rules, words, match_id, match_game, match_games) VALUES
+        ${kept('g1', 'finished', board(true))}, ${kept('g2', 'finished', board(false))}, ${kept('g3', 'abandoned', null)};
+      INSERT INTO game_players (game_id, player_id, game, account_id) VALUES ('g1', 'p1', 'keywords', 1), ('g2', 'p1', 'keywords', 2);
+      INSERT INTO feedback (id, created_at, kind, text, contact, version, language, page, user_agent, credit, account_id,
+        issue, resolved_pr, resolved_at, closed_at, deleted_at, adopted_at, summary_zh, summary_en, link_profile) VALUES
+        (1, 'now', 'idea', 'More words', NULL, 'v', 'en', 'home', NULL, NULL, 1, 5, 7, 'now', NULL, NULL, 'now', 'z', 'e', 1),
+        (2, 'now', 'bug', 'It froze', 'me@example.com', 'v', 'zh', 'room', 'Firefox', NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+          NULL, NULL, NULL, 0),
+        (3, 'now', 'other', 'Hi', NULL, 'v', 'en', 'home', NULL, 'Zed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0);
+      DELETE FROM feedback WHERE id = 3;
+      ${changes}
+    `);
+    const feedback = database.db.prepare('SELECT * FROM feedback ORDER BY id').all();
+    database.db.close();
+    return feedback;
+  }
+
+  test('of the twenty-sixth release keeps its feedback and boards, and gets the ratings, the guesses and the words adopted from the games', async () => {
+    const before = await twentySixth();
+    const migrated = await open(dir, MIGRATIONS.slice(0, 27));
+    expect(migrated).toMatchObject({ schema: 27, migratedFrom: 26 });
+    const { db } = migrated;
+    const all = (sql: string) => db.prepare(sql).all();
+    const run = (sql: string) => db.exec(sql);
+    // The schema is that of a new database of that release, to the letter.
+    const fresh = await open(null, MIGRATIONS.slice(0, 27));
+    const schema = (database: DatabaseSync) =>
+      database
+        .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+        .all();
+    expect(schema(db)).toEqual(schema(fresh.db));
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    // Every piece of feedback is as it was, about no game, and the ids go on from where they were.
+    expect(all('SELECT * FROM feedback ORDER BY id')).toEqual(
+      before.map((row) => ({ ...row, game: null, game_id: null })),
+    );
+    expect(all("SELECT seq FROM sqlite_sequence WHERE name = 'feedback'")).toEqual([{ seq: 3 }]);
+    run(
+      "INSERT INTO feedback (created_at, kind, text, version, language, page) VALUES ('now', 'idea', 'x', 'v', 'en', 'home')",
+    );
+    expect(all("SELECT id FROM feedback WHERE text = 'x'")).toEqual([{ id: 4 }]);
+    // A board with words of the chair's own names nobody as who gave them, since the record didn't
+    // say; the others are as they were.
+    expect(all('SELECT game_id AS id, setup FROM replays ORDER BY game_id')).toEqual([
+      {
+        id: 'g1',
+        setup:
+          '{"settings":{"language":"en"},"startingTeam":"red","cards":[{"word":"Lamp","color":"red","custom":true},{"word":"Kite","color":"blue","custom":false}],"customAuthor":null}',
+      },
+      {
+        id: 'g2',
+        setup:
+          '{"settings":{"language":"en"},"startingTeam":"red","cards":[{"word":"Lamp","color":"red","custom":false},{"word":"Kite","color":"blue","custom":false}]}',
+      },
+      { id: 'g3', setup: null },
+    ]);
+    // Feedback is about a game of the first game that is kept, or about none; it names both or neither.
+    run("UPDATE feedback SET game = 'keywords', game_id = 'g2' WHERE id = 2");
+    expect(() => run("UPDATE feedback SET game = 'impostor', game_id = 'g1' WHERE id = 1")).toThrow(/FOREIGN KEY/);
+    expect(() => run("UPDATE feedback SET game_id = 'g1' WHERE id = 1")).toThrow(/CHECK/);
+    // A rating or a guess is of a game that is kept, a guess a list or a skip.
+    run("INSERT INTO ratings VALUES ('g1', 'keywords', 'p1', 'good', 'now'), ('g1', 'keywords', 'p2', NULL, 'now')");
+    run(
+      "INSERT INTO ai_guesses VALUES ('g1', 'keywords', 'p1', '[\"p2\"]', 'now'), ('g1', 'keywords', 'p2', NULL, 'now')",
+    );
+    expect(() => run("INSERT INTO ratings VALUES ('g9', 'keywords', 'p1', 'good', 'now')")).toThrow(/FOREIGN KEY/);
+    expect(() => run("INSERT INTO ratings VALUES ('g1', 'keywords', 'p1', 'hard', 'now')")).toThrow(/UNIQUE/);
+    expect(() => run(`INSERT INTO ai_guesses VALUES ('g2', 'keywords', 'p1', '{"p2":1}', 'now')`)).toThrow(/CHECK/);
+    // Words adopted are an object, from a game or none, with an account to be named by.
+    const adopt = (values: string) =>
+      run(
+        'INSERT INTO content_contributions (kind, game, game_id, content, account_id, named, adopted_at, summary_zh, summary_en) ' +
+          `VALUES (${values})`,
+      );
+    adopt(`'words', 'keywords', 'g1', '{"words":["Lamp"]}', 1, 1, 'now', 'z', 'e'`);
+    adopt(`'pair', 'impostor', NULL, '{"words":["Apple","Pear"],"field":"general"}', NULL, 0, 'now', 'z', 'e'`);
+    for (const values of [
+      `'words', 'keywords', 'g1', '{"words":["Lamp"]}', NULL, 1, 'now', 'z', 'e'`,
+      `'words', 'keywords', 'g1', '["Lamp"]', 1, 1, 'now', 'z', 'e'`,
+      `'words', 'keywords', 'g1', '{"words":["Lamp"]}', 1, 2, 'now', 'z', 'e'`,
+    ]) {
+      expect(() => adopt(values), values).toThrow(/CHECK/);
+    }
+    // Ratings and guesses go with their game; words adopted and feedback stay, about no game.
+    run("DELETE FROM replays WHERE game_id IN ('g1', 'g2')");
+    expect(all('SELECT count(*) AS n FROM ratings')).toEqual([{ n: 0 }]);
+    expect(all('SELECT count(*) AS n FROM ai_guesses')).toEqual([{ n: 0 }]);
+    expect(all('SELECT id, game_id AS gameId FROM content_contributions ORDER BY id')).toEqual([
+      { id: 1, gameId: null },
+      { id: 2, gameId: null },
+    ]);
+    expect(all('SELECT id, game, game_id AS gameId FROM feedback WHERE id = 2')).toEqual([
+      { id: 2, game: null, gameId: null },
+    ]);
+    // Once the words adopted are no longer named, the account may go, which they are kept without.
+    run('UPDATE content_contributions SET named = 0 WHERE account_id = 1');
+    run('DELETE FROM accounts WHERE id = 1');
+    expect(all('SELECT account_id AS account FROM content_contributions ORDER BY id')).toEqual([
+      { account: null },
+      { account: null },
+    ]);
+  });
+
+  test('of the twenty-sixth release is left as it was when the setup of a game is not JSON', async () => {
+    const before = await twentySixth(`UPDATE replays SET setup = '{"cards":' WHERE game_id = 'g2'`);
+    await expect(open(dir, MIGRATIONS.slice(0, 27))).rejects.toThrow(/malformed JSON/);
+    const after = new DatabaseSync(join(dir, DATABASE_FILE));
+    expect(schemaVersion(after)).toBe(26);
+    expect(after.prepare('SELECT * FROM feedback ORDER BY id').all()).toEqual(before);
+    expect(after.prepare("SELECT setup FROM replays WHERE game_id = 'g1'").get()).toEqual({
+      setup:
+        '{"settings":{"language":"en"},"startingTeam":"red","cards":[{"word":"Lamp","color":"red","custom":true},{"word":"Kite","color":"blue","custom":false}]}',
+    });
+    expect(
+      after
+        .prepare("SELECT name FROM sqlite_schema WHERE name IN ('ratings', 'ai_guesses', 'content_contributions')")
+        .all(),
+    ).toEqual([]);
+    after.close();
+  });
+
   test('runs a migration with foreign keys off, so that it can rebuild a table that others point at', async () => {
     const two = [
       'CREATE TABLE a (id INTEGER PRIMARY KEY) STRICT',
@@ -2083,6 +2225,8 @@ describe('a database in memory', () => {
     expect(tables(database.db)).toEqual([
       'accounts',
       'agent_plays',
+      'ai_guesses',
+      'content_contributions',
       'email_tokens',
       'feedback',
       'friendships',
@@ -2091,6 +2235,7 @@ describe('a database in memory', () => {
       'github_contributions',
       'likes',
       'match_records',
+      'ratings',
       'replays',
       'reports',
       'sessions',

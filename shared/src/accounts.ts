@@ -315,12 +315,16 @@ export interface MatchRecord {
 // each of the game's roles, by the role's ID, as the game names them (for the team word guessing
 // game, a group's PI, `captain`, and a student, `guesser`), counting every game as the total does,
 // and how many matches of the game it has finished, and finished first in, alone or level with
-// others (docs/architecture.md#accounts). A role it has never played in isn't there.
+// others (docs/architecture.md#accounts). A role it has never played in isn't there. `wordsSet`
+// is, for a game in which a setter gives the words, how many games that finished the account set
+// the words of, and how many good ratings players gave them (docs/architecture.md#ratings); it
+// isn't there for an account that has set none.
 export interface GameCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };
   roles: Record<string, { games: number; wins: number }>;
   matches: { played: number; won: number };
+  wordsSet?: { games: number; good: number };
 }
 
 // The counts of a game that the account has finished no game or match of.

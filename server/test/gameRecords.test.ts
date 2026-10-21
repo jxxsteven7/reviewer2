@@ -1,8 +1,9 @@
 import { type ClueRecord, type KeywordsRoomData, type KeywordsView, type Team } from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test } from 'vitest';
+import type { GameModule } from '../src/core/game';
 import type { GameLogData } from '../src/core/gameLog';
 import { keywordsGame } from '../src/games/keywords';
-import { fakeGame } from './fakeGame';
+import { fakeGame, type FakeData, type FakeView } from './fakeGame';
 import { Browser, startServer, TestClient, until, type TestServer } from './helpers';
 
 // The record of a game over real sockets (docs/architecture.md#game-records): how it ended and what
@@ -469,14 +470,15 @@ describe('the record of a game', () => {
     expect(players()).toEqual([]);
   });
 
-  test('is kept when the one player with an account left before the end, who still has no replay', async () => {
+  test('is kept when the one player with an account left before the end, who may still watch it again', async () => {
     server = await startServer();
     const { annId, anns, gameId } = await played({ leave: true });
     await until(() => kept().length === 1, 'the record');
     expect(players()).toEqual([{ playerId: annId, accountId: 1 }]);
-    // Ann has no part in the end of the game, so it isn't on her record, and the replay needs that.
+    // Ann has no part in the end of the game, so it isn't on her record; she took part in it all the
+    // same, which is what the replay needs.
     expect(server.db.prepare('SELECT count(*) AS count FROM game_records').get()).toEqual({ count: 0 });
-    expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 404 });
+    expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 200 });
   });
 
   test('is kept when the one player with an account deleted it during the game, without her, her player ID marked', async () => {
@@ -527,6 +529,40 @@ describe('the record of a game', () => {
     await ann.waitFor((state) => state.phase === 'ended');
     await until(() => kept().length === 1, 'the record');
     expect(kinds()).toMatchObject([{ ending: 'finished', replay: 1 }]);
+  });
+
+  test("keeps who gave the chair's own words among those who took part, without counting them, to watch it again", async () => {
+    // The test game, which says that whoever gave the chair's own words of a game took part in it.
+    type Authored = FakeData & { author?: string | null };
+    const authored: GameModule<Authored, FakeView> = {
+      ...(fakeGame as GameModule<Authored, FakeView>),
+      start: (data, ctx, words, gameId) => ({
+        ...fakeGame.start(data, ctx, words, gameId),
+        author: ctx.customAuthor(),
+      }),
+      contributors: (data, ctx) => (data.author ? [ctx.keyOf(data.author)] : []),
+    };
+    server = await startServer({ games: [authored as unknown as GameModule] });
+    // Ann chairs and only watches, and gives the words; Bob and Dan play.
+    const anns = new Browser(server.url);
+    expect((await anns.register('Ann')).body).toEqual({ ok: true });
+    const ann = track(await anns.connect());
+    const reply = await ann.send('room:create', { game: 'test', language: 'en', fields: ['general'], play: false });
+    if (!reply.ok) throw new Error(reply.error);
+    expect(await ann.send('room:settings', { words: 'Alpha\nBravo\nCharlie\nDelta' })).toEqual({ ok: true });
+    const bob = track(await TestClient.connect(server.url));
+    const dan = track(await TestClient.connect(server.url));
+    await bob.send('room:join', { code: reply.code, play: true });
+    await dan.send('room:join', { code: reply.code, play: true });
+    await ann.waitFor((state) => state.players.length === 3);
+    await ann.send('room:start', { round: 0 });
+    const { gameId } = (await ann.waitFor((state) => state.phase === 'playing')) as { gameId: string };
+    await bob.send('test:finish');
+    await ann.waitFor((state) => state.phase === 'ended');
+    await until(() => kept().length === 1, 'the record');
+    expect(players()).toEqual([{ playerId: ann.state?.me, accountId: 1 }]);
+    expect(kinds()).toMatchObject([{ ending: 'finished', accounts: 0, guests: 2 }]);
+    expect(await anns.request('/api/account/replay', { gameId })).toMatchObject({ status: 200 });
   });
 
   test('closes the room with the game cut short, and the log kept whole, when the log is flooded', async () => {

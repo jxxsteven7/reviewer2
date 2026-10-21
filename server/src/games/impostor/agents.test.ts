@@ -25,6 +25,7 @@ const context = (agents: readonly string[]): GameContext => ({
   playerIds: () => [],
   hasAccount: () => false,
   hasField: () => true,
+  customAuthor: () => null,
   titleCount: () => null,
   awardsTitles: () => false,
 });

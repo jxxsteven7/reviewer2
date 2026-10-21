@@ -8,11 +8,13 @@ import { fakeGame } from '../../test/fakeGame';
 import { keywordsGame } from '../games/keywords';
 import { AccountStore } from './accounts';
 import { checkData, IDS_SHOWN, type DataProblem } from './check';
+import { ContentStore } from './content';
 import { ContributionStore } from './contributions';
 import { openDatabase } from './database';
 import { DEFAULT_FEEDBACK_LIMITS, FeedbackStore } from './feedback';
 import { RecordStore, ReplayStore, TitleStore } from './records';
 import { countedUnderKey } from './recount';
+import { RatingStore } from './ratings';
 import { DEFAULT_SESSION_LIMITS } from './sessions';
 import { knownTitles } from '../core/game';
 
@@ -228,14 +230,51 @@ beforeEach(async () => {
     named: false,
     summary,
   });
+  // Ann rated the game with a guest good, and the guest dismissed the question; Ann guessed who
+  // the AI player of the game with one was, and Bob skipped it.
+  const ratings = new RatingStore(db, () => NOW);
+  ratings.rate('test', 'g1', 'p1', 'good');
+  ratings.rate('test', 'g1', 'p2', null);
+  ratings.guess('test', 'g3', 'p1', ['a']);
+  ratings.guess('test', 'g3', 'p2', null);
+  // Words from the game with a guest, adopted with Ann's name, and others from no game, without.
+  const content = new ContentStore(db, () => NOW);
+  content.adopt({
+    kind: 'words',
+    game: 'test',
+    gameId: 'g1',
+    content: { words: ['Lamp', 'Kite'] },
+    accountId: ann.id,
+    named: true,
+    summary,
+  });
+  content.adopt({
+    kind: 'pair',
+    game: 'test',
+    gameId: null,
+    content: { words: ['Apple', 'Pear'], field: 'general' },
+    accountId: null,
+    named: false,
+    summary,
+  });
 });
 
 const summary = { zh: 'z', en: 'e' };
 
 afterEach(() => db.close());
 
+// The fake game of the tests, with ratings and guesses of its AI players, as the check reads them.
+const ratedGame: typeof fakeGame = {
+  ...fakeGame,
+  ratings: ['good', 'meh'],
+  shapes: {
+    ...(fakeGame.shapes as NonNullable<typeof fakeGame.shapes>),
+    guess: (value) => Array.isArray(value) && value.every((id) => typeof id === 'string'),
+  },
+};
+
 // The server plays the first game and the fake one of the tests.
-const check = () => checkData(db, { games: [keywordsGame, fakeGame], now: () => NOW });
+const check = () => checkData(db, { games: [keywordsGame, ratedGame], now: () => NOW });
 
 // Breaks the data with `sql`, with foreign keys off as a hand's edit might, and gives the problems
 // that the check then finds.
@@ -404,7 +443,7 @@ describe('the check of the data', () => {
     ],
     [
       'AI seats in a game whose record counts no AI player',
-      "UPDATE replays SET agents = 0 WHERE game_id = 'g3'",
+      "UPDATE replays SET agents = 0 WHERE game_id = 'g3'; DELETE FROM ai_guesses",
       ['g3:a'],
     ],
     ['feedback of a kind there is not', "UPDATE feedback SET kind = 'rant' WHERE id = 4", ['4']],
@@ -424,6 +463,48 @@ describe('the check of the data', () => {
     [
       'feedback with a contact kept past its time',
       "UPDATE feedback SET created_at = '2026-01-01T00:00:00.000Z' WHERE id = 2",
+      ['2'],
+    ],
+    // A rating or a guess is named by its game and the player ID.
+    [
+      "ratings that are not one of their game's",
+      "UPDATE ratings SET rating = 'awful' WHERE player_id = 'p1'",
+      ['g1:p1'],
+    ],
+    ['ratings of games that did not finish', "UPDATE ratings SET game_id = 'g4' WHERE player_id = 'p1'", ['g4:p1']],
+    [
+      "guesses of the AI players not in the game's shape",
+      "UPDATE ai_guesses SET guess = '[1]' WHERE player_id = 'p1'",
+      ['g3:p1'],
+    ],
+    [
+      'guesses of the AI players of games that did not finish or had none',
+      "UPDATE ai_guesses SET game_id = 'g1' WHERE player_id = 'p2'",
+      ['g1:p2'],
+    ],
+    [
+      'adopted words of a kind there is not, or not in its shape',
+      "UPDATE content_contributions SET kind = 'riddle' WHERE id = 1",
+      ['1'],
+    ],
+    [
+      'adopted words of a kind there is not, or not in its shape',
+      `UPDATE content_contributions SET content = '{"words":["Apple"],"field":"general"}' WHERE id = 2`,
+      ['2'],
+    ],
+    [
+      'adopted words of a game that this server does not play',
+      "UPDATE content_contributions SET game = 'chess' WHERE id = 2",
+      ['2'],
+    ],
+    [
+      'adopted words of another game than the one they came from',
+      "UPDATE content_contributions SET game = 'keywords' WHERE id = 1",
+      ['1'],
+    ],
+    [
+      'adopted words without what they were in both languages',
+      "UPDATE content_contributions SET summary_en = ' ' WHERE id = 2",
       ['2'],
     ],
     // The contributions from GitHub are named by their issue or their advisory.
@@ -642,7 +723,7 @@ describe('the check of the data', () => {
     // The fake game under rules by which no one side wins, so that the records say nothing of who
     // won, and the record of each game says so too.
     const level: typeof fakeGame = {
-      ...fakeGame,
+      ...ratedGame,
       recount: (kept) => {
         const count = fakeGame.recount?.(kept) ?? null;
         return count && { ...count, outcome: null };
@@ -676,7 +757,7 @@ describe('the check of the data', () => {
   });
 
   test('takes the rules of a match without options for a game whose matches have none, and only those', () => {
-    const plain = { ...fakeGame, match: { setup: (data: unknown) => data, score: () => null, lineup: () => [] } };
+    const plain = { ...ratedGame, match: { setup: (data: unknown) => data, score: () => null, lineup: () => [] } };
     const checked = () => checkData(db, { games: [keywordsGame, plain], now: () => NOW });
     db.exec(
       `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.match', json('{"games":2}')) WHERE id = 1`,
@@ -746,13 +827,13 @@ describe('the check of the data', () => {
     try {
       expect(check()).toEqual([]);
       const found = (problems: DataProblem[]) => problems.filter(({ rule }) => rule.includes('avatar'));
-      expect(found(checkData(db, { games: [keywordsGame, fakeGame], avatarDir: dir, now: () => NOW }))).toEqual([
+      expect(found(checkData(db, { games: [keywordsGame, ratedGame], avatarDir: dir, now: () => NOW }))).toEqual([
         { rule: 'accounts whose avatar file is missing', count: 1, ids: ['1'] },
       ]);
       writeFileSync(join(dir, AVATAR), '');
       writeFileSync(join(dir, `${'b'.repeat(64)}.jpg`), '');
       writeFileSync(join(dir, 'notes.txt'), '');
-      expect(found(checkData(db, { games: [keywordsGame, fakeGame], avatarDir: dir, now: () => NOW }))).toEqual([
+      expect(found(checkData(db, { games: [keywordsGame, ratedGame], avatarDir: dir, now: () => NOW }))).toEqual([
         { rule: 'avatar files that no account shows', count: 1, ids: ['bbbbbbbb'] },
       ]);
     } finally {

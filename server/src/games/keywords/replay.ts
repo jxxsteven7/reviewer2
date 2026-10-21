@@ -44,6 +44,9 @@ export interface KeywordsSetup {
   settings: KeywordsSettings;
   startingTeam: Team;
   cards: SetupCard[];
+  // Who gave the chair's own words, by player ID, on a board with some (null for a game from before
+  // the record named them).
+  customAuthor?: string | null;
 }
 
 export interface SetupCard {

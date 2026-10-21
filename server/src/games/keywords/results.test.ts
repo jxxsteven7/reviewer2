@@ -31,6 +31,7 @@ function ended(result: GameResult | null, found = 0): KeywordsData {
     game: { ...game, cards },
     vacated: { red: null, blue: null },
     match: null,
+    customAuthor: null,
   };
 }
 

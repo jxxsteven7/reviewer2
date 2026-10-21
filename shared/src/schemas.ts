@@ -67,6 +67,7 @@ export const ROOM_MESSAGES = {
     version: z.string().max(64),
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),
+    gameId: gameId.optional(),
   }),
   // A room starts with its game's default settings when `settings` is left out. Nobody gives a
   // name: a creator who is logged in has their username, and a guest a number in the room
@@ -101,6 +102,11 @@ export const ROOM_MESSAGES = {
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:emote': z.object({ emote: z.enum(EMOTES) }),
+  // A player's rating of the game that has just ended, one of the game's, which the room checks, or
+  // null to dismiss the question; and their guess of who its AI players were, in the game's shape,
+  // which the game checks, or null to skip it (docs/architecture.md#ratings). Each names the game.
+  'room:rate': z.object({ gameId, rating: z.string().max(32).nullable() }),
+  'room:guessAgents': z.object({ gameId, guess: z.unknown() }),
   // A member reports another to the operator, with a note that the rules in feedback.ts judge.
   'room:report': z.object({ playerId, text: z.string().optional() }),
   // The chair's controls. The settings change the word lists, whether every game draws them anew,

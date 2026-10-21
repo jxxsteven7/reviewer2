@@ -12,7 +12,7 @@ import { fail } from './answers';
 import { newCode } from './codes';
 import type { GameModule, PracticeSeats } from './game';
 import type { Rng } from './random';
-import { chooseFields, Room, type AgentState, type Member, type MemberAccount } from './room';
+import { chooseFields, Room, type AgentState, type Member, type MemberAccount, type RoomOptions } from './room';
 import type { WordLibrary } from './words';
 
 // All the rooms on this server, which live in memory (docs/architecture.md), and the rules for
@@ -68,6 +68,9 @@ export class Rooms {
     // Whether the server's agent answers, for the AI players of every room, or null on a server
     // without an agent (docs/architecture.md#ai-players).
     private readonly agents: AgentState | null = null,
+    // What the records say of each pair of related terms of a game, for a room's next draw of one
+    // (RoomOptions.pairRecords), or null on a server that keeps no records.
+    private readonly pairRecords: RoomOptions['pairRecords'] = null,
   ) {}
 
   get size(): number {
@@ -130,6 +133,7 @@ export class Rooms {
       now: this.now,
       titleCount: this.titleCount,
       agents: this.agents,
+      pairRecords: this.pairRecords,
     });
     if (options.settings !== undefined) {
       const configured = room.setSettings({ settings: options.settings });

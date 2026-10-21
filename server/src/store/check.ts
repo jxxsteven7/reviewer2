@@ -9,6 +9,7 @@ import {
   GITHUB_ADVISORY,
   GITHUB_LOGIN,
   HANDLE,
+  isContent,
   isLanguage,
   MATCH_TITLES,
   matchGamesValid,
@@ -385,6 +386,55 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     const shapes = known.get(String(game))?.shapes;
     return shapes !== undefined && role !== null && !shapes.role(String(role));
   });
+
+  // What players said of the games they played (docs/architecture.md#ratings): a rating is one of
+  // its game's, of a game that finished, and a guess of who the AI players were is in the game's
+  // shape, of a game that finished with AI players in it. A player's rating or guess is named by
+  // the game and the player ID.
+  const said = (table: string, column: string) =>
+    `SELECT game_id || ':' || player_id AS id, game, ${column} AS value FROM ${table}`;
+  each("ratings that are not one of their game's", said('ratings', 'rating'), ({ game, value }) => {
+    const module = known.get(String(game));
+    return module !== undefined && !(value === null || (module.ratings ?? []).includes(String(value)));
+  });
+  sql(
+    'ratings of games that did not finish',
+    "SELECT r.game_id || ':' || r.player_id FROM ratings AS r JOIN replays AS g ON g.game_id = r.game_id " +
+      "WHERE g.ending <> 'finished'",
+  );
+  each("guesses of the AI players not in the game's shape", said('ai_guesses', 'guess'), ({ game, value }) => {
+    const shapes = known.get(String(game))?.shapes;
+    if (shapes === undefined) return false;
+    return value !== null && !(shapes.guess?.(parse(value)) ?? false);
+  });
+  sql(
+    'guesses of the AI players of games that did not finish or had none',
+    "SELECT a.game_id || ':' || a.player_id FROM ai_guesses AS a JOIN replays AS g ON g.game_id = a.game_id " +
+      "WHERE g.ending <> 'finished' OR g.agents = 0",
+  );
+
+  // The words that the operator adopted from the games into the word library
+  // (docs/architecture.md#content-contributions): of a kind there is, in its shape, of a game that
+  // the server plays and that the game they came from is a game of, with what they were in both
+  // languages.
+  each(
+    'adopted words of a kind there is not, or not in its shape',
+    'SELECT id, kind, content FROM content_contributions',
+    ({ kind, content }) => !isContent(String(kind), parse(content)),
+  );
+  each(
+    'adopted words of a game that this server does not play',
+    'SELECT id, game FROM content_contributions',
+    ({ game }) => !known.has(String(game)),
+  );
+  sql(
+    'adopted words of another game than the one they came from',
+    'SELECT c.id FROM content_contributions AS c JOIN replays AS g ON g.game_id = c.game_id WHERE g.game <> c.game',
+  );
+  sql(
+    'adopted words without what they were in both languages',
+    "SELECT id FROM content_contributions WHERE trim(summary_zh) = '' OR trim(summary_en) = ''",
+  );
 
   // The feedback (docs/architecture.md#feedback): what it may be, and what it may have become.
   found(

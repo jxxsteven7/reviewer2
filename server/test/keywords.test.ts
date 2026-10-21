@@ -180,6 +180,7 @@ const context = (): GameContext => ({
   playerIds: () => ['ann', 'bob', 'cat'],
   hasAccount: () => false,
   hasField: () => true,
+  customAuthor: () => null,
   titleCount: () => null,
   awardsTitles: () => false,
 });

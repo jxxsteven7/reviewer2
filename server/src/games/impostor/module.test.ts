@@ -46,6 +46,7 @@ function table(
     playerIds: () => players,
     hasAccount: (id) => (options.accounts ?? []).includes(id),
     hasField: (field) => field === 'fruit',
+    customAuthor: () => null,
     titleCount: () => null,
     awardsTitles: () => false,
   };
@@ -279,7 +280,15 @@ describe('the setter', () => {
     expect(started.players.map((player) => player.id).sort()).toEqual([...PEOPLE.slice(1), 'gus'].sort());
     expect(started.source).toEqual({ kind: 'setter', setter: 'ann', field: 'fruit', named: false });
     expect([started.words.student.word, started.words.reviewer2.word].sort()).toEqual(['Apple', 'pear']);
-    expect(game.participants?.(room.data, room.ctx)).toContain('key-ann');
+    // The setter took part without playing, and gave a pair of words to the library.
+    expect(game.participants?.(room.data, room.ctx)).not.toContain('key-ann');
+    expect(game.contributors?.(room.data, room.ctx)).toEqual(['key-ann']);
+    expect(game.content?.(game.setup?.(room.data))).toEqual({
+      kind: 'pair',
+      content: { words: [started.words.student.word, started.words.reviewer2.word], field: 'fruit' },
+      author: 'ann',
+      named: false,
+    });
     // The setter sees both words, without knowing who has which, and talks off the field.
     const view = room.view({ playerId: 'ann' }).game;
     expect(view).toMatchObject({ you: null, setterWords: ['Apple', 'pear'], words: null, mayTalk: true });
@@ -532,6 +541,33 @@ describe('the log and the records', () => {
     ).toBeNull();
     // Everyone sees every role once it is over.
     expect(room.view({ playerId: 'zed' }).game?.seats.every((seat) => seat.role !== null)).toBe(true);
+  });
+
+  it('counts no record for a player who left a game that a side won', () => {
+    const room = table({ players: PEOPLE.slice(0, 5) });
+    room.start();
+    room.deal('SSSSR');
+    room.leave('dan');
+    room.describeAll();
+    room.voteFor('eve', 'ann');
+    expect(room.data.game?.result).toEqual({ winner: 'student', reason: 'caught' });
+    const results = game.results?.(room.data, room.ctx);
+    expect(results?.map((result) => [result.playerId, result.result])).toEqual([
+      ['ann', 'won'],
+      ['bob', 'won'],
+      ['cat', 'won'],
+      ['eve', 'lost'],
+    ]);
+    expect(game.participants?.(room.data, room.ctx)).toContain('key-dan');
+    expect(game.contributors?.(room.data, room.ctx)).toEqual([]);
+    expect(game.content?.(game.setup?.(room.data))).toBeNull();
+    const recount = game.recount?.({
+      setup: game.setup?.(room.data),
+      log: room.log(),
+      language: 'en',
+      keyOf: (id) => `key-${id}`,
+    });
+    expect(recount?.results).toEqual(results);
   });
 
   it('keeps what each message carried, as the game keeps it', () => {

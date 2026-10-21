@@ -92,6 +92,7 @@ export function seatedGame() {
     playerIds: () => players,
     hasAccount: () => false,
     hasField: () => true,
+    customAuthor: () => null,
     titleCount: () => null,
     awardsTitles: () => false,
   };

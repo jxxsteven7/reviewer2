@@ -10,6 +10,7 @@ import {
   GITHUB_ADVISORY,
   GITHUB_LOGIN,
   GITHUB_URL,
+  isContent,
   isGuestName,
   MAX_SUMMARY_LENGTH,
   REPOSITORY_URL,
@@ -24,6 +25,7 @@ import { loadConfig } from './config';
 import { GAMES } from './games';
 import { AccountStore } from './store/accounts';
 import { checkData } from './store/check';
+import { ContentStore, type AdoptedContent } from './store/content';
 import { ContributionStore, type GithubContribution, type GithubRef } from './store/contributions';
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
 import { FeedbackStore, type Feedback, type FeedbackView, type Report } from './store/feedback';
@@ -60,6 +62,8 @@ import { describeBrowser } from './userAgent';
 //   node server/dist/admin.cjs github anonymous <issue>|--advisory <GHSA>
 //   node server/dist/admin.cjs github forget <issue>|--advisory <GHSA>
 //   node server/dist/admin.cjs github list
+//   node server/dist/admin.cjs content adopt <game id> [--anonymous] --zh <sentence> --en <sentence>
+//   node server/dist/admin.cjs content list
 //   node server/dist/admin.cjs reports list
 //   node server/dist/admin.cjs data check
 //
@@ -106,6 +110,14 @@ import { describeBrowser } from './userAgent';
 // drops their username and id, at their request, so that nothing names them any more; `github
 // list` shows every contribution from GitHub. No command deletes one.
 //
+// The `content` commands are the words that players gave the word library in their games
+// (docs/architecture.md#content-contributions): `content adopt` adopts what a kept game holds of
+// them, as the game says (GameModule.content), such as the pair that a setter gave or the chair's
+// own words on a board, once the operator has added them to words/ by hand, with who gave them, by
+// the account they had in the game, named as they asked or, with --anonymous, not, and a sentence
+// in each language on what was adopted; a game's words are adopted once. `content list` shows
+// everything adopted. Like the contributions from GitHub, no command deletes one.
+//
 // `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
 // bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
@@ -114,8 +126,8 @@ import { describeBrowser } from './userAgent';
 // now. `data check` holds every row against the rules that the code takes for granted of the data
 // (store/check.ts, docs/rules/constraints.md#data), and prints each rule broken with the rows that
 // break it, by id alone, or that every check passed; it exits with 1 when any is broken.
-// `accounts`, `feedback list`, `feedback draft`, `trash`, `github list`, `reports list`, `profile
-// list` and `data check` only read.
+// `accounts`, `feedback list`, `feedback draft`, `trash`, `github list`, `content list`, `reports
+// list`, `profile list` and `data check` only read.
 // DATA_DIR names the server's data, as it does for the server. The database is opened as it is,
 // never migrated, and the server may go on running meanwhile.
 
@@ -149,6 +161,8 @@ const USAGE = [
   '  github anonymous <issue>|--advisory <GHSA>',
   '  github forget <issue>|--advisory <GHSA>',
   '  github list',
+  '  content adopt <game id> [--anonymous] --zh <sentence> --en <sentence>',
+  '  content list',
   '  reports list',
   '  data check',
 ].join('\n');
@@ -184,6 +198,7 @@ interface Data {
   accounts: Accounts;
   feedback: FeedbackStore;
   contributions: ContributionStore;
+  content: ContentStore;
 }
 
 type Print = (line: string) => void;
@@ -397,6 +412,7 @@ function feedbackLines(feedback: Feedback, daysLeft: number | null): string[] {
     `    from: ${sender(feedback)}`,
     `    contact: ${feedback.contact ?? '(none)'}`,
     ...(feedback.userAgent === null ? [] : [`    browser: ${seen(feedback.userAgent)}`]),
+    ...(feedback.gameId ? [`    game: ${feedback.game ?? ''} ${feedback.gameId}`] : []),
     ...feedback.text.split('\n').map((line) => `    > ${line}`.trimEnd()),
   ];
 }
@@ -407,6 +423,7 @@ function feedbackLines(feedback: Feedback, daysLeft: number | null): string[] {
 function feedbackJson(feedback: Feedback, daysLeft: number | null) {
   const { id, createdAt, kind, status, issue, resolvedPr, adoptedAt, closedAt, deletedAt } = feedback;
   const { linkProfile, username, credit, nameTakenBy, contact, text, userAgent } = feedback;
+  const about = { game: feedback.game ?? null, gameId: feedback.gameId ?? null };
   return {
     id,
     createdAt,
@@ -425,6 +442,7 @@ function feedbackJson(feedback: Feedback, daysLeft: number | null) {
     contact,
     text,
     userAgent,
+    ...about,
   };
 }
 
@@ -616,6 +634,18 @@ function summaryOf({ zh, en }: Flags, print: Print): ContributionSummary | 1 | 2
 }
 
 // What a contribution says the player contributed, on two lines.
+// Words adopted from a game as `content list` shows them, on one line: the id, the day they were
+// adopted, the game they are of, the game they came from, if it is still kept, the words, with the
+// field of a pair, who gave them, and then the two sentences.
+function contentLine(
+  { id, adoptedAt, game, gameId, kind, content, named, summaryZh, summaryEn }: AdoptedContent,
+  username: string | null,
+): string {
+  const words = content.words.join(kind === 'pair' ? ' / ' : ', ') + (content.field ? ` (${content.field})` : '');
+  const by = named && username !== null ? username : username === null ? 'nobody named' : `${username}, unnamed`;
+  return `#${id}  ${day(adoptedAt)}  ${game} ${gameId ?? '(game gone)'}  ${kind}  ${words}  ${by}  ${summaryZh} · ${summaryEn}`;
+}
+
 function printSummary(print: Print, zh: string | null, en: string | null): void {
   print(`  zh: ${zh ?? '(nothing yet)'}`);
   print(`  en: ${en ?? '(nothing yet)'}`);
@@ -1298,6 +1328,71 @@ const COMMANDS: Record<string, Command> = {
       return 0;
     },
   },
+  'content adopt': {
+    words: 1,
+    flags: ['anonymous', 'zh', 'en'],
+    run(data, [gameId], flags, print) {
+      const summary = summaryOf(flags, print);
+      if (typeof summary === 'number') return summary;
+      const row = data.db.prepare('SELECT game, setup FROM replays WHERE game_id = ?').get(gameId as string) as
+        { game: string; setup: string | null } | undefined;
+      if (row === undefined) {
+        print(`No game ${gameId} is kept.`);
+        return 1;
+      }
+      const module = GAMES.find((game) => game.id === row.game);
+      const held = row.setup === null ? null : (module?.content?.(JSON.parse(row.setup)) ?? null);
+      if (held === null || !isContent(held.kind, held.content)) {
+        print(`Game ${gameId} holds no words that a player gave.`);
+        return 1;
+      }
+      if (data.content.list().some((adopted) => adopted.gameId === gameId)) {
+        print(`The words of game ${gameId} were adopted already (content list).`);
+        return 1;
+      }
+      // Who gave them, by the account they had in the game, while it is there.
+      const author =
+        held.author === null
+          ? undefined
+          : (data.db
+              .prepare('SELECT account_id AS id FROM game_players WHERE game_id = ? AND player_id = ?')
+              .get(gameId as string, held.author) as { id: number } | undefined);
+      const accountId = author?.id ?? null;
+      const adopted = data.content.adopt({
+        kind: held.kind,
+        game: row.game,
+        gameId: gameId as string,
+        content: held.content,
+        accountId,
+        named: held.named && flags.anonymous !== true,
+        summary,
+      });
+      const username = accountId === null ? null : (new AccountStore(data.db).byId(accountId)?.username ?? null);
+      print(`Adopted, as #${adopted.id}:`);
+      print(contentLine(adopted, username));
+      return 0;
+    },
+  },
+  'content list': {
+    words: 0,
+    flags: [],
+    readOnly: true,
+    run(data, _words, _flags, print) {
+      const rows = data.content.list();
+      if (rows.length === 0) {
+        print('No words adopted from the games yet.');
+        return 0;
+      }
+      print(
+        rows.length === 1 ? '1 adoption from the games:' : `${rows.length} adoptions from the games, the latest first:`,
+      );
+      const store = new AccountStore(data.db);
+      for (const row of rows) {
+        print(contentLine(row, row.accountId === null ? null : (store.byId(row.accountId)?.username ?? null)));
+      }
+      return 0;
+    },
+  },
   'github list': {
     words: 0,
     flags: [],
@@ -1364,6 +1459,7 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
     let accounts: Accounts | undefined;
     let feedback: FeedbackStore | undefined;
     let contributions: ContributionStore | undefined;
+    let content: ContentStore | undefined;
     const data: Data = {
       db,
       dataDir,
@@ -1380,6 +1476,9 @@ export function admin(args: readonly string[], env: NodeJS.ProcessEnv, print: Pr
       },
       get contributions() {
         return (contributions ??= new ContributionStore(db));
+      },
+      get content() {
+        return (content ??= new ContentStore(db));
       },
     };
     return command.run(data, words, parsed.flags, print);

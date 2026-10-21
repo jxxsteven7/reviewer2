@@ -46,6 +46,7 @@ function context(ids: string[], options: { offline?: string[]; phase?: RoomPhase
     playerIds: () => ids,
     hasAccount: () => false,
     hasField: () => true,
+    customAuthor: () => null,
     titleCount: () => null,
     awardsTitles: () => false,
   };

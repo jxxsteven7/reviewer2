@@ -40,6 +40,7 @@ function context(online = new Set(SEATS.map(([id]) => id))): GameContext {
     playerIds: () => SEATS.map(([id]) => id),
     hasAccount: () => false,
     hasField: () => true,
+    customAuthor: () => null,
   };
 }
 
@@ -50,6 +51,7 @@ function data(game: KeywordsState | null = gameState(), seats = SEATS): Keywords
     game,
     vacated: { red: null, blue: null },
     match: null,
+    customAuthor: null,
   };
 }
 

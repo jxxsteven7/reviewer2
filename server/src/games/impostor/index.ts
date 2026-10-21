@@ -20,7 +20,7 @@ import { pinyinOf } from '../../core/pinyin';
 import { pairKey } from '../../core/words';
 import { agentMove, agentProblems, agentTask, practiceSeats } from './agents';
 import { recountOf, shownReplay } from './replay';
-import { factsOf, LOGGED, resultsFrom, scoresFrom, setupOf } from './results';
+import { factsOf, LOGGED, resultsFrom, scoresFrom, setupOf, type ImpostorSetup } from './results';
 import {
   describe,
   expire,
@@ -435,13 +435,22 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     return game.speaker === null ? [] : [game.speaker];
   },
 
-  // Everyone who played in the game, those who left included, and the setter (docs/architecture.md#replays).
-  participants: (data, ctx) => {
-    const game = data.game;
-    if (!game) return [];
-    const keys = game.players.map((player) => ctx.keyOf(player.id));
-    return game.source.kind === 'setter' ? [...keys, ctx.keyOf(game.source.setter)] : keys;
+  // Everyone who played in the game, those who left included (docs/architecture.md#replays), and
+  // the setter, who took part in it without playing.
+  participants: (data, ctx) => (data.game ? data.game.players.map((player) => ctx.keyOf(player.id)) : []),
+  contributors: (data, ctx) => (data.game?.source.kind === 'setter' ? [ctx.keyOf(data.game.source.setter)] : []),
+  // The words a setter gave, for the word library (docs/architecture.md#content-contributions).
+  content(setup) {
+    const { source, words } = setup as ImpostorSetup;
+    if (source.kind !== 'setter') return null;
+    return {
+      kind: 'pair',
+      content: { words: [words.student, words.reviewer2], field: source.field },
+      author: source.setter,
+      named: source.named,
+    };
   },
+  setupPaths: { pair: '$.source.pair', setter: '$.source.setter' },
 
   // An AI player takes a place at the table in the waiting room, once a person has.
   seatAgent(data, ctx, playerId) {

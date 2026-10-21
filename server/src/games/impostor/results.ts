@@ -161,25 +161,27 @@ export function detailOf(facts: Facts, id: string): ImpostorDetail {
 
 const fateOf = (facts: Facts, id: string): Fate => facts.outs[id]?.fate ?? 'alive';
 
-// Everyone's part in a game that a side won: the side is the role, and the players of the winning
-// side win together, also those who went out, but not those who left; the winners have place 1
-// and the others 2. A game that a Reviewer 2 left, which nobody won, counts for no record.
+// The part of everyone still in a game that a side won at its end: the side is the role, and the
+// players of the winning side win together, also those who went out; the winners have place 1
+// and the others 2. Those who left have no record of it, as in every game. A game that a Reviewer
+// 2 left, which nobody won, counts for no record.
 export function resultsFrom(facts: Facts): PlayerResult[] | null {
   const winner = facts.result?.winner ?? null;
   if (winner === null) return null;
-  return facts.players.map(({ id, role }) => {
-    const fate = fateOf(facts, id);
-    const won = role === winner && fate !== 'left';
-    return {
-      playerId: id,
-      side: role,
-      role,
-      result: won ? ('won' as const) : ('lost' as const),
-      place: won ? 1 : 2,
-      verdict: fate,
-      detail: detailOf(facts, id),
-    };
-  });
+  return facts.players
+    .filter(({ id }) => fateOf(facts, id) !== 'left')
+    .map(({ id, role }) => {
+      const won = role === winner;
+      return {
+        playerId: id,
+        side: role,
+        role,
+        result: won ? ('won' as const) : ('lost' as const),
+        place: won ? 1 : 2,
+        verdict: fateOf(facts, id),
+        detail: detailOf(facts, id),
+      };
+    });
 }
 
 // Everyone's points, by member key, with where they came from: as they stand while the game is on,

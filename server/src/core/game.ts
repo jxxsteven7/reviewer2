@@ -6,6 +6,8 @@ import {
   type AgentPersona,
   type AgentQuestion,
   type BoardWord,
+  type Content,
+  type ContentKind,
   type Language,
   type MatchRules,
   type RecordResult,
@@ -46,6 +48,10 @@ export interface GameContext {
   // Whether the word library has a field, for a game whose players name one, as a setter names the
   // field of their words.
   hasField(field: string): boolean;
+  // Who gave the room's own words (Room.customWords), as a game about to start with some of them
+  // keeps on its record: the member who last set them, or the chair, who kept them, once that
+  // member has left. Null for a room without words of its own.
+  customAuthor(): string | null;
   // How many times the account of a player, also of one who has left during the current game, has
   // won a title, as its record has it, or null when there is no count to give: for a guest, who
   // keeps none, in a game that awards none, as one that an AI has played in
@@ -210,6 +216,14 @@ export interface AgentTask {
   // How long the moves wait, in milliseconds: the first from when the task came up, each one after
   // from the one before, so that an AI plays at a pace that people can follow.
   pace: { first: number; step: number };
+}
+
+// What a kept game holds that its players gave the word library (GameModule.content).
+export interface GameContent {
+  kind: ContentKind;
+  content: Content;
+  author: string | null;
+  named: boolean;
 }
 
 // One of the game's messages that an AI sends for its seat, as a player's page would.
@@ -412,6 +426,21 @@ export interface GameModule<Data = unknown, View = unknown> {
   // included: the players whose part in it the record keeps. Without this, those whom results()
   // names.
   participants?(data: Data, ctx: GameContext): string[];
+  // The member keys of those who took part in the current game without playing in it, as the
+  // setter who gave its words: the record keeps which account each had, as of the players, with
+  // which they watch it again (docs/architecture.md#replays), but counts them among no players.
+  // Without this, nobody.
+  contributors?(data: Data, ctx: GameContext): string[];
+  // What a kept game holds that its players gave the word library (docs/architecture.md#content-
+  // contributions), from how it began (setup()): the kind and the words, who gave them, by player
+  // ID, or null where the record doesn't say, and whether they asked to be named when the words are
+  // adopted. Null for a game that holds none. Without this, a game holds none.
+  content?(setup: unknown): GameContent | null;
+  // Where the setup of one of its games keeps what the records count of its words, as JSON paths
+  // into it (docs/architecture.md#ratings): the key of the pair of related terms it was dealt, and
+  // the player ID of the setter who gave its words, for how often the players in a room have had a
+  // pair and how players rated it (drawPair), and for the games an account set the words of.
+  setupPaths?: { pair?: string; setter?: string };
   // AI players (docs/architecture.md#ai-players); a game without these has none. The chair seats a
   // new AI player at the seat that the chair's message names, as the game reads it, or the game
   // refuses with one of its codes, as for a seat that is taken. The context already knows the
