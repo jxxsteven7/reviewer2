@@ -51,6 +51,13 @@ describe('a description', () => {
     const reply = allowed(await describeWord(impostorRequest('describe'), turn(model)));
     if (!reply.ok || reply.kind !== 'describe') throw new Error('no line');
     expect(reply.note.judgment).toEqual({ closest: 'p'.repeat(100), fit: 'mine' });
+    // A closest word that says nothing is no judgment, and leaves an earlier one in place.
+    const blank = { closest: ' \n ', fit: 'mine', candidates: ['round and red'] };
+    const kept = allowed(
+      await describeWord(impostorRequest('describe'), turn(new ScriptedModel({ describe: [first, blank] }))),
+    );
+    if (!kept.ok || kept.kind !== 'describe') throw new Error('no line');
+    expect(kept.note.judgment).toEqual({ closest: 'Pear tree', fit: 'closest' });
     // In the first round, the closest word alone; a fit that is none of the three is none.
     for (const fit of [{}, { fit: 'yes' }]) {
       const answer = { closest: 'pear', ...fit, candidates: ['round and red'] };
@@ -60,15 +67,14 @@ describe('a description', () => {
       if (!alone.ok || alone.kind !== 'describe') throw new Error('no line');
       expect(alone.note.judgment).toEqual({ closest: 'pear' });
     }
-    // A judgment that the model didn't write is none.
-    const none = allowed(
-      await describeWord(
-        impostorRequest('describe'),
-        turn(new ScriptedModel({ describe: [{ candidates: ['round and red'] }] })),
-      ),
-    );
-    if (!none.ok || none.kind !== 'describe') throw new Error('no line');
-    expect(none.note.judgment).toBeUndefined();
+    // A judgment that the model didn't write, or wrote nothing for, is none.
+    for (const answer of [{ candidates: ['round and red'] }, { closest: '', candidates: ['round and red'] }]) {
+      const none = allowed(
+        await describeWord(impostorRequest('describe'), turn(new ScriptedModel({ describe: [answer] }))),
+      );
+      if (!none.ok || none.kind !== 'describe') throw new Error('no line');
+      expect(none.note.judgment).toBeUndefined();
+    }
   });
 
   test('of the PI, who has no word, can be anything that is not said yet', async () => {

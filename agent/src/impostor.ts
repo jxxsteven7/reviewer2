@@ -76,11 +76,12 @@ function failure(error: unknown, note: AgentNote, signal: AbortSignal): AgentRep
 
 // What the model worked out before its lines or its vote, when it was to (judges in
 // impostorPrompts.ts): the other word closest to its own, cleaned and cut like a guess, and which
-// of the two the others' lines fit, when there were lines to go by. It goes into the note alone,
-// never into the game.
+// of the two the others' lines fit, when there were lines to go by. A closest word that says
+// nothing is no judgment. It goes into the note alone, never into the game.
 function judgment(answer: Record<string, unknown>): ImpostorJudgment | undefined {
   if (typeof answer.closest !== 'string') return undefined;
   const closest = cleanLine(answer.closest).slice(0, MAX_GUESS);
+  if (closest === '') return undefined;
   const fit = FITS.find((one) => one === answer.fit);
   return fit === undefined ? { closest } : { closest, fit };
 }

@@ -79,8 +79,11 @@ const MINE =
 const NOT_THE_STUDENTS =
   /If fit is closest, you are probably a Reviewer 2, and your side wins only while one of you is still in the game\. The players whose lines fit closest are probably students: never vote for one of them, which would give you away\./;
 const PARTNER =
-  /A player whose lines lean toward your word, as yours do, is probably the other Reviewer 2, on your side: never vote for them either\./;
+  /A player whose lines fit your own word better than closest is probably the other Reviewer 2, on your side: never vote for them either\./;
+// Whom to vote for then: the PI, while one may still be in, and else nobody.
 const NEITHER = /Vote for a player whose lines fit neither word, who is probably the PI, or abstain\./;
+const NOBODY =
+  /give you away\.(?: A player whose lines fit .*? either\.)? Abstain: every other player is probably a student\./;
 const UNCLEAR = /If fit is unclear, vote for the player whose lines fit the others' lines the least, or abstain\./;
 const POINTS_TOLD =
   /The points: a vote for a Reviewer 2 or the PI is worth \+1, whatever comes of it; a vote that puts a student out, -1; abstaining, 0\. Your side winning is worth \+3 to a student, \+5 to a Reviewer 2 and \+6 to the PI, and \+1 more when you are still in the game then, so keeping your side in the game outweighs any one vote\. Choose the vote that these points favor most\./;
@@ -100,7 +103,9 @@ describe('the prompts of the hidden word game', () => {
       const system = await told(kind);
       expect(system).toContain('Your word: apple.');
       expect(system).toMatch(YOU_TOO);
-      expect(system).toMatch(CHECK_FIRST);
+      // Judging a report, it writes no closest word, so it isn't told to name one first.
+      if (kind === 'judge') expect(system).not.toMatch(CHECK_FIRST);
+      else expect(system).toMatch(CHECK_FIRST);
       // The PI has no word to hold against them.
       const pi = await told(kind, { word: null });
       expect(pi).not.toMatch(YOU_TOO);
@@ -137,7 +142,7 @@ describe('the prompts of the hidden word game', () => {
     const { system, fields } = await asked('vote');
     expect(fields).toEqual(['closest', 'fit', 'number', 'reason']);
     expect(system.endsWith(JUDGED_VOTE)).toBe(true);
-    for (const phrase of [NAME_FIRST, MINE, NOT_THE_STUDENTS, NEITHER, UNCLEAR, POINTS_TOLD])
+    for (const phrase of [NAME_FIRST, MINE, NOT_THE_STUDENTS, NOBODY, UNCLEAR, POINTS_TOLD])
       expect(system).toMatch(phrase);
     expect(system).not.toMatch(PI_VOTE);
   });
@@ -150,6 +155,28 @@ describe('the prompts of the hidden word game', () => {
     expect(await told('vote', nine)).toMatch(PARTNER);
     expect(await told('vote', { ...nine, seats: seats(9, { 4: 'reviewer2' }) })).not.toMatch(PARTNER);
     expect(await told('vote', { ...nine, seats: seats(9, { 4: 'student' }) })).toMatch(PARTNER);
+  });
+
+  test('tell a player with a word to vote for the PI only while one may still be in the game', async () => {
+    // A game of five has none.
+    const five = await told('vote');
+    expect(five).toMatch(NOBODY);
+    expect(five).not.toMatch(NEITHER);
+    // A game of six or more may have one, until it is out.
+    for (const players of [6, 9]) {
+      const game = { seats: seats(players), candidates: [1, 3, 5, 6] };
+      const told6 = await told('vote', game);
+      expect(told6).toMatch(NEITHER);
+      expect(told6).not.toMatch(NOBODY);
+      expect(await told('vote', { ...game, seats: seats(players, { 4: 'student' }) })).toMatch(NEITHER);
+      const piOut = await told('vote', { ...game, seats: seats(players, { 4: 'pi' }) });
+      expect(piOut).toMatch(NOBODY);
+      expect(piOut).not.toMatch(NEITHER);
+    }
+    // With the other Reviewer 2 still in, but no PI, it is told of both.
+    expect(await told('vote', { seats: seats(9, { 4: 'pi' }), candidates: [1, 3, 5, 6, 7, 8, 9] })).toMatch(
+      /A player whose lines fit your own word better than closest is probably the other Reviewer 2, on your side: never vote for them either\. Abstain: every other player is probably a student\./,
+    );
   });
 
   test("leave the PI's line and vote as they were, with no judgment first", async () => {
@@ -165,7 +192,7 @@ describe('the prompts of the hidden word game', () => {
     expect(vote.fields).toEqual(['number', 'reason']);
     expect(vote.system.endsWith(PLAIN_VOTE)).toBe(true);
     expect(vote.system).toMatch(PI_VOTE);
-    for (const phrase of [NAME_FIRST, MINE, NOT_THE_STUDENTS, NEITHER, UNCLEAR, POINTS_TOLD]) {
+    for (const phrase of [NAME_FIRST, MINE, NOT_THE_STUDENTS, NEITHER, NOBODY, UNCLEAR, POINTS_TOLD]) {
       expect(vote.system).not.toMatch(phrase);
     }
   });
