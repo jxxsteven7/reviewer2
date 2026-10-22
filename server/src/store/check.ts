@@ -603,8 +603,9 @@ function isAgentLog(data: unknown, gameId: string): data is AgentLogData {
 
 // Whether a value is how an account last set up its rooms (RoomSetup in shared/src/accounts.ts): by
 // game, each with a room, a practice room or both, in their shapes and no larger than a game's
-// setup may be, the game's settings and the practice room's role, if there is one, as the game
-// judges them.
+// setup may be, the game's settings as the game judges them, and the practice room's role, if
+// there is one, as one that the game has practice rooms for (GameModule.practice), which need not
+// be a role that its records name.
 function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): boolean {
   if (!isObject(value)) return false;
   return Object.entries(value).every(([id, setup]) => {
@@ -632,7 +633,7 @@ function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): bo
       if (!isObject(practice) || !isStrings(practice.fields)) return false;
       if (practice.role !== undefined) {
         if (typeof practice.role !== 'string') return false;
-        if (game.shapes !== undefined && !game.shapes.role(practice.role)) return false;
+        if (game.practice === undefined || game.practice(practice.role) === null) return false;
       }
       if (!Object.keys(practice).every((key) => key === 'role' || key === 'fields')) return false;
     }
