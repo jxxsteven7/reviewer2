@@ -19,6 +19,7 @@ import en from '../../locales/en.json';
 import AgentGuess from './AgentGuess.vue';
 import ImpostorGame from './ImpostorGame.vue';
 import ImpostorLobby from './ImpostorLobby.vue';
+import ImpostorScreen from './ImpostorScreen.vue';
 import JudgeSheet from './JudgeSheet.vue';
 import OffField from './OffField.vue';
 import ReplayViewer from './ReplayViewer.vue';
@@ -701,6 +702,7 @@ function inMatch(base: RoomView, overrides: Partial<MatchView> = {}): RoomView {
       played: 1,
       status: 'on',
       game: 2,
+      chairBound: false,
       standings: [
         standing('Ann', { total: 5, rank: 1 }),
         standing('Bob', { total: 3, rank: 2 }),
@@ -823,6 +825,42 @@ describe('the second game in a match', () => {
     expect(wrapper.find('.match-table').exists()).toBe(false);
     expect(wrapper.get('.match-results').text()).toContain('The match was ended early');
     expect(wrapper.get('.match-results').text()).not.toContain('title');
+  });
+});
+
+describe('ImpostorScreen in a match', () => {
+  test("shows the match's table in the waiting room and during the game, without presence while anonymous", () => {
+    const lobby = mount(ImpostorScreen, { props: { room: inMatch(room(null)) }, global: global() });
+    expect(lobby.get('.match-table').text()).toContain('Game 2 of 3');
+    expect(lobby.text()).not.toContain('End the match');
+    // While an anonymous game is on, no points of the game, and nobody offline or gone.
+    const playing = mount(ImpostorScreen, { props: { room: inMatch(room(view())) }, global: global() });
+    const table = playing.get('.match-table');
+    expect(table.findAll('thead th')).toHaveLength(3);
+    expect(table.find('.veiled').exists()).toBe(false);
+    expect(table.findAll('tbody tr .rank').map((cell) => cell.text())).toEqual(['1', '2', '3', '4']);
+  });
+
+  test('shows where the points came from once the game is over, and the ranking once the match is', () => {
+    const over = view({ phase: 'over', speaker: null, clock: null, result: { winner: 'student', reason: 'caught' } });
+    const scored = inMatch(
+      { ...room(over), phase: 'ended' },
+      { standings: [standing('Ann', { total: 10, delta: 5, rank: 1, detail: scoreDetail({ won: true, hits: 2 }) })] },
+    );
+    const ended = mount(ImpostorScreen, { props: { room: scored }, global: global() });
+    expect(ended.get('.match-table .detail.below').text()).toBe('Student \u00b7 won \u00b7 lasted \u00b7 2 hits');
+    expect(ended.get('.match-table').findAll('thead th')).toHaveLength(4);
+    const withdrawn = mount(ImpostorScreen, {
+      props: { room: inMatch({ ...room(view({ phase: 'over', speaker: null, clock: null })), phase: 'ended' }) },
+      global: global(),
+    });
+    expect(withdrawn.get('.match-table .note').text()).toContain('Game 2 was withdrawn');
+    const stopped = mount(ImpostorScreen, {
+      props: { room: inMatch({ ...room(over), phase: 'ended' }, { status: 'stopped' }) },
+      global: global(),
+    });
+    expect(stopped.find('.match-table').exists()).toBe(false);
+    expect(stopped.get('.match-results').text()).toContain('The match was ended early');
   });
 });
 

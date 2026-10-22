@@ -63,4 +63,8 @@ export interface MatchView {
   game: number;
   // Best first; ties keep the order in which the players entered the match.
   standings: StandingView[];
+  // Whether the chair passing to anyone else would end the match early, as in a match bound to its
+  // chair once a game of it has started (MatchHooks.chairBound on the server): the chair is asked
+  // before handing the chair on or leaving the room.
+  chairBound: boolean;
 }

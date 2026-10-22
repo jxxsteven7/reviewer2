@@ -13,6 +13,7 @@ import DuoNotices from '../../core/components/DuoNotices.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
 import EndMatchButton from '../../core/components/EndMatchButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
+import MatchSheet from '../../core/components/MatchSheet.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
 import RatingCard from '../../core/components/RatingCard.vue';
 import AvatarButton from '../../core/components/AvatarButton.vue';
@@ -611,7 +612,11 @@ const status = computed(() => {
             <UiButton v-if="isChair && !game.result" variant="quiet" size="small" @click="ending = true">
               {{ t('game.end') }}
             </UiButton>
-            <EndMatchButton v-if="isChair && !game.result && match?.status === 'on'" :match-id="match.id" />
+            <EndMatchButton
+              v-if="isChair && !game.result && match?.status === 'on'"
+              :match-id="match.id"
+              :game="room.game"
+            />
           </div>
         </div>
       </aside>
@@ -625,11 +630,9 @@ const status = computed(() => {
       <ClueLog :game="game" class="in-sheet" />
     </UiSheet>
 
-    <UiSheet :open="matchOpen" :title="t('match.progressTitle')" @close="matchOpen = false">
-      <MatchTable v-if="match" :room="room" :endable="false" :titles-of="titlesOf" class="in-sheet">
-        <p class="scoring">{{ t('game.scoring') }}</p>
-      </MatchTable>
-    </UiSheet>
+    <MatchSheet :open="matchOpen" :room="room" :titles-of="titlesOf" @close="matchOpen = false">
+      <p class="scoring">{{ t('game.scoring') }}</p>
+    </MatchSheet>
 
     <UiSheet :open="reviewing" :title="t('replay.title')" @close="reviewing = false">
       <ReplayViewer v-if="replay" :replay="replay" :talk="talk" />

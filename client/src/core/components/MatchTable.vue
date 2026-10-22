@@ -2,7 +2,6 @@
 import type { TitleCount } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { gameInfo } from '../../games/info';
 import { points, signedPoints } from '../points';
 import type { ShownMatch, ShownRoom } from '../room';
 import { useTitleFolds } from '../useTitleFolds';
@@ -64,7 +63,6 @@ const lines = computed(() => {
     .map((line) => ({ ...line, left: false, rank: line.games > 0 ? rankOf(line.total) : null }))
     .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity) || b.total - a.total);
 });
-const titlesAwarded = computed(() => gameInfo(props.room.game)?.matchTitles !== false);
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.
 const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastDelta') : t('match.delta')));
@@ -146,7 +144,7 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
       v-if="endable && isChair && match.status === 'on'"
       class="end"
       :match-id="match.id"
-      :titles="titlesAwarded"
+      :game="room.game"
     />
   </section>
 </template>

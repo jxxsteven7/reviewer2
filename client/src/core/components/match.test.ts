@@ -61,6 +61,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
       played: 1,
       status: 'on',
       game: 1,
+      chairBound: false,
       standings: [],
       ...match,
     },

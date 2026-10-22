@@ -21,7 +21,7 @@ import {
 import { ANY_AGENT_NOTE } from '@reviewer2/shared/schemas';
 import { AVATAR_FILE } from '../accounts/avatars';
 import type { AgentLogData } from '../core/agentLog';
-import { knownTitles, type GameModule } from '../core/game';
+import { knownTitles, matchAwardsTitles, type GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
 import { countedUnder, countGames, countMatches, HeldRecords } from './recount';
@@ -325,7 +325,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     }
     // The records of a match whose games are all kept and counted, against what they add up to; a
     // match with no game kept, or with a game that can't be counted, is reported as such above.
-    const matches = countMatches(counted.counted, module.match?.titles !== false);
+    const matches = countMatches(counted.counted, matchAwardsTitles(module.match));
     const uncountable = new Set(counted.uncounted.map(({ matchId }) => matchId));
     const kept = new Set(
       (

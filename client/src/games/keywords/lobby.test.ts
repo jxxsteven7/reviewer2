@@ -655,6 +655,7 @@ describe('KeywordsLobby in a match', () => {
     played,
     status: 'on',
     game: played + 1,
+    chairBound: false,
     standings: [],
   });
   const inMatch = (me: string, room: Partial<KeywordsRoomData>, played = 0): RoomView => ({
