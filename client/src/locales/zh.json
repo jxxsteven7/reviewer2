@@ -1499,6 +1499,10 @@
       "recentMatches": "最近 20 场比赛",
       "matchLine": "{rank}/{players} 名 · {score} 分 | {rank}/{players} 名 · {score} 分",
       "matchGames": "{count} 局 | {count} 局",
+      "wordsSet": "出过的题",
+      "liked": "好评 {good}/{rated}",
+      "noRatings": "没人评",
+      "setWords": "{0} / {1}",
       "logout": "退出登录",
       "delete": "注销账号",
       "deleteWarning": {

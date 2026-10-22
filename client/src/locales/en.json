@@ -1499,6 +1499,10 @@
       "recentMatches": "The last 20 matches",
       "matchLine": "{rank}/{players} · {score} pt | {rank}/{players} · {score} pts",
       "matchGames": "{count} game | {count} games",
+      "wordsSet": "Pairs you set",
+      "liked": "Liked {good}/{rated}",
+      "noRatings": "No ratings",
+      "setWords": "{0} / {1}",
       "logout": "Log out",
       "delete": "Delete the account",
       "deleteWarning": {

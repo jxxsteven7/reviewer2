@@ -7,15 +7,17 @@ import {
   interpolate,
   joinByLink,
   newPlayer,
+  register,
   setSetting,
   snapshotsOf,
   test,
   TEXT,
 } from './helpers';
 
-// The second game from the room setup to its end (docs/games/impostor.md): four players describe
-// their terms in turn, one reports another and the others judge it, one reloads in the middle and
-// is back at their number, and everyone votes Reviewer 2 out.
+// The second game from the room setup to its end (docs/games/impostor.md): four players with
+// accounts describe their terms in turn, one reports another and the others judge it, one reloads
+// in the middle and is back at their number, everyone votes Reviewer 2 out, and each finds the game
+// on their record.
 
 const text = TEXT.en;
 const impostor = text.games.impostor;
@@ -24,6 +26,9 @@ const gameIn = (state: RoomView | undefined): ImpostorView | null =>
   (state?.data as ImpostorRoomData | undefined)?.game ?? null;
 const latest = (page: Page): ImpostorView | null => gameIn(snapshotsOf(page).at(-1));
 const numberOf = (page: Page): number => latest(page)?.you?.number ?? 0;
+
+// An account's username, which no other test on the same server has.
+const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
 
 // Lines made of no word that a term of the lists could hold, so that none gives a term away, and
 // far enough apart that none is refused as the same as another.
@@ -42,16 +47,20 @@ async function describe(players: Page[], line: string): Promise<void> {
   await expect.poll(() => latest(players[0]!)?.lines.length).toBe(said + 1);
 }
 
-test('four players describe, judge a report, come back after a reload and vote Reviewer 2 out', async ({ browser }) => {
+test('four players describe, judge a report, come back after a reload, vote Reviewer 2 out and find it on their records', async ({
+  browser,
+}) => {
   const chair = await newPlayer(browser);
+  await register(chair, own('Ann'));
   // No time limits, so that the test sets the pace.
   const url = await createGameRoom(chair, 'impostor', 'en', async (page) => {
     await setSetting(page, impostor.settings.boxes.describeTime, 0);
     await setSetting(page, impostor.settings.boxes.voteTime, 0);
   });
   const players = [chair];
-  for (let joined = 0; joined < 3; joined += 1) {
+  for (const name of ['Bob', 'Cat', 'Dan']) {
     const page = await newPlayer(browser);
+    await register(page, own(name));
     await joinByLink(page, url, 'en');
     players.push(page);
   }
@@ -149,4 +158,18 @@ test('four players describe, judge a report, come back after a reload and vote R
   await rating.getByText(text.rating.options.good, { exact: true }).click();
   await expect(rating.locator('label.chosen')).toHaveText(text.rating.options.good);
   expect(gameIn(snapshotsOf(chair).at(-1))?.result).toEqual({ winner: 'student', reason: 'caught' });
+
+  // Each finds the game on their record of the second game, with their role and how their game
+  // went, which a line on a phone puts under the role rather than cutting it short.
+  for (const page of players) {
+    await page.goto('/account');
+    await page.locator('.game-tabs label').filter({ hasText: impostor.name }).click();
+    const line = page.locator('.records .games .record');
+    await expect(line).toHaveCount(1);
+    const caught = page === reviewer2;
+    await expect(line.locator('.role')).toHaveText(impostor.roles[caught ? 'reviewer2' : 'student']);
+    const verdict = line.locator('.verdict');
+    await expect(verdict).toHaveText(impostor.letter.short[caught ? 'voted_out' : 'alive']);
+    expect(await verdict.evaluate((part) => part.scrollWidth <= part.clientWidth)).toBe(true);
+  }
 });
