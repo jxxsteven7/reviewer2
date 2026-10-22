@@ -156,10 +156,12 @@ function goodLine(game: ImpostorAgentGame, tie: boolean): string {
 // the lines fit its own word, for the player whose lines fit it least; when they fit the closest
 // word, it is probably a Reviewer 2, whose side wins only while one of them lasts, so it votes
 // neither for the students, which would give it away, nor, in a game with two Reviewer 2s while
-// both are in, for the other one, whose lines fit its own word better than the closest, but, while
-// the PI may still be in, for the player whose lines fit neither word, or it abstains; and when
-// that is unclear, for the player whose lines fit the others' least. The points are those of the
-// rules (docs/games/impostor.md#points), told with a win's, which outweighs any one vote.
+// both are in, for the other one, whose lines fit its own word better than the closest, but for the
+// player whose lines fit neither word, probably the PI while one may still be in, or it abstains;
+// and when that is unclear, for the player whose lines fit the others' least. A student that
+// misjudges the fit follows the same advice, so it is never told to abstain alone. The points are
+// those of the rules (docs/games/impostor.md#points), told with a win's, which outweighs any one
+// vote.
 function howToVote(game: ImpostorAgentGame): string {
   if (game.word === null) {
     return (
@@ -180,7 +182,7 @@ function howToVote(game: ImpostorAgentGame): string {
   const whomThen =
     counts.pi - shownOut('pi') > 0
       ? 'Vote for a player whose lines fit neither word, who is probably the PI, or abstain.'
-      : 'Abstain: every other player is probably a student.';
+      : 'Vote for a player whose lines fit neither word, or abstain.';
   return [
     'It is time to vote. First name closest, and judge fit from the lines alone: it may not be mine.',
     'If fit is mine, vote for the player whose lines fit your word the least: that player probably has another ' +
