@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { FRIEND_LIMITS, RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { fakeGame } from '../../test/fakeGame';
+import { impostorGame } from '../games/impostor';
 import { keywordsGame } from '../games/keywords';
 import { AccountStore } from './accounts';
 import { checkData, IDS_SHOWN, type DataProblem } from './check';
@@ -269,6 +270,8 @@ afterEach(() => db.close());
 const ratedGame: typeof fakeGame = {
   ...fakeGame,
   ratings: ['good', 'meh'],
+  // Practice rooms, for a player alone.
+  practice: (role) => (role === 'player' ? { seat: { type: 'test:sit', payload: null }, agents: [null] } : null),
   shapes: {
     ...(fakeGame.shapes as NonNullable<typeof fakeGame.shapes>),
     guess: (value) => Array.isArray(value) && value.every((id) => typeof id === 'string'),
@@ -761,6 +764,25 @@ describe('the check of the data', () => {
     ).toEqual([
       { rule: "titles of a match that are not a match's", count: 1, ids: ['3'] },
       { rule: 'records of matches whose title is not what their games award', count: 1, ids: ['1'] },
+    ]);
+  });
+
+  test("takes the role of a practice room that the game has, though its records don't name it", () => {
+    // The second game's one role in a practice room is a player's; its records name the role that
+    // each player was dealt.
+    const checked = () => checkData(db, { games: [keywordsGame, ratedGame, impostorGame], now: () => NOW });
+    const practice = (role: string) =>
+      db.exec(
+        `UPDATE accounts SET room_setup = json_set(room_setup, '$.impostor', json('{"practice":{"role":"${role}","fields":["general"]}}')) WHERE id = 1`,
+      );
+    practice('player');
+    expect(checked()).toEqual([]);
+    practice('pi');
+    expect(checked()).toEqual([{ rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] }]);
+    // A game without practice rooms has no practice role at all.
+    const without = { ...ratedGame, practice: undefined };
+    expect(checkData(db, { games: [keywordsGame, without], now: () => NOW })).toEqual([
+      { rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] },
     ]);
   });
 
