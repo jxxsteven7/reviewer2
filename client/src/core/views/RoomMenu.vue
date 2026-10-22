@@ -44,9 +44,13 @@ const successor = computed(() => {
   const id = nextChair(props.room.players.filter((player) => player.id !== props.me.id));
   return props.room.players.find((player) => player.id === id) ?? null;
 });
+// The chair's confirmation says who chairs the room next, and, where that ends the match
+// (MatchView.chairBound), that it does.
 const leaveText = computed(() => {
   if (!isChair.value) return t('room.leaveConfirm');
-  return successor.value ? t('room.leaveChair', { name: successor.value.name }) : t('room.leaveLast');
+  if (!successor.value) return t('room.leaveLast');
+  const key = props.room.match?.chairBound ? 'room.leaveChairMatch' : 'room.leaveChair';
+  return t(key, { name: successor.value.name });
 });
 
 // A chair who hands the chair over, or loses it while away, can't close the room any more.

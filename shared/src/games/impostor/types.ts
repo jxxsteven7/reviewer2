@@ -18,6 +18,10 @@ export type Fate = (typeof FATES)[number];
 export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 12;
 
+// How many games a match of the game may have (docs/games/impostor.md#matches), the first the
+// room setup's default.
+export const IMPOSTOR_MATCH_GAMES = [3, 5, 7] as const;
+
 // How long the players who may judge a report have, how long a Reviewer 2 or a PI who was voted out
 // has to guess the students' word, and how long a report's reason may be, in characters.
 export const REPORT_SECONDS = 20;
@@ -71,6 +75,7 @@ export type ReportVerdict = (typeof VERDICTS)[number];
 // or set the words. `guess_first`: a player who is to guess the AI players after the game talks
 // once they have guessed or skipped it. `not_setter`, `bad_field` and `account_required`: only the
 // setter sets the words, of a field of the word library, and the setter needs an account.
+// `words_played`: a match never has the same pair twice.
 // `private_only`: the god view and the setter are for a private room.
 export const IMPOSTOR_ERRORS = [
   'table_full',
@@ -96,6 +101,7 @@ export const IMPOSTOR_ERRORS = [
   'words_missing',
   'words_too_long',
   'words_same',
+  'words_played',
 ] as const;
 export type ImpostorError = (typeof IMPOSTOR_ERRORS)[number];
 

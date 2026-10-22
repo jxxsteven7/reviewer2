@@ -6,6 +6,10 @@ import { useI18n } from 'vue-i18n';
 import ClockBar from '../../core/components/ClockBar.vue';
 import DuoNotices from '../../core/components/DuoNotices.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
+import EndMatchButton from '../../core/components/EndMatchButton.vue';
+import MatchResults from '../../core/components/MatchResults.vue';
+import MatchSheet from '../../core/components/MatchSheet.vue';
+import MatchTable from '../../core/components/MatchTable.vue';
 import RatingCard from '../../core/components/RatingCard.vue';
 import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
@@ -25,6 +29,7 @@ import ImpostorRules from './ImpostorRules.vue';
 import ImpostorStrip from './ImpostorStrip.vue';
 import JudgeSheet from './JudgeSheet.vue';
 import LineBox from './LineBox.vue';
+import { describeScore, unscoredNote } from './match';
 import OffField from './OffField.vue';
 import RevealList from './RevealList.vue';
 import RoundLog from './RoundLog.vue';
@@ -49,6 +54,14 @@ import { playerAt, useImpostor } from './useImpostor';
 // Once the game is over: the guess of who the AI players were, where there is one (AgentGuess.vue),
 // the streaks, who everyone was (RevealList.vue), the question of how the words were
 // (RatingCard.vue), and the review, which opens the record of every round.
+//
+// In a match (docs/games/impostor.md#matches), as in the first game's room (KeywordsGame.vue): its
+// table opens in a sheet while the game is on (MatchSheet.vue), from the bar of buttons on a phone
+// and among the tools on a wide screen, without the points of the game, which come only at its end,
+// and, in an anonymous game, without saying who is offline or gone; the chair's button to end the
+// match stands beside the one to end the game. Once the game is over, the table follows the
+// question of how the words were, with where each player's points came from, their role included
+// (match.ts), or the final ranking does when the match is over.
 const props = defineProps<{ room: ShownRoom }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -234,11 +247,20 @@ watch(over, (ended) => {
   if (ended) ending.value = false;
 });
 const rated = computed(() => (game.value.words ? `${game.value.words.student} / ${game.value.words.reviewer2}` : null));
+
+const match = computed(() => room.value.match);
+const matchOpen = ref(false);
+watch(over, (ended) => {
+  if (ended) matchOpen.value = false;
+});
+const scoreLine = (detail: unknown) => describeScore(t, detail);
+const scoring = computed(() => t('games.impostor.match.scoring', { points: t('games.impostor.rules.points') }));
+const unscored = computed(() => unscoredNote(t, match.value, game.value));
 </script>
 
 <template>
   <section class="impostor-game">
-    <ImpostorLetter v-if="over" :game="game" :is-chair="isChair" :busy="busy" @again="again" />
+    <ImpostorLetter v-if="over" :game="game" :is-chair="isChair" :busy="busy" :match="match" @again="again" />
     <ImpostorStrip v-else :game="game" :setter="isSetter" :agents="agents" :must-act="mustAct" />
     <div
       v-if="(game.clock && !over) || data.mayEmote"
@@ -262,6 +284,12 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
         :question="t('games.impostor.rating')"
         :rated="rated"
       />
+      <template v-if="match">
+        <MatchResults v-if="match.status !== 'on'" :room="room" />
+        <MatchTable v-else :room="room" :describe="scoreLine" :note="unscored" class="between">
+          <p class="scoring">{{ scoring }}</p>
+        </MatchTable>
+      </template>
     </template>
 
     <div class="layout">
@@ -338,6 +366,9 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
             <UiButton v-if="readsOffField" size="small" @click="sheet = 'offField'">
               {{ t(over ? 'games.impostor.buttons.talk' : 'games.impostor.buttons.offField') }}
             </UiButton>
+            <UiButton v-if="match && !over" size="small" @click="matchOpen = true">
+              {{ t('game.buttons.match') }}
+            </UiButton>
           </div>
         </div>
       </div>
@@ -362,6 +393,9 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
           <RoundLog :game="game" />
         </section>
         <div class="tools">
+          <UiButton v-if="match && !over" size="small" @click="matchOpen = true">
+            {{ t('match.progressTitle') }}
+          </UiButton>
           <ImpostorRules :settings="data.settings" :language="room.language" />
         </div>
       </aside>
@@ -369,6 +403,7 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
 
     <div v-if="isChair && !over" class="foot">
       <UiButton variant="quiet" size="small" @click="ending = true">{{ t('game.end') }}</UiButton>
+      <EndMatchButton v-if="match?.status === 'on'" :match-id="match.id" :game="room.game" />
     </div>
 
     <UiSheet
@@ -395,6 +430,16 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
         @send="say"
       />
     </UiSheet>
+
+    <MatchSheet
+      :open="matchOpen"
+      :room="room"
+      :delta="false"
+      :presence="!data.settings.anonymous"
+      @close="matchOpen = false"
+    >
+      <p class="scoring">{{ scoring }}</p>
+    </MatchSheet>
 
     <SeatPanel :game="game" :number="opened" :name="openedName" :is-chair="isChair" @close="opened = null" />
     <JudgeSheet :game="game" />
@@ -563,6 +608,17 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* A match's table, as in the first game's room (KeywordsGame.vue): under the result, apart from
+   the board. */
+.scoring {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}
+
+.between {
+  margin-bottom: var(--space-4);
 }
 
 @media (min-width: 40rem) {

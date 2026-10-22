@@ -23,9 +23,12 @@ const global = (locale: 'en' | 'zh' = 'en') => ({
   stubs: { teleport: true },
 });
 
+// The players enter the match in this order, which numbers them.
+const NAMES = ['Ann', 'Bob', 'Cat', 'Dan', 'Eve'];
 const line = (name: string, overrides: Partial<StandingView> = {}): StandingView => ({
   playerId: name.toLowerCase(),
   name,
+  number: NAMES.indexOf(name) + 1,
   total: 0,
   delta: null,
   games: 1,
@@ -61,6 +64,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
       played: 1,
       status: 'on',
       game: 1,
+      chairBound: false,
       standings: [],
       ...match,
     },
@@ -173,6 +177,34 @@ describe('the table of a match', () => {
     // Where the game puts the button elsewhere, the table has none.
     const elsewhere = mount(MatchTable, { props: { room: room({ standings }), endable: false }, global: global() });
     expect(elsewhere.text()).not.toContain('End the match');
+  });
+
+  // The server lists those who have left after everyone else, so where the table shows nobody as
+  // gone, it keeps the lines in one order whoever leaves: ranked again over everyone who has played
+  // a game that counted, ties in the order the players entered the match.
+  test('keeps its lines in one order whoever leaves, where it shows nobody as gone', () => {
+    const names = (standings: StandingView[]) => {
+      const wrapper = mount(MatchTable, { props: { room: room({ standings }), presence: false }, global: global() });
+      expect(wrapper.find('.veiled').exists()).toBe(false);
+      return {
+        names: wrapper.findAll('tbody tr .name').map((cell) => cell.text()),
+        ranks: wrapper.findAll('tbody tr .rank').map((cell) => cell.text()),
+      };
+    };
+    // The first game, with nobody ranked yet: Bob leaves, and the server moves him to the end.
+    const first = (name: string, left = false) =>
+      line(name, { games: 0, rank: null, left, ...(left ? { playerId: null } : {}) });
+    const everyone = names([first('Ann'), first('Bob'), first('Cat'), first('Dan')]);
+    expect(everyone).toEqual({ names: ['Ann', 'Bob', 'Cat', 'Dan'], ranks: ['–', '–', '–', '–'] });
+    expect(names([first('Ann'), first('Cat'), first('Dan'), first('Bob', true)])).toEqual(everyone);
+    // A later game, with Ann, Bob and Cat level: Ann leaves, and the server ranks her no more.
+    const level = (name: string, total: number, rank: number | null, left = false) =>
+      line(name, { total, rank, left, ...(left ? { playerId: null } : {}) });
+    const ranked = names([level('Ann', 2, 1), level('Bob', 2, 1), level('Cat', 2, 1), level('Dan', 1, 4)]);
+    expect(ranked).toEqual({ names: ['Ann', 'Bob', 'Cat', 'Dan'], ranks: ['1', '1', '1', '4'] });
+    expect(names([level('Bob', 2, 1), level('Cat', 2, 1), level('Dan', 1, 3), level('Ann', 2, null, true)])).toEqual(
+      ranked,
+    );
   });
 });
 

@@ -655,6 +655,7 @@ describe('KeywordsLobby in a match', () => {
     played,
     status: 'on',
     game: played + 1,
+    chairBound: false,
     standings: [],
   });
   const inMatch = (me: string, room: Partial<KeywordsRoomData>, played = 0): RoomView => ({
@@ -753,5 +754,21 @@ describe('KeywordsLobby in a match', () => {
     expect(chair.find('.settings-summary').exists()).toBe(true);
     expect(chair.get('.desk').text()).toContain('stay as they are until the match is over');
     expect(chair.text()).not.toContain('Shuffle groups');
+  });
+
+  // The server refuses to start a game of a match that is over (match_over): the chair is offered
+  // another match or an ordinary room instead.
+  test('offers no start once the match is over, also when it was ended early', async () => {
+    for (const status of ['over', 'stopped'] as const) {
+      const room = inMatch('ann', { lineup: 'fixed' }, 1);
+      const chair = mount(KeywordsLobby, {
+        props: { room: { ...room, match: { ...room.match!, status } } },
+        global: global(),
+      });
+      await flushPromises();
+      expect(chair.findAll('button').some((button) => button.text() === 'Start')).toBe(false);
+      expect(chair.find('.desk').exists()).toBe(false);
+      expect(chair.get('.match-results').text()).toContain('Another match');
+    }
   });
 });

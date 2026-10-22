@@ -1,7 +1,7 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import type { Language, MatchTitle, RecordResult } from '@reviewer2/shared';
 import { certifiedPlay, type AgentLogData } from '../core/agentLog';
-import type { GameModule, GameOutcome, GameTitle, Recount } from '../core/game';
+import { matchAwardsTitles, type GameModule, type GameOutcome, type GameTitle, type Recount } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { rankings, titlesFor } from '../core/match';
 import { jsonOf } from './records';
@@ -286,9 +286,10 @@ function membersAtEnd(log: GameLogData): Set<string> {
 // (core/match.ts): everyone's total over the match's games, by their number, with the numbers that
 // went into another counted for the one they went into; the players ranked are those who scored in
 // a game and were in the room when the last game ended, by their totals, ties sharing a place; the
-// titles go to the top and, with three or more ranked, the bottom. A match with fewer games kept
-// than it was to have didn't run its course, and counts for no record: it is left out.
-export function countMatches(games: readonly CountedGame[]): Map<string, CountedMatch> {
+// titles go to the top and, with three or more ranked, the bottom, for a game whose matches award
+// them (`titles`, MatchHooks.titles). A match with fewer games kept than it was to have didn't run
+// its course, and counts for no record: it is left out.
+export function countMatches(games: readonly CountedGame[], titles = true): Map<string, CountedMatch> {
   const matches = new Map<string, CountedGame[]>();
   for (const game of games) {
     if (game.match === null) continue;
@@ -320,12 +321,12 @@ export function countMatches(games: readonly CountedGame[]): Map<string, Counted
       .filter(([number]) => present.has(number))
       .map(([key, total]) => ({ key: String(key), total }));
     const ranks = rankings(ranked);
-    const titles = titlesFor(ranked);
+    const awarded = titles ? titlesFor(ranked) : new Map<string, MatchTitle>();
     const standings = new Map<number, Standing>();
     for (const [account, number] of accounts) {
       const rank = ranks.get(String(number));
       if (rank === undefined) continue;
-      standings.set(account, { rank, total: totals.get(number) ?? 0, title: titles.get(String(number)) ?? null });
+      standings.set(account, { rank, total: totals.get(number) ?? 0, title: awarded.get(String(number)) ?? null });
     }
     const game = played[0] as CountedGame;
     counted.set(id, { id, game: game.game, games: played.length, players: ranked.length, standings });
@@ -633,7 +634,7 @@ export function recountRecords(db: DatabaseSync, games: readonly GameModule[]): 
         }
         report.games += 1;
       }
-      for (const match of countMatches(counted).values()) {
+      for (const match of countMatches(counted, matchAwardsTitles(module.match)).values()) {
         const records = held.match(match.id, match);
         let changed = false;
         for (const { id, standing, counted: differs } of records) {

@@ -232,6 +232,29 @@
       "rating": "这一局的词怎么样？"
     },
     "impostor": {
+      "match": {
+        "note": "整场比赛设置不变。每局重新发号码和身份，上一局的号码不代表这一局是谁；同一场比赛不会出现重复的词对。比赛里不能有 AI 玩家。",
+        "scoring": "比赛计分和普通局一样（测试版）：{points}",
+        "detail": {
+          "won": "获胜",
+          "lasted": "活到最后",
+          "outIn": "第 {round} 轮出局",
+          "violation": "违规出局",
+          "left": "离开了",
+          "hits": "投中 1 票 | 投中 {count} 票",
+          "wrong": "投出学生 ×{count}",
+          "comebackRight": "翻盘猜中",
+          "comebackWrong": "翻盘猜错",
+          "missedLines": "描述超时 ×{count}",
+          "missedVotes": "投票超时 ×{count}",
+          "failedReports": "举报不成立 ×{count}"
+        },
+        "unscored": {
+          "withdrawn": "第 {game} 局已撤稿，不算分，要重打一局。",
+          "reviewer2_left": "二号审稿人离开了，第 {game} 局不算分，要重打一局。",
+          "removed": "主持人移除了玩家，第 {game} 局不算分，要重打一局。"
+        }
+      },
       "name": "谁是二号审稿人",
       "summary": "学生拿到同一个词，二号审稿人拿到的不一样，连 TA 自己都不知道；导师没有词。",
       "players": "4–12 人",
@@ -346,7 +369,8 @@
         "play": "坐下来玩",
         "setter": "出题人",
         "setterNote": "出题人在等待区出好两个词，自己不参加游戏。",
-        "numbersNote": "开局时头像都换成号码（一号审稿人也是），结束才揭晓号码是谁。"
+        "numbersNote": "开局时头像都换成号码（一号审稿人也是），结束才揭晓号码是谁。",
+        "numbersNoteMatch": "开局时头像都换成号码，结束才揭晓号码是谁。"
       },
       "problems": {
         "needs_players": "至少要有 4 位在线玩家才能开局，还差 {count} 位。",
@@ -639,6 +663,7 @@
     "leave": "离开房间",
     "leaveConfirm": "确定离开这个房间吗？你的座位会被让出。",
     "leaveChair": "确定离开这个房间吗？你的座位会被让出，主持由 {name} 接任。",
+    "leaveChairMatch": "确定离开这个房间吗？你的座位会被让出，主持由 {name} 接任；这场比赛跟着主持人走，会提前结束。",
     "leaveLast": "确定离开这个房间吗？你是房间里最后一个人，房间会随之关闭。",
     "closeInstead": "为所有人关闭房间",
     "closeRoom": "关闭房间",
@@ -714,6 +739,7 @@
     "games": "局数",
     "gamesRange": "{min} 到 {max} 局",
     "gamesProblem": "请填 {min} 到 {max} 之间的整数。",
+    "gamesChoice": "{count} 局",
     "teams": "分组",
     "teamsChoice": {
       "fixed": "不许换队",
@@ -750,6 +776,8 @@
     "none": "开局后，参加的人都会列在这里。",
     "end": "提前结束比赛",
     "endConfirm": "比赛现在结束，按目前的分数排名，不发称号。正在进行的一局会中止。",
+    "endConfirmUntitled": "比赛现在结束，按目前的分数排名。正在进行的一局会中止。",
+    "chairEnds": "把主持交给 {name}？这场比赛跟着主持人走，交出去比赛就提前结束，按目前的分数排名；正在进行的一局会先打完。",
     "next": "下一局",
     "waitNext": "等主持人开始下一局。",
     "over": "最终排名",
@@ -1253,6 +1281,7 @@
     "words_missing": "两个词都要填。",
     "words_too_long": "词太长了：最多 5 个汉字或 14 个字母。",
     "words_same": "两个词不能一样，也不能是彼此的变形。",
+    "words_played": "这场比赛已经出过这对词。",
     "guess_first": "先猜谁是 AI，或者跳过，再来聊天。"
   },
   "footer": {

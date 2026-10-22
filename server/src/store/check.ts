@@ -21,7 +21,7 @@ import {
 import { ANY_AGENT_NOTE } from '@reviewer2/shared/schemas';
 import { AVATAR_FILE } from '../accounts/avatars';
 import type { AgentLogData } from '../core/agentLog';
-import { knownTitles, type GameModule } from '../core/game';
+import { knownTitles, matchAwardsTitles, type GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
 import { countedUnder, countGames, countMatches, HeldRecords } from './recount';
@@ -325,7 +325,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     }
     // The records of a match whose games are all kept and counted, against what they add up to; a
     // match with no game kept, or with a game that can't be counted, is reported as such above.
-    const matches = countMatches(counted.counted);
+    const matches = countMatches(counted.counted, matchAwardsTitles(module.match));
     const uncountable = new Set(counted.uncounted.map(({ matchId }) => matchId));
     const kept = new Set(
       (
@@ -644,12 +644,13 @@ function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): bo
   });
 }
 
-// Whether a value is the rules of a match of the game (MatchRules): the number of games, and the
-// game's own options, as the game takes them (MatchHooks.options), or none for a game that has
-// none.
+// Whether a value is the rules of a match of the game (MatchRules): the number of games, one of
+// those the game takes where it takes only some (MatchHooks.games), and the game's own options, as
+// the game takes them (MatchHooks.options), or none for a game that has none.
 const isMatchRules = (value: unknown, game: GameModule): boolean => {
   const hooks = game.match;
   if (!isObject(value) || hooks === undefined || !matchGamesValid(value.games)) return false;
+  if (hooks.games && !hooks.games.includes(value.games as number)) return false;
   if (!Object.keys(value).every((key) => key === 'games' || key === 'options')) return false;
   return hooks.options ? hooks.options(value.options) !== null : value.options === undefined;
 };

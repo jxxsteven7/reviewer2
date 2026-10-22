@@ -123,4 +123,25 @@ describe('RoomMenu', () => {
     over.unmount();
     account.summary = null;
   });
+
+  test('warns the chair that leaving ends a match bound to its chair', async () => {
+    const match = { id: 'm1', status: 'on', standings: [], chairBound: false } as unknown as RoomView['match'];
+    const leave = async (wrapper: ReturnType<typeof mount>) => {
+      await wrapper
+        .findAll('.room-menu .button')
+        .find((b) => b.text() === 'Leave the room')!
+        .trigger('click');
+      await flushPromises();
+      return wrapper.text();
+    };
+    const plain = await opened('lobby', match);
+    expect(await leave(plain)).toContain('Your seat will be given up, and Bob will chair the room.');
+    expect(plain.text()).not.toContain('ends early');
+    plain.unmount();
+    const bound = await opened('lobby', { ...match, chairBound: true } as RoomView['match']);
+    expect(await leave(bound)).toContain(
+      'Bob will chair the room, and this match, which is bound to its chair, ends early.',
+    );
+    bound.unmount();
+  });
 });

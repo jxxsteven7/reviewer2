@@ -1,6 +1,7 @@
 import { type Language, type MatchRules } from '@reviewer2/shared';
 import {
   defaultSettings as impostorDefaults,
+  IMPOSTOR_MATCH_GAMES,
   restoreSettings as restoreImpostorSettings,
 } from '@reviewer2/shared/impostor';
 import { defaultMatchRules, defaultSettings, keywordsMatchRules, restoreSettings } from '@reviewer2/shared/keywords';
@@ -13,6 +14,7 @@ import ImpostorRules from './impostor/ImpostorRules.vue';
 import ImpostorScreen from './impostor/ImpostorScreen.vue';
 import ImpostorReplay from './impostor/ReplayViewer.vue';
 import ImpostorSettings from './impostor/SettingsForm.vue';
+import ImpostorMatchNote from './impostor/MatchNote.vue';
 import SourceChoice from './impostor/SourceChoice.vue';
 import * as keywordsGuide from './keywords/guide';
 import KeywordsGame from './keywords/KeywordsGame.vue';
@@ -37,7 +39,8 @@ import SettingsForm from './keywords/SettingsForm.vue';
 // room shows the first game's, as the game's `Lobby` scene draws it, and whose chapter on rooms
 // shares the game's invented `room`. A game with matches has its `match`: the form of its own
 // options, which binds with v-model to them, the rules a new match starts from, and the rules of an
-// earlier match, as far as they still will do, or null.
+// earlier match, as far as they still will do, or null; and the numbers of games that a match may
+// have, for a game that takes only some (MatchHooks.games on the server).
 export interface GameScreens {
   Lobby: Component;
   Game: Component;
@@ -52,6 +55,7 @@ export interface GameScreens {
     Options: Component;
     defaults(): MatchRules;
     restore(saved: unknown): MatchRules | null;
+    choices?: readonly number[];
   };
   guide?: {
     chapters: Omit<GuideChapter, 'game'>[];
@@ -83,5 +87,16 @@ export const games: Record<string, GameScreens> = {
     Source: SourceChoice,
     defaultSettings: impostorDefaults,
     restoreSettings: restoreImpostorSettings,
+    // A match of 3, 5 or 7 games, with no options of its own, only a line on what it keeps the same
+    // and what it deals anew.
+    match: {
+      Options: ImpostorMatchNote,
+      defaults: () => ({ games: IMPOSTOR_MATCH_GAMES[0] }),
+      restore: (saved) => {
+        const games = (saved as { games?: unknown } | null)?.games;
+        return IMPOSTOR_MATCH_GAMES.some((choice) => choice === games) ? { games: games as number } : null;
+      },
+      choices: IMPOSTOR_MATCH_GAMES,
+    },
   },
 };

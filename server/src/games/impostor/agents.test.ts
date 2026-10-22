@@ -36,6 +36,7 @@ const dataOf = (game: ImpostorGame, agents: readonly string[]): ImpostorData => 
   seats: game.players.map((player) => player.id),
   setterWords: null,
   game: { ...game, players: game.players.map((player) => ({ ...player, agent: agents.includes(player.id) })) },
+  matchPairs: null,
 });
 
 describe('the AI players', () => {

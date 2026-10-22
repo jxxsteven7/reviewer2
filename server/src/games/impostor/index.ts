@@ -2,11 +2,13 @@ import { cleanLine, RATINGS, type BoardWord } from '@reviewer2/shared';
 import {
   checkSetterWords,
   defaultSettings,
+  IMPOSTOR_MATCH_GAMES,
   IMPOSTOR_ROLES,
   MAX_PLAYERS,
   MIN_PLAYERS,
   mayBePublic,
   PRIVATE_SETTINGS,
+  samePair,
   sameSettings,
   settingsProblems,
   type ImpostorRoomData,
@@ -62,6 +64,10 @@ const wordsOf = (data: ImpostorData, ctx: Pick<GameContext, 'chairId'>): SetterW
   const setter = setterOf(data, ctx);
   return setter !== null && data.setterWords?.by === setter ? data.setterWords : null;
 };
+
+// Whether the match has had a pair of words already (docs/games/impostor.md#matches).
+const played = (data: ImpostorData, pair: [string, string]): boolean =>
+  data.matchPairs?.some((had) => samePair(had, pair)) ?? false;
 
 // Who plays the next game: everyone who came to play and is online, in the order they came, but
 // the setter.
@@ -135,7 +141,7 @@ const actions: { [M in ImpostorMessage]: Action<M> } = {
   },
   // The setter gives the two words, the field they are of and whether to be named when the pair is
   // adopted, in the waiting room. The setter needs an account, which a pair adopted is credited to.
-  // The words are kept as checkSetterWords() checked them, cleaned.
+  // The words are kept as checkSetterWords() checked them, cleaned. A match has no pair twice.
   'impostor:words': (data, ctx, playerId, { a, b, field, named }) => {
     if (data.game && data.game.phase !== 'over') return fail('wrong_phase');
     if (setterOf(data, ctx) !== playerId) return { ok: false, error: 'not_setter' };
@@ -144,6 +150,7 @@ const actions: { [M in ImpostorMessage]: Action<M> } = {
     const problem = checkSetterWords(a, b);
     if (problem) return { ok: false, error: problem };
     const words = { by: playerId, a: cleanLine(a), b: cleanLine(b), field, named };
+    if (played(data, [words.a, words.b])) return { ok: false, error: 'words_played' };
     return { ok: true, data: { ...data, setterWords: words } };
   },
   'impostor:describe': (data, ctx, playerId, message) =>
@@ -309,7 +316,13 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
   logLimits: LOG_LIMITS,
   ratings: RATINGS,
 
-  create: (language) => ({ settings: defaultSettings(language), seats: [], setterWords: null, game: null }),
+  create: (language) => ({
+    settings: defaultSettings(language),
+    seats: [],
+    setterWords: null,
+    game: null,
+    matchPairs: null,
+  }),
 
   // The settings come whole and must suit the room's language; the god view and the setter are for a
   // private room only.
@@ -379,7 +392,8 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
       ctx.rng,
       ctx.now(),
     );
-    return { ...data, game };
+    const matchPairs = data.matchPairs && [...data.matchPairs, [pair[0].word, pair[1].word] as [string, string]];
+    return { ...data, game, matchPairs };
   },
 
   deadline: (data) => deadlineOf(data.game),
@@ -419,8 +433,27 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
   outcome: (data) => outcomeOf(data.game?.result ?? null),
   score: (data, ctx) => (data.game ? scoresFrom(factsOf(data.game), ctx.keyOf) : null),
   // A game in which the chair removed a player of the game counts for no points
-  // (docs/games/impostor.md#leaving).
+  // (docs/games/impostor.md#leaving), and a match plays it again.
   scoresNothing: (data) => (data.game?.removed.length ?? 0) > 0,
+
+  // A match (docs/games/impostor.md#matches) of 3, 5 or 7 games, with no options of its own, which
+  // awards no titles in the beta. Everyone who plays a game is in it, in the order they came to the
+  // table, never by their numbers, which the table of an anonymous game would otherwise list them
+  // by; whoever sets the words, which the chair does, plays in none, and the match ends without its
+  // setter. The points of a game in progress would tell who voted for a Reviewer 2, so they show
+  // once it is over; and a pair of terms, drawn or set, comes once in a match.
+  match: {
+    setup: (data, _ctx, rules) => ({ ...data, matchPairs: rules ? [] : null }),
+    lineup: (data) => {
+      const seat = (id: string) => data.seats.indexOf(id);
+      return (data.game?.players.map((player) => player.id) ?? []).sort((a, b) => seat(a) - seat(b));
+    },
+    games: IMPOSTOR_MATCH_GAMES,
+    titles: false,
+    live: false,
+    fresh: (data, words) => !played(data, [words[0]?.word ?? '', words[1]?.word ?? '']),
+    chairBound: (data) => data.settings.setter,
+  },
   // A game that a side won may be rated (docs/architecture.md#ratings).
   rated: (data) => data.game?.result?.winner !== undefined && data.game.result.winner !== null,
 
