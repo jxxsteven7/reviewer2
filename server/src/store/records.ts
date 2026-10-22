@@ -1,8 +1,8 @@
 import {
   emptyAgentCounts,
   emptyGameCounts,
+  MATCH_TITLES,
   RECENT_RECORDS,
-  TITLES,
   type AgentGameCounts,
   type BestStreaks,
   type DuoCounts,
@@ -47,8 +47,8 @@ import type { AgentPlay } from '../core/room';
 
 // One player's part in one game, as the game module described it (GameModule.results()), with the
 // points it brought them (migration 8), scored as a match scores a game, and the titles it brought
-// them, each with the turn it came in. A game that an AI played in (docs/architecture.md#ai-players)
-// brings no points and no titles, which the record of the game says.
+// them, each with the turn it came in. A game that brings nobody points, as one that an AI played
+// in (docs/architecture.md#ai-players), brings no titles either, which the record of the game says.
 export interface NewRecord {
   game: string;
   gameId: string;
@@ -73,9 +73,10 @@ export const jsonOf = (value: unknown): string | null =>
 // the index on the game (migration 13), which the statement names: left to itself, SQLite looks
 // each friend up in every one of the account's games instead, by the unique index on the account
 // and the game, which takes ten times as long with a hundred friends. Teammates were on the same
-// side, opponents on another, and one beat the other by finishing in a better place. A game that an
-// AI played in counts for no friend (migration 15), so that no two friends make titles together
-// against AI players. Exported for the test that reads the query plan.
+// side, opponents on another, and one beat the other by finishing in a better place. A game that
+// brought nobody points counts for no friend (migration 27), as one that an AI played in, so that
+// no two friends make titles together against AI players, or in a game that the chair could have
+// won by removing a player. Exported for the test that reads the query plan.
 export const DUOS_SQL =
   'SELECT mine.game, theirs.account_id AS friend, ' +
   "count(*) FILTER (WHERE theirs.side = mine.side AND mine.result = 'won') AS wonTogether, " +
@@ -84,7 +85,7 @@ export const DUOS_SQL =
   'count(*) FILTER (WHERE theirs.side <> mine.side AND mine.place < theirs.place) AS beat, ' +
   'count(*) FILTER (WHERE theirs.side <> mine.side AND theirs.place < mine.place) AS beaten ' +
   'FROM game_records AS mine ' +
-  'JOIN replays AS game ON game.game_id = mine.game_id AND game.agents = 0 AND game.takeover = 0 ' +
+  'JOIN replays AS game ON game.game_id = mine.game_id AND game.scores_nothing = 0 ' +
   'JOIN game_records AS theirs INDEXED BY game_records_game ' +
   'ON theirs.game_id = mine.game_id AND theirs.account_id <> mine.account_id ' +
   'WHERE mine.account_id = ? AND theirs.account_id IN (' +
@@ -108,7 +109,7 @@ export interface NewMatchRecord {
 // latest game is part of, which is a record when it is longer than every run of its kind before
 // it, so that the first run of each kind is one. A drawn game ends the run before it and starts
 // none. A record without games, or whose latest game was drawn, has no latest run. The games are
-// those that count, which the caller picks: the games of one game that no AI played in.
+// those that count, which the caller picks: the games of one game that brought points.
 export function streaksOf(results: readonly RecordResult[]): BestStreaks & { latest: Streak | null } {
   const best = { wins: 0, losses: 0 };
   let run = 0;
@@ -141,10 +142,12 @@ export class RecordStore {
   readonly #recent: StatementSync;
   readonly #insertMatch: StatementSync;
   readonly #matchCount: StatementSync;
+  readonly #detailSums: StatementSync;
+  readonly #verdictCounts: StatementSync;
   readonly #recentMatches: StatementSync;
   readonly #results: StatementSync;
   readonly #duos: StatementSync;
-  readonly #agentsIn: StatementSync;
+  readonly #scoresNothing: StatementSync;
 
   constructor(
     db: DatabaseSync,
@@ -186,6 +189,15 @@ export class RecordStore {
       'INSERT INTO match_records (account_id, game, match_id, ended_at, games, rank, players, score) ' +
         'VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
     );
+    // The totals of the whole numbers in the detail of an account's records of a game, by key, and
+    // how many of the records have each verdict.
+    this.#detailSums = db.prepare(
+      'SELECT j.key AS key, sum(j.value) AS total FROM game_records r, json_each(r.detail) j ' +
+        "WHERE r.account_id = ? AND r.game = ? AND j.type = 'integer' GROUP BY j.key",
+    );
+    this.#verdictCounts = db.prepare(
+      'SELECT verdict, count(*) AS total FROM game_records WHERE account_id = ? AND game = ? GROUP BY verdict',
+    );
     // A match is won by finishing first, alone or level with others.
     this.#matchCount = db.prepare(
       'SELECT game, count(*) AS played, count(*) FILTER (WHERE rank = 1) AS won FROM match_records ' +
@@ -198,23 +210,23 @@ export class RecordStore {
         'WHERE m.account_id = ? AND m.game = ? ORDER BY m.id DESC LIMIT ?',
     );
     // The result of every game of a game on the record that counts for a streak, in the order the
-    // games were kept, which is the order they ended in: a game that an AI played in brings no
-    // streak (migration 15). The streaks are counted from them whenever they are asked for
-    // (streaksOf), which takes a moment for the longest record, and keeps nothing beside the records
-    // that could fall behind them (migration 23).
+    // games were kept, which is the order they ended in: a game that brought nobody points, as one
+    // that an AI played in, brings no streak (migration 27). The streaks are counted from them
+    // whenever they are asked for (streaksOf), which takes a moment for the longest record, and
+    // keeps nothing beside the records that could fall behind them (migration 23).
     this.#results = db.prepare(
-      `SELECT r.game, r.result ${RECORDS_WITH_GAMES} WHERE r.account_id = ? AND g.agents = 0 AND g.takeover = 0 ` +
-        'ORDER BY r.id',
+      `SELECT r.game, r.result ${RECORDS_WITH_GAMES} WHERE r.account_id = ? AND g.scores_nothing = 0 ORDER BY r.id`,
     );
     this.#duos = db.prepare(DUOS_SQL);
-    // Whether an AI played in a kept game, as a player or for someone who was offline.
-    this.#agentsIn = db.prepare('SELECT (agents > 0 OR takeover = 1) AS agents FROM replays WHERE game_id = ?');
+    // Whether a kept game brought nobody points, as the record of the game says.
+    this.#scoresNothing = db.prepare('SELECT scores_nothing AS unscored FROM replays WHERE game_id = ?');
   }
 
   // Keeps the record, with the streak that the game brings the account to in its game, which is
-  // none for a drawn game; or null when the game was on the record already, or an AI played in it,
-  // as the record of the game says, which counts for no streak, title or friend. The caller runs it
-  // in a transaction (Accounts.record), so that the streak is counted with the record in place.
+  // none for a drawn game; or null when the game was on the record already, or brought nobody
+  // points, as one that an AI played in, as the record of the game says, which counts for no
+  // streak, title or friend. The caller runs it in a transaction (Accounts.record), so that the
+  // streak is counted with the record in place.
   add(accountId: number, record: NewRecord): { streak: Streak | null } | null {
     const { game, gameId, side, role, result, place, verdict, detail, points } = record;
     const { changes } = this.#insert.run(
@@ -230,8 +242,8 @@ export class RecordStore {
       points,
     );
     if (Number(changes) === 0) return null;
-    const agents = (this.#agentsIn.get(gameId) as { agents: number } | undefined)?.agents === 1;
-    return agents ? null : { streak: this.#streaks(accountId).get(game)?.latest ?? null };
+    const nothing = (this.#scoresNothing.get(gameId) as { unscored: number } | undefined)?.unscored === 1;
+    return nothing ? null : { streak: this.#streaks(accountId).get(game)?.latest ?? null };
   }
 
   // The longest streaks of wins and of losses on the account's record of each game it has a game of
@@ -252,9 +264,9 @@ export class RecordStore {
     return new Map([...results].map(([game, games]) => [game, streaksOf(games)]));
   }
 
-  // What the account has played in each game with each friend who shares a game of it with them,
-  // by the game's ID and then the friend's account ID, from every game on both their records but
-  // those that an AI played in (docs/architecture.md#friend-duos).
+  // What the account has played in each game with each friend who shares a game of it with them, by
+  // the game's ID and then the friend's account ID, from every game on both their records but those
+  // that brought nobody points, as those that an AI played in (docs/architecture.md#friend-duos).
   duos(accountId: number): Map<string, Map<number, DuoCounts>> {
     type Row = DuoCounts & { game: string; friend: number };
     const duos = new Map<string, Map<number, DuoCounts>>();
@@ -309,6 +321,27 @@ export class RecordStore {
     return counts;
   }
 
+  // What the account's records of a game add up (GameCounts.sums): the totals of the detail's whole
+  // numbers under `detail`, and how many records have each of `verdicts`, each 0 where none has it.
+  sums(
+    accountId: number,
+    game: string,
+    { detail = [], verdicts = [] }: { detail?: readonly string[]; verdicts?: readonly string[] },
+  ): Record<string, number> {
+    type Total = { key: string; total: number };
+    const totals = new Map((this.#detailSums.all(accountId, game) as Total[]).map(({ key, total }) => [key, total]));
+    type Verdict = { verdict: string; total: number };
+    const counted = (this.#verdictCounts.all(accountId, game) as Verdict[]).map(({ verdict, total }) => [
+      verdict,
+      total,
+    ]);
+    const verdictTotals = new Map(counted as [string, number][]);
+    return Object.fromEntries([
+      ...detail.map((key) => [key, totals.get(key) ?? 0]),
+      ...verdicts.map((verdict) => [verdict, verdictTotals.get(verdict) ?? 0]),
+    ]);
+  }
+
   // The counts of each game, and its latest games and matches.
   view(accountId: number, limit = RECENT_RECORDS): RecordsView {
     type Row = Omit<GameRecord, 'match' | 'agents'> & {
@@ -336,8 +369,12 @@ export class TitleStore {
   readonly #insertForGame: StatementSync;
   readonly #counts: StatementSync;
   readonly #count: StatementSync;
+  readonly #known: ReadonlySet<Title>;
 
-  constructor(db: DatabaseSync) {
+  // `known` are the titles there are: the match's, and those that the games bring
+  // (GameModule.titles).
+  constructor(db: DatabaseSync, known: Iterable<Title> = MATCH_TITLES) {
+    this.#known = new Set(known);
     // A match awards an account one title (the titles_match index), and a turn of a game brings it
     // one title once (titles_game). Unlike OR IGNORE, ON CONFLICT passes over that alone, and still
     // refuses a row that the table's checks refuse, or one of a match or a game that isn't on the
@@ -358,14 +395,14 @@ export class TitleStore {
   // Awards a title from a match of the game `game`, and says whether it was new. The same title can
   // be awarded many times, but a match awards an account one title.
   award(accountId: number, game: string, title: Title, matchId: string): boolean {
-    known(title);
+    this.#check(title);
     return Number(this.#insert.run(accountId, game, title, matchId).changes) > 0;
   }
 
   // Awards a title that a game brought, in one of its turns, and says whether it was new: a turn of
   // a game brings an account a title once, however often the end of the game is reported.
   awardForGame(accountId: number, game: string, title: Title, gameId: string, turn: number): boolean {
-    known(title);
+    this.#check(title);
     return Number(this.#insertForGame.run(accountId, game, title, gameId, turn).changes) > 0;
   }
 
@@ -382,23 +419,24 @@ export class TitleStore {
       ({ game, title, count }) => ({ game, title, count }),
     );
   }
-}
 
-// The titles are the code's to check (migration 14), as they are for the whole table: a title that
-// isn't one is a mistake in the code, and is never kept. Which game's they are, the check of the
-// data checks (check.ts).
-function known(title: Title): void {
-  if (!TITLES.includes(title)) throw new Error(`Unknown title: ${String(title)}`);
+  // The titles are the code's to check (migration 14), as they are for the whole table: a title
+  // that isn't one is a mistake in the code, and is never kept. Which game's they are, the check of
+  // the data checks (check.ts).
+  #check(title: Title): void {
+    if (!this.#known.has(title)) throw new Error(`Unknown title: ${String(title)}`);
+  }
 }
 
 // A game to keep (docs/architecture.md#game-records), once for each game, however often its end is
 // reported: how it ended, who won and how if it finished, and what kind of game it was
 // (Room.record()); how it began (GameModule.setup), if the game says; the log of everything that
 // happened in it; the AI's own log of it, or null when no AI played in it (agentLog.ts); which
-// player, by the ID they had in the room, was which account; and, for a game that a match scored,
-// its place in the match: the match's ID, which game of it this was, from 1, and how many games the
-// match was to have (Room.matchGame()), while `inMatch` says whether it was played in a room that
-// plays a match at all, scored or not.
+// player, by the ID they had in the room, was which account; whether it brought nobody points, a
+// streak, a title or a friend title, for whatever reason (Room.record()); and, for a game that a
+// match scored, its place in the match: the match's ID, which game of it this was, from 1, and how
+// many games the match was to have (Room.matchGame()), while `inMatch` says whether it was played
+// in a room that plays a match at all, scored or not.
 export interface NewReplay {
   game: string;
   gameId: string;
@@ -411,6 +449,7 @@ export interface NewReplay {
   players: readonly { playerId: string; accountId: number }[];
   counts: { accounts: number; guests: number; agents: number };
   takeover: boolean;
+  scoresNothing: boolean;
   agentPlays: readonly AgentPlay[];
   match: { id: string; game: number; games: number } | null;
   inMatch: boolean;
@@ -450,20 +489,20 @@ export class ReplayStore {
     // A game is kept once, and, as for the records, never in a form that the table's checks refuse.
     this.#insert = db.prepare(
       'INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, ' +
-        'started_at, setup, accounts, guests, agents, takeover, in_match, practice, language, fields, version, rules, ' +
-        'words, match_id, match_game, match_games) ' +
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
+        'started_at, setup, accounts, guests, agents, takeover, scores_nothing, in_match, practice, language, fields, ' +
+        'version, rules, words, match_id, match_game, match_games) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING',
     );
     // An account that is gone by now, deleted while the game was on, is left out.
     this.#player = db.prepare(
       'INSERT OR IGNORE INTO game_players (game_id, player_id, game, account_id) ' +
         'SELECT ?, ?, ?, id FROM accounts WHERE id = ?',
     );
-    // Only an account that has the game on its record may read it, and only a game that finished
-    // has a replay.
+    // Only an account that took part in the game may read it, as a player or as the setter who
+    // gave its words (game_players, migration 27), and only a game that finished has a replay.
     this.#read = db.prepare(
       "SELECT game, setup, log, language FROM replays WHERE game_id = ? AND ending = 'finished' AND " +
-        'EXISTS (SELECT 1 FROM game_records WHERE account_id = ? AND game_id = replays.game_id)',
+        'EXISTS (SELECT 1 FROM game_players WHERE account_id = ? AND game_id = replays.game_id)',
     );
     this.#players = db.prepare(
       'SELECT player_id AS playerId, account_id AS accountId FROM game_players WHERE game_id = ? ORDER BY rowid',
@@ -510,6 +549,7 @@ export class ReplayStore {
           game.counts.guests,
           game.counts.agents,
           flag(game.takeover),
+          flag(game.scoresNothing),
           flag(game.inMatch),
           flag(game.practice),
           game.language,
@@ -588,8 +628,8 @@ export class ReplayStore {
     return true;
   }
 
-  // What it takes to show the replay of a game that finished, for an account that played in it, or
-  // null.
+  // What it takes to show the replay of a game that finished, for an account that took part in it,
+  // or null.
   read(accountId: number, gameId: string): StoredGame | null {
     const row = this.#read.get(gameId, accountId) as
       { game: string; setup: string | null; log: string; language: Language } | undefined;

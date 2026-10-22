@@ -2,20 +2,23 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, test } from 'vitest';
+import { ContentStore } from './content';
 import { ContributionStore } from './contributions';
 import { FeedbackStore } from './feedback';
 import { MIGRATIONS } from './migrations';
 
-// The feedback, the reports of players and the contributions from GitHub are archives
-// (docs/architecture.md#feedback, docs/architecture.md#feedback-contributions): what a player
-// sent and whom a report is about are never changed, and no row of the reports or of the
-// contributions from GitHub is ever deleted. The only changes are the ones that the players were
-// promised and the operator's notes: a contact is cleared after 90 days, what became of the
-// feedback is recorded (the GitHub issue, the pull request, adopted or not, with what the player
-// contributed, closed or not, in the trash or not), a contribution from GitHub gets its sentences
-// written again or its author listed anonymously or forgotten at their request, and a deleted
-// account is unlinked from the feedback and the reports, which its foreign keys do; besides them,
-// the migrations named below, each once, as the maintainers agreed. The one way a row of feedback
+// The feedback, the reports of players, the contributions from GitHub and the content adopted into
+// the word library are archives (docs/architecture.md#feedback,
+// docs/architecture.md#feedback-contributions, docs/architecture.md#content-contributions): what a
+// player sent and whom a report is about are never changed, and no row of the reports, of the
+// contributions from GitHub or of the content adopted is ever deleted. The only changes are the
+// ones that the players were promised and the operator's notes: a contact is cleared after 90
+// days, what became of the feedback is recorded (the GitHub issue, the pull request, adopted or
+// not, with what the player contributed, closed or not, in the trash or not), a contribution from
+// GitHub gets its sentences written again or its author listed anonymously or forgotten at their
+// request, the content adopted from an account that is deleted names nobody, and a deleted
+// account is unlinked from the feedback, the reports and the content, which its foreign keys do;
+// besides them, the migrations named below, each once, as the maintainers agreed. The one way a row of feedback
 // goes is the purge of what has been in the trash for 30 days, and feedback that was adopted or is
 // a GitHub issue never goes. These tests fail when code that breaks that is added; change them
 // only with a maintainer's agreement.
@@ -35,10 +38,12 @@ function sources(dir = SOURCE): string[] {
 // What was promised, and the operator's notes, each as it is written in its store, where each is
 // written once: a statement is allowed there, with the code around it, and nowhere else, so that
 // no other command can run the purge at a time of its own, or write a time of its own into the
-// trash. The feedback's are in store/feedback.ts, and those of the contributions from GitHub in
-// store/contributions.ts, which name a row by its issue or its advisory.
+// trash. The feedback's are in store/feedback.ts, those of the contributions from GitHub in
+// store/contributions.ts, which name a row by its issue or its advisory, and those of the content
+// in store/content.ts.
 const FEEDBACK_FILE = join(import.meta.dirname, 'feedback.ts');
 const CONTRIBUTIONS_FILE = join(import.meta.dirname, 'contributions.ts');
+const CONTENT_FILE = join(import.meta.dirname, 'content.ts');
 const ALLOWED: { statement: string; file: string }[] = [
   ...[
     'UPDATE feedback SET contact = NULL WHERE contact IS NOT NULL AND created_at < ?',
@@ -59,21 +64,22 @@ const ALLOWED: { statement: string; file: string }[] = [
     'UPDATE github_contributions SET login = NULL, github_id = NULL, named = 0 ' +
       'WHERE issue IS ? AND advisory IS ? AND login IS NOT NULL',
   ].map((statement) => ({ statement, file: CONTRIBUTIONS_FILE })),
+  { statement: 'UPDATE content_contributions SET named = 0 WHERE account_id = ? AND named = 1', file: CONTENT_FILE },
 ];
 const ALLOWED_STATEMENTS = ALLOWED.map(({ statement }) => statement);
 
 // The methods of the stores whose names say that they delete or rewrite, and the ones of the
-// feedback that may: the notes and the trash. The contributions from GitHub have none such: their
-// changes, describe(), anonymize() and forget(), are the statements allowed above.
+// feedback that may: the notes and the trash. The contributions from GitHub and the content have
+// none such: their changes, describe(), anonymize() and forget(), are the statements allowed above.
 const CHANGING = /delete|remove|drop|purge|erase|update|edit|set/i;
 const FEEDBACK_METHODS = ['setIssue', 'delete', 'purge'];
 
-// Migration 5 rebuilds the feedback table, once, so that its kinds are no longer fixed by a CHECK
-// (store/migrations.ts). Its statements that drop the old table and put the new one in its place
-// are allowed there and in no other migration, and database.test.ts checks that it copies every
-// row as it was.
+// Migration 5 rebuilds the feedback table, so that its kinds are no longer fixed by a CHECK, and
+// migration 27 does again, so that it can name the game it was sent about (store/migrations.ts).
+// Their statements that drop the old table and put the new one in its place are allowed there and
+// in no other migration, and database.test.ts checks that each copies every row as it was.
 const REBUILD = {
-  migration: 5,
+  migrations: [5, 27],
   statements: ['DROP TABLE feedback', 'ALTER TABLE new_feedback RENAME TO feedback'],
 };
 
@@ -84,7 +90,7 @@ const REBUILD = {
 // (store/migrations.ts). The maintainers agreed to each. Its statements are allowed there and in
 // no other migration.
 const RETIREMENT = {
-  migration: 17,
+  migrations: [17],
   statements: [
     'UPDATE feedback SET link_profile = 1',
     'ALTER TABLE feedback DROP COLUMN link',
@@ -101,7 +107,7 @@ const RETIREMENT = {
 // (store/migrations.ts). The maintainers agreed to each. Its statements are allowed there and in no
 // other migration.
 const SIGNING = {
-  migration: 21,
+  migrations: [21],
   statements: [
     'UPDATE feedback SET link_profile = 0 WHERE link_profile = 1 AND (credit IS NULL OR account_id IS NULL)',
     'UPDATE feedback SET link_profile = 1 WHERE link_profile = 0 AND credit IS NOT NULL AND account_id IS NOT NULL',
@@ -148,7 +154,7 @@ const named = (names: string) => `(?:${names}|"(?:${names})"|\`(?:${names})\`|\\
 const SQL = new RegExp(
   '\\b(?:DELETE\\s+FROM|UPDATE(?:\\s+OR\\s+\\w+)?|REPLACE\\s+INTO|INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO|' +
     'DROP\\s+TABLE(?:\\s+IF\\s+EXISTS)?|ALTER\\s+TABLE|ALTER\\s+TABLE\\s+\\S+\\s+RENAME\\s+TO)\\s+' +
-    `(?:${named('main')}\\s*\\.\\s*)?${named('feedback|acknowledgments|reports|github_contributions')}(?![\\w$])[^;]*`,
+    `(?:${named('main')}\\s*\\.\\s*)?${named('feedback|acknowledgments|reports|github_contributions|content_contributions')}(?![\\w$])[^;]*`,
   'gi',
 );
 
@@ -170,11 +176,11 @@ function offending(sql: string, allowed: readonly string[] = ALLOWED_STATEMENTS)
 // The same for the strings in TypeScript code.
 const offendingCode = (code: string): string[] => strings(code).flatMap((sql) => offending(sql));
 
-// The same for each migration, with the rebuild allowed in migration 5 alone, the end of the
-// acknowledgments in migration 17 alone, and the signing by the account in migration 21 alone.
+// The same for each migration, with the rebuild allowed in migrations 5 and 27 alone, the end of
+// the acknowledgments in migration 17 alone, and the signing by the account in migration 21 alone.
 const offendingMigrations = (migrations: readonly string[]): string[] =>
   migrations.flatMap((migration, index) => {
-    const once = [REBUILD, RETIREMENT, SIGNING].find(({ migration: number }) => number === index + 1);
+    const once = [REBUILD, RETIREMENT, SIGNING].find(({ migrations: numbers }) => numbers.includes(index + 1));
     const allowed = once ? [...ALLOWED_STATEMENTS, ...once.statements] : ALLOWED_STATEMENTS;
     return offending(migration, allowed).map((statement) => `migration ${index + 1}: ${statement}`);
   });
@@ -185,6 +191,7 @@ describe('the archive', () => {
       Object.getOwnPropertyNames((store as { prototype: object }).prototype).filter((name) => CHANGING.test(name));
     expect(changing(FeedbackStore).sort()).toEqual([...FEEDBACK_METHODS].sort());
     expect(changing(ContributionStore)).toEqual([]);
+    expect(changing(ContentStore)).toEqual([]);
   });
 
   test('is changed by no SQL in the server but what was promised, each written once, in the store', () => {
@@ -212,25 +219,28 @@ describe('the archive', () => {
     expect(sources()).toContain(MIGRATIONS_FILE);
     expect(sources()).toContain(FEEDBACK_FILE);
     expect(sources()).toContain(CONTRIBUTIONS_FILE);
+    expect(sources()).toContain(CONTENT_FILE);
     expect(sources().length).toBeGreaterThan(20);
   });
 
-  test('allows the rebuild of migration 5 there and in no other migration', () => {
-    const rebuild = MIGRATIONS[REBUILD.migration - 1] as string;
-    expect(offending(rebuild)).toEqual(REBUILD.statements);
-    // The same rebuild in a later migration.
-    expect(offendingMigrations([...MIGRATIONS, rebuild])).toEqual(
-      REBUILD.statements.map((statement) => `migration ${MIGRATIONS.length + 1}: ${statement}`),
-    );
-    // Any other change, in migration 5 too.
-    const changed = [
-      ...MIGRATIONS.slice(0, REBUILD.migration - 1),
-      `${rebuild}\n  DELETE FROM feedback WHERE id > 10;\n  DROP TABLE acknowledgments;\n`,
-    ];
-    expect(offendingMigrations(changed)).toEqual([
-      'migration 5: DELETE FROM feedback WHERE id > 10',
-      'migration 5: DROP TABLE acknowledgments',
-    ]);
+  test('allows the rebuilds of migrations 5 and 27 there and in no other migration', () => {
+    for (const number of REBUILD.migrations) {
+      const rebuild = MIGRATIONS[number - 1] as string;
+      expect(offending(rebuild)).toEqual(REBUILD.statements);
+      // The same rebuild in a later migration.
+      expect(offendingMigrations([...MIGRATIONS, rebuild])).toEqual(
+        REBUILD.statements.map((statement) => `migration ${MIGRATIONS.length + 1}: ${statement}`),
+      );
+      // Any other change, in the migration too.
+      const changed = [
+        ...MIGRATIONS.slice(0, number - 1),
+        `${rebuild}\n  DELETE FROM feedback WHERE id > 10;\n  DROP TABLE acknowledgments;\n`,
+      ];
+      expect(offendingMigrations(changed)).toEqual([
+        `migration ${number}: DELETE FROM feedback WHERE id > 10`,
+        `migration ${number}: DROP TABLE acknowledgments`,
+      ]);
+    }
     // A migration that renames the table away, or puts another in its place, in other words.
     expect(
       offendingMigrations([
@@ -247,7 +257,8 @@ describe('the archive', () => {
   });
 
   test('allows the end of the acknowledgments in migration 17 and in no other migration', () => {
-    const retirement = MIGRATIONS[RETIREMENT.migration - 1] as string;
+    const [number] = RETIREMENT.migrations as [number];
+    const retirement = MIGRATIONS[number - 1] as string;
     expect(offending(retirement)).toEqual(RETIREMENT.statements);
     expect(offendingMigrations([...MIGRATIONS, retirement])).toEqual(
       RETIREMENT.statements.map((statement) => `migration ${MIGRATIONS.length + 1}: ${statement}`),
@@ -255,25 +266,23 @@ describe('the archive', () => {
     // Any other change there.
     expect(
       offendingMigrations([
-        ...MIGRATIONS.slice(0, RETIREMENT.migration - 1),
+        ...MIGRATIONS.slice(0, number - 1),
         `${retirement}\n  UPDATE feedback SET adopted_at = NULL;\n`,
       ]),
-    ).toEqual([`migration ${RETIREMENT.migration}: UPDATE feedback SET adopted_at = NULL`]);
+    ).toEqual([`migration ${number}: UPDATE feedback SET adopted_at = NULL`]);
   });
 
   test('allows the signing by the account in migration 21 and in no other migration', () => {
-    const signing = MIGRATIONS[SIGNING.migration - 1] as string;
+    const [number] = SIGNING.migrations as [number];
+    const signing = MIGRATIONS[number - 1] as string;
     expect(offending(signing)).toEqual(SIGNING.statements);
     expect(offendingMigrations([...MIGRATIONS, signing])).toEqual(
       SIGNING.statements.map((statement) => `migration ${MIGRATIONS.length + 1}: ${statement}`),
     );
     // Any other change there.
     expect(
-      offendingMigrations([
-        ...MIGRATIONS.slice(0, SIGNING.migration - 1),
-        `${signing}\n  UPDATE feedback SET credit = NULL;\n`,
-      ]),
-    ).toEqual([`migration ${SIGNING.migration}: UPDATE feedback SET credit = NULL`]);
+      offendingMigrations([...MIGRATIONS.slice(0, number - 1), `${signing}\n  UPDATE feedback SET credit = NULL;\n`]),
+    ).toEqual([`migration ${number}: UPDATE feedback SET credit = NULL`]);
   });
 
   test('would be found changed, however the SQL is written', () => {
@@ -333,6 +342,8 @@ describe('the archive', () => {
       'DELETE FROM github_contributions WHERE issue = ?',
       'UPDATE github_contributions SET kind = ? WHERE issue = ?',
       'UPDATE github_contributions SET named = 0 WHERE issue = ?',
+      'DELETE FROM content_contributions WHERE id = ?',
+      'UPDATE content_contributions SET named = 0',
       // The trash, purged without waiting, emptied by hand, or purged with what was adopted.
       'DELETE FROM feedback WHERE deleted_at IS NOT NULL',
       'DELETE FROM feedback WHERE deleted_at IS NOT NULL AND id = ?',

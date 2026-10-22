@@ -1,4 +1,4 @@
-import type { KeywordsView } from '@reviewer2/shared';
+import type { KeywordsView } from '@reviewer2/shared/keywords';
 import { watch, type Ref } from 'vue';
 import { connection } from '../../core/socket';
 

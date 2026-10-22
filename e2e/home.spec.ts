@@ -32,7 +32,10 @@ for (const language of ['en', 'zh'] as const) {
 
     // Beside the first game's name, its rules, at the defaults of a new room in the page's language:
     // a Chinese room's ask for no clue that sounds like a word on the board.
-    await page.locator('.entry .title').getByRole('button', { name: text.rules.link, exact: true }).click();
+    await page
+      .locator('.entry[data-game="keywords"] .title')
+      .getByRole('button', { name: text.rules.link, exact: true })
+      .click();
     const rules = page.locator('[role=dialog]', { has: page.locator('.rules') });
     await expect(rules.locator('h2')).toHaveText(text.rules.title);
     await expect(rules.locator('.defaults')).toHaveText(text.rules.defaults);

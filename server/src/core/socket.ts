@@ -373,10 +373,11 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
   // titles it brought them, which the database ties to the record of the game; the streak it
   // brought them to, which the room tells in the snapshot that ends the game (Room.noteStreak());
   // their ranks as they are now for everyone to see; and the titles that the game brought friends
-  // who played in it, which the room tells each account alone (Room.noteDuos()). A game that an AI
-  // played in brings nobody points, a streak or a title (docs/architecture.md#ai-players). Whoever
-  // had left by then has no part in its end. A game that couldn't be kept, as when the database is
-  // full, leaves no records either.
+  // who played in it, which the room tells each account alone (Room.noteDuos()). A game that brings
+  // nobody points, as one that an AI played in (docs/architecture.md#ai-players), brings nobody a
+  // streak, a title or a friend title either, as the record of the game says (Room.record()).
+  // Whoever had left by then has no part in its end. A game that couldn't be kept, as when the
+  // database is full, leaves no records either.
   function keepRecords(room: Room): void {
     if (!accounts || room.gameId === null) return;
     const gameId = room.gameId;
@@ -441,6 +442,7 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         players,
         counts: kept.counts,
         takeover: kept.takeover,
+        scoresNothing: kept.scoresNothing,
         agentPlays: kept.agentPlays,
         match: room.matchGame(),
         inMatch: kept.match,
@@ -1170,9 +1172,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
     // never its text, contact or name. Only what was kept counts against the address, so that a
     // player who is told to shorten their text doesn't lose a turn for it, and feedback that the
     // address sent once already in the window is answered as it was the first time, without being
-    // kept or counted again.
+    // kept or counted again. Feedback sent from the end of a game is kept with the game, which
+    // the operator sees.
     on(handlers, 'meta:feedback', (message) => {
-      const { kind, text, contact, credit, linkProfile, version: pageVersion, language, page } = message;
+      const { kind, text, contact, credit, linkProfile, version: pageVersion, language, page, gameId } = message;
       const checked = checkFeedback(text);
       if (checked.problem) return fail(checked.problem);
       const given = checkContact(contact);
@@ -1196,7 +1199,15 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
         return fail('feedback_full');
       }
       const userAgent = socket.handshake.headers['user-agent'];
+      // The game it is about, from the end of a game in the player's room that they took part in
+      // and that is kept; otherwise it is kept without one.
+      const found = gameId === undefined ? null : membership(socket);
+      const about =
+        found && gameId !== undefined && found.room.tookPart(found.member.id, gameId) && accounts?.replays.has(gameId)
+          ? { game: found.room.game.id, gameId }
+          : null;
       const id = feedback.add({
+        ...about,
         kind,
         text: checked.text,
         contact: given.contact,
@@ -1360,6 +1371,29 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       return ok();
     });
 
+    // A player's rating of the game that has just ended, or their dismissal, and their guess of
+    // who its AI players were, or their skip (docs/architecture.md#ratings), which the room shows
+    // them and the record of the game keeps, by their player ID in it. A game that isn't kept
+    // keeps none.
+    on(handlers, 'room:rate', ({ gameId, rating }) => {
+      const found = membership(socket);
+      if (!found) return fail('not_member');
+      const { room, member } = found;
+      const rated = room.rate(member.id, gameId, rating);
+      if (!rated.ok) return rated;
+      if (accounts) safely('rating', () => accounts.rate(room.game.id, gameId, member.id, rated.rating));
+      return changed(room, rated);
+    });
+    on(handlers, 'room:guessAgents', ({ gameId, guess }) => {
+      const found = membership(socket);
+      if (!found) return fail('not_member');
+      const { room, member } = found;
+      const guessed = room.guessAgents(member.id, gameId, guess);
+      if (!guessed.ok) return guessed;
+      if (accounts) safely('guess', () => accounts.guessAgents(room.game.id, gameId, member.id, guessed.guess));
+      return changed(room, guessed);
+    });
+
     on(handlers, 'room:settings', (changes) => asChair(socket, (room) => changed(room, room.setSettings(changes))));
 
     // Listing the room takes an account that may be in public rooms; taking it off the list
@@ -1465,8 +1499,10 @@ export function attachSockets(io: Server, options: SocketOptions): RoomSockets {
       }),
     );
 
-    on(handlers, 'room:remove', ({ playerId }) =>
+    on(handlers, 'room:remove', (payload) =>
       asChair(socket, (room, chair) => {
+        const playerId = 'playerId' in payload ? payload.playerId : room.playerAt(payload.seat);
+        if (playerId === null) return fail('no_such_player');
         if (playerId === chair.id) return fail('bad_request'); // the chair leaves instead
         const removed = room.remove(playerId);
         if (!removed.ok) return removed;

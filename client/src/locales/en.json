@@ -33,7 +33,6 @@
   },
   "home": {
     "intro": "Join a room and play!",
-    "players": "4–30 players",
     "newRoom": "New room",
     "practice": {
       "entry": "Play with Reviewer\u00a01",
@@ -48,43 +47,17 @@
         "friends": "With friends"
       },
       "whoHints": {
-        "me": "The game starts at once, and Reviewer\u00a01 takes the other three seats.",
         "friends": "Wait in the room and send friends the link; Reviewer\u00a01 takes the seats nobody takes."
       },
       "roleTitle": "You play as",
-      "roles": {
-        "captain": "PI",
-        "guesser": "Student"
-      },
-      "roleHints": {
-        "captain": "You give the clues, and Reviewer\u00a01 guesses as your student. It's a first-year: opposites, puns and in-jokes go over its head, so go easy on it.",
-        "guesser": "Reviewer\u00a01 gives the clues as your PI, and you guess. It's a brand-new PI, and its clues can be way off. Bear with it."
-      },
       "you": "You",
       "chooseField": "Choose at least one word list to start.",
       "note": "Games that Reviewer\u00a01 plays in bring no points, streaks or titles.",
       "start": "Start",
-      "open": "Open the room"
+      "open": "Open the room",
+      "table": "The seats of this game"
     },
     "forthcoming": "Forthcoming",
-    "games": {
-      "keywords": {
-        "name": "Double Blind",
-        "summary": "Two research groups race to find all their keywords first. Reveal Reviewer 2, and your paper is rejected on the spot."
-      },
-      "impostor": {
-        "name": "Who's Reviewer 2?",
-        "summary": "Everyone gets the same term, except one person, Reviewer 2, who gets a similar one. Find out who."
-      },
-      "titles": {
-        "name": "Real or Fake",
-        "summary": "Tell real paper titles from made-up ones."
-      },
-      "abstracts": {
-        "name": "Bluff the Abstract",
-        "summary": "Write a convincing abstract for a paper nobody has read, then vote for the one that looks most real."
-      }
-    },
     "join": {
       "label": "Got a manuscript number? Join now.",
       "placeholder": "K7QX",
@@ -114,6 +87,473 @@
       "waiting": "You're still in room {code} (waiting for the game to start)",
       "playing": "You're still in room {code} (game in progress)",
       "back": "Back to the room"
+    },
+    "forthcomingGames": {
+      "titles": {
+        "name": "Real or Fake",
+        "summary": "Tell real paper titles from made-up ones."
+      },
+      "abstracts": {
+        "name": "Bluff the Abstract",
+        "summary": "Write a convincing abstract for a paper nobody has read, then vote for the one that looks most real."
+      }
+    }
+  },
+  "games": {
+    "keywords": {
+      "name": "Double Blind",
+      "summary": "Two research groups race to find all their keywords first. Reveal Reviewer 2, and your paper is rejected on the spot.",
+      "players": "4–30 players",
+      "groups": {
+        "red": "Red group",
+        "blue": "Blue group"
+      },
+      "seats": {
+        "captain": "PI",
+        "guesser": "Students"
+      },
+      "roles": {
+        "captain": "PI",
+        "guesser": "Student"
+      },
+      "letter": {
+        "title": "Decision letter",
+        "titleFor": "Decision letter · {group}",
+        "verdicts": {
+          "oral": "Accept (Oral)",
+          "spotlight": "Accept (Spotlight)",
+          "poster": "Accept (Poster)",
+          "deskReject": "Desk Reject",
+          "reject": "Reject",
+          "withdrawn": "Withdrawn"
+        },
+        "short": {
+          "oral": "Oral",
+          "spotlight": "Spotlight",
+          "poster": "Poster",
+          "deskReject": "Desk Reject",
+          "reject": "Reject",
+          "withdrawn": "Withdrawn"
+        },
+        "explain": {
+          "oral": "The group won while the other group still had four or more keywords to find.",
+          "spotlight": "The group won while the other group still had two or three keywords to find.",
+          "poster": "The group won while the other group had one keyword left to find.",
+          "reject": "The group lost: the other group's keywords were all found first.",
+          "deskReject": "The group revealed Reviewer 2 and lost on the spot.",
+          "withdrawn": "The chair withdrew the game, so it counts for nobody: no record, no points, no streak."
+        },
+        "bodies": {
+          "oral": {
+            "found": {
+              "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The reviewers were struck by how far ahead you finished: the other group still had {left} keywords to find. Please prepare a twelve-minute talk, and resist the urge to fit forty slides into it.",
+              "2": "Dear {group}, congratulations! Out of a record number of submissions, yours is one of the very few selected for an oral at R2Conf. You found every keyword while your competitors still had {left} left on the table. The plenary hall is yours.",
+              "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. Reviewer 2 looked hard for a weakness and found none. Your rivals are still looking for {left} keywords of their own."
+            },
+            "reviewer2": {
+              "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The competing paper from the {other} was assigned to Reviewer 2, and that was the end of it, with {left} keywords still to find. The stage is yours; please keep the talk under twelve minutes.",
+              "2": "Dear {group}, congratulations! Your paper has been accepted for an oral at R2Conf. To be frank, the committee never got to compare the two papers: Reviewer 2 found the {other}'s first, {left} keywords from the finish line. A win is a win.",
+              "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. The {other} turned over Reviewer 2 with {left} keywords still to find, and the slot went to you. Nobody will count how many you had found yourselves."
+            }
+          },
+          "spotlight": {
+            "found": {
+              "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. It was close: the other group had only {left} keywords left to find. You will have five minutes on stage; please use them wisely.",
+              "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. The reviewers praised your clear clues and steady guessing, and noted that your rivals were just {left} keywords behind.",
+              "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “Solid work, finished with {left} keywords to spare on the other side. We expect the camera-ready version by Friday.”"
+            },
+            "reviewer2": {
+              "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. The {other} was only {left} keywords from the finish when it ran into Reviewer 2. You will have five minutes on stage; please remember to thank the reviewer.",
+              "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. It could have gone either way: the {other} had {left} keywords left when it found Reviewer 2 instead. The reviewers call this “a decisive contribution by the competition”.",
+              "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “The rival paper was {left} keywords short when Reviewer 2 got to it. Fortune favors the careful.” The camera-ready version is due on Friday."
+            }
+          },
+          "poster": {
+            "found": {
+              "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. You won by a single keyword, which the reviewers called “a thrilling finish”. Please bring a poster tube and a strong voice.",
+              "2": "Dear {group}, after a long discussion, your paper has been accepted as a poster. The other group was one keyword away from taking your slot. Posters are A0 and portrait; the coffee is at the back.",
+              "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword on the other side, and this letter would read very differently."
+            },
+            "reviewer2": {
+              "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. The {other} was one keyword from the finish line, and turned over Reviewer 2 instead. Please bring a poster tube, and perhaps a thank-you card.",
+              "2": "Dear {group}, after a short discussion, your paper has been accepted as a poster. The {other} needed one more keyword and found Reviewer 2 instead. The committee calls this “a narrow escape”. Posters are A0 and portrait.",
+              "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword for the {other}, and this letter would have gone to them. Reviewer 2 had other plans."
+            }
+          },
+          "deskReject": {
+            "1": "Dear {group}, we regret to inform you that your submission has been desk rejected without review. Your group revealed Reviewer 2, who needed no further evidence. The {other} goes on to the conference without you.",
+            "2": "Dear {group}, your paper has been desk rejected. Reviewer 2 read the first line, wrote “major flaws throughout” and left. We wish you better luck in the next cycle.",
+            "3": "Dear {group}, thank you for your submission. Unfortunately, it was assigned to Reviewer 2, and that was the end of it: desk reject. The {other} sends its regards."
+          },
+          "reject": {
+            "1": "Dear {group}, we regret to inform you that your paper was not accepted to R2Conf. The {other} found all of its keywords first, and there was room for only one of you. We received many strong submissions this year.",
+            "2": "Dear {group}, thank you for submitting to R2Conf. After careful consideration, the committee has decided to reject your paper. The {other} simply got there first. The reviews, all three words of them, are attached.",
+            "3": "Dear {group}, unfortunately your submission has been rejected. It was not a bad paper; the {other} just finished its paper sooner. We hope to see a revised version in the next game."
+          },
+          "withdrawn": {
+            "1": "The chair withdrew this game before the end. The submission is closed: nobody is accepted, and nobody is rejected.",
+            "2": "This submission has been withdrawn by the chair. No decision will be made, and no reviewer was harmed.",
+            "3": "The chair pulled this paper before the decision. Both groups keep their keywords, and their dignity, for the next game."
+          }
+        },
+        "signature": "The Program Chairs, R2Conf",
+        "again": "Play again",
+        "waitAgain": "The chair can start another game."
+      },
+      "titles": {
+        "names": {
+          "missed_deadline": "Forgot to Submit",
+          "deadline_hero": "Deadline Hero",
+          "opening_record": "Opened the Scoring",
+          "heavenly_hand": "Heavenly Hand",
+          "instant_reject": "Instant Desk Reject",
+          "first_turn_reject": "Fell at the First Hurdle"
+        },
+        "explain": {
+          "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
+          "deadline_hero": "For a PI who gives a clue in the last 3 seconds of their time, when the students then find as many of the group's cards as it names before revealing anything else, or every card the group has left when fewer are left than the number; and for a student who reveals one of the group's cards in the last 3 seconds of the guesses: submitted at 23:59:57, and accepted. Earned again in every turn that makes you one, in each game with time limits that ends by itself while you are logged in and in your seat.",
+          "opening_record": "For everyone in a group whose very first clue of a game names 4 cards or more, and whose students then find that many of the group's cards before revealing anything else; a group that wins in that turn has the heavenly hand instead. The lab's first paper, accepted without a single revision.",
+          "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all.",
+          "instant_reject": "For everyone in a group whose very first card was Reviewer 2, out on the spot. The paper came back before it had left the building.",
+          "first_turn_reject": "For everyone in a group whose students revealed Reviewer 2 in the turn of its very first clue, out on the spot; as the very first card, that is an instant desk reject instead. The lab's first paper, rejected before it ever reached review."
+        }
+      },
+      "practice": {
+        "roles": {
+          "captain": "PI",
+          "guesser": "Student"
+        },
+        "roleHints": {
+          "captain": "You give the clues, and Reviewer\u00a01 guesses as your student. It's a first-year: opposites, puns and in-jokes go over its head, so go easy on it.",
+          "guesser": "Reviewer\u00a01 gives the clues as your PI, and you guess. It's a brand-new PI, and its clues can be way off. Bear with it."
+        },
+        "alone": "The game starts at once, and Reviewer\u00a01 takes the other three seats."
+      },
+      "rating": "How were the words of this game?"
+    },
+    "impostor": {
+      "name": "Who's Reviewer 2?",
+      "summary": "The students share one term. Reviewer 2 gets a similar one and doesn't know it; the PI gets none.",
+      "players": "4–12 players",
+      "privateOnly": "A room with a setter or the god view can only be private.",
+      "practice": {
+        "alone": "You play with five Reviewer 1s, at numbers dealt at random."
+      },
+      "rating": "How was this pair of terms?",
+      "number": "#{number}",
+      "openSeat": "Open the panel of #{number}",
+      "roles": {
+        "student": "Student",
+        "reviewer2": "Reviewer 2",
+        "pi": "PI"
+      },
+      "letter": {
+        "title": "Decision letter",
+        "titleFor": "Decision letter · {role}",
+        "results": {
+          "caught": "Reviewer 2 caught",
+          "pi_survived": "The PI got away with it",
+          "survived": "Reviewer 2 survived",
+          "comeback": "A comeback",
+          "reviewer2_left": "Reviewer 2 left",
+          "withdrawn": "Withdrawn"
+        },
+        "bodies": {
+          "caught": "{reviewer2} had “{word}”, and the students “{student}”. Every Reviewer 2 was voted out: the students win.",
+          "pi_survived": "{reviewer2} had “{word}”, and the students “{student}”. Every Reviewer 2 is out, but the PI, {pi}, who had no term at all, was never found out: the PI wins.",
+          "survived": "{reviewer2} had “{word}”, and the students “{student}”. Reviewer 2 lasted to the end and wins.",
+          "comeback": "Voted out, {number} guessed the students' term, “{student}”, and the {role} wins. Reviewer 2 had “{word}”.",
+          "reviewer2_left": "Reviewer 2, {reviewer2}, left the room, so the game has no winner. The students had “{student}”, and Reviewer 2 “{word}”.",
+          "withdrawn": "The chair ended the game early: nobody wins, and it brings nobody points."
+        },
+        "verdicts": {
+          "alive": "Lasted",
+          "voted_out": "Voted out",
+          "violation": "Broke the rules",
+          "left": "Left"
+        },
+        "short": {
+          "alive": "Lasted",
+          "voted_out": "Voted out",
+          "violation": "Broke the rules",
+          "left": "Left"
+        },
+        "signature": "The Program Chairs, R2Conf",
+        "again": "Play again",
+        "waitAgain": "The chair can start another game."
+      },
+      "seat": {
+        "votedOutIn": "Voted out in round {round}",
+        "violation": "Out for breaking the rules",
+        "left": "Left the game",
+        "noLine": "Ran out of time",
+        "you": "You",
+        "states": {
+          "voted_out": "Out",
+          "violation": "Out",
+          "left": "Left",
+          "writing": "Writing…",
+          "said": "Said",
+          "waiting": "Waiting",
+          "voted": "Voted",
+          "voting": "Voting",
+          "lasted": "Lasted"
+        }
+      },
+      "vote": {
+        "title": "Vote",
+        "for": "Vote for #{number}",
+        "choose": "Choose someone first",
+        "abstain": "Abstain",
+        "abstainNote": "0 points",
+        "submit": "Vote for #{number}",
+        "count": "{voted} of {voters} voted · the votes show together when all are in or time is up",
+        "voted": "You voted for #{number}. Waiting for the others.",
+        "abstained": "You abstained. Waiting for the others."
+      },
+      "describe": {
+        "label": "Your line",
+        "placeholder": "Say something about your term…",
+        "send": "Send",
+        "count": "{count} / {max}",
+        "hasWord": "It gives your term away: “{match}”",
+        "tooLong": "At most {count} characters"
+      },
+      "comeback": {
+        "label": "Guess the students' term",
+        "send": "Guess",
+        "note": "One chance: a right guess wins the game, a wrong one costs a point.",
+        "skip": "Don't guess"
+      },
+      "buttons": {
+        "log": "Record",
+        "offField": "Sidelines",
+        "talk": "After the game",
+        "review": "Review"
+      },
+      "toasts": {
+        "out": "#{number} is voted out · {role}",
+        "tie": "A tie: the tied players add a line each, then the others vote again",
+        "nobody": "Nobody is out this round",
+        "wrongGuess": "#{number} guessed the students' term wrong"
+      },
+      "endConfirm": "End this game now? Nobody wins, and it brings nobody points.",
+      "lobby": {
+        "players": "Players",
+        "count": "{count} / {max} · {min} can start",
+        "left": "{count} seat left | {count} seats left",
+        "full": "Every seat is taken.",
+        "play": "Play",
+        "setter": "Setter",
+        "setterNote": "The setter sets the two terms here and watches the game.",
+        "numbersNote": "As the game starts, every avatar turns into a number, Reviewer 1's too, and who had which number shows at the end."
+      },
+      "problems": {
+        "needs_players": "A game needs at least 4 players online: {count} more to go.",
+        "too_many_players": "12 play at most: {count} too many. Someone has to watch.",
+        "needs_words": "The setter hasn't set the terms yet.",
+        "needs_timers": "A room with AI players needs time limits for describing and voting.",
+        "needs_human": "At least one person has to play."
+      },
+      "setter": {
+        "title": "You set the terms of this game",
+        "a": "Term A",
+        "b": "Term B",
+        "named": "Credit me if the pair is adopted",
+        "namedHint": "Unticked, the credit is anonymous.",
+        "note": "Your terms may be adopted into the public word library, and a good pair counts as a contribution of yours. The game decides at random which term most players get. You don't play or score; you may talk on the sidelines, but not write either term.",
+        "submit": "Done",
+        "saved": "Set: you can change them until the game starts"
+      },
+      "source": {
+        "title": "Terms from",
+        "library": "The word library",
+        "libraryHint": "A pair drawn from the word lists chosen.",
+        "setter": "A setter",
+        "setterHint": "The chair sets two terms and watches. Private rooms only.",
+        "setterNeedsAccount": "Setting the terms takes an account. Private rooms only."
+      },
+      "settings": {
+        "rules": "Options",
+        "numbers": "Time and length",
+        "on": "On",
+        "off": "Off",
+        "anonymous": "Anonymous seats",
+        "pi": "PI",
+        "comeback": "Comeback guess",
+        "godView": "God view",
+        "describeTime": "Time to describe",
+        "voteTime": "Time to vote",
+        "length": {
+          "zh": "Line length (characters)",
+          "en": "Line length (characters)"
+        },
+        "hints": {
+          "anonymous": "Avatars show numbers alone until the end.",
+          "pi": "From 6 players. The PI gets no term.",
+          "comeback": "A Reviewer 2 or PI voted out guesses the students' term once.",
+          "godView": "Spectators see every role. Private rooms only."
+        },
+        "boxes": {
+          "describeTime": "Describe (s)",
+          "voteTime": "Vote (s)",
+          "length": "Characters"
+        },
+        "timesHint": "0 = no time limit, for playing around one table. A line has {min} to {max} characters."
+      },
+      "record": {
+        "round": "Round {round}",
+        "votedBy": "Voted by",
+        "votes": "{count} vote | {count} votes",
+        "out": "Out",
+        "abstained": "Abstained",
+        "timedOut": "No vote · out of time, −1",
+        "outAside": "#{number} out · {role}",
+        "nobodyOut": "Nobody out",
+        "now": {
+          "describe": "Describing",
+          "vote": "Voting",
+          "tie": "Tied players add a line",
+          "revote": "Revote",
+          "comeback": "Comeback guess"
+        },
+        "tieLine": "Tie line",
+        "noLines": "Nobody has said anything this round yet.",
+        "ballots": {
+          "vote": "Vote",
+          "revote": "Revote"
+        }
+      },
+      "report": {
+        "title": "Report #{number}",
+        "intro": "The report goes to the whole room and stops the clock while everyone still in the game judges it, for 20 seconds. Upheld, the player is out for breaking the rules, −3; rejected, it costs you a point. One report a round.",
+        "which": "Which of their lines",
+        "noLine": "No line in particular",
+        "reason": "Reason",
+        "reasonHint": "{count} · The reason can't give your term away either.",
+        "submit": "Report #{number}",
+        "made": "#{by} reported #{target}",
+        "question": "Did #{number} break the rules?",
+        "agree": "Agree",
+        "disagree": "Disagree",
+        "yours": "Your verdict: {verdict}",
+        "verdicts": {
+          "agree": "agree",
+          "disagree": "disagree",
+          "abstain": "abstain"
+        },
+        "judged": "{judged} of {eligible} judged",
+        "rules": "Nobody sees a verdict until all are in or time is up. Not judging counts as abstaining; the report is upheld if more than half agree.",
+        "saidIn": "Said in round {round}",
+        "verdictsTitle": "Verdicts",
+        "outcomePassed": "#{number} is out for breaking the rules",
+        "outcomeFailed": "Rejected: −1 for #{number}",
+        "goesOn": "The game goes on.",
+        "passed": "Report upheld",
+        "failed": "Report rejected",
+        "passedMark": "Upheld",
+        "agreeCount": "Agree: {count}",
+        "disagreeCount": "Disagree: {count}",
+        "abstain": "Abstained",
+        "summary": "#{by} reported #{target} · {eligible} could judge, {needed} agreements needed"
+      },
+      "panel": {
+        "lines": "Their lines",
+        "noLines": "No lines yet.",
+        "report": "Report",
+        "removeNote": "Whoever is removed has left the game, and their role shows at the end. If they are a Reviewer 2, the game ends at once with no winner. A game with someone removed brings nobody points.",
+        "anonymousNote": "Who has which number shows at the end.",
+        "back": "Back",
+        "removeConfirm": "Remove #{number} from the room?"
+      },
+      "strip": {
+        "setter": "You set the terms",
+        "spectator": "You are watching",
+        "youOut": "You are #{number} · out · {role}",
+        "you": "You are #{number}",
+        "report": "A report is being judged, and the clock stands still",
+        "describeMine": "Your turn to describe!",
+        "describe": "#{number} is describing…",
+        "tieMine": "A tie: add a line!",
+        "tie": "A tie: #{number} adds a line…",
+        "voteMine": "Vote out Reviewer 2",
+        "vote": "Everyone is voting…",
+        "revoteMine": "Vote again, among the tied",
+        "revote": "The others vote again…",
+        "comebackMine": "Last chance: guess the students' term!",
+        "comeback": "#{number} is guessing the students' term…",
+        "over": "Game over",
+        "round": "Round {round}",
+        "setterWords": "Your terms",
+        "word": "Your term",
+        "onlyYou": "Only you see it",
+        "noWord": "You have no term: you are the PI. Don't let it show.",
+        "godView": "God view: students “{student}” · Reviewer 2 “{reviewer2}”",
+        "agents": "This game has {count} AI player, at a number nobody knows, and brings nobody points | This game has {count} AI players, at numbers nobody knows, and brings nobody points"
+      },
+      "reveal": {
+        "title": "Who was who",
+        "words": "Students “{student}” · Reviewer 2 “{reviewer2}”",
+        "you": "You",
+        "lasted": "Lasted to the end",
+        "afterGuess": "Who had which number, and who was AI, shows once you have guessed."
+      },
+      "guess": {
+        "prompt": "Who was the AI?",
+        "title": "Guess the AI",
+        "reward": "This game had {count} AI player. Guess right for a reward! | This game had {count} AI players. Guess right for a reward!",
+        "choose": "Choose the numbers you think were AI",
+        "submit": "It's {numbers}",
+        "skip": "Skip",
+        "note": "The roles are out. Who had which number, and who was AI, shows once you guess.",
+        "right": "Just kidding, there's no reward. You were right: the AI was {numbers}.",
+        "after": "Just kidding, there's no reward. The AI was {numbers}."
+      },
+      "offField": {
+        "named": "{name} · {role}",
+        "setter": "setter",
+        "spectator": "spectator",
+        "after": "After the game",
+        "readOnly": "You can read the sidelines, but not write.",
+        "afterNote": "The game is over: everyone can talk here.",
+        "note": "Players still in the game can't see this · don't write a term you know",
+        "input": "Say something…",
+        "empty": "No messages yet. Those who are out, the spectators and the setter talk here; players still in the game can't see it."
+      },
+      "rules": {
+        "winTitle": "Roles and winning",
+        "roles": "4 to 12 players. The students share one term; Reviewer 2 gets a similar one and doesn't know it. A game of up to 8 has one Reviewer 2, and a game of 9 to 12 has {two}.",
+        "pi": "From 6 players there is a PI too, who gets no term, knows it, and has to bluff.",
+        "win": "Reviewer 2 wins by lasting until {small} players are left, or {large} in a game of 7 or more. If every Reviewer 2 is out while the PI is still in, the PI wins; once they are all out, the students win.",
+        "comeback": "Comeback: a Reviewer 2 or PI voted out has 30 seconds to guess the students' term once, and wins with a right guess.",
+        "turnTitle": "Describing and voting",
+        "describe": {
+          "zh": "In order of number, each player writes one line about their term, up to {count} characters.",
+          "en": "In order of number, each player writes one line about their term, up to {count} characters."
+        },
+        "giveaway": "A line may not use any character of your term, a form of it, a translation or its pinyin, and may not all but repeat an earlier line.",
+        "vote": "After each round everyone votes at once, and the votes show together when all are in or time is up. You can't vote for yourself; abstaining scores 0, not voting in time −1. Whoever gets the most votes is out: their role shows, their term doesn't.",
+        "tie": "A tie: the tied players add a line each, and the others vote again among them; if it is still tied, nobody is out that round.",
+        "anonymous": "Seats show numbers alone; who had which shows at the end.",
+        "time": "Describing and voting have this room's time limits.",
+        "noTime": "This room has no time limits, for playing around one table.",
+        "reportTitle": "Reports",
+        "report": "If someone breaks the rules, say by naming their term, tap their number to report them, with a reason. Everyone still in the game judges it within 20 seconds; with more than half agreeing, the player is out for breaking the rules, −3, and otherwise the reporter loses a point. One report a round each.",
+        "offFieldTitle": "The sidelines and reactions",
+        "offField": "Those who are out, the spectators and the setter talk on the sidelines, which players still in the game can't see. No term of the game may be named there either.",
+        "emotes": "Players still in the game can't send reactions; once it is over, everyone can.",
+        "pointsTitle": "Points (beta)",
+        "points": "Winning: students +3, Reviewer 2 +5, the PI +6; +1 for still being in at the end; +1 for each vote for a Reviewer 2 or the PI; +2 for a right comeback guess. Losing: −1 for each vote for a student who is voted out; −1 for a student voted out; −2 for a Reviewer 2 or PI out in the first round; −1 for a vote not cast in time; −3 for a line not written in time; −1 for a wrong comeback guess; −3 for breaking the rules; −1 for a rejected report.",
+        "lost": "A game with AI players, with someone removed, or ended early brings nobody points; it is recorded all the same."
+      },
+      "stats": {
+        "hits": "Hit rate",
+        "votes": "{count} vote | {count} votes",
+        "rounds": "Avg. rounds",
+        "violations": "Rule breaks",
+        "wordsSet": "Set / liked",
+        "wordsSetValue": "{games} / {good}"
+      }
     }
   },
   "create": {
@@ -143,7 +583,10 @@
     "publicNeedsAccount": "Log in or register to create a public room.",
     "loadingFields": "Loading the word lists...",
     "submit": "Create the room",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "field": "Field",
+    "fieldPairs": "{count} pairs",
+    "fieldNoPairs": "No pairs yet"
   },
   "room": {
     "manuscript": "Manuscript",
@@ -215,13 +658,7 @@
   },
   "lobby": {
     "kicker": "Waiting room",
-    "group": {
-      "red": "Red group",
-      "blue": "Blue group"
-    },
     "roles": {
-      "captain": "PI",
-      "guesser": "Students",
       "spectator": "Spectators"
     },
     "vacant": "vacant",
@@ -233,7 +670,7 @@
     "screens": "Big screens showing this room: {count}.",
     "dismissScreens": "Send the screens away",
     "captainNote": "The PI sees which cards belong to the group and gives the clues.",
-    "agentLevel": "Reviewer\u00a01 is still new at this: opposites, puns and in-jokes mostly go over its head, and its clues can be way off. Don't take it too seriously.",
+    "agentLevel": "Reviewer 1 is still new at this: opposites, puns and in-jokes mostly go over its head, and what it says can be way off. Don't take it too seriously.",
     "agentNote": "A game that an AI plays in brings nobody points, a streak, a title or a friend title.",
     "takeoverNote": "A player who is offline for 20 seconds in their turn is played for by an AI until they are back.",
     "desk": "Chair's desk",
@@ -498,90 +935,6 @@
     "review": "Review the game",
     "keyNote": "Only the PIs see the colors of hidden cards.",
     "board": "The board",
-    "letter": {
-      "title": "Decision letter",
-      "titleFor": "Decision letter · {group}",
-      "verdicts": {
-        "oral": "Accept (Oral)",
-        "spotlight": "Accept (Spotlight)",
-        "poster": "Accept (Poster)",
-        "deskReject": "Desk Reject",
-        "reject": "Reject",
-        "withdrawn": "Withdrawn"
-      },
-      "short": {
-        "oral": "Oral",
-        "spotlight": "Spotlight",
-        "poster": "Poster",
-        "deskReject": "Desk Reject",
-        "reject": "Reject",
-        "withdrawn": "Withdrawn"
-      },
-      "explain": {
-        "oral": "The group won while the other group still had four or more keywords to find.",
-        "spotlight": "The group won while the other group still had two or three keywords to find.",
-        "poster": "The group won while the other group had one keyword left to find.",
-        "reject": "The group lost: the other group's keywords were all found first.",
-        "deskReject": "The group revealed Reviewer 2 and lost on the spot.",
-        "withdrawn": "The chair withdrew the game, so it counts for nobody: no record, no points, no streak."
-      },
-      "bodies": {
-        "oral": {
-          "found": {
-            "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The reviewers were struck by how far ahead you finished: the other group still had {left} keywords to find. Please prepare a twelve-minute talk, and resist the urge to fit forty slides into it.",
-            "2": "Dear {group}, congratulations! Out of a record number of submissions, yours is one of the very few selected for an oral at R2Conf. You found every keyword while your competitors still had {left} left on the table. The plenary hall is yours.",
-            "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. Reviewer 2 looked hard for a weakness and found none. Your rivals are still looking for {left} keywords of their own."
-          },
-          "reviewer2": {
-            "1": "Dear authors of the {group}, we are delighted to inform you that your submission has been accepted to R2Conf as an oral presentation. The competing paper from the {other} was assigned to Reviewer 2, and that was the end of it, with {left} keywords still to find. The stage is yours; please keep the talk under twelve minutes.",
-            "2": "Dear {group}, congratulations! Your paper has been accepted for an oral at R2Conf. To be frank, the committee never got to compare the two papers: Reviewer 2 found the {other}'s first, {left} keywords from the finish line. A win is a win.",
-            "3": "Dear {group}, the program committee is pleased to accept your paper as an oral presentation. The {other} turned over Reviewer 2 with {left} keywords still to find, and the slot went to you. Nobody will count how many you had found yourselves."
-          }
-        },
-        "spotlight": {
-          "found": {
-            "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. It was close: the other group had only {left} keywords left to find. You will have five minutes on stage; please use them wisely.",
-            "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. The reviewers praised your clear clues and steady guessing, and noted that your rivals were just {left} keywords behind.",
-            "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “Solid work, finished with {left} keywords to spare on the other side. We expect the camera-ready version by Friday.”"
-          },
-          "reviewer2": {
-            "1": "Dear {group}, we are pleased to inform you that your paper has been accepted to R2Conf as a spotlight. The {other} was only {left} keywords from the finish when it ran into Reviewer 2. You will have five minutes on stage; please remember to thank the reviewer.",
-            "2": "Dear {group}, congratulations on your acceptance with a spotlight presentation. It could have gone either way: the {other} had {left} keywords left when it found Reviewer 2 instead. The reviewers call this “a decisive contribution by the competition”.",
-            "3": "Dear {group}, your submission has been accepted as a spotlight paper. The area chair writes: “The rival paper was {left} keywords short when Reviewer 2 got to it. Fortune favors the careful.” The camera-ready version is due on Friday."
-          }
-        },
-        "poster": {
-          "found": {
-            "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. You won by a single keyword, which the reviewers called “a thrilling finish”. Please bring a poster tube and a strong voice.",
-            "2": "Dear {group}, after a long discussion, your paper has been accepted as a poster. The other group was one keyword away from taking your slot. Posters are A0 and portrait; the coffee is at the back.",
-            "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword on the other side, and this letter would read very differently."
-          },
-          "reviewer2": {
-            "1": "Dear {group}, we are happy to let you know that your paper has been accepted to R2Conf as a poster. The {other} was one keyword from the finish line, and turned over Reviewer 2 instead. Please bring a poster tube, and perhaps a thank-you card.",
-            "2": "Dear {group}, after a short discussion, your paper has been accepted as a poster. The {other} needed one more keyword and found Reviewer 2 instead. The committee calls this “a narrow escape”. Posters are A0 and portrait.",
-            "3": "Dear {group}, congratulations: your paper squeezed in as a poster. One more keyword for the {other}, and this letter would have gone to them. Reviewer 2 had other plans."
-          }
-        },
-        "deskReject": {
-          "1": "Dear {group}, we regret to inform you that your submission has been desk rejected without review. Your group revealed Reviewer 2, who needed no further evidence. The {other} goes on to the conference without you.",
-          "2": "Dear {group}, your paper has been desk rejected. Reviewer 2 read the first line, wrote “major flaws throughout” and left. We wish you better luck in the next cycle.",
-          "3": "Dear {group}, thank you for your submission. Unfortunately, it was assigned to Reviewer 2, and that was the end of it: desk reject. The {other} sends its regards."
-        },
-        "reject": {
-          "1": "Dear {group}, we regret to inform you that your paper was not accepted to R2Conf. The {other} found all of its keywords first, and there was room for only one of you. We received many strong submissions this year.",
-          "2": "Dear {group}, thank you for submitting to R2Conf. After careful consideration, the committee has decided to reject your paper. The {other} simply got there first. The reviews, all three words of them, are attached.",
-          "3": "Dear {group}, unfortunately your submission has been rejected. It was not a bad paper; the {other} just finished its paper sooner. We hope to see a revised version in the next game."
-        },
-        "withdrawn": {
-          "1": "The chair withdrew this game before the end. The submission is closed: nobody is accepted, and nobody is rejected.",
-          "2": "This submission has been withdrawn by the chair. No decision will be made, and no reviewer was harmed.",
-          "3": "The chair pulled this paper before the decision. Both groups keep their keywords, and their dignity, for the next game."
-        }
-      },
-      "signature": "The Program Chairs, R2Conf",
-      "again": "Play again",
-      "waitAgain": "The chair can start another game."
-    },
     "revealChoose": "Reveal a card",
     "chat": {
       "open": "Group chat",
@@ -762,7 +1115,7 @@
     "cannot_start": "The game can't start yet.",
     "stale": "That turn or that game is already over.",
     "emote_cooldown": "Wait a moment before you send another reaction.",
-    "emote_not_now": "PIs can't react while students are guessing.",
+    "emote_not_now": "Not now: a PI can't react while their students guess, nor a player while their game is on, though one who is out may where names are shown.",
     "bad_match": "This game can't be played as a match.",
     "match_over": "The match is over.",
     "match_locked": "The word lists and the rules can't change in the middle of a match.",
@@ -770,6 +1123,9 @@
     "agents_in_room": "Remove the AI players first: public rooms and matches have none.",
     "player_is_agent": "That's an AI player: the chair can only remove it.",
     "agents_offline": "Reviewer\u00a01 is offline for now. Try again in a while.",
+    "private_only": "This kind of room can only be private.",
+    "cannot_rate": "You can't rate this game now.",
+    "cannot_guess": "You can't guess who the AI players are now.",
     "game_over": "The game is over.",
     "not_your_turn": "It's not your group's turn.",
     "not_captain": "Only the PI can give the clue.",
@@ -797,7 +1153,7 @@
     "between_games": "You can play from the next game.",
     "bigger_group": "In this match, whoever hasn't played yet joins the group with fewer players.",
     "agent_limit": "A group can have one AI PI and one AI student.",
-    "needs_human": "Someone must sit in a group before an AI player can be invited.",
+    "needs_human": "A person must take a seat before an AI player can be invited.",
     "offline": "You're offline. Waiting for the connection...",
     "timeout": "The server didn't answer. Please try again.",
     "unknown": "Something went wrong.",
@@ -869,7 +1225,30 @@
     "profile_banned": "This account can't write a link or a line on its page.",
     "bio_too_long": "Use at most 80 characters.",
     "web_link_invalid": "Use a web address that starts with https://, not an email address.",
-    "web_link_too_long": "Use at most 200 characters for the link."
+    "web_link_too_long": "Use at most 200 characters for the link.",
+    "table_full": "The table is full: 12 play at most.",
+    "not_playing": "Only a player still in the game can do that.",
+    "not_speaker": "It isn't your turn to describe.",
+    "voted_already": "You have voted already.",
+    "bad_vote": "You can't vote for that player.",
+    "report_open": "Another report is being judged: wait for it to end.",
+    "reported_already": "You have reported someone this round already.",
+    "bad_report": "That report can't be made.",
+    "cannot_judge": "You can't judge this report.",
+    "judged_already": "You have judged it already.",
+    "no_comeback": "There is no guess to make now.",
+    "cannot_talk": "Players still in the game can't talk on the sidelines.",
+    "not_setter": "Only the setter sets the terms.",
+    "bad_field": "There is no such field.",
+    "line_empty": "Write something first.",
+    "line_too_long": "That is too long.",
+    "line_has_word": "That gives your term away.",
+    "line_repeated": "That is all but the same as an earlier line: say it another way.",
+    "chat_has_word": "You can't write a term you know.",
+    "words_missing": "Fill in both terms.",
+    "words_too_long": "A term must fit on a card: up to 5 Chinese characters or 14 letters.",
+    "words_same": "The two terms must differ, and not be forms of each other.",
+    "guess_first": "Guess who the AI players were, or skip it, before you talk."
   },
   "footer": {
     "byline": "By {name}",
@@ -918,7 +1297,8 @@
     },
     "bugNote": "With a bug report, your browser's user agent is sent along to help find the bug: the names and versions of the browser and the system, and on some phones the model. A GitHub issue made of it shows the site's version and the names and versions of the browser and the system, never the model.",
     "submit": "Send",
-    "sent": "Thank you! Your feedback has been sent."
+    "sent": "Thank you! Your feedback has been sent.",
+    "attached": "This game goes along with it, so that we can look at it."
   },
   "contributions": {
     "title": "Feedback contributions",
@@ -1067,13 +1447,7 @@
       "titles": "Titles",
       "titleNames": {
         "best_paper": "Best Paper Award",
-        "black_hole": "Academic Trash",
-        "missed_deadline": "Forgot to Submit",
-        "deadline_hero": "Deadline Hero",
-        "opening_record": "Opened the Scoring",
-        "heavenly_hand": "Heavenly Hand",
-        "instant_reject": "Instant Desk Reject",
-        "first_turn_reject": "Fell at the First Hurdle"
+        "black_hole": "Academic Trash"
       },
       "titleCount": "{title} ×{count}",
       "contributed": "Contributions: {kind}",
@@ -1120,22 +1494,19 @@
       "recentMatches": "The last 20 matches",
       "matchLine": "{rank}/{players} · {score} pt | {rank}/{players} · {score} pts",
       "matchGames": "{count} game | {count} games",
-      "roles": {
-        "captain": "PI",
-        "guesser": "Student"
-      },
       "logout": "Log out",
       "delete": "Delete the account",
       "deleteWarning": {
         "goneLead": "Deleted for good: ",
         "gone": "the account, its public page, record, rank, titles, friendships, likes and avatar. The username is free for anyone to take.",
         "keptLead": "Kept, no longer linked to you: ",
-        "kept": "the games you played in, which others played in too, whose replays show you as a deleted player, with what you said in the group chat kept anonymous; the feedback and contributions you sent, which show a deleted player where you signed them, though GitHub issues already published keep the name; and the reports you sent or got.",
+        "kept": "the games you played in or set the words of, which others played in too, whose replays show you as a deleted player, with what you said in them, your reports, ratings and guesses kept anonymous; the feedback and contributions you sent, which show a deleted player where you signed them, though GitHub issues already published keep the name; the words of yours adopted into the word library, credited to nobody; and the reports you sent or got.",
         "beyondLead": "Can't be taken back: ",
         "beyond": "game records already used to train the AI players or published as a dataset, which never held your name or account. The server's backups keep your data until they expire.",
         "final": "This can't be undone."
       },
-      "deleteSubmit": "Delete for good"
+      "deleteSubmit": "Delete for good",
+      "gameTabs": "Game"
     },
     "avatar": {
       "zoom": "Zoom",
@@ -1325,13 +1696,7 @@
   "titles": {
     "award": {
       "best_paper": "Awarded at the end of a match to the player with the highest total. Players level at the top all get it; when everyone is level, nobody does.",
-      "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it.",
-      "missed_deadline": "For a PI whose time for a clue ran out before they gave one: the paper was written, it just never left the desktop. Earned again with every missed deadline, in each game that ends by itself while you are logged in and in your seat.",
-      "deadline_hero": "For a PI who gives a clue in the last 3 seconds of their time, when the students then find as many of the group's cards as it names before revealing anything else, or every card the group has left when fewer are left than the number; and for a student who reveals one of the group's cards in the last 3 seconds of the guesses: submitted at 23:59:57, and accepted. Earned again in every turn that makes you one, in each game with time limits that ends by itself while you are logged in and in your seat.",
-      "opening_record": "For everyone in a group whose very first clue of a game names 4 cards or more, and whose students then find that many of the group's cards before revealing anything else; a group that wins in that turn has the heavenly hand instead. The lab's first paper, accepted without a single revision.",
-      "heavenly_hand": "For everyone in a group that finds the last of its cards in the turn of its very first clue, and wins right there. One clue, one paper, straight into the journal of your dreams: the rarest title of all.",
-      "instant_reject": "For everyone in a group whose very first card was Reviewer 2, out on the spot. The paper came back before it had left the building.",
-      "first_turn_reject": "For everyone in a group whose students revealed Reviewer 2 in the turn of its very first clue, out on the spot; as the very first card, that is an instant desk reject instead. The lab's first paper, rejected before it ever reached review."
+      "black_hole": "Awarded at the end of a match of three or more players to the player with the lowest total. Players level at the bottom all get it."
     },
     "streak": {
       "wins": "The longest run of games won in a row on the record: {n}.",
@@ -1349,7 +1714,8 @@
       "words": "Words of theirs for the word lists were adopted, whether they left a name or not. The feedback contributions on the home page list everyone's."
     },
     "author": "The first account to register belongs to the author of the game.",
-    "agents": "An AI played in this game, as a player or for someone who was offline."
+    "agents": "An AI played in this game, as a player or for someone who was offline.",
+    "ofGame": "A title of {game}: each game keeps its own record."
   },
   "duos": {
     "names": {
@@ -1428,8 +1794,8 @@
   },
   "privacy": {
     "recordsTitle": "Game records",
-    "guestNotice": "Games are recorded, the group chat included, to train AI players and for research; nothing published carries names.",
-    "records": "Games are recorded, the group chat included. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chat. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
+    "guestNotice": "Games are recorded, the chats included, to train AI players and for research; nothing published carries names.",
+    "records": "Games are recorded, with what the players say in their chats, the reports they make in them, how they rate a game or guess its AI players, and the words they give for one, which may be adopted into the word library. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chats. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
   },
   "guide": {
     "title": "Tutorial",
@@ -1806,5 +2172,27 @@
       "bio": "Stars by day, papers by night.",
       "contribution": "Filter the clue log by group"
     }
+  },
+  "beta": {
+    "pill": "Beta",
+    "title": "{game} beta",
+    "intro": "This game is still being tested: its rules, points and pairs of terms will change as people play it.",
+    "risk": "A big update may clear this game's records so far. Accounts, friends and the records of the other games stay, and you can keep playing. It is how the game gets better.",
+    "feedback": "Found a problem, or have an idea? Tap “Say something” on the card after a game, or “Feedback” at the foot of the home page.",
+    "ok": "Got it",
+    "create": "This game is still being tested: rules and points may change, and a big update may clear its records.",
+    "records": "A big update may clear the records here; the others stay.",
+    "short": "This game is still being tested."
+  },
+  "rating": {
+    "dismiss": "Don't rate",
+    "options": {
+      "good": "Good",
+      "hard": "Too hard",
+      "easy": "Too easy",
+      "problem": "Something's wrong"
+    },
+    "hint": "Tap × not to rate; you can change it before you leave.",
+    "say": "Say something"
   }
 }

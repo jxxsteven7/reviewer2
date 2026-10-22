@@ -1,13 +1,13 @@
+import { MAX_CHAT_LENGTH } from '@reviewer2/shared';
 import {
   CHAT_KEPT,
   EVENTS_KEPT,
-  MAX_CHAT_LENGTH,
   otherTeam,
   type CardColor,
   type ClueCount,
   type ClueRecord,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { seededRng } from '../../core/random';
 import {

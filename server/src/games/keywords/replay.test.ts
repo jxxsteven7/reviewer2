@@ -5,7 +5,7 @@ import {
   type ReplayGroup,
   type ShownReplay,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { testWords } from '../../../test/helpers';
 import type { GameLogData } from '../../core/gameLog';

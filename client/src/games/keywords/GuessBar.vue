@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { KeywordsView } from '@reviewer2/shared';
+import type { KeywordsView } from '@reviewer2/shared/keywords';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';

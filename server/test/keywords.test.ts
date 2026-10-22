@@ -1,7 +1,6 @@
+import { MAX_CHAT_INPUT, MAX_CHAT_LENGTH, type RoomView } from '@reviewer2/shared';
 import {
   defaultSettings,
-  MAX_CHAT_INPUT,
-  MAX_CHAT_LENGTH,
   MAX_CLUE_INPUT,
   otherTeam,
   SPECTATOR,
@@ -9,9 +8,8 @@ import {
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
-  type RoomView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { GameContext } from '../src/core/game';
 import { seededRng } from '../src/core/random';
@@ -174,11 +172,15 @@ const context = (): GameContext => ({
   language: 'en',
   rng: seededRng(1),
   chairId: 'ann',
+  public: false,
   now: () => 0,
   keyOf: (id) => id,
   isOnline: () => true,
   agentOf: () => null,
   playerIds: () => ['ann', 'bob', 'cat'],
+  hasAccount: () => false,
+  hasField: () => true,
+  customAuthor: () => null,
   titleCount: () => null,
   awardsTitles: () => false,
 });
@@ -1181,7 +1183,7 @@ describe('custom words', () => {
       error: 'no_words',
     });
     await expectOk(ann.send('room:settings', { fields: [], words: chinese.join('\n') }));
-    await ann.waitFor((state) => state.fields.length === 0 && state.customWordCount === 25);
+    await ann.waitFor((state) => state.fields?.length === 0 && state.customWordCount === 25);
     await expectOk(ann.send('room:start', { round: ann.state?.round }));
     await settle(table);
     const words = board(table.spectator).cards.map((card) => card.word);

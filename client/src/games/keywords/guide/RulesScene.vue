@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { defaultSettings, type Language } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { defaultSettings } from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { rulesSections } from '../rules';

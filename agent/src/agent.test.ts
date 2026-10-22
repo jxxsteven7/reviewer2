@@ -5,14 +5,19 @@ import { join } from 'node:path';
 import { MAX_AGENT_REQUEST } from '@reviewer2/shared';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { createAgent } from './agent';
-import { allowed, clueRequest, guessRequest, ScriptedModel } from './testing';
+import { allowed, clueRequest, guessRequest, impostorRequest, ScriptedModel } from './testing';
 
 type Logged = [string, Record<string, unknown> | undefined];
 
-function agent(model: ScriptedModel, limits: { concurrency?: number; queue?: number } = {}) {
+function agent(
+  model: ScriptedModel,
+  limits: { concurrency?: number; queue?: number } = {},
+  models: { impostor?: ScriptedModel } = {},
+) {
   const logged: Logged[] = [];
   const created = createAgent({
     model,
+    models,
     log: (event, fields) => logged.push([event, fields]),
     concurrency: limits.concurrency ?? 2,
     queue: limits.queue ?? 32,
@@ -37,6 +42,20 @@ describe('a request', () => {
     });
   });
 
+  test('of a game with a model of its own goes to that model, and every other to the first', async () => {
+    const first = new ScriptedModel({ clue: [clueAnswer], describe: [{ candidates: ['from the first model'] }] });
+    const own = new ScriptedModel({ describe: [{ candidates: ['round and red'] }] }, 'small');
+    const { handle } = agent(first, {}, { impostor: own });
+    expect(allowed(await handle(JSON.stringify(impostorRequest('describe'))))).toMatchObject({
+      ok: true,
+      kind: 'describe',
+      text: 'round and red',
+      note: { model: 'small', prompt: 'impostor-1' },
+    });
+    expect(allowed(await handle(JSON.stringify(clueRequest())))).toMatchObject({ ok: true, kind: 'clue' });
+    expect([first.asked.map(({ name }) => name), own.asked.map(({ name }) => name)]).toEqual([['clue'], ['describe']]);
+  });
+
   test('that is anything but what the protocol allows is refused unread', async () => {
     const model = new ScriptedModel({ clue: [clueAnswer] });
     const { handle } = agent(model);
@@ -54,6 +73,9 @@ describe('a request', () => {
       JSON.stringify({ ...clueRequest(), waitMs: 600_000 }),
       JSON.stringify({ ...guessRequest(), clue: undefined }),
       JSON.stringify({ v: 1, kind: 'ping', persona: 'reviewer1' }),
+      JSON.stringify({ ...impostorRequest('describe'), game: 'keywords' }),
+      JSON.stringify({ ...impostorRequest('vote'), candidates: [13] }),
+      JSON.stringify({ ...impostorRequest('judge'), report: undefined }),
     ];
     for (const line of refused)
       expect(await handle(line), line.slice(0, 80)).toEqual({ ok: false, error: 'bad_request' });
@@ -65,6 +87,15 @@ describe('a request', () => {
     const { handle } = agent(model);
     expect(allowed(await handle('{"v":1,"kind":"ping"}'))).toEqual({ ok: true, kind: 'ping', model: 'qwen' });
     model.known = false;
+    expect(await handle('{"v":1,"kind":"ping"}')).toEqual({ ok: false, error: 'model_failed' });
+  });
+
+  test('is told whether every model is there, when a game has its own', async () => {
+    const first = new ScriptedModel({}, 'qwen');
+    const own = new ScriptedModel({}, 'small');
+    const { handle } = agent(first, {}, { impostor: own });
+    expect(allowed(await handle('{"v":1,"kind":"ping"}'))).toEqual({ ok: true, kind: 'ping', model: 'qwen, small' });
+    own.known = false;
     expect(await handle('{"v":1,"kind":"ping"}')).toEqual({ ok: false, error: 'model_failed' });
   });
 

@@ -1,3 +1,4 @@
+import { type GamePoints } from '@reviewer2/shared';
 import {
   endPoints,
   openingRecord,
@@ -6,12 +7,11 @@ import {
   revealPoints,
   type CardColor,
   type CardView,
-  type GamePoints,
   type KeywordsRoomData,
   type KeywordsScoreDetail,
   type KeywordsView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { Float } from '../../core/components/ScoreFloat.vue';
 
 // The points that rise from the board as a game goes (docs/games/keywords.md#points-as-they-come):
@@ -81,12 +81,12 @@ export function revealFloats(
   for (const id of Object.keys(data.seats)) {
     const place = placeOf(data, id);
     const points = place ? pointsFor(id, place.team, place.role) : 0;
-    if (place && points !== 0) players.set(id, { text: signed(points), team: place.team });
+    if (place && points !== 0) players.set(id, { text: signed(points), tint: place.team });
   }
   let mine: Float | null = null;
   if (me !== null && data.side !== null) {
     const points = pointsFor(me, data.side, data.keyViewers.includes(me) ? 'captain' : 'guesser');
-    if (points !== 0) mine = { text: signed(points), team: data.side };
+    if (points !== 0) mine = { text: signed(points), tint: data.side };
   }
   return { mine, players };
 }
@@ -113,8 +113,8 @@ export function endFloats(
     const outdone = side !== null && risen.has(side) && scored.role === 'guesser' && scored.heavenlyHand;
     const bonus = endPoints(scored) - (outdone ? POINTS.guesser.openingRecord : 0);
     if (bonus <= 0) continue;
-    if (team !== null) players.set(playerId, { text: signed(bonus), team });
-    if (playerId === me && data.side !== null) mine = { text: signed(bonus), team: data.side };
+    if (team !== null) players.set(playerId, { text: signed(bonus), tint: team });
+    if (playerId === me && data.side !== null) mine = { text: signed(bonus), tint: data.side };
   }
   return { mine, players };
 }

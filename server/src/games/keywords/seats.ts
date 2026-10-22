@@ -7,7 +7,7 @@ import {
   type SeatError,
   type StartProblem,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { pick, shuffle, type Rng } from '../../core/random';
 
 // Who sits where, and the rules for changing seats (docs/games/keywords.md). Seats are keyed by

@@ -6,7 +6,7 @@ import {
   type KeywordsScoreDetail,
   type KeywordsView,
   type Mark,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import DuoNotices from '../../core/components/DuoNotices.vue';
@@ -14,6 +14,7 @@ import EmoteButton from '../../core/components/EmoteButton.vue';
 import EndMatchButton from '../../core/components/EndMatchButton.vue';
 import MatchResults from '../../core/components/MatchResults.vue';
 import MatchTable from '../../core/components/MatchTable.vue';
+import RatingCard from '../../core/components/RatingCard.vue';
 import AvatarButton from '../../core/components/AvatarButton.vue';
 import TitleLine from '../../core/components/TitleLine.vue';
 import ScoreFloat from '../../core/components/ScoreFloat.vue';
@@ -29,7 +30,8 @@ import { useMediaQuery } from '../../core/useMediaQuery';
 import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import { useTitleFolds } from '../../core/useTitleFolds';
-import ClockBar, { periodOf } from './ClockBar.vue';
+import ClockBar from '../../core/components/ClockBar.vue';
+import { periodOf } from './clock';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
 import DecisionLetter from './DecisionLetter.vue';
@@ -41,9 +43,9 @@ import KeywordsBoard from './KeywordsBoard.vue';
 import PausedNotice from './PausedNotice.vue';
 import { replayOf } from './replay';
 import ReplayViewer from './ReplayViewer.vue';
-import RulesSheet from './RulesSheet.vue';
+import KeywordsRules from './KeywordsRules.vue';
 import TurnStrip from './TurnStrip.vue';
-import { useChatLine } from './useChatLine';
+import { useChatLine } from '../../core/useChatLine';
 import { useKeywords, type Chooser } from './useKeywords';
 import { useDeadlineHeroes } from './useDeadlineHeroes';
 import { useGroupCalls } from './useGroupCalls';
@@ -79,7 +81,8 @@ import { useTurnedCard } from './useTurnedCard';
 // where the table doesn't list them: under an ordinary game's letter, and under the ranking. The
 // streaks that the game brought the players to come right after the letters, before the match's
 // table, and the titles that it brought the player's friends after them; their notices are on the
-// page from the start, out of sight, so that a screen reader is told of them.
+// page from the start, out of sight, so that a screen reader is told of them. A player of a game
+// that finished is asked after them how its words were (RatingCard.vue).
 const props = defineProps<{ room: ShownRoom }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -178,7 +181,7 @@ const canClue = computed(
 const canGuess = computed(
   () => game.value.phase === 'guess' && myTurn.value && mySeat.value?.role === 'guesser' && !paused.value,
 );
-const group = computed(() => t(`lobby.group.${game.value.team}`));
+const group = computed(() => t(`games.keywords.groups.${game.value.team}`));
 // Whether the viewer may ask for their group's extension now: the room allows one, the phase has
 // a time limit, it is the viewer's move, and the group hasn't had one in this game.
 const canExtend = computed(
@@ -372,7 +375,7 @@ watch(
   (count, before) => {
     const event = game.value.events.at(-1);
     if (count > before && event?.kind === 'extended' && event.team) {
-      toast('game.extended', { group: t(`lobby.group.${event.team}`) });
+      toast('game.extended', { group: t(`games.keywords.groups.${event.team}`) });
     }
   },
 );
@@ -475,6 +478,12 @@ const status = computed(() => {
     </div>
     <StreakNotices :room="room" />
     <DuoNotices :room="room" />
+    <RatingCard
+      v-if="game.result && room.rating"
+      :game-id="game.gameId"
+      :rating="room.rating"
+      :question="t('games.keywords.rating')"
+    />
     <template v-if="game.result && match">
       <MatchResults v-if="match.status !== 'on'" :room="room" />
       <MatchTable v-else :room="room" :describe="describe" :titles-of="titlesOf" class="between">
@@ -586,7 +595,7 @@ const status = computed(() => {
             <UiButton v-if="wide && match && !game.result" class="open-match" size="small" @click="matchOpen = true">
               {{ t('match.progressTitle') }}
             </UiButton>
-            <RulesSheet :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
+            <KeywordsRules :settings="data.settings" :language="room.language" :custom-words="room.customWordCount" />
             <UiButton v-if="replay" class="review" variant="quiet" size="small" @click="reviewing = true">
               {{ t('game.review') }}
             </UiButton>

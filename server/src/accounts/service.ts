@@ -21,7 +21,10 @@ import {
   type DuoPart,
   type DuoTitle,
   type DuoView,
+  emptyGameCounts,
   type FriendLimits,
+  type GameCounts,
+  type GameRecords,
   type Language,
   type LikerView,
   type MailKind,
@@ -34,12 +37,14 @@ import {
   type Streak,
 } from '@reviewer2/shared';
 import type { DatabaseSync } from 'node:sqlite';
-import type { GameModule, KeptReplay, ShownAccount } from '../core/game';
+import { knownTitles, type GameModule, type KeptReplay, type ShownAccount } from '../core/game';
 import type { GameLogEntry, MatchNumbers } from '../core/gameLog';
 import { AccountStore, type Account } from '../store/accounts';
 import { databaseBytes, MAX_DATABASE_BYTES } from '../store/database';
+import { ContentStore } from '../store/content';
 import { FeedbackStore } from '../store/feedback';
 import { LikeStore } from '../store/likes';
+import { RatingStore } from '../store/ratings';
 import {
   AgentPlayStore,
   RecordStore,
@@ -141,6 +146,11 @@ export class Accounts {
   readonly replays: ReplayStore;
   readonly agentPlays: AgentPlayStore;
   readonly titles: TitleStore;
+  // How players rated the games they played and whom they guessed the AI players were
+  // (docs/architecture.md#ratings), and the words that the operator adopted from the games into
+  // the word library (docs/architecture.md#content-contributions).
+  readonly ratings: RatingStore;
+  readonly content: ContentStore;
   // The feedback, for the feedback contributions that an account's page counts, which the operator
   // adopts (admin.ts).
   readonly #feedback: FeedbackStore;
@@ -154,6 +164,7 @@ export class Accounts {
   // Set by the socket layer once it is there.
   hooks: AccountHooks = NO_HOOKS;
   readonly #db: DatabaseSync;
+  readonly #games: readonly GameModule[];
   readonly #log: Log;
   readonly #maxDatabaseBytes: number;
   readonly #deleted: () => void;
@@ -169,6 +180,7 @@ export class Accounts {
   constructor(options: AccountsOptions) {
     const clock = options.clock ?? (() => Date.now());
     this.#db = options.db;
+    this.#games = options.games ?? [];
     this.#log = options.log ?? (() => {});
     this.#maxDatabaseBytes = options.maxDatabaseBytes ?? MAX_DATABASE_BYTES;
     this.#deleted = options.deleted ?? (() => {});
@@ -182,7 +194,9 @@ export class Accounts {
     this.records = new RecordStore(options.db, clock);
     this.replays = new ReplayStore(options.db, clock);
     this.agentPlays = new AgentPlayStore(options.db, new Map((options.games ?? []).map((game) => [game.id, game])));
-    this.titles = new TitleStore(options.db);
+    this.titles = new TitleStore(options.db, knownTitles(options.games ?? []));
+    this.ratings = new RatingStore(options.db, clock);
+    this.content = new ContentStore(options.db, clock);
     this.#feedback = options.feedback ?? new FeedbackStore(options.db, clock);
     this.friends = new Friendships(options.db, clock, options.now, options.friendLimits);
     this.likes = new LikeStore(options.db, clock);
@@ -272,7 +286,9 @@ export class Accounts {
       streaks: this.records.streaks(account.id),
       link: account.profile.link,
       bio: account.profile.bio,
-      record: account.profile.showRecord ? this.records.counts(account.id) : null,
+      record: account.profile.showRecord
+        ? this.#withGameCounts(account.id, this.records.counts(account.id), emptyGameCounts)
+        : null,
       contributions: account.profile.showThanks ? this.#feedback.counts(account.id) : null,
       likes: this.likes.count(account.id),
       liked: viewer !== null && this.likes.has(account.id, viewer.id),
@@ -543,8 +559,10 @@ export class Accounts {
       if (!this.#stillLoggedIn(login)) return null;
       const ended = this.sessions.deleteForAccount(id);
       const others = this.friends.others(id);
-      // Its games forget it before the rows that say which player it was in them go.
+      // Its games forget it before the rows that say which player it was in them go, and the
+      // words it gave the word library stay, as nobody's.
       this.replays.forget(id);
+      this.content.forget(id);
       const account = this.store.delete(id);
       return account ? { ended, account, others } : null;
     });
@@ -793,7 +811,46 @@ export class Accounts {
   }
 
   recordsOf(login: Login): RecordsView {
-    return this.records.view(login.account.id);
+    return this.#withGameCounts<GameRecords>(login.account.id, this.records.view(login.account.id), () => ({
+      ...emptyGameCounts(),
+      recent: [],
+      matches: { played: 0, won: 0, recent: [] },
+    }));
+  }
+
+  // The counts of each game, with, for each game in which a setter gives the words, the games the
+  // account set the words of and their good ratings, if it set any (GameCounts.wordsSet), and for
+  // each game that asks for them, what its records add up, if it played any (GameCounts.sums). A
+  // game it has set the words of but played none of is there with nothing else.
+  #withGameCounts<Counts extends GameCounts>(
+    accountId: number,
+    counts: Record<string, Counts>,
+    empty: () => Counts,
+  ): Record<string, Counts> {
+    for (const game of this.#games) {
+      const played = counts[game.id];
+      if (game.recordSums && played) played.sums = this.records.sums(accountId, game.id, game.recordSums);
+      const path = game.setupPaths?.setter;
+      if (path === undefined) continue;
+      const set = this.ratings.setterCounts(game.id, path, accountId);
+      if (set.games > 0) counts[game.id] = { ...(counts[game.id] ?? empty()), wordsSet: set };
+    }
+    return counts;
+  }
+
+  // Keeps a player's rating of a game that is kept, or their dismissal, by null
+  // (docs/architecture.md#ratings), unless the database is full. Says whether it was kept.
+  rate(game: string, gameId: string, playerId: string, rating: string | null): boolean {
+    if (this.#full()) return false;
+    return this.ratings.rate(game, gameId, playerId, rating);
+  }
+
+  // Keeps a player's guess of who the AI players of a game that is kept were, or their skip, by
+  // null (docs/architecture.md#guessing-the-ai), unless the database is full. Says whether it was
+  // kept.
+  guessAgents(game: string, gameId: string, playerId: string, guess: unknown): boolean {
+    if (this.#full()) return false;
+    return this.ratings.guess(game, gameId, playerId, guess);
   }
 
   // Keeps a game on an account's record, as the game module described it, with the streak that it

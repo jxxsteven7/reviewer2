@@ -1,35 +1,31 @@
 <script setup lang="ts">
-import type { KeywordsSettings, Language } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { RouterLink, useRoute } from 'vue-router';
-import { GUIDE_PATH } from '../../core/guide/progress';
-import UiButton from '../../core/components/UiButton.vue';
-import UiSheet from '../../core/components/UiSheet.vue';
-import { rulesSections } from './rules';
-import SettingsSummary from './SettingsSummary.vue';
+import { GUIDE_PATH } from '../guide/progress';
+import UiButton from './UiButton.vue';
+import UiSheet from './UiSheet.vue';
 
-// "How to play", in the rules' own sections (rules.ts), as this room plays them, with all of its
-// settings at the top, and at the end the way to the tutorial, for a player who would rather be
-// shown: in a room it opens in a tab of its own, so that the game goes on in this one.
+// "How to play", for every game (docs/rules/display.md#a-games-room): the room's settings first, as
+// the game's summary in the slot shows them, then the rules in the game's own sections, and at the
+// end, for a game with a tutorial, the way to it, for a player who would rather be shown: in a room
+// it opens in a tab of its own, so that the game goes on in this one.
 //
 // In a room it opens from a quiet button. On the home page it opens from a `link`, the small word
 // "Rules" beside the game's name, with the `defaults`, as a new room has them, and a word that each
 // room may change them.
-const props = withDefaults(
+withDefaults(
   defineProps<{
-    settings: KeywordsSettings;
-    language: Language;
-    customWords?: number;
+    sections: { title: string; text: string[] }[];
     link?: boolean;
     defaults?: boolean;
+    guide?: boolean;
   }>(),
-  { customWords: 0, link: false, defaults: false },
+  { link: false, defaults: false, guide: false },
 );
 const { t } = useI18n();
 const open = ref(false);
 
-const sections = computed(() => rulesSections(t, props.settings, props.language));
 const route = useRoute();
 const inRoom = computed(() => route.path.startsWith('/room/'));
 </script>
@@ -44,13 +40,14 @@ const inRoom = computed(() => route.path.startsWith('/room/'));
       <p v-if="defaults" class="defaults">{{ t('rules.defaults') }}</p>
       <section>
         <h3 class="section-title">{{ t(defaults ? 'rules.defaultsTitle' : 'settings.title') }}</h3>
-        <SettingsSummary class="summary" :settings="settings" :language="language" :custom-words="customWords" />
+        <div class="summary"><slot /></div>
       </section>
       <section v-for="section in sections" :key="section.title">
         <h3 class="section-title">{{ section.title }}</h3>
         <p v-for="line in section.text" :key="line">{{ line }}</p>
       </section>
       <RouterLink
+        v-if="guide"
         class="guide-link text-link"
         :to="GUIDE_PATH"
         :target="inRoom ? '_blank' : undefined"

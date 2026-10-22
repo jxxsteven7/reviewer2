@@ -1,4 +1,4 @@
-import type { AgentAnswer, AgentPersona } from '@reviewer2/shared';
+import type { AgentAnswer, AgentNote, AgentPersona } from '@reviewer2/shared';
 import type { AgentChannel, AgentOutcome } from './agentChannel';
 import type { AgentTask, GameContext } from './game';
 import type { Member, Room } from './room';
@@ -467,15 +467,16 @@ export class AgentDriver {
   }
 }
 
-// What the AI's log keeps of an outcome: the answer and the agent's note, or why there was none.
-function answerOf(outcome: AgentOutcome): { answer?: unknown; note?: AgentAnswer['note']; error?: string } {
+// What the AI's log keeps of an outcome: the answer, in the game's own shape, and the agent's note,
+// or why there was none.
+function answerOf(outcome: AgentOutcome): { answer?: unknown; note?: AgentNote; error?: string } {
   if (!outcome.ok)
     return { error: outcome.error, ...('note' in outcome && outcome.note ? { note: outcome.note } : {}) };
-  if (outcome.kind === 'clue') {
-    return { answer: { word: outcome.word, count: outcome.count, targets: outcome.targets }, note: outcome.note };
-  }
-  if (outcome.kind === 'guess') return { answer: { picks: outcome.picks, reason: outcome.reason }, note: outcome.note };
-  return {};
+  if (outcome.kind === 'ping') return {};
+  const answer = Object.fromEntries(
+    Object.entries(outcome).filter(([key]) => key !== 'ok' && key !== 'kind' && key !== 'note'),
+  );
+  return { answer, note: outcome.note };
 }
 
 // How many of an AI player are in the rooms now, for its page (docs/architecture.md#ai-players): the

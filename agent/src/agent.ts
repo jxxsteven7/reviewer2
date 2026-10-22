@@ -1,7 +1,8 @@
 import { createServer, type Server, type Socket } from 'node:net';
 import { MAX_AGENT_REQUEST, type AgentReply, type AgentRequest } from '@reviewer2/shared';
 import { AGENT_REPLY, AGENT_REQUEST } from '@reviewer2/shared/schemas';
-import { giveClue, guess } from './keywords';
+import { playImpostor } from './impostor';
+import { giveClue, guess, type Turn } from './keywords';
 import type { Model } from './model';
 import { PERSONAS } from './personas';
 
@@ -14,8 +15,13 @@ import { PERSONAS } from './personas';
 
 type Log = (event: string, fields?: Record<string, unknown>) => void;
 
+// The games that the agent plays, by their IDs.
+export type AgentGameId = Exclude<AgentRequest, { kind: 'ping' }>['game'];
+
 export interface AgentOptions {
+  // The model that plays every game, but one that has its own (config.ts).
   model: Model;
+  models?: Partial<Record<AgentGameId, Model>>;
   log: Log;
   // How many requests go to the model at once, and how many more may wait their turn (config.ts).
   concurrency: number;
@@ -28,8 +34,19 @@ export interface AgentOptions {
 // How long a ping may take: it only asks the service which models it has.
 const PING_MS = 5_000;
 
+// A turn of a game, with the game's own code.
+function playGame(request: Exclude<AgentRequest, { kind: 'ping' }>, turn: Turn): Promise<AgentReply> {
+  switch (request.game) {
+    case 'keywords':
+      return request.kind === 'clue' ? giveClue(request, turn) : guess(request, turn);
+    case 'impostor':
+      return playImpostor(request, turn);
+  }
+}
+
 export function createAgent({
   model,
+  models = {},
   log,
   concurrency,
   queue,
@@ -80,21 +97,27 @@ export function createAgent({
     if (!(await turnWith(until))) return { ok: false, error: 'busy' };
     try {
       const turn = {
-        model,
+        model: models[request.game] ?? model,
         persona: PERSONAS[request.persona],
         signal: AbortSignal.timeout(Math.max(1, Math.ceil(until - now()))),
         now,
       };
-      return request.kind === 'clue' ? await giveClue(request, turn) : await guess(request, turn);
+      return await playGame(request, turn);
     } finally {
       done();
     }
   }
 
+  // Every model that plays a game, once each, which a ping asks after: the AI players are there only
+  // when each of them is.
+  const everyModel = [...new Set([model, ...Object.values(models)])];
+
   async function answer(request: AgentRequest): Promise<AgentReply> {
     if (request.kind !== 'ping') return play(request);
-    const known = await model.ping(AbortSignal.timeout(PING_MS));
-    return known ? { ok: true, kind: 'ping', model: model.name } : { ok: false, error: 'model_failed' };
+    const signal = AbortSignal.timeout(PING_MS);
+    const known = await Promise.all(everyModel.map((one) => one.ping(signal)));
+    const names = [...new Set(everyModel.map(({ name }) => name))].join(', ');
+    return known.every(Boolean) ? { ok: true, kind: 'ping', model: names } : { ok: false, error: 'model_failed' };
   }
 
   // Answers one line. An answer that is anything but what the protocol allows, as a bug could make

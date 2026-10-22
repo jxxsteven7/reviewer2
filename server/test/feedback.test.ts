@@ -55,6 +55,8 @@ describe('feedback', () => {
       status: 'new',
       username: null,
       nameTakenBy: null,
+      game: null,
+      gameId: null,
     };
     expect(server.feedback.latest(10)).toEqual([
       {

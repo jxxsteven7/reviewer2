@@ -1,4 +1,5 @@
-import type { KeywordsView, PlayerView } from '@reviewer2/shared';
+import type { PlayerView } from '@reviewer2/shared';
+import type { KeywordsView } from '@reviewer2/shared/keywords';
 import { watch, type Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { callOut } from '../../core/emotes';

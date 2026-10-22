@@ -101,8 +101,8 @@ test('players with accounts play a whole game with guests, and find it on their 
   await expect(ann.locator('.records .record .tag')).toHaveText([text.account.profile.ordinaryTag]);
   const record = ann.locator('.records .record');
   await expect(record).toHaveCount(1);
-  await expect(record).toContainText(text.game.letter.short[annWon ? 'poster' : 'reject']);
-  await expect(record).toContainText(`${text.lobby.group.red}, ${text.account.profile.roles.captain}`);
+  await expect(record).toContainText(text.games.keywords.letter.short[annWon ? 'poster' : 'reject']);
+  await expect(record).toContainText(`${text.games.keywords.groups.red}, ${text.games.keywords.roles.captain}`);
   // However narrow the page, nothing on the line runs under the button on its right.
   expect(
     await record.evaluate((line) => {
@@ -115,7 +115,7 @@ test('players with accounts play a whole game with guests, and find it on their 
   const dan = table.guessers.blue;
   await dan.goto('/account');
   await expect(dan.locator('.records .record')).toContainText(
-    `${text.lobby.group.blue}, ${text.account.profile.roles.guesser}`,
+    `${text.games.keywords.groups.blue}, ${text.games.keywords.roles.guesser}`,
   );
 });
 

@@ -59,7 +59,7 @@ onBeforeUnmount(() => waiting());
 const listsOf = (room: PublicRoom) =>
   room.randomFields
     ? t('home.publicRooms.randomFields')
-    : room.fields.map((id) => fieldNames.value.get(id)?.[room.language] ?? id).join(' · ');
+    : (room.fields ?? []).map((id) => fieldNames.value.get(id)?.[room.language] ?? id).join(' · ');
 </script>
 
 <template>
@@ -82,7 +82,7 @@ const listsOf = (room: PublicRoom) =>
       <ul v-else class="rooms">
         <li v-for="room in rooms" :key="room.code" class="room">
           <div class="facts">
-            <span class="game">{{ t(`home.games.${room.game}.name`) }}</span>
+            <span class="game">{{ t(`games.${room.game}.name`) }}</span>
             <span class="status" :class="{ playing: room.playing }">
               {{ t(room.playing ? 'home.publicRooms.playing' : 'home.publicRooms.waiting') }}
             </span>

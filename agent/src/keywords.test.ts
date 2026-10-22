@@ -1,4 +1,4 @@
-import { defaultSettings } from '@reviewer2/shared';
+import { defaultSettings } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { giveClue, guess, type Turn } from './keywords';
 import { ModelError } from './model';

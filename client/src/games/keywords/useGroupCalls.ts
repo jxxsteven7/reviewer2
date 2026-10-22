@@ -1,4 +1,4 @@
-import type { KeywordsView } from '@reviewer2/shared';
+import type { KeywordsView } from '@reviewer2/shared/keywords';
 import type { Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { callOutGroup } from '../../core/emotes';
@@ -24,7 +24,7 @@ export function useGroupCalls(game: Ref<KeywordsView | null>): void {
     if (!reveal) return;
     for (const call of GROUP_CALLS) {
       if (!JUDGES[call](view, reveal.by) || JUDGES[call](last, reveal.by)) continue;
-      const group = t(`lobby.group.${reveal.by}`);
+      const group = t(`games.keywords.groups.${reveal.by}`);
       const line = t(`game.calls.${call}.${callLine(view.gameId, view.turn, call)}`, { group });
       callOutGroup(reveal.by, group, line, CALL_SOUNDS[call]);
     }

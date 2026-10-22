@@ -1,68 +1,79 @@
-<script setup lang="ts">
-import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength } from '@reviewer2/shared';
-import { computed, nextTick, onBeforeUnmount, ref, toRef, watch } from 'vue';
-import { useI18n } from 'vue-i18n';
-import AvatarButton from '../../core/components/AvatarButton.vue';
-import UiButton from '../../core/components/UiButton.vue';
-import type { ShownRoom } from '../../core/room';
-import { byTurn } from './chat';
-import { useKeywords } from './useKeywords';
+<script lang="ts">
+// A message as a chat shows it: whether it is the viewer's own, the writer's name, and the text.
+// A game adds what it draws the writer's avatar from.
+export interface ShownMessage {
+  id: number | string;
+  own: boolean;
+  name: string;
+  text: string;
+}
 
-// The group's messages by turn, and the line a student writes under them. GroupChat.vue shows
-// this beside the board, in a panel that is open all the time, or on a phone in a sheet, which
-// throws the thread away as it closes: so the line, `draft`, and the sending are the page's
-// (useChatLine.ts), and the thread only shows and edits the one and asks for the other. Students
-// write one line at a time; PIs read but can't write. Once the game is over, everyone who played
-// for the group, its PI too, may talk it over, until the next game, under a heading of its own
-// after the turns; whoever only sat down after the end reads.
-const props = defineProps<{ room: ShownRoom; sending: boolean }>();
+// The messages under a heading of their own, such as a turn's, or under none.
+export interface ChatSection<Message extends ShownMessage> {
+  key: string | number;
+  title: string | null;
+  messages: Message[];
+}
+</script>
+
+<script setup lang="ts" generic="Message extends ShownMessage">
+import { checkChat, MAX_CHAT_INPUT, MAX_CHAT_LENGTH, textLength } from '@reviewer2/shared';
+import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import UiButton from './UiButton.vue';
+
+// A chat of a game, in every game (docs/rules/display.md#a-games-room): the messages, as beige
+// rows, the viewer's own yellow, each with the writer's avatar, which the game draws in the
+// `avatar` slot, the name in bold and the text, under the headings of their sections, such as the
+// first game's turns; and, for a viewer who may write (`canWrite`), the line they write under them,
+// with a green send button in the same row and the count of characters under it, or what is wrong
+// with the line, as the game checks it (`check`, by default checkChat: not too long). A grey `note`
+// says when the viewer may only read, or what the chat is for. The line, `draft`, and the sending
+// are the page's, which keeps them while the chat comes and goes, so the thread only shows and
+// edits the one and asks for the other.
+const props = withDefaults(
+  defineProps<{
+    sections: ChatSection<Message>[];
+    canWrite: boolean;
+    sending: boolean;
+    label: string;
+    empty: string;
+    note?: string | null;
+    check?: (text: string) => { text: string; problem: string | null };
+  }>(),
+  { note: null, check: checkChat },
+);
 const draft = defineModel<string>('draft', { required: true });
 const emit = defineEmits<{ send: [] }>();
 const { t } = useI18n();
-const { data, mySeat, mySide } = useKeywords(toRef(props, 'room'));
-
-const game = computed(() => data.value.game);
-const chat = computed(() => game.value?.chat ?? []);
-const turns = computed(() => byTurn(chat.value));
-const over = computed(() => game.value?.phase === 'over');
-const canWrite = computed(() =>
-  over.value
-    ? (mySeat.value?.team ?? null) !== null && mySeat.value?.team === mySide.value
-    : mySeat.value?.role === 'guesser',
-);
+const id = useId();
 
 // The list shows the newest message as the thread comes into view, which is when it is mounted,
 // and follows new ones only while it is at its end, so that a player reading older messages
 // isn't pulled away from them; the viewer's own message always comes into view.
 const NEAR_END = 40;
 const list = ref<HTMLElement | null>(null);
+const last = computed(() => props.sections.at(-1)?.messages.at(-1));
 watch(
-  () => chat.value.at(-1)?.id ?? 0,
+  () => last.value?.id ?? 0,
   async () => {
     // Measured before the new message is rendered: was the list at its end until now?
     const before = list.value;
     const follow =
-      !before ||
-      before.scrollHeight - before.scrollTop - before.clientHeight <= NEAR_END ||
-      chat.value.at(-1)?.player === props.room.me;
+      !before || before.scrollHeight - before.scrollTop - before.clientHeight <= NEAR_END || last.value?.own === true;
     await nextTick();
     if (follow && list.value) list.value.scrollTop = list.value.scrollHeight;
   },
   { immediate: true },
 );
 
-function nameOf(playerId: string): string {
-  if (playerId === props.room.me) return t('game.chat.you');
-  return props.room.players.find((player) => player.id === playerId)?.name ?? t('game.chat.someone');
-}
-
-// The player who wrote a message, for the avatar beside it, or none for someone who has left.
-const playerOf = (playerId: string) => props.room.players.find((player) => player.id === playerId);
-
 const input = ref<HTMLInputElement | null>(null);
-const check = computed(() => checkChat(draft.value));
-const length = computed(() => textLength(check.value.text));
-const tooLong = computed(() => check.value.problem === 'chat_too_long');
+const checked = computed(() => props.check(draft.value));
+const length = computed(() => textLength(checked.value.text));
+// What is wrong with the line, but for its being empty, which only keeps it from being sent.
+const problem = computed(() =>
+  checked.value.problem === null || checked.value.problem === 'chat_empty' ? null : checked.value.problem,
+);
 
 function send() {
   emit('send');
@@ -104,55 +115,41 @@ onBeforeUnmount(() => resized?.disconnect());
 
 <template>
   <div class="chat">
-    <ol v-if="turns.length" ref="list" class="turns" @scroll.passive="scrolled">
-      <li v-for="turn in turns" :key="turn.after ? 'after' : turn.turn" class="turn">
-        <h3 class="turn-title">{{ turn.after ? t('game.chat.after') : t('game.turn', { turn: turn.turn }) }}</h3>
-        <p
-          v-for="message in turn.messages"
-          :key="message.id"
-          class="message"
-          :class="{ own: message.player === room.me }"
-        >
-          <AvatarButton
-            v-if="playerOf(message.player)"
-            :player-id="message.player"
-            :name="playerOf(message.player)?.name ?? ''"
-            :username="playerOf(message.player)?.username"
-            :guest="playerOf(message.player)?.guest"
-            :avatar="playerOf(message.player)?.avatar"
-            :agent="playerOf(message.player)?.agent !== undefined"
-          />
-          <span class="name">{{ nameOf(message.player) }}</span>
+    <ol v-if="sections.length" ref="list" class="turns" @scroll.passive="scrolled">
+      <li v-for="section in sections" :key="section.key" class="turn">
+        <h3 v-if="section.title" class="turn-title">{{ section.title }}</h3>
+        <p v-for="message in section.messages" :key="message.id" class="message" :class="{ own: message.own }">
+          <slot name="avatar" :message="message" />
+          <span class="name">{{ message.name }}</span>
           <span class="text">{{ message.text }}</span>
         </p>
       </li>
     </ol>
-    <p v-else class="empty">{{ t('game.chat.empty') }}</p>
+    <p v-else class="empty">{{ empty }}</p>
 
     <form v-if="canWrite" class="compose" @submit.prevent="send">
-      <label class="label" for="chat-text">{{ t('game.chat.input') }}</label>
+      <label class="label" :for="`${id}-text`">{{ label }}</label>
       <div class="row">
         <input
-          id="chat-text"
+          :id="`${id}-text`"
           ref="input"
           v-model="draft"
           :maxlength="MAX_CHAT_INPUT"
           autocomplete="off"
           enterkeyhint="send"
-          :aria-invalid="tooLong ? 'true' : undefined"
-          aria-describedby="chat-hint"
+          :aria-invalid="problem ? 'true' : undefined"
+          :aria-describedby="`${id}-hint`"
           @focus="toEnd"
         />
-        <UiButton variant="primary" type="submit" :disabled="check.problem !== null || sending">
+        <UiButton variant="primary" type="submit" :disabled="checked.problem !== null || sending">
           {{ t('game.chat.send') }}
         </UiButton>
       </div>
-      <p id="chat-hint" class="hint num" :class="{ problem: tooLong }">
-        {{ tooLong ? t('errors.chat_too_long') : t('game.chat.count', { count: length, max: MAX_CHAT_LENGTH }) }}
+      <p :id="`${id}-hint`" class="hint num" :class="{ problem }">
+        {{ problem ? t(`errors.${problem}`) : t('game.chat.count', { count: length, max: MAX_CHAT_LENGTH }) }}
       </p>
     </form>
-    <p v-if="canWrite && over" class="note">{{ t('game.chat.review') }}</p>
-    <p v-else-if="!canWrite" class="note">{{ over ? t('game.chat.over') : t('game.chat.readOnly') }}</p>
+    <p v-if="note" class="note">{{ note }}</p>
   </div>
 </template>
 
@@ -204,7 +201,7 @@ onBeforeUnmount(() => resized?.disconnect());
 }
 
 /* The avatar's middle is level with the middle of the name's first line. */
-.message :deep(.avatar-button) {
+.message > :slotted(*:first-child) {
   margin-right: var(--space-2);
   vertical-align: middle;
 }

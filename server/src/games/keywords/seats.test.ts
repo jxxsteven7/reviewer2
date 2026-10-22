@@ -1,4 +1,4 @@
-import { SPECTATOR, type Seat } from '@reviewer2/shared';
+import { SPECTATOR, type Seat } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { seededRng, type Rng } from '../../core/random';
 import {

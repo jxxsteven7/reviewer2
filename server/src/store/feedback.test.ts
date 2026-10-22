@@ -61,6 +61,8 @@ describe('the feedback', () => {
       status: 'new',
       username: null,
       nameTakenBy: null,
+      game: null,
+      gameId: null,
     };
     expect(feedback.latest(10)).toEqual([
       { id: 2, createdAt: '2026-10-09T12:01:00.000Z', ...bug, contact: 'wechat: r2', language: 'zh', ...alone },

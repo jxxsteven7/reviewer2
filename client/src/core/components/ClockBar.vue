@@ -1,24 +1,18 @@
-<script lang="ts">
-import type { KeywordsView } from '@reviewer2/shared';
-
-// The stretch of time that a game's clock is for: the game's turn and its phase.
-export const periodOf = (game: KeywordsView): string => `${game.gameId}:${game.turn}:${game.phase}`;
-</script>
-
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { connection } from '../../core/socket';
+import { connection } from '../socket';
 
-// How long the current phase has left, as a bar that runs down and the seconds beside it. The
-// server keeps the time and ends the phase (docs/games/keywords.md): every snapshot says how much
-// time was left when it was sent, and the bar counts down from there, from when the snapshot
-// arrived. It never ends anything itself, and stops at zero to wait for the server. It is red while
-// the viewer has to act (`mine`), so that their move stands out, and ink at any other time. A
-// `frozen` clock, during a pause, stands still at what the server said. `period` names the stretch
-// of time that the clock is for (periodOf).
+// How long the current phase of a game has left, as a bar that runs down and the seconds beside it,
+// in every game (docs/rules/display.md#a-games-room). The server keeps the time and ends the phase
+// (docs/games/keywords.md): every snapshot says how much time was left when it was sent, and the
+// bar counts down from there, from when the snapshot arrived. It never ends anything itself, and
+// stops at zero to wait for the server. It is red while the viewer has to act (`mine`), so that
+// their move stands out, and ink at any other time. A `frozen` clock, during a pause, stands still
+// at what the server said. `period` names the stretch of time that the clock is for, as the game
+// names it, such as the first game's turn and phase.
 const props = withDefaults(
-  defineProps<{ clock: NonNullable<KeywordsView['clock']>; period: string; frozen?: boolean; mine?: boolean }>(),
+  defineProps<{ clock: { left: number; total: number }; period: string; frozen?: boolean; mine?: boolean }>(),
   { frozen: false, mine: false },
 );
 const { t } = useI18n();

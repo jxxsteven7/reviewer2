@@ -21,7 +21,7 @@ const counts = (changes: Partial<GameCounts> = {}): GameCounts => ({
 });
 const stats = (record: GameCounts, locale: 'en' | 'zh' = 'en') =>
   mount(RecordStats, {
-    props: { counts: record },
+    props: { game: 'keywords', counts: record },
     global: { plugins: [createI18n({ legacy: false, locale, messages: { en, zh } })] },
   });
 const blocks = (wrapper: ReturnType<typeof stats>) =>

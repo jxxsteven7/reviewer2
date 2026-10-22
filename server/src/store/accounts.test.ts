@@ -11,6 +11,8 @@ import { openDatabase } from './database';
 import { keepGame } from '../../test/keptGame';
 import { RecordStore, streaksOf, TitleStore, type NewMatchRecord, type NewRecord, type NewReplay } from './records';
 import { DEFAULT_SESSION_LIMITS, MailTokenStore, SessionStore } from './sessions';
+import { keywordsGame } from '../games/keywords';
+import { knownTitles } from '../core/game';
 
 const DAY = 24 * 60 * 60_000;
 const NO_MATCHES = { played: 0, won: 0, recent: [] };
@@ -678,7 +680,7 @@ describe('titles', () => {
   };
 
   test('are counted, and can be awarded again and again', () => {
-    const titles = new TitleStore(db);
+    const titles = new TitleStore(db, knownTitles([keywordsGame]));
     const ann = account();
     expect(titles.counts(ann.id)).toEqual([]);
     for (const matchId of ['m1', 'm2', 'm3']) matchOf(ann.id, matchId);
@@ -698,7 +700,7 @@ describe('titles', () => {
   });
 
   test('are awarded once for each match, however often its end is reported, and one for each match', () => {
-    const titles = new TitleStore(db);
+    const titles = new TitleStore(db, knownTitles([keywordsGame]));
     const ann = account();
     matchOf(ann.id, 'm1');
     expect(titles.award(ann.id, 'keywords', 'best_paper', 'm1')).toBe(true);
@@ -711,7 +713,7 @@ describe('titles', () => {
   });
 
   test('that games bring are awarded once for each turn of a game, and add up', () => {
-    const titles = new TitleStore(db);
+    const titles = new TitleStore(db, knownTitles([keywordsGame]));
     const ann = account();
     const bob = account('Bob');
     gameOf(ann.id, 'g1');
@@ -732,7 +734,7 @@ describe('titles', () => {
   });
 
   test("go with the record of the match or the game they are of, and can't be awarded without it", () => {
-    const titles = new TitleStore(db);
+    const titles = new TitleStore(db, knownTitles([keywordsGame]));
     const ann = account();
     expect(() => titles.award(ann.id, 'keywords', 'best_paper', 'm9')).toThrow(/FOREIGN KEY/);
     expect(() => titles.awardForGame(ann.id, 'keywords', 'deadline_hero', 'g9', 1)).toThrow(/FOREIGN KEY/);
@@ -762,7 +764,7 @@ describe('the record of matches', () => {
 
   test('keeps each match once, the latest first, with the title it awarded, and counts them all', () => {
     const records = new RecordStore(db, () => now);
-    const titles = new TitleStore(db);
+    const titles = new TitleStore(db, knownTitles([keywordsGame]));
     const ann = account();
     expect(records.addMatch(ann.id, match())).toBe(true);
     titles.award(ann.id, 'keywords', 'best_paper', 'm1');

@@ -1,6 +1,7 @@
-import type { KeywordsSettings, Language } from '@reviewer2/shared';
+import type { Language } from '@reviewer2/shared';
+import type { KeywordsSettings } from '@reviewer2/shared/keywords';
 
-// The sections of "How to play" (RulesSheet.vue) as a room with these settings plays the game: its
+// The sections of "How to play" (KeywordsRules.vue) as a room with these settings plays the game: its
 // guess rule, its clue rule, its time limits and its extensions, and at the end what becomes of the
 // record of the game (docs/architecture.md#game-records), which guests read here. The letters of a
 // clue count wherever a Latin word on the board has them in a Chinese room, and at its start in an

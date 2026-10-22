@@ -9,18 +9,18 @@ import {
   GITHUB_ADVISORY,
   GITHUB_LOGIN,
   HANDLE,
+  isContent,
   isLanguage,
   MATCH_TITLES,
   matchGamesValid,
   MAX_ROOM_SETUP,
   RECORDS_NOTICE_VERSION,
-  TITLES,
   usernameKey,
   type Language,
 } from '@reviewer2/shared';
 import { AVATAR_FILE } from '../accounts/avatars';
 import type { AgentLogData } from '../core/agentLog';
-import type { GameModule } from '../core/game';
+import { knownTitles, type GameModule } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { DEFAULT_FEEDBACK_LIMITS } from './feedback';
 import { countedUnder, countGames, countMatches, HeldRecords } from './recount';
@@ -225,21 +225,22 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
 
   // What accounts keep of the games (docs/architecture.md#accounts), each row against the record
   // of its game, which the foreign keys tie it to, and against what the game counts of the record
-  // of the game under the rules of today (recount.ts): who won and how, as the record of the game
-  // says it came out, how the game came out for each account, the place, the points, the verdict,
-  // the game's own detail and the titles of each record of a game, what each AI did in it, and the
-  // place, the total and the title of each record of a match. A game that one side won has its
-  // records won on that side and not won on any other; one that no one side won says nothing of
-  // its records.
+  // of the game under the rules of today (recount.ts): who won and how, and whether it brought
+  // anybody anything, as the record of the game says it came out, how the game came out for each
+  // account, the place, the points, the verdict, the game's own detail and the titles of each
+  // record of a game, what each AI did in it, and the place, the total and the title of each record
+  // of a match. A game that one side won has its records won on that side and not won on any other;
+  // one that no one side won says nothing of its records, and one that brought nobody points has
+  // none on its records.
   sql(
     'records of games that disagree with the record of the game',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
       "WHERE g.ending <> 'finished' OR (g.winner IS NOT NULL AND (r.result = 'won') <> (r.side = g.winner))",
   );
   sql(
-    'records of games that an AI played in, with points',
+    'records of games that brought nobody points, with points',
     'SELECT r.id FROM game_records AS r JOIN replays AS g ON g.game_id = r.game_id ' +
-      'WHERE (g.agents > 0 OR g.takeover = 1) AND r.points <> 0',
+      'WHERE g.scores_nothing = 1 AND r.points <> 0',
   );
   each(
     'records of games in a role the game does not have',
@@ -262,12 +263,13 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'SELECT m.id FROM match_records AS m WHERE NOT EXISTS (SELECT 1 FROM replays AS g ' +
       'WHERE g.match_id = m.match_id AND g.game = m.game)',
   );
+  const titles = knownTitles(games);
   found(
     'titles that are not ones there are',
     (
       db
-        .prepare('SELECT id FROM titles WHERE title NOT IN (' + TITLES.map(() => '?').join(', ') + ')')
-        .all(...TITLES) as Row[]
+        .prepare('SELECT id FROM titles WHERE title NOT IN (' + titles.map(() => '?').join(', ') + ')')
+        .all(...titles) as Row[]
     ).map((row) => String(row.id)),
   );
   each(
@@ -275,7 +277,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     'SELECT id, game, title FROM titles WHERE game_id IS NOT NULL',
     ({ game, title }) => {
       const module = known.get(String(game));
-      return module !== undefined && !(module.titles ?? []).includes(title as (typeof TITLES)[number]);
+      return module !== undefined && !(module.titles ?? []).includes(String(title));
     },
   );
   sql(
@@ -378,12 +380,62 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
   const plays = "SELECT game_id || ':' || player_id AS id, game, role, feats, takeover FROM agent_plays";
   each("AI seats whose counts are not in the game's shape", plays, ({ game, feats, takeover }) => {
     const shapes = known.get(String(game))?.shapes;
-    return shapes !== undefined && Number(takeover) === 0 && !shapes.feats(parse(feats));
+    if (shapes === undefined || Number(takeover) !== 0) return false;
+    return shapes.feats ? !shapes.feats(parse(feats)) : feats !== null;
   });
   each('AI plays in a role the game does not have', plays, ({ game, role }) => {
     const shapes = known.get(String(game))?.shapes;
     return shapes !== undefined && role !== null && !shapes.role(String(role));
   });
+
+  // What players said of the games they played (docs/architecture.md#ratings): a rating is one of
+  // its game's, of a game that finished, and a guess of who the AI players were is in the game's
+  // shape, of a game that finished with AI players in it. A player's rating or guess is named by
+  // the game and the player ID.
+  const said = (table: string, column: string) =>
+    `SELECT game_id || ':' || player_id AS id, game, ${column} AS value FROM ${table}`;
+  each("ratings that are not one of their game's", said('ratings', 'rating'), ({ game, value }) => {
+    const module = known.get(String(game));
+    return module !== undefined && !(value === null || (module.ratings ?? []).includes(String(value)));
+  });
+  sql(
+    'ratings of games that did not finish',
+    "SELECT r.game_id || ':' || r.player_id FROM ratings AS r JOIN replays AS g ON g.game_id = r.game_id " +
+      "WHERE g.ending <> 'finished'",
+  );
+  each("guesses of the AI players not in the game's shape", said('ai_guesses', 'guess'), ({ game, value }) => {
+    const shapes = known.get(String(game))?.shapes;
+    if (shapes === undefined) return false;
+    return value !== null && !(shapes.guess?.(parse(value)) ?? false);
+  });
+  sql(
+    'guesses of the AI players of games that did not finish or had none',
+    "SELECT a.game_id || ':' || a.player_id FROM ai_guesses AS a JOIN replays AS g ON g.game_id = a.game_id " +
+      "WHERE g.ending <> 'finished' OR g.agents = 0",
+  );
+
+  // The words that the operator adopted from the games into the word library
+  // (docs/architecture.md#content-contributions): of a kind there is, in its shape, of a game that
+  // the server plays and that the game they came from is a game of, with what they were in both
+  // languages.
+  each(
+    'adopted words of a kind there is not, or not in its shape',
+    'SELECT id, kind, content FROM content_contributions',
+    ({ kind, content }) => !isContent(String(kind), parse(content)),
+  );
+  each(
+    'adopted words of a game that this server does not play',
+    'SELECT id, game FROM content_contributions',
+    ({ game }) => !known.has(String(game)),
+  );
+  sql(
+    'adopted words of another game than the one they came from',
+    'SELECT c.id FROM content_contributions AS c JOIN replays AS g ON g.game_id = c.game_id WHERE g.game <> c.game',
+  );
+  sql(
+    'adopted words without what they were in both languages',
+    "SELECT id FROM content_contributions WHERE trim(summary_zh) = '' OR trim(summary_en) = ''",
+  );
 
   // The feedback (docs/architecture.md#feedback): what it may be, and what it may have become.
   found(

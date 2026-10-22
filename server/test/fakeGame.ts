@@ -62,7 +62,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
   rulesVersion: 7,
   // The one title that it brings, which the first game has too: no other game is played beside it.
   titles: ['deadline_hero'],
-  wordsNeeded: 3,
+  words: { board: 3 },
   create: (language) => ({
     joined: [],
     players: [],
@@ -99,7 +99,7 @@ export const fakeGame: GameModule<FakeData, FakeView> = {
     if (data.broken === 'join') throw new Error('joining broke');
     return { ...data, joined: [...data.joined, id], players: play ? [...data.players, id] : data.players };
   },
-  leave(data, id) {
+  leave(data, _ctx, id) {
     if (data.broken === 'leave' && (data.brokenFor === null || data.brokenFor === id)) throw new Error('leaving broke');
     return { ...data, joined: data.joined.filter((other) => other !== id), over: data.over || data.fragile };
   },

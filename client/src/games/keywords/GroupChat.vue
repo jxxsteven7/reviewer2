@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import type { RoomView } from '@reviewer2/shared';
 import { computed, ref, toRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import AvatarButton from '../../core/components/AvatarButton.vue';
+import ChatThread, { type ChatSection, type ShownMessage } from '../../core/components/ChatThread.vue';
 import UiButton from '../../core/components/UiButton.vue';
 import UiSheet from '../../core/components/UiSheet.vue';
-import { markSeen, seenIn, unread } from './chat';
-import ChatThread from './ChatThread.vue';
+import type { ShownRoom } from '../../core/room';
+import { byTurn, markSeen, seenIn, unread } from './chat';
 import { useKeywords } from './useKeywords';
 
 // The group chat (docs/games/keywords.md): the group's messages by turn, with the line a student
-// writes (ChatThread.vue). Beside the board, as a `panel`, it is open all the time, and every
+// writes (ChatThread.vue). Students write one line at a time; PIs read but can't write. Once the
+// game is over, everyone who played for the group, its PI too, may talk it over, until the next
+// game, under a heading of its own after the turns; whoever only sat down after the end reads.
+// Beside the board, as a `panel`, it is open all the time, and every
 // message counts as read as it comes. On a phone it is a button with the number of new messages,
 // which opens the thread as a sheet: with the keyboard up at once while there is nothing to read
 // yet, and without it once there is, since the player may only want to read; the sheet keeps above
@@ -21,18 +25,48 @@ import { useKeywords } from './useKeywords';
 // and asks the page to send it. In the tutorial (`demo`), the chat is an invented game's, and
 // what the viewer read of it isn't kept: the list of the last message read in each game is the
 // browser's, for real games, and holds only a few.
-const props = withDefaults(defineProps<{ room: RoomView; panel?: boolean; sending: boolean; demo?: boolean }>(), {
+const props = withDefaults(defineProps<{ room: ShownRoom; panel?: boolean; sending: boolean; demo?: boolean }>(), {
   panel: false,
   demo: false,
 });
 const draft = defineModel<string>('draft', { required: true });
 const emit = defineEmits<{ send: [] }>();
 const { t } = useI18n();
-const { data, mySeat } = useKeywords(toRef(props, 'room'));
+const { data, mySeat, mySide } = useKeywords(toRef(props, 'room'));
 
 const game = computed(() => data.value.game);
 const chat = computed(() => game.value?.chat ?? null);
-const group = computed(() => (mySeat.value?.team ? t(`lobby.group.${mySeat.value.team}`) : ''));
+const over = computed(() => game.value?.phase === 'over');
+const canWrite = computed(() =>
+  over.value
+    ? (mySeat.value?.team ?? null) !== null && mySeat.value?.team === mySide.value
+    : mySeat.value?.role === 'guesser',
+);
+const note = computed(() => {
+  if (canWrite.value) return over.value ? t('game.chat.review') : null;
+  return over.value ? t('game.chat.over') : t('game.chat.readOnly');
+});
+
+// The messages by turn, each with its writer, while they are still in the room, for the avatar.
+const playerOf = (playerId: string) => props.room.players.find((player) => player.id === playerId);
+type Message = ShownMessage & { player: string };
+const sections = computed<ChatSection<Message>[]>(() =>
+  byTurn(chat.value ?? []).map((turn) => ({
+    key: turn.after ? 'after' : turn.turn,
+    title: turn.after ? t('game.chat.after') : t('game.turn', { turn: turn.turn }),
+    messages: turn.messages.map((message) => ({
+      id: message.id,
+      own: message.player === props.room.me,
+      name:
+        message.player === props.room.me
+          ? t('game.chat.you')
+          : (playerOf(message.player)?.name ?? t('game.chat.someone')),
+      text: message.text,
+      player: message.player,
+    })),
+  })),
+);
+const group = computed(() => (mySeat.value?.team ? t(`games.keywords.groups.${mySeat.value.team}`) : ''));
 const title = computed(() => t('game.chat.title', { group: group.value }));
 
 const open = ref(false);
@@ -62,7 +96,28 @@ watch(
   <template v-if="chat">
     <section v-if="panel" class="chat-panel">
       <h2 class="section-title">{{ title }}</h2>
-      <ChatThread v-model:draft="draft" :room="room" :sending="sending" @send="emit('send')" />
+      <ChatThread
+        v-model:draft="draft"
+        :sections="sections"
+        :can-write="canWrite"
+        :sending="sending"
+        :label="t('game.chat.input')"
+        :empty="t('game.chat.empty')"
+        :note="note"
+        @send="emit('send')"
+      >
+        <template #avatar="{ message }">
+          <AvatarButton
+            v-if="playerOf(message.player)"
+            :player-id="message.player"
+            :name="playerOf(message.player)?.name ?? ''"
+            :username="playerOf(message.player)?.username"
+            :guest="playerOf(message.player)?.guest"
+            :avatar="playerOf(message.player)?.avatar"
+            :agent="playerOf(message.player)?.agent !== undefined"
+          />
+        </template>
+      </ChatThread>
     </section>
     <template v-else>
       <UiButton
@@ -75,7 +130,29 @@ watch(
         <span v-if="fresh" class="badge num" aria-hidden="true">{{ fresh }}</span>
       </UiButton>
       <UiSheet :open="open" :title="title" :focus-input="chat.length === 0" fit-screen @close="open = false">
-        <ChatThread v-model:draft="draft" class="in-sheet" :room="room" :sending="sending" @send="emit('send')" />
+        <ChatThread
+          v-model:draft="draft"
+          class="in-sheet"
+          :sections="sections"
+          :can-write="canWrite"
+          :sending="sending"
+          :label="t('game.chat.input')"
+          :empty="t('game.chat.empty')"
+          :note="note"
+          @send="emit('send')"
+        >
+          <template #avatar="{ message }">
+            <AvatarButton
+              v-if="playerOf(message.player)"
+              :player-id="message.player"
+              :name="playerOf(message.player)?.name ?? ''"
+              :username="playerOf(message.player)?.username"
+              :guest="playerOf(message.player)?.guest"
+              :avatar="playerOf(message.player)?.avatar"
+              :agent="playerOf(message.player)?.agent !== undefined"
+            />
+          </template>
+        </ChatThread>
       </UiSheet>
     </template>
   </template>

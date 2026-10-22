@@ -1,3 +1,5 @@
+import type { LogLimits } from './game';
+
 // The log of one game (docs/architecture.md#game-records): everything that changed it, in order,
 // from its start to its end, with when it came and who did it. The room keeps one for the game it
 // is playing, and the record of the game keeps it, on the server alone, however the game ended. The
@@ -19,7 +21,8 @@
 // it has MAX_GAME_LOG_BYTES, which only a game left to its timers for hours reaches: the log is
 // then full (`full`), and the room closes with its game cut short there (socket.ts), so that no
 // room can grow without end in the server's memory. The log is kept whole, with the end that says
-// why.
+// why. A game that needs more, as one in which every player writes something every round, says how
+// much (GameModule.logLimits).
 export const MAX_GAME_LOG_BYTES = 128 * 1024;
 export const CROWDED_GAME_LOG_BYTES = 64 * 1024;
 export const MAX_SAID_BYTES = 48 * 1024;
@@ -114,6 +117,7 @@ export class GameLog {
   #bytes: number;
   #saidBytes = 0;
   #truncated = false;
+  readonly #limits: Required<Omit<LogLimits, 'perMember'>>;
 
   constructor(
     readonly game: string,
@@ -122,7 +126,13 @@ export class GameLog {
     readonly startedAt: number,
     readonly start: Record<string, unknown> | null,
     readonly agents: Record<string, string> = {},
+    limits: LogLimits = {},
   ) {
+    this.#limits = {
+      bytes: limits.bytes ?? MAX_GAME_LOG_BYTES,
+      crowded: limits.crowded ?? CROWDED_GAME_LOG_BYTES,
+      said: limits.said ?? MAX_SAID_BYTES,
+    };
     this.#bytes = Buffer.byteLength(JSON.stringify(this.data()));
   }
 
@@ -140,7 +150,7 @@ export class GameLog {
     if (said !== undefined) {
       if (this.#truncated) return;
       const bytes = Buffer.byteLength(JSON.stringify(entry)) + 1;
-      if (this.#saidBytes + bytes > MAX_SAID_BYTES) {
+      if (this.#saidBytes + bytes > this.#limits.said) {
         this.#truncated = true;
         this.#bytes += TRUNCATED_BYTES;
         this.#push({ t: entry.t, by: null, type: 'truncated' });
@@ -160,13 +170,13 @@ export class GameLog {
   // Whether the log has grown as large as a log may, apart from what the players said, which has
   // its own share: a flood of messages, on which the room closes.
   get full(): boolean {
-    return this.#doneBytes > MAX_GAME_LOG_BYTES;
+    return this.#doneBytes > this.#limits.bytes;
   }
 
   // Whether the log is crowded with comings and goings, on which the room takes nobody in and lets
   // nobody change seats until the game ends.
   get crowded(): boolean {
-    return this.#doneBytes > CROWDED_GAME_LOG_BYTES;
+    return this.#doneBytes > this.#limits.crowded;
   }
 
   // The size of what was done, apart from what was said.

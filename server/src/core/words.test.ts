@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BOARD_SIZE, cardsClash, LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
+import { LANGUAGES, wordKey, type BoardWord, type Language } from '@reviewer2/shared';
+import { BOARD_SIZE, cardsClash } from '@reviewer2/shared/keywords';
 import { afterAll, describe, expect, test } from 'vitest';
 import { seededRng } from './random';
 import {
@@ -35,8 +36,8 @@ describe('the word library', () => {
       { id: 'en-only', name: { zh: 'E', en: 'E' }, terms: [{ id: 'a', en: 'Alpha' }] },
     ]);
     expect(library.fields()).toEqual([
-      { id: 'en-only', name: { zh: 'E', en: 'E' }, counts: { zh: 0, en: 1 } },
-      { id: 'ml', name: { zh: '\u9886\u57df ml', en: 'Field ml' }, counts: { zh: 30, en: 30 } },
+      { id: 'en-only', name: { zh: 'E', en: 'E' }, counts: { zh: 0, en: 1 }, pairs: 0 },
+      { id: 'ml', name: { zh: '\u9886\u57df ml', en: 'Field ml' }, counts: { zh: 30, en: 30 }, pairs: 0 },
     ]);
     expect(library.has('ml')).toBe(true);
     expect(library.has('nope')).toBe(false);

@@ -63,13 +63,13 @@ describe('the certified versions of the AI', () => {
   test('are none yet, so that a game an AI played in brings nothing', () => {
     expect(
       CERTIFIED_AGENTS,
-      'No version of the AI is certified yet. The first one needs more than this list: the streaks ' +
-        '(RecordStore.#results and #agentsIn), the friend duos (DUOS_SQL) and the records page ' +
-        '(RecordStore.#recent, GameRecord.agents) in server/src/store/records.ts, the check of the data ' +
-        '("records of games that an AI played in, with points" in server/src/store/check.ts), the score ' +
-        'floats (RoomView.agentsPlayed) and the docs (docs/architecture.md#ai-players, both READMEs) take ' +
-        '"an AI played" for "brought nothing", and must decide by certifiedPlay() as the room and the ' +
-        'recount do.',
+      'No version of the AI is certified yet. The first one needs more than this list: the records page ' +
+        '(RecordStore.#recent, GameRecord.agents) in server/src/store/records.ts, the score floats ' +
+        '(RoomView.agentsPlayed), the points of the second game (pointsShown in ' +
+        'server/src/games/impostor/results.ts) and the docs (docs/architecture.md#ai-players, both ' +
+        'READMEs) take "an AI played" for "brought nothing", and must decide by certifiedPlay() as the ' +
+        'room and the recount do, and with them the record of each game (replays.scores_nothing), by which ' +
+        'the streaks and the friend duos go.',
     ).toEqual([]);
     expect(certifiedPlay(log([answered(v1)]))).toBe(false);
   });

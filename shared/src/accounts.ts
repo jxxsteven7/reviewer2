@@ -1,7 +1,6 @@
 import type { ContributionCount } from './contributions';
 import type { DuoView } from './duos';
 import type { Language } from './language';
-import { KEYWORDS_TITLES } from './games/keywords/titles';
 import type { MatchRules } from './match';
 import type { Rank } from './ranks';
 import { cleanName } from './names';
@@ -148,12 +147,12 @@ export type EmailState = (typeof EMAIL_STATES)[number];
 // was won, by the game it was won in. A match of any game that runs its course awards its two to
 // the top and the bottom of its ranking (MATCH_TITLES); a game brings the players with accounts
 // whose game goes on the record titles of its own, each time they earn one, which each game
-// declares (for the team word guessing game, KEYWORDS_TITLES). The records keep a title by its ID
-// alone, so no two games declare the same one (accounts.test.ts).
+// declares (GameModule.titles on the server; for the team word guessing game, KEYWORDS_TITLES). The
+// records keep a title by its ID alone, so no two games declare the same one
+// (server/src/games/index.test.ts).
 export const MATCH_TITLES = ['best_paper', 'black_hole'] as const;
 export type MatchTitle = (typeof MATCH_TITLES)[number];
-export const TITLES = [...MATCH_TITLES, ...KEYWORDS_TITLES] as const;
-export type Title = (typeof TITLES)[number];
+export type Title = string;
 
 export interface TitleCount {
   game: string;
@@ -316,12 +315,19 @@ export interface MatchRecord {
 // each of the game's roles, by the role's ID, as the game names them (for the team word guessing
 // game, a group's PI, `captain`, and a student, `guesser`), counting every game as the total does,
 // and how many matches of the game it has finished, and finished first in, alone or level with
-// others (docs/architecture.md#accounts). A role it has never played in isn't there.
+// others (docs/architecture.md#accounts). A role it has never played in isn't there. `wordsSet`
+// is, for a game in which a setter gives the words, how many games that finished the account set
+// the words of, and how many good ratings players gave them (docs/architecture.md#ratings); it
+// isn't there for an account that has set none. `sums` is what the records of a game that asks for
+// it add up, as the game names it: the totals of counts in the records' detail and how many records
+// have a verdict, such as the votes and the times out for breaking the rules in the second game.
 export interface GameCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };
   roles: Record<string, { games: number; wins: number }>;
   matches: { played: number; won: number };
+  wordsSet?: { games: number; good: number };
+  sums?: Record<string, number>;
 }
 
 // The counts of a game that the account has finished no game or match of.

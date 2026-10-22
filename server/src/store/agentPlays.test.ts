@@ -53,6 +53,7 @@ const keep = (gameId: string, agentPlays: AgentPlay[], game = 'keywords') =>
     players: [],
     counts: { accounts: 1, guests: 0, agents: 1 },
     takeover: false,
+    scoresNothing: true,
     agentPlays,
     match: null,
     inMatch: false,

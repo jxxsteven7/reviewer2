@@ -1,12 +1,11 @@
+import { type PlayerView, type RoomView } from '@reviewer2/shared';
 import {
   defaultSettings,
   type KeywordsRoomData,
   type KeywordsSettings,
   type KeywordsView,
-  type PlayerView,
-  type RoomView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { AgentLogData } from '../src/core/agentLog';
 import { FRESH_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';

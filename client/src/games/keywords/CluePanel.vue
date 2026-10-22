@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { type Language } from '@reviewer2/shared';
 import {
   checkClue,
   clueOptions,
@@ -8,9 +9,8 @@ import {
   type ClueMatchKind,
   type KeywordsSettings,
   type KeywordsView,
-  type Language,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import UiButton from '../../core/components/UiButton.vue';

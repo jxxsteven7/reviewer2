@@ -1,4 +1,4 @@
-import { otherTeam } from '@reviewer2/shared';
+import { otherTeam } from '@reviewer2/shared/keywords';
 import {
   avatarOf,
   closeSheet,
@@ -45,7 +45,7 @@ for (const language of ['en', 'zh'] as const) {
     // and the spectator and the screen read both, the winner's first.
     const winner = gameOf(snapshotsOf(table.spectator).at(-1))?.result?.winner ?? 'red';
     const loser = otherTeam(winner);
-    const { verdicts } = text.game.letter;
+    const { verdicts } = text.games.keywords.letter;
     for (const page of [table.captains[winner], table.guessers[winner]]) {
       await expect(page.locator('.letter .verdict')).toHaveText(verdicts.poster);
     }

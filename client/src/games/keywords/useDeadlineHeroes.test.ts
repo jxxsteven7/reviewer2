@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import type { KeywordsView, PlayerView } from '@reviewer2/shared';
+import type { PlayerView } from '@reviewer2/shared';
+import type { KeywordsView } from '@reviewer2/shared/keywords';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref } from 'vue';

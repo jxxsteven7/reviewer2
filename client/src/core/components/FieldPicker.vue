@@ -1,22 +1,29 @@
 <script setup lang="ts">
 import type { FieldInfo, Language } from '@reviewer2/shared';
+import { useId } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { gameInfo } from '../../games/info';
 
-// Choosing the word lists for a room. A list without enough words in the room's language can't
-// be chosen, and none can while the picker is `disabled`, as when the room draws its lists for
-// every game; what is chosen still shows, greyed out.
+// Choosing the word lists for a room of a game. A list without enough words in the room's language
+// for the game (GameInfo.usable) can't be chosen, and none can while the picker is `disabled`, as
+// when the room draws its lists for every game; what is chosen still shows, greyed out. Each list
+// says how many terms it has, or for a game of pairs how many pairs. A `single` list is chosen
+// alone, as the field of a setter's words, which may be any.
 
 const props = withDefaults(
-  defineProps<{ fields: FieldInfo[]; language: Language; needed: number; disabled?: boolean }>(),
-  { disabled: false },
+  defineProps<{ fields: FieldInfo[]; language: Language; game: string; disabled?: boolean; single?: boolean }>(),
+  { disabled: false, single: false },
 );
 const model = defineModel<string[]>({ required: true });
 const { t } = useI18n();
 
-const usable = (field: FieldInfo) => field.counts[props.language] >= props.needed;
+const group = useId();
+const usable = (field: FieldInfo) => props.single || (gameInfo(props.game)?.usable(field, props.language) ?? false);
+const pairs = () => gameInfo(props.game)?.pairs === true;
 
 function toggle(id: string, on: boolean) {
-  model.value = on ? [...model.value, id] : model.value.filter((other) => other !== id);
+  if (props.single) model.value = [id];
+  else model.value = on ? [...model.value, id] : model.value.filter((other) => other !== id);
 }
 </script>
 
@@ -25,14 +32,23 @@ function toggle(id: string, on: boolean) {
     <li v-for="field in fields" :key="field.id">
       <label :class="{ disabled: disabled || !usable(field) }">
         <input
-          type="checkbox"
+          :type="single ? 'radio' : 'checkbox'"
+          :name="single ? group : undefined"
           :checked="model.includes(field.id)"
           :disabled="disabled || !usable(field)"
           @change="toggle(field.id, ($event.target as HTMLInputElement).checked)"
         />
         <span class="name">{{ field.name[language] }}</span>
-        <span class="count">
-          {{ usable(field) ? t('create.fieldTerms', { count: field.counts[language] }) : t('create.fieldTooSmall') }}
+        <span v-if="!single" class="count">
+          {{
+            pairs()
+              ? usable(field)
+                ? t('create.fieldPairs', { count: field.pairs })
+                : t('create.fieldNoPairs')
+              : usable(field)
+                ? t('create.fieldTerms', { count: field.counts[language] })
+                : t('create.fieldTooSmall')
+          }}
         </span>
       </label>
     </li>

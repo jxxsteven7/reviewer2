@@ -1,4 +1,4 @@
-import { TEAMS } from '@reviewer2/shared';
+import { TEAMS } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { fakeGame } from '../../../test/fakeGame';
 import { testWords } from '../../../test/helpers';

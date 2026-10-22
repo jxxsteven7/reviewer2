@@ -1,7 +1,7 @@
+import { checkChat, RATINGS, type Title, type TitleCount } from '@reviewer2/shared';
 import {
   BOARD_SIZE,
   cardsClash,
-  checkChat,
   cleanClue,
   defaultSettings,
   KEYWORDS_TITLES,
@@ -17,10 +17,8 @@ import {
   type KeywordsView,
   type Seat,
   type Team,
-  type Title,
-  type TitleCount,
-} from '@reviewer2/shared';
-import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/schemas';
+} from '@reviewer2/shared/keywords';
+import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/keywords/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
 import { recountOf, shownReplay, type KeywordsSetup } from './replay';
@@ -104,6 +102,9 @@ export interface KeywordsData {
   vacated: Record<Team, string | null>;
   // The game's part of the match that the room plays, if it plays one (match.ts).
   match: MatchSeating | null;
+  // Who gave the room's own words that the current game was dealt, by player ID
+  // (GameContext.customAuthor), or null for a game dealt none.
+  customAuthor: string | null;
 }
 
 const nobodyVacated = (): Record<Team, string | null> => ({ red: null, blue: null });
@@ -361,6 +362,8 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const COLORS: readonly string[] = [...TEAMS, 'neutral', 'reviewer2'];
 const shapes: GameShapes = {
+  // A board with words of the chair's own names who gave them, by player ID, or nobody (null) for a
+  // game from before the record named them (migration 27); one without, nobody.
   setup: (value) =>
     isObject(value) &&
     KEYWORDS_SETTINGS.strict().safeParse(value.settings).success &&
@@ -375,7 +378,9 @@ const shapes: GameShapes = {
         typeof card.custom === 'boolean' &&
         Object.keys(card).length === 3,
     ) &&
-    Object.keys(value).length === 3,
+    (value.cards.some((card) => (card as { custom: boolean }).custom)
+      ? (value.customAuthor === null || typeof value.customAuthor === 'string') && Object.keys(value).length === 4
+      : Object.keys(value).length === 3),
   settings: (value) => KEYWORDS_SETTINGS.strict().safeParse(value).success,
   role: (role) => role === 'captain' || role === 'guesser',
   detail: (value) =>
@@ -400,10 +405,9 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   id: 'keywords',
   rulesVersion: RULES_VERSION,
   titles: KEYWORDS_TITLES,
-  wordsNeeded: BOARD_SIZE,
-  // Two words of which one lies inside the other would give each other away: "Gene" and "Gene
-  // editing" can't share a board.
-  wordsClash: cardsClash,
+  // A board, of which no two words lie inside each other, which would give each other away: "Gene"
+  // and "Gene editing" can't share a board.
+  words: { board: BOARD_SIZE, clash: cardsClash },
 
   create: (language) => ({
     settings: defaultSettings(language),
@@ -411,6 +415,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
     game: null,
     vacated: nobodyVacated(),
     match: null,
+    customAuthor: null,
   }),
 
   // The settings come whole, and must suit the room's language: a Chinese room counts the clue's
@@ -443,7 +448,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
 
   // A captain who leaves frees the seat; the key viewers remember them anyway, the groups remember
   // whom each player has played for, and a deadline missed while the seat stays empty costs them.
-  leave(data, playerId) {
+  leave(data, _ctx, playerId) {
     const seating = removeSeat(data.seating, playerId);
     return {
       ...data,
@@ -483,6 +488,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
       seating: startGame(seating, ctx.keyOf),
       game: newGame(words, ctx.rng, { gameId, settings: data.settings, language: ctx.language }, ctx.now()),
       vacated: nobodyVacated(),
+      customAuthor: words.some((word) => word.custom) ? ctx.customAuthor() : null,
     };
   },
 
@@ -551,17 +557,35 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   },
 
   // How the game began: the settings, the group that starts, and the board, every card's color
-  // included and each card marked as a word of the chair's own or of the lists. It goes into the
-  // record of the game alone, which stays on the server, with the room's language beside it.
+  // included and each card marked as a word of the chair's own or of the lists, with who gave the
+  // chair's own, if any. It goes into the record of the game alone, which stays on the server, with
+  // the room's language beside it.
   setup(data): KeywordsSetup | null {
     const game = data.game;
     if (!game) return null;
+    const cards = game.cards.map(({ word, color, custom }) => ({ word, color, custom: custom === true }));
     return {
       settings: { ...game.settings },
       startingTeam: game.startingTeam,
-      cards: game.cards.map(({ word, color, custom }) => ({ word, color, custom: custom === true })),
+      cards,
+      ...(cards.some((card) => card.custom) ? { customAuthor: data.customAuthor } : {}),
     };
   },
+
+  // Who gave the chair's own words of the game, among those who took part in it, and the words, for
+  // the word library (docs/architecture.md#content-contributions).
+  contributors: (data, ctx) =>
+    data.game?.cards.some((card) => card.custom) && data.customAuthor !== null ? [ctx.keyOf(data.customAuthor)] : [],
+  content(setup) {
+    const kept = setup as KeywordsSetup;
+    const words = kept.cards.filter((card) => card.custom).map((card) => card.word);
+    if (words.length === 0) return null;
+    return { kind: 'words', content: { words }, author: kept.customAuthor ?? null, named: true };
+  },
+
+  // Every game that finished may be rated, by the words of its board (docs/architecture.md#ratings).
+  ratings: RATINGS,
+  rated: (data) => data.game?.phase === 'over' && data.game.result?.winner !== null,
 
   shapes,
 
@@ -595,11 +619,12 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // still there.
   participants: (data) => [...data.seating.sides.keys()],
 
+  score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
+
   match: {
     // Whether the groups stay the same and how they are made (KeywordsMatchOptions).
     options: keywordsMatchOptions,
     setup: (data, _ctx, rules) => ({ ...data, match: rules && newMatchSeating(rules as KeywordsMatchRules) }),
-    score: (data, ctx) => (data.game ? scoreGame(data.game, data.seating, ctx.keyOf) : null),
     lineup: (data) => [...data.seating.seats].filter(([, seat]) => seat.team !== null).map(([id]) => id),
   },
 

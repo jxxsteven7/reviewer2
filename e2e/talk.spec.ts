@@ -1,5 +1,5 @@
 import type { Browser, Locator, Page } from '@playwright/test';
-import { otherTeam } from '@reviewer2/shared';
+import { otherTeam } from '@reviewer2/shared/keywords';
 import {
   chooseCard,
   closeSheet,

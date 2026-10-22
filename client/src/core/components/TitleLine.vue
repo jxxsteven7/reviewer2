@@ -2,6 +2,7 @@
 import type { TitleCount } from '@reviewer2/shared';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { awardName } from '../titles';
 import TitleInfo from './TitleInfo.vue';
 
 // The titles that one game brought a player (docs/games/keywords.md#titles), as small yellow pills
@@ -20,7 +21,7 @@ const shown = ref(props.titles.length);
 const least = ref(0);
 
 const labelOf = ({ title, count }: TitleCount) => {
-  const name = t(`account.profile.titleNames.${title}`);
+  const name = awardName(t, title);
   return count > 1 ? t('account.profile.titleCount', { title: name, count }) : name;
 };
 

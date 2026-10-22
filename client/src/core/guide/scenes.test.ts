@@ -31,7 +31,9 @@ vi.mock('../socket', async () => {
 });
 vi.mock('../fields', async () => {
   const { shallowRef } = await import('vue');
-  const fields: FieldInfo[] = [{ id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 400, en: 400 } }];
+  const fields: FieldInfo[] = [
+    { id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 400, en: 400 }, pairs: 0 },
+  ];
   return { fields: shallowRef(fields), loadFields: vi.fn() };
 });
 vi.mock('../account', () => ({

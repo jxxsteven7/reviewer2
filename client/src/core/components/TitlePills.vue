@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ContributionCount, StreakKind, TitleCount } from '@reviewer2/shared';
 import { useI18n } from 'vue-i18n';
+import { awardName } from '../titles';
 import TitleInfo from './TitleInfo.vue';
 
 // An account's titles, its streaks, named already (streaks.ts), and its feedback contributions of
@@ -24,7 +25,7 @@ const counted = (label: string, count: number) =>
   <ul class="titles">
     <li v-for="{ title, count } in titles" :key="title">
       <TitleInfo :title="{ kind: 'award', title }" class="pill press press-small">
-        {{ counted(t(`account.profile.titleNames.${title}`), count) }}
+        {{ counted(awardName(t, title), count) }}
       </TitleInfo>
     </li>
     <li v-for="{ kind, length, title } in streaks" :key="kind">

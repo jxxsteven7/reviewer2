@@ -1,4 +1,4 @@
-import type { CardView, ClueRecord, KeywordsView, Seat } from '@reviewer2/shared';
+import type { CardView, ClueRecord, KeywordsView, Seat } from '@reviewer2/shared/keywords';
 import { copyRecord, guessesLeft, remaining, type KeywordsState } from './state';
 
 // The only way game state leaves the server (docs/rules/constraints.md). What a viewer gets

@@ -1,6 +1,6 @@
 import { CODE_ALPHABET, MAX_SCREENS } from '@reviewer2/shared';
 import { describe, expect, test } from 'vitest';
-import { fakeGame } from '../../test/fakeGame';
+import { fakeGame, type FakeData } from '../../test/fakeGame';
 import { testWords } from '../../test/helpers';
 import { clientIp, groupIp } from './clientIp';
 import { newCode } from './codes';
@@ -380,5 +380,66 @@ describe('removals', () => {
     for (let i = MAX_REMOVED; i < MAX_REMOVED + MAX_REMOVED / 2; i += 1) removeNewcomer(room, i);
     expect(room.removal(`seat-${MAX_REMOVED}`, `browser-${MAX_REMOVED + MAX_REMOVED / 2 - 1}`)).toBe('removed');
     expect(room.removal('seat-0')).toBeNull();
+  });
+});
+
+describe('the room and its game', () => {
+  const tableOf = (game: typeof fakeGame, fields = ['general']) => {
+    const rooms = new Rooms(testWords(), seededRng(3), () => 0);
+    const created = rooms.create({ game, language: 'en', fields, key: 'chair', play: true });
+    if (!created.ok) throw new Error(created.error);
+    created.room.attach(created.member, 'socket-chair');
+    return { room: created.room, chair: created.member };
+  };
+
+  test('says who still has to guess the AI players of the game that has just ended', () => {
+    // A game in which whoever said nothing during it still has to guess.
+    const { room, chair } = tableOf({
+      ...fakeGame,
+      guessing: (data: FakeData, id: string) => data.players.includes(id) && !data.talkers.includes(id),
+    });
+    const bob = joinOf(room, 'seat-b', true);
+    room.attach(bob, 'socket-bob');
+    expect(room.start(0)).toMatchObject({ ok: true });
+    const gameId = room.gameId as string;
+    room.act(chair.id, 'test:say', 'done');
+    // Not while the game is on.
+    expect(room.guessing(gameId, [bob.id])).toBe(false);
+    room.act(chair.id, 'test:finish', undefined);
+    expect(room.phase).toBe('ended');
+    expect(room.guessing(gameId, [bob.id])).toBe(true);
+    expect(room.guessing(gameId, [chair.id, bob.id])).toBe(true);
+    expect(room.guessing(gameId, [chair.id])).toBe(false);
+    expect(room.guessing('another', [bob.id])).toBe(false);
+    expect(room.guessing(gameId, [])).toBe(false);
+    // Nor once the room has left the game behind, or for a game that takes no guesses.
+    expect(room.again(gameId)).toMatchObject({ ok: true });
+    expect(room.guessing(gameId, [bob.id])).toBe(false);
+    const plain = tableOf(fakeGame);
+    plain.room.start(0);
+    plain.room.act(plain.chair.id, 'test:finish', undefined);
+    expect(plain.room.guessing(plain.room.gameId as string, [plain.chair.id])).toBe(false);
+  });
+
+  test('takes the rest of a settings message that brings no words of the chair, for a game without a board', () => {
+    const { room, chair } = tableOf({ ...fakeGame, words: undefined }, []);
+    expect(room.setSettings({ words: '', settings: { level: 2 } })).toEqual({ ok: true });
+    expect(room.view({ playerId: chair.id }).data).toMatchObject({ level: 2 });
+    expect(room.setSettings({ words: 'Lamp', settings: { level: 3 } })).toEqual({ ok: false, error: 'bad_words' });
+    expect(room.view({ playerId: chair.id }).data).toMatchObject({ level: 2 });
+  });
+
+  test("credits the chair's own words to whoever set them, also once they have left", () => {
+    const { room, chair } = tableOf(fakeGame);
+    expect(room.context.customAuthor()).toBeNull();
+    expect(room.setSettings({ words: 'Lamp\nKite' })).toEqual({ ok: true });
+    expect(room.context.customAuthor()).toBe(chair.id);
+    const bob = joinOf(room, 'seat-b', true);
+    room.attach(bob, 'socket-bob');
+    room.drop(chair.id);
+    expect(room.chairId).toBe(bob.id);
+    expect(room.context.customAuthor()).toBe(chair.id);
+    expect(room.setSettings({ words: '' })).toEqual({ ok: true });
+    expect(room.context.customAuthor()).toBeNull();
   });
 });

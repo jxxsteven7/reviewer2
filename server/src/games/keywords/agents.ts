@@ -1,12 +1,12 @@
+import { type AgentAnswer } from '@reviewer2/shared';
 import {
   emptyKeywordsFeats,
   TEAMS,
-  type AgentAnswer,
   type AgentGame,
   type KeywordsAgentFeats,
   type StartProblem,
-} from '@reviewer2/shared';
-import { KEYWORDS_MESSAGES } from '@reviewer2/shared/schemas';
+} from '@reviewer2/shared/keywords';
+import { KEYWORDS_MESSAGES } from '@reviewer2/shared/keywords/schemas';
 import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
 import type { KeywordsData } from './index';
 import { seatOf, type Seating } from './seats';
@@ -187,7 +187,7 @@ export function agentMove(
       payload: { ...moment, word: answer.word, count: answer.count, targets: [...answer.targets] },
     };
   }
-  if (game.phase !== 'guess') return null;
+  if (game.phase !== 'guess' || answer.kind !== 'guess') return null;
   const next = answer.picks.find((card) => game.cards[card] && !game.cards[card].revealed);
   if (task.advice) {
     if (next === undefined) return null;

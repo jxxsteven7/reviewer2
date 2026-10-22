@@ -1,5 +1,5 @@
 // What players write, as it is shown: the rules that nicknames (names.ts) and chat messages
-// (games/keywords/chat.ts) share, so that the two can't drift apart. A nickname refuses what a
+// (chat.ts) share, so that the two can't drift apart. A nickname refuses what a
 // message merely drops, so the rules come as cleaners, and a name is refused when a cleaner would
 // change it. Both sides run them: the client while a player types, and the server again before it
 // keeps the text.

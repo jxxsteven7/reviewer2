@@ -1,4 +1,5 @@
-import type { AgentGame, CardColor, CardView, ClueCount, Language, Team } from '@reviewer2/shared';
+import type { Language } from '@reviewer2/shared';
+import type { AgentGame, CardColor, CardView, ClueCount, Team } from '@reviewer2/shared/keywords';
 import type { Persona } from './personas';
 
 // What the agent tells the model and asks it, for the team word guessing game

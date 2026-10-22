@@ -96,6 +96,10 @@ export interface NewFeedback {
   page: FeedbackPage;
   // The browser's, for a bug only.
   userAgent: string | null;
+  // The game it is about, when the player sent it from the end of one that is kept (migration 27),
+  // by the game and the game's ID, or neither.
+  game?: string | null;
+  gameId?: string | null;
 }
 
 export interface Feedback extends NewFeedback {
@@ -156,7 +160,7 @@ const COLUMNS =
   'f.link_profile AS linkProfile, f.issue, ' +
   'f.resolved_pr AS resolvedPr, f.resolved_at AS resolvedAt, f.adopted_at AS adoptedAt, f.summary_zh AS summaryZh, ' +
   'f.summary_en AS summaryEn, f.closed_at AS closedAt, f.deleted_at AS deletedAt, f.version, f.language, f.page, ' +
-  `f.user_agent AS userAgent, a.username, ${STATUS}`;
+  `f.user_agent AS userAgent, f.game, f.game_id AS gameId, a.username, ${STATUS}`;
 const FROM = 'FROM feedback f LEFT JOIN accounts a ON a.id = f.account_id';
 // Every row as Feedback, and the status of every row, for counting, which reads the feedback's
 // own columns alone. Both are read as subqueries, so that `status` in a WHERE clause names the
@@ -201,7 +205,7 @@ export class FeedbackStore {
   ) {
     this.#insert = db.prepare(
       'INSERT INTO feedback (created_at, kind, text, contact, credit, account_id, link_profile, version, ' +
-        'language, page, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'language, page, user_agent, game, game_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     );
     this.#count = db.prepare('SELECT count(*) AS count FROM feedback');
     // What the feedback holds, in bytes of UTF-8, which is what it takes in the file, give or take
@@ -278,6 +282,7 @@ export class FeedbackStore {
   // Keeps the feedback and returns its id, in one of the three ways of NewFeedback.
   add(feedback: NewFeedback): number {
     const { kind, text, contact, credit, accountId, linkProfile, version, language, page, userAgent } = feedback;
+    const about = feedback.game && feedback.gameId ? [feedback.game, feedback.gameId] : [null, null];
     const signed = accountId !== null && (linkProfile || credit !== null);
     const createdAt = new Date(this.now()).toISOString();
     const { lastInsertRowid } = this.#insert.run(
@@ -292,6 +297,7 @@ export class FeedbackStore {
       language,
       page,
       userAgent,
+      ...about,
     );
     return Number(lastInsertRowid);
   }

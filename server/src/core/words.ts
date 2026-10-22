@@ -28,14 +28,37 @@ export const GLOSSES_FILE = join('dictionary', 'han-glosses.json');
 export interface WordListData {
   id: string;
   name: Record<Language, string>;
-  terms: { id: string; zh?: string; en?: string; forms?: Partial<Record<Language, string[]>> }[];
+  terms: {
+    id: string;
+    zh?: string;
+    en?: string;
+    forms?: Partial<Record<Language, string[]>>;
+    related?: string[];
+  }[];
 }
 
 interface Field {
   info: FieldInfo;
   // The words in each language, once each, with the same terms in the other languages.
   words: Record<Language, Entry[]>;
+  // The pairs of related terms (words/README.md#related-terms), each as its two terms in each
+  // language, in the order of the list.
+  pairs: { key: string; words: Record<Language, [BoardWord, BoardWord]> }[];
 }
+
+// A pair of related terms of a field, as a game with pairs draws it (GameModule.words): its key,
+// which the records know it by (pairKey), and its two words in the room's language, in the order of
+// the list, each with its term (BoardWord.term) and, like the words of a pool, its terms in the
+// other languages, its forms and its pinyin.
+export interface WordPair {
+  key: string;
+  words: [BoardWord, BoardWord];
+}
+
+// The key of a pair: its field and the IDs of its two terms, in the order of the list. The IDs of
+// a list never change once merged (words/README.md), so a key stays the same from one version of
+// the library to the next.
+export const pairKey = (field: string, first: string, second: string): string => `${field}:${first}+${second}`;
 
 // A word as the library keeps it: with its `wordKey` and, for a Chinese word, its pinyin, both
 // worked out once, when the library is built, and not again for every pool and every draw.
@@ -73,7 +96,12 @@ export class WordLibrary {
         Language,
         number
       >;
-      this.#fields.set(list.id, { info: { id: list.id, name: { ...list.name }, counts }, words });
+      const pairs = pairsOf(list, skip, (word) => this.glossesOf(word));
+      this.#fields.set(list.id, {
+        info: { id: list.id, name: { ...list.name }, counts, pairs: pairs.length },
+        words,
+        pairs,
+      });
     }
   }
 
@@ -130,6 +158,124 @@ export class WordLibrary {
       return boardWord;
     });
   }
+
+  // Every pair of related terms of the chosen fields, in one language. Throws for a field that the
+  // library doesn't have, as pool() does.
+  pairs(fieldIds: readonly string[], language: Language): WordPair[] {
+    return fieldIds.flatMap((id) => {
+      const field = this.#fields.get(id);
+      if (!field) throw new Error(`no word list has the id "${id}"`);
+      return field.pairs.map(({ key, words }) => ({ key, words: words[language] }));
+    });
+  }
+}
+
+// The pairs of related terms of a list: each id in a term's `related` that names a later term of
+// the list with words in every language, as scripts/check-words.mjs makes sure each does; a pair
+// that isn't one is skipped and reported. Each word comes with its translation, the forms of the
+// term in every language, and, for a Chinese one, its pinyin and the English meanings of its
+// characters, as a word of a pool does.
+function pairsOf(
+  list: WordListData,
+  skip: Skip,
+  glossesOf: (word: string) => string[],
+): { key: string; words: Record<Language, [BoardWord, BoardWord]> }[] {
+  const file = `${list.id}.json`;
+  const index = new Map(list.terms.map((term, at) => [term.id, at]));
+  const wordsOf = (term: WordListData['terms'][number]): Record<Language, BoardWord> | null => {
+    if (!LANGUAGES.every((language) => term[language] !== undefined && wordKey(term[language] ?? '') !== '')) {
+      return null;
+    }
+    const forms = LANGUAGES.flatMap((language) => term.forms?.[language] ?? []).filter((form) => wordKey(form));
+    return Object.fromEntries(
+      LANGUAGES.map((language) => {
+        const word = term[language] as string;
+        const translations = LANGUAGES.filter((other) => other !== language).map((other) => term[other] as string);
+        const pinyin = pinyinOf(word);
+        const glosses = glossesOf(word);
+        const boardWord: BoardWord = {
+          word,
+          translations,
+          ...(forms.length ? { forms } : {}),
+          ...(pinyin === null ? {} : { pinyin }),
+          ...(glosses.length ? { glosses } : {}),
+          term: { id: term.id, field: list.id },
+        };
+        return [language, boardWord];
+      }),
+    ) as Record<Language, BoardWord>;
+  };
+  const pairs: { key: string; words: Record<Language, [BoardWord, BoardWord]> }[] = [];
+  const keys = new Set<string>();
+  list.terms.forEach((term, at) => {
+    for (const other of term.related ?? []) {
+      const later = index.get(other);
+      const second = later === undefined ? undefined : list.terms[later];
+      const first = wordsOf(term);
+      const next = second && wordsOf(second);
+      if (later === undefined || later <= at || !first || !next) {
+        skip(
+          file,
+          `"related" names ${JSON.stringify(other)}, which is no later term with words in every language`,
+          term.id,
+        );
+        continue;
+      }
+      const key = pairKey(list.id, term.id, other);
+      if (keys.has(key)) continue;
+      keys.add(key);
+      pairs.push({
+        key,
+        words: Object.fromEntries(LANGUAGES.map((language) => [language, [first[language], next[language]]])) as Record<
+          Language,
+          [BoardWord, BoardWord]
+        >,
+      });
+    }
+  });
+  return pairs;
+}
+
+// What the records say of a pair (WordPair.key), for a room about to draw one: how many times the
+// players with accounts who are in the room have had it, all of them together, whether two or more
+// of them had it in one game together, and how many players have rated a game with it as good and
+// as having a problem (docs/architecture.md#ratings).
+export interface PairRecord {
+  seen: number;
+  together: boolean;
+  good: number;
+  problems: number;
+}
+
+// How many players rate a pair as having a problem before the draws leave it out.
+export const PAIR_PROBLEMS = 2;
+
+// Draws a pair for a game (docs/games/impostor.md#the-words), from those of the fields that fewer
+// than PAIR_PROBLEMS players found a problem with. It prefers, in turn, a pair that the room hasn't
+// played (`used`, by key) and that no two of its players have had in one game together; then one
+// the room hasn't played; then any. Of those, it takes one that the players have had the fewest
+// times, more likely the more players rated it good. Null when the fields have no pair to draw.
+export function drawPair(
+  pairs: readonly WordPair[],
+  records: ReadonlyMap<string, PairRecord>,
+  used: ReadonlySet<string>,
+  rng: Rng,
+): WordPair | null {
+  const record = (pair: WordPair): PairRecord =>
+    records.get(pair.key) ?? { seen: 0, together: false, good: 0, problems: 0 };
+  const usable = pairs.filter((pair) => record(pair).problems < PAIR_PROBLEMS);
+  const fresh = usable.filter((pair) => !used.has(pair.key));
+  const tier = [fresh.filter((pair) => !record(pair).together), fresh, usable].find((some) => some.length > 0);
+  if (!tier) return null;
+  const fewest = Math.min(...tier.map((pair) => record(pair).seen));
+  const least = tier.filter((pair) => record(pair).seen === fewest);
+  const weights = least.map((pair) => 1 + record(pair).good);
+  let at = rng.int(weights.reduce((sum, weight) => sum + weight, 0));
+  for (const [index, weight] of weights.entries()) {
+    if (at < weight) return least[index] as WordPair;
+    at -= weight;
+  }
+  return least[least.length - 1] as WordPair;
 }
 
 // The key of each word that a pool holds. It is kept beside the word and not in it, because the
@@ -202,7 +348,7 @@ function unique(list: WordListData, skip: Skip, glossesOf: (word: string) => str
   >;
 }
 
-// Whether two words must not share a game, as a game module says (GameModule.wordsClash).
+// Whether two words must not share a game, as a game module says (GameModule.words).
 export type Clash = (a: BoardWord, b: BoardWord) => boolean;
 
 // How many words the fallback of drawWords() looks at, at most: it compares every two of them, and
@@ -397,7 +543,7 @@ function loadGlosses(dir: string, skip: Skip): Glosses {
 // nothing. Whatever it leaves out, it reports with the term's id, or with the term's place in the
 // list when it has no id.
 function readTerm(value: unknown, index: number, skip: (reason: string, term: string) => void): WordListData['terms'] {
-  const term = value as Partial<Record<'id' | 'forms' | Language, unknown>> | null;
+  const term = value as Partial<Record<'id' | 'forms' | 'related' | Language, unknown>> | null;
   if (!term || typeof term !== 'object' || !isText(term.id)) {
     skip('not a term with an "id"', `terms[${index}]`);
     return [];
@@ -413,7 +559,8 @@ function readTerm(value: unknown, index: number, skip: (reason: string, term: st
   if (Object.keys(texts).length === 0) return [];
   const { id } = term;
   const forms = term.forms === undefined ? undefined : readForms(term.forms, (reason) => skip(reason, id));
-  return [{ id, ...texts, ...(forms ? { forms } : {}) }];
+  const related = term.related === undefined ? undefined : readRelated(term.related, (reason) => skip(reason, id));
+  return [{ id, ...texts, ...(forms ? { forms } : {}), ...(related ? { related } : {}) }];
 }
 
 // The forms of a term, `{ "zh": [...], "en": [...] }`, with what isn't text left out and
@@ -438,4 +585,17 @@ function readForms(value: unknown, skip: (reason: string) => void): Partial<Reco
     });
   }
   return forms;
+}
+
+// The IDs of the related terms of a term, with what isn't text left out and reported.
+function readRelated(value: unknown, skip: (reason: string) => void): string[] | undefined {
+  if (!Array.isArray(value)) {
+    skip('"related" is not a list');
+    return undefined;
+  }
+  return value.filter((id: unknown, index) => {
+    if (isText(id)) return true;
+    skip(`"related[${index}]" is not text`);
+    return false;
+  });
 }

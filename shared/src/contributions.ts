@@ -93,3 +93,32 @@ export function checkSummary(text: string | undefined): SummaryCheck {
   if (textLength(cleaned) > MAX_SUMMARY_LENGTH) return { summary: cleaned, problem: 'summary_too_long' };
   return { summary: cleaned, problem: null };
 }
+
+// The content that players gave the word library and the operator adopted into it
+// (docs/architecture.md#content-contributions): a pair of related terms that a setter gave a game
+// of the second game, with the field the setter named, or the chair's own words of a game of the
+// first. They are kept beside the contributions above, and not listed with them: they are no
+// GitHub issue.
+export const CONTENT_KINDS = ['pair', 'words'] as const;
+export type ContentKind = (typeof CONTENT_KINDS)[number];
+
+// The most words that one game may have given: a board of the first game, all of them the chair's.
+export const MAX_CONTENT_WORDS = 25;
+
+// What was adopted: the words, two for a pair, with its field, and up to MAX_CONTENT_WORDS of the
+// chair's own, with none.
+export interface Content {
+  words: string[];
+  field?: string;
+}
+
+export function isContent(kind: unknown, value: unknown): value is Content {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const { words, field, ...rest } = value as Record<string, unknown>;
+  if (Object.keys(rest).length > 0 || !Array.isArray(words)) return false;
+  if (!words.every((word) => typeof word === 'string' && showsSomething(word) && cleanLine(word) === word)) {
+    return false;
+  }
+  if (kind === 'pair') return words.length === 2 && typeof field === 'string' && field !== '';
+  return kind === 'words' && field === undefined && words.length >= 1 && words.length <= MAX_CONTENT_WORDS;
+}

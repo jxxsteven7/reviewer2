@@ -1,19 +1,17 @@
+import { type Language } from '@reviewer2/shared';
 import {
   SPECTATOR,
   TEAMS,
-  type AgentPersona,
   type CardColor,
   type ClueCount,
   type KeywordsReplay,
   type KeywordsSettings,
-  type Language,
   type ReplayGroup,
-  type ReplayPerson,
   type Seat,
   type ShownReplay,
   type Team,
-} from '@reviewer2/shared';
-import type { KeptCount, KeptReplay, Recount } from '../../core/game';
+} from '@reviewer2/shared/keywords';
+import { peopleOf, type KeptCount, type KeptReplay, type Recount } from '../../core/game';
 import type { GameLogData } from '../../core/gameLog';
 import { featsOf } from './agents';
 import { scoreGame } from './match';
@@ -46,6 +44,9 @@ export interface KeywordsSetup {
   settings: KeywordsSettings;
   startingTeam: Team;
   cards: SetupCard[];
+  // Who gave the chair's own words, by player ID, on a board with some (null for a game from before
+  // the record named them).
+  customAuthor?: string | null;
 }
 
 export interface SetupCard {
@@ -177,27 +178,7 @@ export function replayOf(setup: KeywordsSetup, log: GameLogData, language: Langu
 export function shownReplay({ setup, log, language, accounts, viewer }: KeptReplay): ShownReplay | null {
   const replay = replayOf(setup as KeywordsSetup, log, language);
   if (!replay) return null;
-  const deleted = new Set(log.deleted);
-  const people: Record<string, ReplayPerson> = {};
-  for (const id of [...groupIds(replay.groups), ...historyIds(replay.history)]) {
-    if (people[id]) continue;
-    const account = accounts.get(id);
-    const agent = log.agents?.[id];
-    const guest = log.guests?.[id];
-    if (account) {
-      people[id] = {
-        name: account.username,
-        ...(account.avatar === null ? {} : { avatar: account.avatar }),
-        handle: account.handle,
-      };
-    } else if (deleted.has(id)) {
-      people[id] = { deleted: true };
-    } else if (agent !== undefined) {
-      people[id] = { agent: agent as AgentPersona };
-    } else if (guest !== undefined) {
-      people[id] = { guest };
-    }
-  }
+  const people = peopleOf(log, accounts, [...groupIds(replay.groups), ...historyIds(replay.history)]);
   const me = groupIds(replay.groups).find((id) => viewer.has(id)) ?? [...viewer].find((id) => people[id]) ?? null;
   return { ...replay, people, me };
 }

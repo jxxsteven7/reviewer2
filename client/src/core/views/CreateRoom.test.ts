@@ -17,13 +17,25 @@ const socket = vi.hoisted(() => ({
 }));
 vi.mock('../socket', () => socket);
 
-// The word lists come from the server; here they are set by hand. A game's own settings form is
-// left out, since it has nothing to do with the lists.
 vi.mock('../fields', async () => {
   const { shallowRef } = await import('vue');
   return { fields: shallowRef<FieldInfo[] | null>(null), loadFields: vi.fn() };
 });
-vi.mock('../../games', () => ({ games: {} }));
+// The word lists come from the server; here they are set by hand. The first game brings its
+// matches, with their options, but no settings of its own, which have nothing to do with the lists.
+vi.mock('../../games', async () => {
+  const { defaultMatchRules, keywordsMatchRules } = await import('@reviewer2/shared/keywords');
+  const { default: Options } = await import('../../games/keywords/MatchOptions.vue');
+  return {
+    games: {
+      keywords: {
+        defaultSettings: () => undefined,
+        restoreSettings: () => undefined,
+        match: { Options, defaults: defaultMatchRules, restore: keywordsMatchRules },
+      },
+    },
+  };
+});
 // A guest, unless a test logs in.
 const signedIn = vi.hoisted(() => ({ account: { loaded: true, summary: null as object | null, mail: false } }));
 vi.mock('../account', async () => {
@@ -36,8 +48,8 @@ const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
 
 const FIELDS: FieldInfo[] = [
-  { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } },
-  { id: 'ml', name: { zh: 'M', en: 'Machine learning' }, counts: { zh: 3, en: 30 } },
+  { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 },
+  { id: 'ml', name: { zh: 'M', en: 'Machine learning' }, counts: { zh: 3, en: 30 }, pairs: 0 },
 ];
 
 beforeEach(() => {
@@ -53,7 +65,7 @@ beforeEach(() => {
 });
 
 async function opened() {
-  return mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
+  return mount(CreateRoom, { props: { game: 'keywords' }, global: { plugins: [i18n] } });
 }
 
 type Wrapper = Awaited<ReturnType<typeof opened>>;
@@ -99,7 +111,7 @@ describe('the room setup', () => {
     const guest = await opened();
     expect(guest.findAll('input[type="text"]')).toHaveLength(0);
     expect(guest.get('.notice').text()).toBe(
-      'Games are recorded, the group chat included, to train AI players and for research; nothing published carries names.',
+      'Games are recorded, the chats included, to train AI players and for research; nothing published carries names.',
     );
     await box(guest, 0).setValue(true);
     await guest.get('form').trigger('submit');
@@ -114,7 +126,7 @@ describe('the room setup', () => {
       contributions: [],
       roomSetup: {},
     };
-    const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
+    const wrapper = mount(CreateRoom, { props: { game: 'keywords' }, global: { plugins: [i18n] } });
     expect(wrapper.find('input[autocomplete="nickname"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Ann Lee');
     expect(wrapper.find('.notice').exists()).toBe(false);
@@ -210,7 +222,7 @@ describe('the room setup', () => {
       }),
     );
     const wrapper = mount(CreateRoom, {
-      props: { game: 'keywords', wordsNeeded: 25, fresh: true },
+      props: { game: 'keywords', fresh: true },
       global: { plugins: [i18n] },
     });
     expect(box(wrapper, 0).element.checked).toBe(true);
@@ -271,6 +283,7 @@ describe('the room setup', () => {
 
   test("reads the last room's settings for this language, told which language they were kept in", async () => {
     const restoreSettings = vi.fn(() => ({ restored: true }));
+    const kept = games.keywords;
     games.keywords = {
       Settings: { render: () => h('div') },
       defaultSettings: () => ({}),
@@ -288,14 +301,14 @@ describe('the room setup', () => {
       await opened();
       expect(restoreSettings).toHaveBeenLastCalledWith({}, 'en', null);
     } finally {
-      delete games.keywords;
+      games.keywords = kept as GameScreens;
     }
   });
 
   test("starts an account's room from the setup that the server kept for it", async () => {
     const room = { language: 'en', fields: ['general'], randomFields: false, match: null, public: true, play: true };
     signedIn.account.summary = { username: 'Ann', avatar: null, roomSetup: { keywords: { room } } };
-    const wrapper = mount(CreateRoom, { props: { game: 'keywords', wordsNeeded: 25 }, global: { plugins: [i18n] } });
+    const wrapper = mount(CreateRoom, { props: { game: 'keywords' }, global: { plugins: [i18n] } });
     expect(box(wrapper, 0).element.checked).toBe(true);
     await wrapper.get('form').trigger('submit');
     await flushPromises();
@@ -316,7 +329,7 @@ describe('the room setup', () => {
   });
 
   test('chooses every list there is words enough in, or some of them at random, at least one', async () => {
-    fields.value = [...FIELDS, { id: 'tiny', name: { zh: 'T', en: 'Tiny' }, counts: { zh: 3, en: 3 } }];
+    fields.value = [...FIELDS, { id: 'tiny', name: { zh: 'T', en: 'Tiny' }, counts: { zh: 3, en: 3 }, pairs: 0 }];
     const wrapper = await opened();
     const checked = () => wrapper.findAll<HTMLInputElement>('.fields input:checked').map((input) => input.element);
     const [atRandom, all] = wrapper.findAll('.tool');

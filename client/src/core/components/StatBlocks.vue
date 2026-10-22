@@ -5,20 +5,21 @@
 // record (`roles`) are six: the four of before and the rates in each role, which go on a second
 // line of their own where four is all that fits, as on a phone or in a panel, and in one line of
 // six where it fits, as on a wide account page; the blocks ask their own box, not the screen, since
-// the same record sits in a narrow panel on a wide screen. A count under a rate may wrap between
-// the number and its word, so that a long one grows the block rather than be cut.
+// the same record sits in a narrow panel on a wide screen. Blocks in `thirds` stand three to a
+// line, as a game with three roles has them. A count under a rate may wrap between the number and
+// its word, so that a long one grows the block rather than be cut.
 export interface StatBlock {
   label: string;
   value: string;
   detail?: string;
 }
 
-defineProps<{ blocks: StatBlock[]; roles?: boolean }>();
+defineProps<{ blocks: StatBlock[]; roles?: boolean; thirds?: boolean }>();
 </script>
 
 <template>
   <div class="stat-blocks-box">
-    <dl class="stat-blocks" :class="{ roles }">
+    <dl class="stat-blocks" :class="{ roles, thirds }">
       <div v-for="block in blocks" :key="block.label" class="block">
         <dt>{{ block.label }}</dt>
         <dd class="value num">{{ block.value }}</dd>
@@ -76,6 +77,10 @@ dd {
   color: var(--ink-2);
   font-size: var(--text-xs);
   overflow-wrap: anywhere;
+}
+
+.thirds {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* The six blocks of a record: the rates in each role on a line of their own under the four, each

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { clueCounts, defaultSettings, type Language, type Mark, type Team } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { clueCounts, defaultSettings, type Mark, type Team } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { spot, useSpot } from '../../../core/guide/spot';
@@ -42,7 +43,7 @@ const groups = computed(() => {
   ];
 });
 const waiting = computed(() => {
-  const group = t(`lobby.group.${game.value.team}`);
+  const group = t(`games.keywords.groups.${game.value.team}`);
   return game.value.phase === 'clue' ? t('game.waitClue', { group }) : t('game.waitGuess', { group });
 });
 const counts = computed(() => clueCounts(settings.value.guessRule, game.value.remaining.red));

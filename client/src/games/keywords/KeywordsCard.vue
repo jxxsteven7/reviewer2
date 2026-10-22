@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { hasHan, type CardView, type Language, type Mark, type Team } from '@reviewer2/shared';
+import { hasHan, type Language } from '@reviewer2/shared';
+import { type CardView, type Mark, type Team } from '@reviewer2/shared/keywords';
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import PlayerAvatar from '../../core/components/PlayerAvatar.vue';

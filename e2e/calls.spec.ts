@@ -12,7 +12,7 @@ test('a group whose first card is Reviewer 2 is called out to the whole room, by
   const team = await teamOnTurn(table.captains.red);
   await giveClue(table.captains[team], 'Hint', 2, 'en');
   await reveal(table.guessers[team], await keyCard(table.captains[team], 'reviewer2'));
-  const group = text.lobby.group[team];
+  const group = text.games.keywords.groups[team];
   const lines = Object.values(text.game.calls.instant_reject).map((line) => interpolate(line, { group }));
   for (const page of [
     table.captains.red,

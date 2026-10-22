@@ -46,23 +46,6 @@ export interface GameResult {
   reason: EndReason;
 }
 
-// A term for a card: the word in the room's language and, when the word library has them, the
-// same term in its other languages, and the other forms of the term that the library lists in
-// any language, such as "dataset" for "Data". A Chinese word also comes with its pinyin, which
-// the server works out, without tones and with a space between the syllables, and with the English
-// meanings of its characters, as the dictionary in words/dictionary/ gives them (`glosses`). The
-// clue check holds a clue against all of these (see clue.ts).
-export interface BoardWord {
-  word: string;
-  translations?: readonly string[];
-  forms?: readonly string[];
-  pinyin?: string;
-  glosses?: readonly string[];
-  // A word of the chair's own (docs/games/keywords.md#custom-words), which the record of the game
-  // marks on its card; a word of the lists has none.
-  custom?: true;
-}
-
 // What a player sees of a card. `color` is there only when the player may know it: the card has
 // been revealed, the player is a captain, or the game is over. Otherwise the key is absent.
 // `translations`, `forms` and `pinyin` are there when the card has any, for the clue check on the
@@ -119,6 +102,13 @@ export const DEADLINE_HERO_MS = 3000;
 export const EVENT_KINDS = ['paused', 'resumed', 'extended', 'missed', 'hero'] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
 export const EVENTS_KEPT = 50;
+
+// How many messages a group keeps. Every change to a room sends each member a whole snapshot
+// with their group's chat in it, so the chat decides how large a snapshot can get, and a guesser
+// may send ten messages a second, each of which goes out to everyone in the room with the whole
+// chat. Twenty messages are what a group has said in the turn or two that it is still thinking
+// about, and at most 20,000 UTF-16 units in a snapshot.
+export const CHAT_KEPT = 20;
 
 export interface GameEvent {
   turn: number;

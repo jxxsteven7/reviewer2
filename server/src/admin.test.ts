@@ -8,9 +8,11 @@ import { addAccounts } from '../test/statistics';
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { admin } from './admin';
+import { ContentStore } from './store/content';
 import { ContributionStore } from './store/contributions';
 import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 import { FeedbackStore, type NewFeedback } from './store/feedback';
+import { ReplayStore } from './store/records';
 
 // The operator's commands, on a data directory as the server leaves it.
 
@@ -476,6 +478,24 @@ describe('feedback list', () => {
     expect(listed('--status', 'trash').lines[0]).toBe('1 piece of feedback in the trash:');
   });
 
+  test('names the game that feedback sent from the end of one is about', () => {
+    vi.useFakeTimers({ now: NOW });
+    database.db.exec(
+      'INSERT INTO replays (game_id, game, ended_at, log, ending, started_at, accounts, guests, agents, takeover, in_match, ' +
+        "practice, language, fields, version, words) VALUES ('g7', 'impostor', 'now', " +
+        `'{"v":2,"game":"impostor","gameId":"g7","start":null,"entries":[]}', 'finished', 'now', 0, 1, 0, 0, 0, 0, 'en', '[]', 'v', 'w')`,
+    );
+    new FeedbackStore(database.db).add(feedback({ game: 'impostor', gameId: 'g7' }));
+    expect(listed().lines.slice(2)).toEqual([
+      '#1  2026-11-01 09:00 UTC  Idea  New',
+      '    from: anonymous',
+      '    contact: (none)',
+      '    game: impostor g7',
+      '    > A timer, please.',
+    ]);
+    expect(JSON.parse(listed('--json').lines.join('\n'))).toMatchObject([{ game: 'impostor', gameId: 'g7' }]);
+  });
+
   test('gives scripts the same as JSON', () => {
     sent();
     const entries = JSON.parse(listed('--status', 'all', '--json').lines.join('\n'));
@@ -499,6 +519,8 @@ describe('feedback list', () => {
       contact: 'wechat: ann',
       text: 'It froze.\n\nOn the board.',
       userAgent: AGENT,
+      game: null,
+      gameId: null,
     });
     expect(entries.find(({ id }: { id: number }) => id === 6)).toEqual({
       id: 6,
@@ -515,6 +537,8 @@ describe('feedback list', () => {
       credit: null,
       nameTakenBy: null,
       contact: null,
+      game: null,
+      gameId: null,
       ...same,
     });
     expect(entries.find(({ id }: { id: number }) => id === 3)).toMatchObject({
@@ -1743,5 +1767,87 @@ describe('github list', () => {
     ]);
     // It only reads.
     expect(run('github', 'list', '14')).toBe(2);
+  });
+});
+
+describe('content', () => {
+  // A kept game of the second game whose setter, Ann, gave the words, as she asked, named; and a
+  // game of the first game without words of the chair's own.
+  function kept(gameId: string, game: string, setup: object, players: { playerId: string; accountId: number }[]) {
+    new ReplayStore(database.db, () => Date.parse('2026-10-20T08:00:00.000Z')).add({
+      game,
+      gameId,
+      ending: 'finished',
+      outcome: { winner: 'student', reason: 'caught' },
+      durationMs: 1000,
+      setup,
+      log: { v: 2, game, gameId, start: null, entries: [{ t: 1, by: null, type: 'end' }] },
+      agentLog: null,
+      players,
+      counts: { accounts: players.length, guests: 0, agents: 0 },
+      takeover: false,
+      scoresNothing: false,
+      agentPlays: [],
+      match: null,
+      inMatch: false,
+      practice: false,
+      language: 'en',
+      fields: ['fruit'],
+      version: 'v',
+      rules: 1,
+      words: 'w',
+    });
+  }
+  function games(): number {
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION);
+    if (!ann) throw new Error('no account');
+    const setup = (named: boolean) => ({
+      settings: {},
+      players: [],
+      words: { student: 'Apple', reviewer2: 'Pear' },
+      source: { kind: 'setter', setter: 's', field: 'fruit', named },
+    });
+    kept('g1', 'impostor', setup(true), [{ playerId: 's', accountId: ann.id }]);
+    kept('g2', 'impostor', setup(true), [{ playerId: 's', accountId: ann.id }]);
+    kept('g3', 'keywords', { settings: {}, startingTeam: 'red', cards: [] }, []);
+    return ann.id;
+  }
+
+  test('adopts the words a player gave in a game once, named as they asked or not, and lists them', () => {
+    vi.useFakeTimers({ now: Date.parse('2026-10-21T08:00:00.000Z') });
+    const ann = games();
+    expect(run('content', 'adopt', 'g1', ...SAID)).toBe(0);
+    expect(printed).toEqual([
+      'Adopted, as #1:',
+      `#1  2026-10-21  impostor g1  pair  Apple / Pear (fruit)  Ann  ${ZH} · ${EN}`,
+    ]);
+    expect(run('content', 'adopt', 'g1', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe('The words of game g1 were adopted already (content list).');
+    expect(run('content', 'adopt', 'g2', '--anonymous', ...SAID)).toBe(0);
+    expect(printed.at(-1)).toBe(`#2  2026-10-21  impostor g2  pair  Apple / Pear (fruit)  Ann, unnamed  ${ZH} · ${EN}`);
+    // A game without words of a player's own, and one that isn't kept, have nothing to adopt.
+    expect(run('content', 'adopt', 'g3', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe('Game g3 holds no words that a player gave.');
+    expect(run('content', 'adopt', 'g9', ...SAID)).toBe(1);
+    expect(printed.at(-1)).toBe('No game g9 is kept.');
+    expect(run('content', 'adopt', 'g3')).toBe(2);
+    printed.length = 0;
+    expect(run('content', 'list')).toBe(0);
+    expect(printed).toEqual([
+      '2 adoptions from the games, the latest first:',
+      `#2  2026-10-21  impostor g2  pair  Apple / Pear (fruit)  Ann, unnamed  ${ZH} · ${EN}`,
+      `#1  2026-10-21  impostor g1  pair  Apple / Pear (fruit)  Ann  ${ZH} · ${EN}`,
+    ]);
+    // Words given by an account that is deleted since name nobody, and stay.
+    new ContentStore(database.db).forget(ann);
+    accounts.store.delete(ann);
+    printed.length = 0;
+    expect(run('content', 'list')).toBe(0);
+    expect(printed.at(-1)).toBe(`#1  2026-10-21  impostor g1  pair  Apple / Pear (fruit)  nobody named  ${ZH} · ${EN}`);
+  });
+
+  test('says when nothing was adopted', () => {
+    expect(run('content', 'list')).toBe(0);
+    expect(printed).toEqual(['No words adopted from the games yet.']);
   });
 });

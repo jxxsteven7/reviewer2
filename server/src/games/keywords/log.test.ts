@@ -18,11 +18,15 @@ describe('the log of the team word guessing game', () => {
     language: 'en',
     rng: seededRng(1),
     chairId: 'ann',
+    public: false,
     now: () => 0,
     keyOf: (id) => keys[id] ?? id,
     isOnline: () => true,
     agentOf: () => null,
     playerIds: () => Object.keys(keys),
+    hasAccount: () => false,
+    hasField: () => true,
+    customAuthor: () => null,
     titleCount: () => null,
     awardsTitles: () => false,
   });
@@ -146,6 +150,33 @@ describe('the log of the team word guessing game', () => {
     if (!clued.ok) throw new Error(clued.error);
     expect(keywordsGame.due?.(clued.data)).toEqual([student]);
     expect(keywordsGame.rulesVersion).toBe(6);
+    expect(keywordsGame.shapes?.setup(keywordsGame.setup?.(data))).toBe(true);
+    // A board of the lists alone has nobody who gave words, and nothing for the word library.
+    expect(keywordsGame.contributors?.(data, ctx)).toEqual([]);
+    expect(keywordsGame.content?.(keywordsGame.setup?.(data))).toBeNull();
+  });
+
+  test("names who gave the chair's own words on the board, and keeps them for the word library", () => {
+    const ctx = { ...context(), phase: 'playing' as const, customAuthor: () => 'bob' };
+    const words = Array.from({ length: 25 }, (_, index) =>
+      index < 2 ? { word: `Word${index}`, custom: true as const } : { word: `Word${index}` },
+    );
+    const data = keywordsGame.start(seated(ctx), ctx, words, gameId);
+    const setup = keywordsGame.setup?.(data) as { customAuthor?: string | null; cards: { word: string }[] };
+    expect(setup.customAuthor).toBe('bob');
+    expect(keywordsGame.shapes?.setup(setup)).toBe(true);
+    // A board with words of the chair's own names who gave them, or nobody for an old game, and
+    // one without names nobody.
+    expect(keywordsGame.shapes?.setup({ ...setup, customAuthor: null })).toBe(true);
+    expect(keywordsGame.shapes?.setup({ ...setup, customAuthor: 3 })).toBe(false);
+    expect(keywordsGame.shapes?.setup({ ...setup, customAuthor: undefined })).toBe(false);
+    expect(keywordsGame.contributors?.(data, ctx)).toEqual(['key-bob']);
+    expect(keywordsGame.content?.(setup)).toEqual({
+      kind: 'words',
+      content: { words: setup.cards.filter((card) => /^Word[01]$/.test(card.word)).map((card) => card.word) },
+      author: 'bob',
+      named: true,
+    });
   });
 
   test('counts what an AI player did, and says how the game came out once it is over', () => {

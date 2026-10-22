@@ -3,8 +3,11 @@ import { ACCOUNT_API, emptyGameCounts, type GameRecord, type GameRecords, type R
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
+import { gameInfo } from '../../games/info';
 import { request } from '../account';
 import AgentIcon from '../components/AgentIcon.vue';
+import BetaNote from '../components/BetaNote.vue';
+import GameTabs from '../components/GameTabs.vue';
 import RecordStats from '../components/RecordStats.vue';
 import TitleInfo from '../components/TitleInfo.vue';
 import UiButton from '../components/UiButton.vue';
@@ -12,16 +15,18 @@ import UiSheet from '../components/UiSheet.vue';
 import { formatStamp } from '../dates';
 import { errorKey } from '../errors';
 import { points } from '../points';
-import { RECORDS_GAME } from '../records';
 import { toastError } from '../toast';
 import { useBusy } from '../useBusy';
 
-// The account's record of the first game (RECORDS_GAME): the numbers of games, wins and matches
-// (RecordStats.vue); then the last 20 games, a line each: when it ended, in numbers, whether it
-// was an ordinary game or which game of its match, or, for a game that an AI played in, which is
-// never one of a match, the robot's head and "AI" in their place, which a tap explains, the role
-// on a chip in the group's tint, and the decision that the group got, by its short English name in
-// every language, with a round button on the right to watch it again; then the last 20 matches, in
+// The account's record, one game at a time, as the tab chosen names it (GameTabs.vue), with a line
+// under the tab of a game in beta on what a big update may do to it (BetaNote.vue): the game's
+// counts (RecordStats.vue); then its last 20 games, a line each: when it ended, in numbers, whether
+// it was an ordinary game or which game of its match, or, for a game that an AI played in, which is
+// never one of a match, the robot's head and "AI" in their place, which a tap explains, the role on
+// a chip, in the group's tint in a game of groups and in ink in one where everyone plays alone, and
+// what the game made of it: the decision that the group got, by its short English name in every
+// language, or how the player's game went; with a round button on the right to watch it again;
+// then the last 20 matches, in
 // the same look, each with its games, its place and total, and its title on the right. The columns
 // of a list line up from one line to the next where the browser has subgrids. What doesn't fit, a
 // long decision or title, is cut short with an ellipsis; a tap on it says what it means, in full
@@ -29,12 +34,14 @@ import { useBusy } from '../useBusy';
 // the server kept to watch again opens in a sheet, in the game's own replay viewer.
 const { t, te } = useI18n();
 const records = ref<RecordsView | null>(null);
+const game = ref('keywords');
+const info = computed(() => gameInfo(game.value));
 // The record of the game shown, which is empty for an account that has finished none of it.
 const emptyRecords = (): GameRecords => {
   const counts = emptyGameCounts();
   return { ...counts, recent: [], matches: { ...counts.matches, recent: [] } };
 };
-const shown = computed<GameRecords | null>(() => records.value && (records.value[RECORDS_GAME] ?? emptyRecords()));
+const shown = computed<GameRecords | null>(() => records.value && (records.value[game.value] ?? emptyRecords()));
 // Every game on the record, in matches or not.
 const played = computed(() => (shown.value ? shown.value.ordinary.games + shown.value.inMatches.games : 0));
 const failed = ref<string | undefined>();
@@ -75,18 +82,26 @@ const moment = (iso: string) => {
   const { day, time } = formatStamp(iso);
   return `${day} ${time}`;
 };
-const role = (record: GameRecord) => label(`account.profile.roles.${record.role}`, record.role);
-// The decision by its short name, where the locale files have one, as they do for the first game.
-const short = (verdict: string) =>
-  label(`game.letter.short.${verdict}`, label(`game.letter.verdicts.${verdict}`, verdict));
+const role = (record: GameRecord) => label(`games.${record.game}.roles.${record.role}`, record.role);
+// The decision by its short name, where the locale files have one, as they do for both games.
+const short = (record: GameRecord) =>
+  label(
+    `games.${record.game}.letter.short.${record.verdict}`,
+    label(`games.${record.game}.letter.verdicts.${record.verdict}`, record.verdict),
+  );
+// The record's side, as a screen reader hears it: the group, in a game of groups.
+const side = (record: GameRecord) =>
+  gameInfo(record.game)?.groups ? label(`games.${record.game}.groups.${record.side}`, record.side) : null;
 
 // Whether the locale files explain the decision, as they do for every decision of the first game.
-const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
+const explained = (record: GameRecord) => te(`games.${record.game}.letter.explain.${record.verdict}`);
 </script>
 
 <template>
   <div v-if="shown" class="records">
-    <RecordStats :counts="shown" />
+    <GameTabs v-model="game" />
+    <BetaNote v-if="info?.beta" :game="game" text="beta.records" />
+    <RecordStats :game="game" :counts="shown" />
     <p v-if="played === 0" class="note">{{ t('account.profile.noRecords') }}</p>
     <template v-else>
       <h3>{{ t('account.profile.recent') }}</h3>
@@ -108,23 +123,21 @@ const explained = (verdict: string) => te(`game.letter.explain.${verdict}`);
             record.match ? t('account.profile.matchTag', record.match) : t('account.profile.ordinaryTag')
           }}</span>
           <span class="outcome">
-            <span class="role" :class="record.side"
+            <span v-if="side(record) !== null" class="role" :class="record.side"
               ><span class="sr-only">{{
-                t('account.profile.recordLine', {
-                  side: label(`lobby.group.${record.side}`, record.side),
-                  role: role(record),
-                })
+                t('account.profile.recordLine', { side: side(record), role: role(record) })
               }}</span
               ><span aria-hidden="true">{{ role(record) }}</span></span
             >
+            <span v-else class="role alone">{{ role(record) }}</span>
             <TitleInfo
-              v-if="explained(record.verdict)"
-              :title="{ kind: 'verdict', verdict: record.verdict }"
+              v-if="explained(record)"
+              :title="{ kind: 'verdict', game: record.game, verdict: record.verdict }"
               class="verdict"
               :class="record.side"
-              >{{ short(record.verdict) }}</TitleInfo
+              >{{ short(record) }}</TitleInfo
             >
-            <span v-else class="verdict">{{ short(record.verdict) }}</span>
+            <span v-else class="verdict">{{ short(record) }}</span>
           </span>
           <button
             v-if="games[record.game]"
@@ -343,6 +356,12 @@ h3 {
 .role.blue {
   background: var(--blue-tint);
   color: var(--blue-deep);
+}
+
+/* A role in a game where everyone plays alone, a fact about the player, in ink. */
+.role.alone {
+  background: var(--ink);
+  color: var(--on-ink);
 }
 
 /* The decision, after the rest, and a match's title, on the right; either is cut short where the

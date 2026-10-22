@@ -1,5 +1,6 @@
 import { join } from 'node:path';
-import { BOARD_SIZE, cardsClash, LANGUAGES, otherTeam, TEAMS, type CardColor } from '@reviewer2/shared';
+import { LANGUAGES } from '@reviewer2/shared';
+import { BOARD_SIZE, cardsClash, otherTeam, TEAMS, type CardColor } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { pick, seededRng, shuffle } from '../../core/random';
 import { drawWords, loadWordLibrary } from '../../core/words';
@@ -134,7 +135,7 @@ describe('dealing from the word library', () => {
   const fields = library.fields().map(({ id }) => id);
 
   test('lets the room keep apart the words that give each other away', () => {
-    expect(keywordsGame.wordsClash).toBe(cardsClash);
+    expect(keywordsGame.words).toEqual({ board: 25, clash: cardsClash });
   });
 
   test('puts no two words on a board of which one repeats the other, for every list and some mixes', () => {

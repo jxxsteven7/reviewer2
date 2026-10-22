@@ -39,6 +39,7 @@ const view = (code: string, roomId: string, me: string | null, rev = 1): RoomVie
   randomFields: false,
   public: false,
   customWordCount: 0,
+  rating: null,
   phase: 'lobby',
   round: 0,
   gameId: null,

@@ -1,3 +1,4 @@
+import type { Language } from '@reviewer2/shared';
 import type {
   CardColor,
   CardMark,
@@ -7,11 +8,10 @@ import type {
   GameEvent,
   GameResult,
   KeywordsSettings,
-  Language,
   Selection,
   Team,
   TurnPhase,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 
 // The full state of one game. It never leaves the server as it is: view.ts decides what each
 // player sees of it.

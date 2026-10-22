@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@reviewer2/shared';
+import type { ChatMessage } from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { clearMemory, writeStored } from '../../core/storage';
 import { byTurn, markSeen, seenIn, unread } from './chat';

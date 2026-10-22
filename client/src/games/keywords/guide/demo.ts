@@ -1,15 +1,15 @@
+import { type Language } from '@reviewer2/shared';
 import {
   defaultSettings,
   type CardColor,
   type ClueRecord,
   type KeywordsRoomData,
   type KeywordsView,
-  type Language,
   type Mark,
   type Seat,
   type StartProblem,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import type { SpotTarget } from '../../../core/guide/spot';
 import type { ShownPlayer, ShownRoom } from '../../../core/room';
 import type { Chooser } from '../useKeywords';
@@ -438,6 +438,7 @@ export function demoRoom(t: Translate, language: Language, options: RoomOptions)
     duos: [],
     agentsPlayed: false,
     points: [],
+    rating: null,
     data,
   };
 }

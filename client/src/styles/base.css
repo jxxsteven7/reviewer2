@@ -105,6 +105,30 @@ button {
   box-shadow: var(--shadow-2);
 }
 
+/* A tag (docs/rules/display.md#panels-rows-and-tags): an ink pill that states a fact about someone
+   or something, as "you" or "out", and, `outlined`, a white one with the thin outline that marks an
+   AI player. */
+.tag-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.tag-pill.outlined {
+  border: var(--line-thin) solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+
 /* A sticker that can be pressed (docs/rules/display.md), the same everywhere: on a computer, a hover
    lifts it a pixel, with its shadow a pixel longer; a press pushes it into its shadow, which goes;
    both ease. `press` is on a sticker that is its own button. Where the button is larger than the

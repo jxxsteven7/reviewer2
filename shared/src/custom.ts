@@ -1,10 +1,10 @@
-import { hasHan } from '../../han';
-import { textLength } from '../../text';
-import { cleanClue, wordKey } from './clue';
+import { hasHan } from './han';
+import { textLength } from './text';
+import { cleanWord, wordKey } from './words';
 
 // The chair's own words for a private room (docs/games/keywords.md#custom-words): pasted one per
 // line, or separated by commas or the Chinese enumeration comma. Each is cleaned as a clue is
-// (cleanClue), an entry that is the same word as an earlier one (wordKey) or has no letter or
+// (cleanWord), an entry that is the same word as an earlier one (wordKey) or has no letter or
 // digit is dropped, and each must fit on a card. Both sides run this: the chair's editor while
 // they type, and the server before it keeps the words.
 
@@ -36,7 +36,7 @@ export function parseCustomWords(text: string): CustomWords {
   // The types promise a string, but the text comes from a player.
   const entries = typeof text === 'string' && text.length <= MAX_CUSTOM_INPUT ? text.split(SEPARATOR) : [];
   for (const entry of entries) {
-    const word = cleanClue(entry);
+    const word = cleanWord(entry);
     const key = wordKey(word);
     if (key === '' || keys.has(key)) continue;
     keys.add(key);

@@ -1,11 +1,11 @@
+import { type GamePoints } from '@reviewer2/shared';
 import {
   defaultSettings,
   type ClueRecord,
-  type GamePoints,
   type KeywordsRoomData,
   type KeywordsScoreDetail,
   type KeywordsView,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { endFloats, endsBetween, revealedBetween, revealFloats, signed, turnedBetween } from './floats';
 
@@ -117,19 +117,19 @@ describe('a card revealed between two snapshots', () => {
     const reveal = { color: 'neutral' as const, by: 'red' as const };
     const neutral = view({ history: [record('red', [{ card: 0, color: 'neutral', player: 'bob', at: 0 }])] });
     const forBob = revealFloats(data('red'), 'bob', reveal, before, neutral);
-    expect(forBob.mine).toEqual({ text: '-1', team: 'red' });
+    expect(forBob.mine).toEqual({ text: '-1', tint: 'red' });
     expect(Object.fromEntries(forBob.players)).toEqual({
-      ann: { text: '-2', team: 'red' },
-      bob: { text: '-1', team: 'red' },
+      ann: { text: '-2', tint: 'red' },
+      bob: { text: '-1', tint: 'red' },
     });
-    expect(revealFloats(data('red'), 'ann', reveal, before, neutral).mine).toEqual({ text: '-2', team: 'red' });
+    expect(revealFloats(data('red'), 'ann', reveal, before, neutral).mine).toEqual({ text: '-2', tint: 'red' });
     // The other group, and a spectator, see nothing on the card.
     expect(revealFloats(data('blue'), 'dan', reveal, before, neutral).mine).toBeNull();
     expect(revealFloats(data(null), 'eve', reveal, before, neutral).mine).toBeNull();
     // A card of the group's own is +1 for everyone in it, the PI too.
     const own = view({ history: [record('blue', [{ card: 0, color: 'blue', player: 'dan', at: 0 }])] });
     const found = revealFloats(data('blue'), 'cat', { color: 'blue', by: 'blue' }, before, own);
-    expect(found.mine).toEqual({ text: '+1', team: 'blue' });
+    expect(found.mine).toEqual({ text: '+1', tint: 'blue' });
     expect([...found.players.keys()]).toEqual(['cat', 'dan']);
   });
 
@@ -143,32 +143,32 @@ describe('a card revealed between two snapshots', () => {
     // a point more each, as one number.
     const third = revealFloats(data('blue'), 'dan', reveal, step(2), step(3));
     expect(Object.fromEntries(third.players)).toEqual({
-      cat: { text: '+1', team: 'blue' },
-      dan: { text: '+1', team: 'blue' },
+      cat: { text: '+1', tint: 'blue' },
+      dan: { text: '+1', tint: 'blue' },
     });
     const fourth = revealFloats(data('blue'), 'dan', reveal, step(3), step(4));
-    expect(fourth.mine).toEqual({ text: '+2', team: 'blue' });
+    expect(fourth.mine).toEqual({ text: '+2', tint: 'blue' });
     expect(Object.fromEntries(fourth.players)).toEqual({
-      cat: { text: '+2', team: 'blue' },
-      dan: { text: '+2', team: 'blue' },
+      cat: { text: '+2', tint: 'blue' },
+      dan: { text: '+2', tint: 'blue' },
     });
     // The fifth, with a clue of 5: the PI's big clue again, and nothing more for the students.
     const five = (found: number) => view({ history: [{ ...record('blue', guesses(found)), count: 5 }] });
     const fifth = revealFloats(data('blue'), 'cat', reveal, five(4), five(5));
-    expect(fifth.mine).toEqual({ text: '+2', team: 'blue' });
+    expect(fifth.mine).toEqual({ text: '+2', tint: 'blue' });
     expect(Object.fromEntries(fifth.players)).toEqual({
-      cat: { text: '+2', team: 'blue' },
-      dan: { text: '+2', team: 'blue' },
+      cat: { text: '+2', tint: 'blue' },
+      dan: { text: '+2', tint: 'blue' },
     });
     // The big clue is the clue-giver's: a PI who took the seat over from one who left has only the
     // card's point.
     const left = (found: number) =>
       view({ history: [{ ...record('blue', guesses(found)), count: 5, captain: 'gone' }] });
     const taken = revealFloats(data('blue'), 'cat', reveal, left(4), left(5));
-    expect(taken.mine).toEqual({ text: '+1', team: 'blue' });
+    expect(taken.mine).toEqual({ text: '+1', tint: 'blue' });
     expect(Object.fromEntries(taken.players)).toEqual({
-      cat: { text: '+1', team: 'blue' },
-      dan: { text: '+2', team: 'blue' },
+      cat: { text: '+1', tint: 'blue' },
+      dan: { text: '+2', tint: 'blue' },
     });
   });
 });
@@ -203,30 +203,30 @@ describe('the end of a game', () => {
       { playerId: 'dan', points: 0, detail: detail('guesser', false) },
     ];
     const forAnn = endFloats(data('red'), 'ann', points);
-    expect(forAnn.mine).toEqual({ text: '+4', team: 'red' });
+    expect(forAnn.mine).toEqual({ text: '+4', tint: 'red' });
     expect(Object.fromEntries(forAnn.players)).toEqual({
-      ann: { text: '+4', team: 'red' },
-      bob: { text: '+3', team: 'red' },
+      ann: { text: '+4', tint: 'red' },
+      bob: { text: '+3', tint: 'red' },
     });
     const heavenly: GamePoints[] = [
       { playerId: 'ann', points: 0, detail: detail('captain', true, { bigClues: 6, heavenlyHand: true }) },
       { playerId: 'bob', points: 0, detail: detail('guesser', true, { heavenlyHand: true }) },
     ];
     expect(Object.fromEntries(endFloats(data('red'), 'ann', heavenly).players)).toEqual({
-      ann: { text: '+7', team: 'red' },
-      bob: { text: '+4', team: 'red' },
+      ann: { text: '+7', tint: 'red' },
+      bob: { text: '+4', tint: 'red' },
     });
     // Red's opening record rose with its card, and the heavenly hand outdid it by the end: Bob's
     // number is that point less, and the PI's, who had none for it, as it was.
     const outdone = endFloats(data('red'), 'bob', heavenly, new Set(['red']));
-    expect(outdone.mine).toEqual({ text: '+3', team: 'red' });
+    expect(outdone.mine).toEqual({ text: '+3', tint: 'red' });
     expect(Object.fromEntries(outdone.players)).toEqual({
-      ann: { text: '+7', team: 'red' },
-      bob: { text: '+3', team: 'red' },
+      ann: { text: '+7', tint: 'red' },
+      bob: { text: '+3', tint: 'red' },
     });
     expect(Object.fromEntries(endFloats(data('red'), 'bob', heavenly, new Set(['blue'])).players)).toEqual({
-      ann: { text: '+7', team: 'red' },
-      bob: { text: '+4', team: 'red' },
+      ann: { text: '+7', tint: 'red' },
+      bob: { text: '+4', tint: 'red' },
     });
     expect(endFloats(data('blue'), 'dan', points).mine).toBeNull();
     expect(endFloats(data(null), 'eve', points).mine).toBeNull();

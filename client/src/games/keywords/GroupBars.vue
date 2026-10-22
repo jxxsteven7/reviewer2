@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TEAMS, type Team } from '@reviewer2/shared';
+import { TEAMS, type Team } from '@reviewer2/shared/keywords';
 import { useI18n } from 'vue-i18n';
 import AvatarButton from '../../core/components/AvatarButton.vue';
 
@@ -50,7 +50,7 @@ const studentsOf = (team: Team) => {
   <p class="scores">
     <span v-for="team in TEAMS" :key="team" class="score num" :class="team">
       <span class="faces">
-        <span class="sr-only">{{ t(`lobby.group.${team}`) }}</span>
+        <span class="sr-only">{{ t(`games.keywords.groups.${team}`) }}</span>
         <span v-if="piOf(team)" class="pi">
           <AvatarButton
             :player-id="piOf(team)!.id"

@@ -194,7 +194,12 @@ export function createAppServer(options: AppOptions): AppServer {
           log,
           // Asked only once the server answers requests, when the rooms are there.
           agentsLive: (persona) => agentsIn(rooms.all(), persona),
-          showReplay: (kept) => games.get(kept.game)?.showReplay?.(kept) ?? null,
+          // Not while the account still has to guess the AI players of the game in the room that
+          // has just played it (Room.guessing): the replay would show who they were.
+          showReplay: (kept) =>
+            rooms.all().some((room) => room.guessing(kept.log.gameId, kept.viewer))
+              ? null
+              : (games.get(kept.game)?.showReplay?.(kept) ?? null),
         }),
       }),
     }),
@@ -250,7 +255,23 @@ export function createAppServer(options: AppOptions): AppServer {
   const titleCount = accounts ? (id: number, title: Title) => accounts.titles.count(id, title) : null;
   // Whether the agent answers, which the driver of the AI players finds out and the rooms read.
   const agentState = options.agent ? { up: false } : null;
-  const rooms = new Rooms(options.words, rng, now, options.limits ?? DEFAULT_LIMITS, titleCount, agentState);
+  // What the records say of each pair of related terms of a game, by where the game's setups keep
+  // the pair's key (GameModule.setupPaths), for the next draw of a pair in a room.
+  const pairRecords = accounts
+    ? (game: string, accountIds: readonly number[]) => {
+        const path = games.get(game)?.setupPaths?.pair;
+        return path === undefined ? new Map() : accounts.ratings.pairRecords(game, path, accountIds);
+      }
+    : null;
+  const rooms = new Rooms(
+    options.words,
+    rng,
+    now,
+    options.limits ?? DEFAULT_LIMITS,
+    titleCount,
+    agentState,
+    pairRecords,
+  );
   const sockets = attachSockets(io, {
     rooms,
     words: options.words,

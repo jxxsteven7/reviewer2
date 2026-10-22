@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { otherTeam, type ClueRecord, type GameEvent, type KeywordsView } from '@reviewer2/shared';
+import { otherTeam, type ClueRecord, type GameEvent, type KeywordsView } from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { formatList } from '../../core/i18n';
@@ -47,7 +47,7 @@ const meant = (record: ClueRecord) => {
 };
 
 const eventText = (event: GameEvent) =>
-  t(`game.events.${event.kind}`, { group: event.team ? t(`lobby.group.${event.team}`) : '' });
+  t(`game.events.${event.kind}`, { group: event.team ? t(`games.keywords.groups.${event.team}`) : '' });
 </script>
 
 <template>

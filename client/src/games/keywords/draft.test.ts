@@ -1,4 +1,4 @@
-import type { ClueRecord } from '@reviewer2/shared';
+import type { ClueRecord } from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { clearMemory, readStored, writeStored } from '../../core/storage';
 import { emptyDraft, isEmptyDraft, readDraft, writeDraft } from './draft';

@@ -1,11 +1,6 @@
 // @vitest-environment happy-dom
-import {
-  defaultSettings,
-  type ClueRecord,
-  type KeywordsRoomData,
-  type KeywordsView,
-  type RoomView,
-} from '@reviewer2/shared';
+import { type RoomView } from '@reviewer2/shared';
+import { defaultSettings, type ClueRecord, type KeywordsRoomData, type KeywordsView } from '@reviewer2/shared/keywords';
 import { mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { defineComponent, h, nextTick, ref } from 'vue';
@@ -73,6 +68,7 @@ function room(view: KeywordsView, more: Partial<RoomView> = {}): RoomView {
     randomFields: false,
     public: false,
     customWordCount: 0,
+    rating: null,
     phase: 'playing',
     round: 1,
     gameId: 'g1',
@@ -116,7 +112,7 @@ describe('the numbers that rise', () => {
     const { current, floats } = floatsFor(room(game([])));
     current.value = room(game([1]));
     await nextTick();
-    expect(floats().card.value).toMatchObject({ card: 1, text: '+1', team: 'red' });
+    expect(floats().card.value).toMatchObject({ card: 1, text: '+1', tint: 'red' });
     expect([...floats().players.value.keys()]).toEqual(['ann', 'bob']);
     vi.advanceTimersByTime(FLOAT_MS);
     expect(floats().card.value).toBeNull();
@@ -150,7 +146,7 @@ describe('the numbers that rise', () => {
       points: [{ playerId: 'bob', points: 4, detail }],
     });
     await nextTick();
-    expect(floats().end.value).toMatchObject({ text: '+3', team: 'red' });
+    expect(floats().end.value).toMatchObject({ text: '+3', tint: 'red' });
     vi.advanceTimersByTime(END_FLOAT_MS);
     expect(floats().end.value).toBeNull();
   });
@@ -171,7 +167,7 @@ describe('the numbers that rise', () => {
     const { current, floats } = floatsFor(room(five([0, 1, 2])));
     current.value = room(five([0, 1, 2, 3]));
     await nextTick();
-    expect(floats().card.value).toMatchObject({ text: '+2', team: 'red' });
+    expect(floats().card.value).toMatchObject({ text: '+2', tint: 'red' });
     const detail = {
       role: 'guesser',
       found: 5,
@@ -189,6 +185,6 @@ describe('the numbers that rise', () => {
       points: [{ playerId: 'bob', points: 9, detail }],
     });
     await nextTick();
-    expect(floats().end.value).toMatchObject({ text: '+3', team: 'red' });
+    expect(floats().end.value).toMatchObject({ text: '+3', tint: 'red' });
   });
 });

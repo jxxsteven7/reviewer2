@@ -1,12 +1,5 @@
-import {
-  TEAMS,
-  type CardColor,
-  type KeywordsView,
-  type Language,
-  type ReplayPerson,
-  type Seat,
-  type ShownReplay,
-} from '@reviewer2/shared';
+import { type Language, type ReplayPerson } from '@reviewer2/shared';
+import { TEAMS, type CardColor, type KeywordsView, type Seat, type ShownReplay } from '@reviewer2/shared/keywords';
 import type { ShownPlayer } from '../../core/room';
 
 // The replay of the game that has just ended, from the view, for the review on the results page

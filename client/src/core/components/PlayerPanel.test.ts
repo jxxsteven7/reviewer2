@@ -43,6 +43,7 @@ const view = (me: string, isPublic: boolean, player: ShownPlayer = bob): ShownRo
   randomFields: false,
   public: isPublic,
   customWordCount: 0,
+  rating: null,
   phase: 'lobby',
   round: 0,
   gameId: null,

@@ -76,17 +76,20 @@ const go = (n: number) => chapter.value && router.push(guidePath(chapter.value.i
 const back = () => step.value > 1 && go(step.value - 1);
 const next = () => step.value < total.value && go(step.value + 1);
 
-// The contents: the game's chapters under the game's name, then the site's, each with how far this
-// browser has read it, and the chapter read last, if it was left halfway. A step kept beyond a
-// chapter's steps, by a browser that read a longer chapter once, counts as the chapter read.
+// The contents: each game's chapters under the game's name, then the site's, each with how far this
+// browser has read it, and the chapter read last, if it was left halfway; a game with no chapters
+// yet has no heading. A step kept beyond a chapter's steps, by a browser that read a longer chapter
+// once, counts as the chapter read.
 const progress = ref(readProgress());
 watch(chapter, (current) => current === null && (progress.value = readProgress()));
 const sections = computed(() => [
-  ...Object.keys(games).map((game) => ({
-    key: game,
-    title: t('guide.sections.game', { game: t(`home.games.${game}.name`) }),
-    chapters: chapters.filter((each) => each.game === game),
-  })),
+  ...Object.keys(games)
+    .map((game) => ({
+      key: game,
+      title: t('guide.sections.game', { game: t(`games.${game}.name`) }),
+      chapters: chapters.filter((each) => each.game === game),
+    }))
+    .filter((section) => section.chapters.length > 0),
   { key: 'site', title: t('guide.sections.site'), chapters: chapters.filter((each) => each.game === null) },
 ]);
 const readOf = (each: GuideChapter): ChapterProgress | undefined => {

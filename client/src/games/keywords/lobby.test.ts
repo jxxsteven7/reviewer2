@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import { defaultSettings, type KeywordsRoomData, type RoomView } from '@reviewer2/shared';
+import { type RoomView } from '@reviewer2/shared';
+import { defaultSettings, type KeywordsRoomData } from '@reviewer2/shared/keywords';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';
@@ -66,6 +67,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
   randomFields: false,
   public: false,
   customWordCount: 0,
+  rating: null,
   phase: 'lobby',
   round: 2,
   gameId: null,
@@ -330,7 +332,7 @@ describe('KeywordsLobby', () => {
   });
 
   test('lets the chair have every game draw its word lists anew, which needs none chosen', async () => {
-    fields.value = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 300, en: 300 } }];
+    fields.value = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 300, en: 300 }, pairs: 0 }];
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
     await chair.get('.field-fold .each input').setValue(true);
@@ -349,7 +351,7 @@ describe('KeywordsLobby', () => {
   });
 
   test('needs a word list unless the chair has 25 words of their own', async () => {
-    fields.value = [{ id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 300, en: 300 } }];
+    fields.value = [{ id: 'general', name: { zh: '通用', en: 'General' }, counts: { zh: 300, en: 300 }, pairs: 0 }];
     const chair = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     await flushPromises();
     await chair.get('.fields input[type="checkbox"]').setValue(false);

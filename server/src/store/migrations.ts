@@ -1318,4 +1318,124 @@ export const MIGRATIONS: readonly string[] = [
 
   DELETE FROM settings WHERE key GLOB 'rules_counted:*';
   `,
+  // 27: the second game (docs/games/impostor.md), and what players say of the games they played,
+  // for both games (docs/architecture.md#ratings), as the maintainers decided before its beta:
+  //
+  // - ratings keeps how a player rated a game that finished, by the player ID they had in it: one
+  //   of the game's options, which the code checks, as the feedback's kinds, so that a new one needs
+  //   no migration, or NULL for a player who dismissed the question; with when. One row for each
+  //   player of a game, which goes with the record of the game.
+  // - ai_guesses keeps a player's guess of who the AI players of a game were, as the numbers they
+  //   picked, a JSON list in the game's shape (GameShapes.guess), or NULL for a player who skipped
+  //   it; with when. One row for each player of a game, which goes with the record of the game.
+  // - content_contributions keeps what players gave the word library and the operator adopted
+  //   (docs/architecture.md#content-contributions): a setter's pair or the chair's own words of a
+  //   game, of a kind that the code checks, as JSON in the game's own shape; the game they came
+  //   from, which the row outlives, as the feedback outlives its account; the account that gave
+  //   them, which the row outlives as well, and whether it is named, which it can't be without the
+  //   account; when it was adopted; and what was adopted, in Chinese and in English. It is an
+  //   archive (archive.test.ts), as the contributions from GitHub are: no row is deleted.
+  // - feedback is rebuilt, as migration 5 rebuilt it, every row kept with its id and the count that
+  //   AUTOINCREMENT goes on from, so that it can name the game it was sent about, by the record of
+  //   the game, both or neither, which forgets the game rather than the feedback if the record goes.
+  //   No feedback that is there was about a game.
+  // - The setup of every game of the first game with words of the chair's own names who gave them
+  //   (`customAuthor`, KeywordsSetup), by the player ID they had in the room. The games kept before
+  //   this migration don't say, and name nobody (null).
+  // - replays keeps whether the game brought nobody points, a streak, a title or a friend title
+  //   (`scores_nothing`), for whatever reason: an AI that played in it, as an AI player or for
+  //   someone who was offline, without every answer from a certified version of the AI, or a reason
+  //   of the game's own (GameModule.scoresNothing), as a removal in the second game; the streaks
+  //   and the friend duos leave it out by this alone. No version of the AI is certified yet, and
+  //   the first game has no reason of its own, so of the games that are there, those that an AI
+  //   played in brought nothing, and the others did.
+  //
+  // Who set the words of a game of the second game has a row in game_players beside its players,
+  // with which they watch it again; the code writes it, and no row that is there changes.
+  `
+  CREATE TABLE ratings (
+    game_id TEXT NOT NULL,
+    game TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    rating TEXT,
+    rated_at TEXT NOT NULL,
+    PRIMARY KEY (game_id, player_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+
+  CREATE TABLE ai_guesses (
+    game_id TEXT NOT NULL,
+    game TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    guess TEXT CHECK (guess IS NULL OR json_type(guess) = 'array'),
+    guessed_at TEXT NOT NULL,
+    PRIMARY KEY (game_id, player_id),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE CASCADE
+  ) STRICT;
+
+  CREATE TABLE content_contributions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind TEXT NOT NULL,
+    game TEXT NOT NULL,
+    game_id TEXT REFERENCES replays (game_id) ON DELETE SET NULL,
+    content TEXT NOT NULL CHECK (json_type(content) = 'object'),
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    named INTEGER NOT NULL CHECK (named IN (0, 1)),
+    adopted_at TEXT NOT NULL,
+    summary_zh TEXT NOT NULL,
+    summary_en TEXT NOT NULL,
+    CHECK (account_id IS NOT NULL OR named = 0)
+  ) STRICT;
+  CREATE INDEX content_contributions_account ON content_contributions (account_id) WHERE account_id IS NOT NULL;
+
+  CREATE TABLE new_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    contact TEXT,
+    version TEXT NOT NULL,
+    language TEXT NOT NULL CHECK (language IN ('zh', 'en')),
+    page TEXT NOT NULL CHECK (page IN ('home', 'room')),
+    user_agent TEXT,
+    credit TEXT,
+    account_id INTEGER REFERENCES accounts (id) ON DELETE SET NULL,
+    issue INTEGER CHECK (issue > 0),
+    resolved_pr INTEGER CHECK (resolved_pr > 0),
+    resolved_at TEXT,
+    closed_at TEXT,
+    deleted_at TEXT,
+    adopted_at TEXT,
+    summary_zh TEXT,
+    summary_en TEXT,
+    link_profile INTEGER NOT NULL DEFAULT 0 CHECK (link_profile IN (0, 1)),
+    game TEXT,
+    game_id TEXT,
+    CHECK ((game IS NULL) = (game_id IS NULL)),
+    FOREIGN KEY (game_id, game) REFERENCES replays (game_id, game) ON DELETE SET NULL
+  ) STRICT;
+  INSERT INTO new_feedback (id, created_at, kind, text, contact, version, language, page, user_agent, credit,
+      account_id, issue, resolved_pr, resolved_at, closed_at, deleted_at, adopted_at, summary_zh, summary_en,
+      link_profile)
+    SELECT id, created_at, kind, text, contact, version, language, page, user_agent, credit, account_id, issue,
+      resolved_pr, resolved_at, closed_at, deleted_at, adopted_at, summary_zh, summary_en, link_profile
+    FROM feedback;
+  DELETE FROM sqlite_sequence WHERE name = 'new_feedback';
+  INSERT INTO sqlite_sequence (name, seq) SELECT 'new_feedback', seq FROM sqlite_sequence WHERE name = 'feedback';
+  DROP TABLE feedback;
+  ALTER TABLE new_feedback RENAME TO feedback;
+  CREATE INDEX feedback_contact_expiry ON feedback (created_at) WHERE contact IS NOT NULL;
+  CREATE INDEX feedback_account ON feedback (account_id) WHERE account_id IS NOT NULL;
+  CREATE INDEX feedback_trash ON feedback (deleted_at) WHERE deleted_at IS NOT NULL;
+  CREATE INDEX feedback_adopted ON feedback (adopted_at) WHERE adopted_at IS NOT NULL;
+  CREATE INDEX feedback_game ON feedback (game_id) WHERE game_id IS NOT NULL;
+
+  UPDATE replays SET setup = json_set(setup, '$.customAuthor', json('null'))
+    WHERE game = 'keywords' AND setup IS NOT NULL AND EXISTS (
+      SELECT 1 FROM json_each(replays.setup, '$.cards') AS card WHERE json_extract(card.value, '$.custom') = 1
+    );
+
+  ALTER TABLE replays ADD COLUMN scores_nothing INTEGER NOT NULL DEFAULT 0 CHECK (scores_nothing IN (0, 1));
+  UPDATE replays SET scores_nothing = 1 WHERE agents > 0 OR takeover = 1;
+  `,
 ];

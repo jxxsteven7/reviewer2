@@ -4,7 +4,7 @@ import { RECORDS_NOTICE_VERSION } from '@reviewer2/shared';
 import { fakeGame } from '../../test/fakeGame';
 import { newReplay } from '../../test/keptGame';
 import type { AgentLogData } from '../core/agentLog';
-import type { GameModule } from '../core/game';
+import { knownTitles, type GameModule } from '../core/game';
 import type { AgentPlay } from '../core/room';
 import type { GameLogData } from '../core/gameLog';
 import { AccountStore } from './accounts';
@@ -290,6 +290,7 @@ describe('adding up a match', () => {
     gameId: id,
     game: 'test',
     outcome: null,
+    scoresNothing: false,
     records: new Map(),
     seats: new Map(),
     match: {
@@ -437,9 +438,9 @@ describe('counting the records again', () => {
       { t: 3, by: 'p2', type: 'test:say', said: 'hi' },
     ]);
     keep('g2', { p1: ann }, [{ t: 1, by: 'p1', type: 'test:say', said: 'hi' }]);
-    new TitleStore(db).awardForGame(bob, 'test', 'deadline_hero', 'g1', 1);
+    new TitleStore(db, knownTitles([fakeGame])).awardForGame(bob, 'test', 'deadline_hero', 'g1', 1);
     // A title that the game no longer brings, and one it never did.
-    new TitleStore(db).awardForGame(ann, 'test', 'opening_record', 'g2', 2);
+    new TitleStore(db, ['opening_record']).awardForGame(ann, 'test', 'opening_record', 'g2', 2);
     expect(hasGamesOf(db, [fakeGame])).toBe(true);
     expect(recountRecords(db, [otherRules])).toEqual({
       games: 2,

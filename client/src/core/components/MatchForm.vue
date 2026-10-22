@@ -1,25 +1,20 @@
 <script setup lang="ts">
-import {
-  MATCH_GAMES,
-  MATCH_GROUPINGS,
-  MATCH_TEAMS,
-  matchGamesValid,
-  type KeywordsMatchOptions,
-  type KeywordsMatchRules,
-} from '@reviewer2/shared';
-import { computed, ref, useId, watch } from 'vue';
+import { MATCH_GAMES, matchGamesValid, type MatchRules } from '@reviewer2/shared';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { games } from '../../games';
 import UiField from './UiField.vue';
 
-// The rules of a match, for the room setup and for the chair's next match: how many games, and the
-// first game's options (shared/src/games/keywords/match.ts), whether the groups stay the same, and
-// how they are made, for the first game or after every game. The number is typed, so it can be
-// wrong while it is being typed: the form says so, and `valid` says whether the rules can be sent.
-// The server checks them again.
-const model = defineModel<KeywordsMatchRules>({ required: true });
+// The rules of a match of a game, for the room setup and for the chair's next match: how many
+// games, and the game's own options, in the game's form (GameScreens.match), such as whether the
+// first game's groups stay the same. The number is typed, so it can be wrong while it is being
+// typed: the form says so, and `valid` says whether the rules can be sent. The server checks them
+// again.
+const props = defineProps<{ game: string }>();
+const model = defineModel<MatchRules>({ required: true });
 const valid = defineModel<boolean>('valid', { default: true });
 const { t } = useI18n();
-const id = useId();
+const Options = computed(() => games[props.game]?.match?.Options);
 
 // A whole number as it is typed, full-width digits from a Chinese keyboard included, or NaN.
 function parse(text: string): number {
@@ -39,8 +34,10 @@ watch(model, (rules) => {
 const gamesValid = computed(() => matchGamesValid(model.value.games));
 watch(gamesValid, (ok) => (valid.value = ok), { immediate: true });
 
-const choose = (changes: Partial<KeywordsMatchOptions>) =>
-  (model.value = { ...model.value, options: { ...model.value.options, ...changes } });
+const options = computed({
+  get: () => model.value.options,
+  set: (changed: unknown) => (model.value = { ...model.value, options: changed }),
+});
 </script>
 
 <template>
@@ -56,44 +53,7 @@ const choose = (changes: Partial<KeywordsMatchOptions>) =>
         @update:model-value="type"
       />
     </div>
-
-    <fieldset>
-      <legend>{{ t('match.teams') }}</legend>
-      <div class="options">
-        <label v-for="teams in MATCH_TEAMS" :key="teams" :class="{ chosen: model.options.teams === teams }">
-          <input
-            type="radio"
-            :name="`${id}-teams`"
-            :value="teams"
-            :checked="model.options.teams === teams"
-            @change="choose({ teams })"
-          />
-          {{ t(`match.teamsChoice.${teams}`) }}
-        </label>
-      </div>
-      <p class="hint">{{ t(`match.teamsHint.${model.options.teams}`) }}</p>
-    </fieldset>
-
-    <fieldset>
-      <legend>{{ t(`match.grouping.${model.options.teams}`) }}</legend>
-      <div class="options">
-        <label
-          v-for="grouping in MATCH_GROUPINGS"
-          :key="grouping"
-          :class="{ chosen: model.options.grouping === grouping }"
-        >
-          <input
-            type="radio"
-            :name="`${id}-grouping`"
-            :value="grouping"
-            :checked="model.options.grouping === grouping"
-            @change="choose({ grouping })"
-          />
-          {{ t(`match.groupingChoice.${grouping}`) }}
-        </label>
-      </div>
-      <p class="hint">{{ t(`match.groupingHint.${model.options.grouping}`) }}</p>
-    </fieldset>
+    <component :is="Options" v-if="Options" v-model="options" />
   </div>
 </template>
 
@@ -102,61 +62,6 @@ const choose = (changes: Partial<KeywordsMatchOptions>) =>
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-fieldset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-legend {
-  margin-bottom: var(--space-2);
-  padding: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-}
-
-.options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.options label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: 0 var(--space-4);
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-pill);
-  background: var(--paper);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-}
-
-.options label.chosen {
-  background: var(--bg);
-}
-
-.options label:focus-within {
-  outline: var(--line-strong) solid var(--focus);
-  outline-offset: 2px;
-}
-
-.options input {
-  margin: 0;
-  accent-color: var(--ink);
-}
-
-.hint {
-  color: var(--ink-2);
-  font-size: var(--text-sm);
 }
 
 .number {

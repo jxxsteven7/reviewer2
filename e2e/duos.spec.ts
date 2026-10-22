@@ -53,7 +53,7 @@ test('friends who win together become co-first authors, which they alone are tol
 
   for (let game = 1; game <= DUO_MIN; game += 1) {
     if (game > 1) {
-      await ann.getByRole('button', { name: text.game.letter.again }).click();
+      await ann.getByRole('button', { name: text.games.keywords.letter.again }).click();
       await expect(ann.locator('.start-bar .ready')).toBeVisible();
       await ann.getByRole('button', { name: text.lobby.start }).click();
       await expect(ann.locator('.keywords-game')).toBeVisible();
@@ -98,9 +98,9 @@ test('friends who win together become co-first authors, which they alone are tol
 
   // The decision of the latest game on her record: red won with blue far behind.
   const latest = ann.locator('.records .record').first();
-  await latest.getByRole('button', { name: text.game.letter.short.oral }).click();
-  await expect(ann.getByRole('dialog', { name: text.game.letter.verdicts.oral })).toContainText(
-    text.game.letter.explain.oral,
+  await latest.getByRole('button', { name: text.games.keywords.letter.short.oral }).click();
+  await expect(ann.getByRole('dialog', { name: text.games.keywords.letter.verdicts.oral })).toContainText(
+    text.games.keywords.letter.explain.oral,
   );
   await ann.keyboard.press('Escape');
 

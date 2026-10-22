@@ -8,7 +8,7 @@ import { formatDay } from '../dates';
 import { errorKey } from '../errors';
 import { standingOf } from '../friends';
 import { nameOf, usernameAfter } from '../names';
-import { shownCounts, shownDuo, shownStreaks, shownTitles } from '../records';
+import { countsOf, shownDuo, shownStreaks, shownTitles } from '../records';
 import { useLanguage } from '../i18n';
 import { connect } from '../socket';
 import { streakTitles as titlesOf } from '../streaks';
@@ -17,6 +17,7 @@ import { useBusy } from '../useBusy';
 import { useFriendsList } from '../useFriendsList';
 import DuoSummary from './DuoSummary.vue';
 import FriendActions from './FriendActions.vue';
+import GameTabs from './GameTabs.vue';
 import LinkArrow from './LinkArrow.vue';
 import PlayerAvatar from './PlayerAvatar.vue';
 import PlayerNumber from './PlayerNumber.vue';
@@ -25,18 +26,19 @@ import RecordStats from './RecordStats.vue';
 import TitlePills from './TitlePills.vue';
 import UiButton from './UiButton.vue';
 
-// A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its
-// own page and in a room's player panel: the avatar, the username, the rank,
-// the number and the day of registration, the titles, the streaks among them, and what the owner
-// chose to put there: a link, a line about themselves, the record as counts (RecordStats.vue) and
-// the feedback contributions as counts. The bio is shown as the text it is, never as markup, and
-// the link as the address it is, which opens in a new tab and which search engines are told not
-// to follow. The rank opens the ladder of every rank, with this one marked and no points, which
-// the profile never shows. Anyone may look; an account that isn't the owner may like the profile
-// and, beside the like, do what a room's panel and the search's panel offer by how the two stand
-// (FriendActions.vue): ask the owner to be friends, see that it has asked, answer the owner's
-// request, or give a friend a name or part. A friend of the owner also sees what the two have
-// played together (docs/architecture.md#friend-duos), which nobody else is sent.
+// A public profile (docs/architecture.md#public-profiles), by the handle of its account, on its own
+// page and in a room's player panel: the avatar, the username, the rank, the number and the day of
+// registration, the titles, the streaks among them, and what the owner chose to put there: a link,
+// a line about themselves, the record as counts, one game at a time as its tab names it
+// (GameTabs.vue, RecordStats.vue), and the feedback contributions as counts. The bio is shown as
+// the text it is, never as markup, and the link as the address it is, which opens in a new tab and
+// which search engines are told not to follow. The rank opens the ladder of every rank, with this
+// one marked and no points, which the profile never shows. Anyone may look; an account that isn't
+// the owner may like the profile and, beside the like, do what a room's panel and the search's
+// panel offer by how the two stand (FriendActions.vue): ask the owner to be friends, see that it
+// has asked, answer the owner's request, or give a friend a name or part. A friend of the owner
+// also sees what the two have played together (docs/architecture.md#friend-duos), which nobody else
+// is sent.
 //
 // The owner goes by the name that the viewer gives them as a friend, if any (names.ts), with the
 // username after it in small grey type, since such a name may be anyone's, and by that name where
@@ -107,7 +109,8 @@ const language = useLanguage();
 const streakTitles = computed(() =>
   profile.value ? titlesOf(t, shownStreaks(profile.value.streaks), language.value) : [],
 );
-// The record of the game shown (records.ts).
+// The titles of the first game (records.ts), and the game whose record is shown.
+const recordGame = ref('keywords');
 const titles = computed(() => (profile.value ? shownTitles(profile.value.titles) : []));
 const duo = computed(() => (profile.value ? shownDuo(profile.value.duo) : null));
 
@@ -188,7 +191,10 @@ watch(
         </a>
         <p v-if="profile.bio !== null" class="bio">{{ profile.bio }}</p>
 
-        <RecordStats v-if="profile.record" :counts="shownCounts(profile.record)" />
+        <template v-if="profile.record">
+          <GameTabs v-model="recordGame" />
+          <RecordStats :game="recordGame" :counts="countsOf(profile.record, recordGame)" />
+        </template>
 
         <div class="actions">
           <i18n-t keypath="playerPage.likes" tag="span" class="likes num" scope="global">

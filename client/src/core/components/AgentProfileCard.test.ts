@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
-import type { AgentGameCounts, AgentProfileView, KeywordsAgentFeats } from '@reviewer2/shared';
+import type { AgentGameCounts, AgentProfileView } from '@reviewer2/shared';
+import type { KeywordsAgentFeats } from '@reviewer2/shared/keywords';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createI18n } from 'vue-i18n';

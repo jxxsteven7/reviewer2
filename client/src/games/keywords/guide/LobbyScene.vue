@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Language, Seat, StartProblem } from '@reviewer2/shared';
+import type { Language } from '@reviewer2/shared';
+import type { Seat, StartProblem } from '@reviewer2/shared/keywords';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useSpot, type SpotTarget } from '../../../core/guide/spot';

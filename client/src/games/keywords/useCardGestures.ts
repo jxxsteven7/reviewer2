@@ -1,4 +1,4 @@
-import type { Mark } from '@reviewer2/shared';
+import type { Mark } from '@reviewer2/shared/keywords';
 import { onBeforeUnmount, ref } from 'vue';
 
 // How a student's taps on a card become what they mean (docs/games/keywords.md#talking-it-over): a

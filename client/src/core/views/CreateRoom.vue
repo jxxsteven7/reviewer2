@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import {
-  defaultMatchRules,
-  keywordsMatchRules,
-  LANGUAGES,
-  type KeywordsMatchRules,
-  type Language,
-} from '@reviewer2/shared';
+import { LANGUAGES, MATCH_GAMES, type Language, type MatchRules } from '@reviewer2/shared';
 import { computed, onMounted, ref, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { games } from '../../games';
+import { gameInfo } from '../../games/info';
 import { account } from '../account';
+import BetaNote from '../components/BetaNote.vue';
+import ChoiceRow from '../components/ChoiceRow.vue';
 import FieldFold from '../components/FieldFold.vue';
 import LanguageSwitch from '../components/LanguageSwitch.vue';
 import MatchForm from '../components/MatchForm.vue';
@@ -24,10 +21,14 @@ import { keepRoomSetup, keptFields, lastRoom } from '../roomSetup';
 import { send } from '../socket';
 import { useBusy } from '../useBusy';
 
-// Setting up a room: the language (the interface language, which the switch changes), the word
-// lists, folded into a line (FieldFold.vue), or lists drawn anew for every game, the game's own
-// settings, whether it is an ordinary room or a match, and the match's rules, whether the room is
-// private or listed on the home page, and whether the creator plays or only watches. The creator
+// Setting up a room of a game: the language (the interface language, which the switch changes),
+// where the words come from, for a game whose words may come from elsewhere than the word lists
+// (GameScreens.Source), the word lists, folded into a line (FieldFold.vue), or lists drawn anew for
+// every game, while the game draws its words from them, the game's own settings, whether it is an
+// ordinary room or a match, and the match's rules, for a game with matches, whether the room is
+// private or listed on the home page, which some settings of a game keep private
+// (GameInfo.mayBePublic), and whether the creator plays or only watches. A game in beta says so
+// first (BetaNote.vue). The creator
 // becomes the chair either way. A creator who is logged in has their username, which the masthead
 // shows, and only they may list the room; a guest has a number in the room, and gives no name, and
 // is told in a line that the games are recorded, which an account agreed to as it registered
@@ -35,7 +36,7 @@ import { useBusy } from '../useBusy';
 // holds: lists that the language has too few words in drop out, a setting that no longer will do
 // is the game's default, and a guest's room is private. A `fresh` setup, as the tutorial shows
 // one, starts from the defaults instead, with the general list, whatever the last room was.
-const props = withDefaults(defineProps<{ game: string; wordsNeeded: number; fresh?: boolean }>(), { fresh: false });
+const props = withDefaults(defineProps<{ game: string; fresh?: boolean }>(), { fresh: false });
 const emit = defineEmits<{ cancel: [] }>();
 const { t, locale } = useI18n();
 const router = useRouter();
@@ -48,9 +49,8 @@ const play = ref(typeof last?.play === 'boolean' ? last.play : true);
 const formError = ref<string | undefined>();
 const { busy, run } = useBusy();
 const language = computed(() => locale.value as Language);
-const usable = computed(() =>
-  (fields.value ?? []).filter((field) => field.counts[language.value] >= props.wordsNeeded),
-);
+const info = computed(() => gameInfo(props.game));
+const usable = computed(() => (fields.value ?? []).filter((field) => info.value?.usable(field, language.value)));
 // The game's settings, with its own form, which also says whether they will do: those of the last
 // room of this game, which the game reads for this language, knowing the last room's, if it was
 // kept.
@@ -65,16 +65,32 @@ const settings = ref<object | undefined>(
     : screens.value?.defaultSettings(language.value),
 );
 const settingsValid = ref(true);
-// An ordinary room, or a match by these rules.
-// The first game's, the only one with matches so far.
-const lastMatch = keywordsMatchRules(last?.match);
+// Whether the game draws its words from the lists with these settings, and whether a room with
+// them may be listed.
+const drawsWords = computed(() => info.value?.drawsWords(settings.value) ?? true);
+const mayBePublic = computed(() => info.value?.mayBePublic(settings.value) ?? true);
+// An ordinary room, or a match by these rules, in a game with matches (GameScreens.match).
+const matches = computed(() => screens.value?.match !== undefined);
+const lastMatch = screens.value?.match?.restore(last?.match) ?? null;
 const isMatch = ref(lastMatch !== null);
-const match = ref<KeywordsMatchRules>(lastMatch ?? defaultMatchRules());
+const match = ref<MatchRules>(lastMatch ?? screens.value?.match?.defaults() ?? { games: MATCH_GAMES.default });
 const matchValid = ref(true);
 const group = useId();
 // Private, as rooms always were, or public (docs/architecture.md#public-rooms).
-const isPublic = ref(last?.public === true && account.summary !== null);
+const isPublic = ref(last?.public === true && account.summary !== null && mayBePublic.value);
 const visibility = useId();
+watch(mayBePublic, (may) => {
+  if (!may) isPublic.value = false;
+});
+const publicHint = computed(() =>
+  t(
+    !account.summary
+      ? 'create.publicNeedsAccount'
+      : mayBePublic.value
+        ? 'create.publicHint'
+        : `games.${props.game}.privateOnly`,
+  ),
+);
 
 // The creator chooses the lists, those of the last room to begin with. When the lists come, or a
 // change of language leaves a chosen list without enough words, it drops out, and nothing is
@@ -90,14 +106,15 @@ watch(
 // Whether to say that a list must be chosen: while there are lists to choose from and none is.
 // The group of lists points at the hint, so that a screen reader reads it with them. The button
 // can't: it is disabled while the hint shows, so the keyboard never reaches it.
-const needsField = computed(() => usable.value.length > 0 && !chosen.value.length && !randomFields.value);
+const needsField = computed(
+  () => drawsWords.value && usable.value.length > 0 && !chosen.value.length && !randomFields.value,
+);
 const id = useId();
 // Whether the form will do. create() checks it too, since a form can be submitted without its
 // button. The lists must have come, so that those chosen have been checked against them.
 const ready = computed(
   () =>
-    fields.value !== null &&
-    (chosen.value.length > 0 || randomFields.value) &&
+    (!drawsWords.value || (fields.value !== null && (chosen.value.length > 0 || randomFields.value))) &&
     settingsValid.value &&
     (!isMatch.value || matchValid.value),
 );
@@ -111,11 +128,11 @@ async function create() {
     send<{ code: string }>('room:create', {
       game: props.game,
       language: currentLanguage(),
-      fields: chosen.value,
-      ...(randomFields.value ? { randomFields: true } : {}),
+      fields: drawsWords.value ? chosen.value : [],
+      ...(drawsWords.value && randomFields.value ? { randomFields: true } : {}),
       ...(settings.value ? { settings: settings.value } : {}),
-      ...(isMatch.value ? { match: match.value } : {}),
-      ...(isPublic.value ? { public: true } : {}),
+      ...(isMatch.value && matches.value ? { match: match.value } : {}),
+      ...(isPublic.value && mayBePublic.value ? { public: true } : {}),
       play: play.value,
     }),
   );
@@ -141,13 +158,19 @@ async function create() {
 
 <template>
   <form class="create" @submit.prevent="create">
+    <BetaNote v-if="info?.beta" :game="game" text="beta.create" />
     <section class="step">
       <h3>{{ t('create.language') }}</h3>
       <LanguageSwitch />
       <p class="hint">{{ t('create.languageHint', { language: t(`language.${language}`) }) }}</p>
     </section>
 
+    <section v-if="screens?.Source && settings" class="step">
+      <component :is="screens.Source" v-model="settings" />
+    </section>
+
     <section
+      v-if="drawsWords"
       class="step"
       role="group"
       :aria-label="t('create.fields')"
@@ -158,7 +181,7 @@ async function create() {
         v-model:random="randomFields"
         :fields="fields"
         :language="language"
-        :needed="wordsNeeded"
+        :game="game"
         each-game
       />
     </section>
@@ -168,36 +191,34 @@ async function create() {
       <component :is="screens.Settings" v-model="settings" v-model:valid="settingsValid" :language="language" />
     </section>
 
-    <section class="step">
+    <section v-if="matches" class="step">
       <h3 :id="`${group}-kind`">{{ t('match.kind') }}</h3>
       <fieldset class="kind" :aria-labelledby="`${group}-kind`">
-        <label>
+        <ChoiceRow :option="t('match.ordinary')" :hint="t('match.ordinaryHint')">
           <input v-model="isMatch" type="radio" :name="group" :value="false" />
-          <span class="option">{{ t('match.ordinary') }}</span>
-          <span class="hint">{{ t('match.ordinaryHint') }}</span>
-        </label>
-        <label>
+        </ChoiceRow>
+        <ChoiceRow :option="t('match.match')" :hint="t('match.matchHint')">
           <input v-model="isMatch" type="radio" :name="group" :value="true" />
-          <span class="option">{{ t('match.match') }}</span>
-          <span class="hint">{{ t('match.matchHint') }}</span>
-        </label>
+        </ChoiceRow>
       </fieldset>
-      <MatchForm v-if="isMatch" v-model="match" v-model:valid="matchValid" />
+      <MatchForm v-if="isMatch" v-model="match" v-model:valid="matchValid" :game="game" />
     </section>
 
     <section class="step">
       <h3 :id="`${visibility}-label`">{{ t('create.visibility') }}</h3>
       <fieldset class="kind" :aria-labelledby="`${visibility}-label`">
-        <label>
+        <ChoiceRow :option="t('create.private')" :hint="t('create.privateHint')">
           <input v-model="isPublic" type="radio" :name="visibility" :value="false" />
-          <span class="option">{{ t('create.private') }}</span>
-          <span class="hint">{{ t('create.privateHint') }}</span>
-        </label>
-        <label>
-          <input v-model="isPublic" type="radio" :name="visibility" :value="true" :disabled="!account.summary" />
-          <span class="option">{{ t('create.public') }}</span>
-          <span class="hint">{{ t(account.summary ? 'create.publicHint' : 'create.publicNeedsAccount') }}</span>
-        </label>
+        </ChoiceRow>
+        <ChoiceRow :option="t('create.public')" :hint="publicHint">
+          <input
+            v-model="isPublic"
+            type="radio"
+            :name="visibility"
+            :value="true"
+            :disabled="!account.summary || !mayBePublic"
+          />
+        </ChoiceRow>
       </fieldset>
     </section>
 
@@ -258,48 +279,6 @@ h3 {
   margin: 0;
   padding: 0;
   border: 0;
-}
-
-.kind label {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 0 var(--space-3);
-  min-height: 52px;
-  padding: var(--space-2) var(--space-4);
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-control);
-  background: var(--paper);
-  cursor: pointer;
-}
-
-.kind label:has(input:checked) {
-  background: var(--bg);
-}
-
-.kind label:has(input:disabled) {
-  color: var(--ink-2);
-  cursor: default;
-}
-
-.kind label:has(input:focus-visible) {
-  outline: var(--line-strong) solid var(--focus);
-  outline-offset: 2px;
-}
-
-.kind input {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-  accent-color: var(--ink);
-}
-
-.kind .option {
-  font-weight: var(--weight-black);
-}
-
-.kind .hint {
-  grid-column: 2;
 }
 
 .step > :deep(.match-form) {

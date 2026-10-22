@@ -1,4 +1,5 @@
-import { defaultSettings, type Language } from '@reviewer2/shared';
+import { type Language } from '@reviewer2/shared';
+import { defaultSettings } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
 import { PERSONAS } from './personas';
 import { clueSystem, clueUser, PROMPT_VERSION } from './prompts';

@@ -8,17 +8,16 @@ import {
   type Page,
   type TestInfo,
 } from '@playwright/test';
+import { ACCOUNT_API, PROFILE_PATH, type RoomView } from '@reviewer2/shared';
 import {
-  ACCOUNT_API,
   checkClue,
-  PROFILE_PATH,
   type CardColor,
   type KeywordsMatchRules,
   type KeywordsRoomData,
   type KeywordsView,
-  type RoomView,
   type Team,
-} from '@reviewer2/shared';
+} from '@reviewer2/shared/keywords';
+import type { ImpostorRoomData } from '@reviewer2/shared/impostor';
 import { io, type Socket } from 'socket.io-client';
 import { TOKEN } from '../client/src/core/session';
 import en from '../client/src/locales/en.json' with { type: 'json' };
@@ -53,7 +52,7 @@ export function seatSaid(
 ): string {
   const text = TEXT[language];
   if (team === null) return text.banner.spectator;
-  return interpolate(text.banner.seat, { group: text.lobby.group[team], role: text.banner.roles[role] });
+  return interpolate(text.banner.seat, { group: text.games.keywords.groups[team], role: text.banner.roles[role] });
 }
 
 // The avatar of a player in a room, which opens their panel, by its accessible name.
@@ -64,7 +63,7 @@ export function avatarOf(name: string, language: Language = 'en'): { name: strin
 // The button that offers a seat as a student of this group during a game.
 export function playFor(team: Team, language: Language = 'en'): { name: string } {
   const text = TEXT[language];
-  return { name: interpolate(text.game.playFor, { group: text.lobby.group[team] }) };
+  return { name: interpolate(text.game.playFor, { group: text.games.keywords.groups[team] }) };
 }
 
 // Script errors on any page. A test fails at its end if there were any.
@@ -122,6 +121,7 @@ export const test = base.extend<{ cleanup: void }>({
       for (const states of pages) {
         expectNoKey(states);
         expectOwnGroupOnly(states);
+        expectNoRoles(states);
       }
     },
     { auto: true },
@@ -220,6 +220,7 @@ export const gameOf = (state: RoomView | undefined): KeywordsView | null =>
 // the game is over. Whoever else has seen the key, such as a PI who left their seat, gets none
 // (server/src/games/keywords/view.ts).
 function mayHoldKey(state: RoomView): boolean {
+  if (state.game !== 'keywords') return true;
   const { seats, game } = state.data as KeywordsRoomData;
   if (!game || game.phase === 'over') return true;
   return state.me !== null && seats[state.me]?.role === 'captain';
@@ -286,6 +287,7 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
   // a game, so the group a player was last seen in is the one they wrote to.
   const groups = new Map<string, Team>();
   for (const state of states) {
+    if (state.game !== 'keywords') continue;
     const { game, seats } = state.data as KeywordsRoomData;
     for (const [player, seat] of Object.entries(seats)) if (seat.team) groups.set(player, seat.team);
     if (!game) continue;
@@ -305,6 +307,32 @@ export function expectOwnGroupOnly(states: RoomView[]): number {
     for (const { player } of game.selections ?? []) {
       expect(groups.get(player), `the group of ${player}, who chose a card for the ${team} group`).toBe(team);
     }
+  }
+  return checked;
+}
+
+// No snapshot of the second game that a player received while the game was on held a role but
+// those of the players out of it, the viewer's own once they were out, the other term, or who sat
+// at another number in an anonymous game (docs/games/impostor.md#who-sees-what). Returns how many
+// snapshots it checked.
+export function expectNoRoles(states: RoomView[]): number {
+  let checked = 0;
+  for (const state of states) {
+    if (state.game !== 'impostor') continue;
+    const { game, settings } = state.data as ImpostorRoomData;
+    if (!game?.you || game.phase === 'over') continue;
+    checked += 1;
+    for (const seat of game.seats) {
+      if (seat.fate === 'alive') expect(seat.role, `the role of #${seat.number}`).toBeNull();
+      if (settings.anonymous && seat.number !== game.you.number) {
+        expect(seat.playerId, `who sits at #${seat.number}`).toBeNull();
+      }
+    }
+    if (game.seats.find((seat) => seat.number === game.you?.number)?.fate === 'alive') {
+      expect(game.you.role, 'their own role').toBeNull();
+      expect(game.offField, 'the off-field chat').toBeNull();
+    }
+    expect(game.words, 'both terms').toBeNull();
   }
   return checked;
 }
@@ -367,14 +395,23 @@ async function chooseToWatch(page: Page, language: Language, { watch = false }: 
   if (watch) await page.getByRole('radio', { name: TEXT[language].room.join.watch }).check();
 }
 
-// Creates a room with the general word list. A first room setup starts with no list chosen, its
+// Creates a room of the first game with the general word list (createGameRoom).
+export const createRoom = (
+  page: Page,
+  language: Language,
+  setup?: (page: Page) => Promise<void>,
+  joining: Joining = {},
+): Promise<string> => createGameRoom(page, 'keywords', language, setup, joining);
+
+// Creates a room of the game with the general word list, from the game's card on the home page. A first room setup starts with no list chosen, its
 // lists open, and won't create the room until one is; a later one starts from the last room, its
 // lists folded away (roomSetup.ts), which this opens. Nobody gives a name: a guest is numbered by
 // the room, and an account has its username. `setup` runs on the room setup once a list is chosen,
 // for a test that wants other settings than the defaults. The page's snapshots are recorded from
 // here on (snapshotsOf), so that nameOf can tell what the room calls the player.
-export async function createRoom(
+export async function createGameRoom(
   page: Page,
+  game: string,
   language: Language,
   setup?: (page: Page) => Promise<void>,
   joining: Joining = {},
@@ -387,7 +424,7 @@ export async function createRoom(
   await expect(page.locator('.gate, .home').first()).toBeVisible();
   const gate = page.getByRole('link', { name: new RegExp(`^${literally(text.language[language])}`) });
   if (await gate.count()) await gate.click();
-  await page.getByRole('button', { name: text.home.newRoom }).click();
+  await page.locator(`.entry[data-game="${game}"]`).getByRole('button', { name: text.home.newRoom }).click();
   const fold = page.locator('.field-fold .toggle');
   await expect(fold.locator('.summary')).not.toHaveText(text.create.loadingFields);
   if ((await fold.getAttribute('aria-expanded')) !== 'true') await fold.click();

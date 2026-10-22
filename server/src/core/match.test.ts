@@ -338,13 +338,16 @@ describe("the rules of a room's match", () => {
         given.push(rules);
         return data;
       },
-      score: (data, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
       lineup: (data) => data.players,
       ...(options ? { options } : {}),
     };
     const rooms = new Rooms(testWords(), seededRng(3), () => 0);
     const created = rooms.create({
-      game: { ...fakeGame, match },
+      game: {
+        ...fakeGame,
+        match,
+        score: (data: FakeData, ctx) => data.players.map((id) => ({ key: ctx.keyOf(id), points: 0, detail: null })),
+      } as typeof fakeGame,
       language: 'en',
       fields: ['general'],
       key: 'k',

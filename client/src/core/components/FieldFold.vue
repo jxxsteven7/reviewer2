@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { drawFields, type FieldInfo, type Language } from '@reviewer2/shared';
-import { computed, ref, useId, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { gameInfo } from '../../games/info';
 import { errorKey } from '../errors';
 import { connection } from '../socket';
-import { useFold } from '../useFold';
 import FieldPicker from './FieldPicker.vue';
+import FoldCard from './FoldCard.vue';
 
 // The word lists of a room, folded into one line that names the chosen ones (docs/architecture.md
 // #rooms), so that a setup fits on a phone's screen; a tap opens the lists (FieldPicker), with a way
@@ -13,19 +14,20 @@ import FieldPicker from './FieldPicker.vue';
 // (drawFields). Where `eachGame` is offered, the room may instead draw its lists anew for every
 // game: the line says so, and the lists chosen by hand are greyed out, kept for when it stops.
 // Nothing chosen, the fold opens as soon as the lists are here, so that the choice is seen. The
-// lists unfold and fold with their height eased (useFold.ts), as the marker turns.
+// lists unfold and fold as every fold does (FoldCard.vue). A `single`
+// fold chooses one list alone, as the field of a setter's words, with none of the tools.
 const props = withDefaults(
-  defineProps<{ fields: FieldInfo[] | null; language: Language; needed: number; eachGame?: boolean }>(),
-  { eachGame: false },
+  defineProps<{ fields: FieldInfo[] | null; language: Language; game: string; eachGame?: boolean; single?: boolean }>(),
+  { eachGame: false, single: false },
 );
 const chosen = defineModel<string[]>({ required: true });
 const random = defineModel<boolean>('random', { default: false });
 const { t } = useI18n();
-const id = useId();
 const open = ref(false);
-const fold = useFold();
 
-const usable = computed(() => (props.fields ?? []).filter((field) => field.counts[props.language] >= props.needed));
+const usable = computed(() =>
+  (props.fields ?? []).filter((field) => gameInfo(props.game)?.usable(field, props.language) ?? false),
+);
 
 // While the lists are on their way, or while they aren't coming because the server turned the page
 // away (socket.ts), which is then said in their place.
@@ -64,124 +66,48 @@ const chooseAtRandom = () => {
 </script>
 
 <template>
-  <div class="field-fold">
-    <button type="button" class="toggle" :aria-expanded="open" :aria-controls="`${id}-lists`" @click="open = !open">
-      <span class="text">
-        <span class="title">{{ t('create.fields') }}</span>
-        <span class="summary">{{ summary }}</span>
-      </span>
-    </button>
-    <Transition :css="false" v-bind="fold">
-      <div v-show="open" :id="`${id}-lists`" class="lists">
-        <p v-if="!fields" class="hint">{{ waiting }}</p>
-        <template v-else-if="usable.length">
-          <label v-if="eachGame" class="each">
-            <input v-model="random" type="checkbox" />
-            <span class="option">{{ t('create.fieldsEach') }}</span>
-            <span class="hint">{{ t('create.fieldsEachHint') }}</span>
-          </label>
-          <div class="head">
-            <span class="hint">{{
-              random ? t('create.fieldsDrawn') : t('create.fieldsChosen', { count: chosen.length })
-            }}</span>
-            <span class="tools">
-              <button type="button" class="tool" :disabled="random" @click="chooseAtRandom">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
-                  <circle cx="8.5" cy="8.5" r="1.4" />
-                  <circle cx="15.5" cy="8.5" r="1.4" />
-                  <circle cx="12" cy="12" r="1.4" />
-                  <circle cx="8.5" cy="15.5" r="1.4" />
-                  <circle cx="15.5" cy="15.5" r="1.4" />
-                </svg>
-                {{ t('create.fieldsRandom') }}
-              </button>
-              <button type="button" class="tool" :disabled="random" @click="chooseAll">
-                {{ t('create.fieldsAll') }}
-              </button>
-            </span>
-          </div>
-          <FieldPicker v-model="chosen" :fields="fields" :language="language" :needed="needed" :disabled="random" />
-        </template>
-        <p v-else class="hint">{{ t('create.noFields') }}</p>
+  <FoldCard
+    v-model:open="open"
+    class="field-fold"
+    :title="t(single ? 'create.field' : 'create.fields')"
+    :summary="summary"
+  >
+    <p v-if="!fields" class="hint">{{ waiting }}</p>
+    <FieldPicker v-else-if="single" v-model="chosen" :fields="fields" :language="language" :game="game" single />
+    <template v-else-if="usable.length">
+      <label v-if="eachGame" class="each">
+        <input v-model="random" type="checkbox" />
+        <span class="option">{{ t('create.fieldsEach') }}</span>
+        <span class="hint">{{ t('create.fieldsEachHint') }}</span>
+      </label>
+      <div class="head">
+        <span class="hint">{{
+          random ? t('create.fieldsDrawn') : t('create.fieldsChosen', { count: chosen.length })
+        }}</span>
+        <span class="tools">
+          <button type="button" class="tool" :disabled="random" @click="chooseAtRandom">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+              <circle cx="8.5" cy="8.5" r="1.4" />
+              <circle cx="15.5" cy="8.5" r="1.4" />
+              <circle cx="12" cy="12" r="1.4" />
+              <circle cx="8.5" cy="15.5" r="1.4" />
+              <circle cx="15.5" cy="15.5" r="1.4" />
+            </svg>
+            {{ t('create.fieldsRandom') }}
+          </button>
+          <button type="button" class="tool" :disabled="random" @click="chooseAll">
+            {{ t('create.fieldsAll') }}
+          </button>
+        </span>
       </div>
-    </Transition>
-  </div>
+      <FieldPicker v-model="chosen" :fields="fields" :language="language" :game="game" :disabled="random" />
+    </template>
+    <p v-else class="hint">{{ t('create.noFields') }}</p>
+  </FoldCard>
 </template>
 
 <style scoped>
-/* A sticker whose whole first line is the button, with its marker in front. */
-.field-fold {
-  align-self: stretch;
-  border: var(--line) solid var(--ink);
-  border-radius: var(--radius-panel);
-  background: var(--paper);
-  box-shadow: var(--shadow-1);
-}
-
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: 52px;
-  padding: var(--space-2) var(--space-4);
-  border: 0;
-  border-radius: calc(var(--radius-panel) - var(--line));
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-/* The marker turns to point down as the lists unfold. */
-.toggle::before {
-  content: '\25B8';
-  display: inline-block;
-  font-size: var(--text-xs);
-  transition: transform 220ms var(--ease-out);
-}
-
-.toggle[aria-expanded='true']::before {
-  transform: rotate(90deg);
-}
-
-@media (hover: hover) {
-  .toggle:hover {
-    background: var(--paper-2);
-  }
-}
-
-.text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.title {
-  font-weight: var(--weight-black);
-  line-height: 1.3;
-}
-
-.summary {
-  overflow: hidden;
-  color: var(--ink-2);
-  font-size: var(--text-sm);
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lists {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-1) var(--space-4) var(--space-4);
-}
-
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);

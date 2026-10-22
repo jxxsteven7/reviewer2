@@ -131,13 +131,13 @@ describe('PlayerName', () => {
 
 describe('FieldPicker', () => {
   const fields = [
-    { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } },
-    { id: 'small', name: { zh: 'S', en: 'Small' }, counts: { zh: 30, en: 3 } },
+    { id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 },
+    { id: 'small', name: { zh: 'S', en: 'Small' }, counts: { zh: 30, en: 3 }, pairs: 0 },
   ];
 
   test('offers only the lists with enough words in the language', async () => {
     const wrapper = mount(FieldPicker, {
-      props: { fields, language: 'en', needed: 25, modelValue: [], 'onUpdate:modelValue': () => {} },
+      props: { fields, language: 'en', game: 'keywords', modelValue: [], 'onUpdate:modelValue': () => {} },
       global: global(),
     });
     const boxes = wrapper.findAll('input');
@@ -151,7 +151,7 @@ describe('FieldPicker', () => {
 });
 
 describe('FieldFold', () => {
-  const fields = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 } }];
+  const fields = [{ id: 'general', name: { zh: 'G', en: 'General' }, counts: { zh: 30, en: 30 }, pairs: 0 }];
 
   // The lists unfold with their height eased from nothing, and fold back to nothing before they are
   // hidden; the marker's state and the hidden lists switch at once. The transition is the real one
@@ -159,12 +159,12 @@ describe('FieldFold', () => {
   test('unfolds and folds its lists with their height eased, and hides them once they have folded', async () => {
     vi.useFakeTimers();
     const wrapper = mount(FieldFold, {
-      props: { fields, language: 'en', needed: 25, modelValue: ['general'], 'onUpdate:modelValue': () => {} },
+      props: { fields, language: 'en', game: 'keywords', modelValue: ['general'], 'onUpdate:modelValue': () => {} },
       global: { ...global(), stubs: { transition: false } },
       attachTo: document.body,
     });
     const toggle = wrapper.get('.toggle');
-    const lists = wrapper.get('.lists').element as HTMLElement;
+    const lists = wrapper.get('.body').element as HTMLElement;
     expect(lists.style.display).toBe('none');
     await toggle.trigger('click');
     expect(toggle.attributes('aria-expanded')).toBe('true');

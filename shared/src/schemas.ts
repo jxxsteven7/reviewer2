@@ -1,28 +1,26 @@
 import { z } from 'zod';
 import { HANDLE, MAX_EMAIL_LENGTH } from './accounts';
-import { AGENT_ERRORS, AGENT_PERSONAS, MAX_AGENT_REASON, MAX_AGENT_WAIT_MS } from './agent';
+import { AGENT_ERRORS, AGENT_PERSONAS } from './agent';
+import { MAX_CUSTOM_INPUT } from './custom';
 import { FEEDBACK_KINDS, FEEDBACK_PAGES } from './feedback';
-import { MAX_CUSTOM_INPUT } from './games/keywords/custom';
-import { CLUE_RULES, GUESS_RULES } from './games/keywords/settings';
-import { BOARD_SIZE, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './games/keywords/types';
+import { IMPOSTOR_AGENT_REPLIES, IMPOSTOR_AGENT_REQUESTS, IMPOSTOR_NOTE } from './games/impostor/schemas';
+import { KEYWORDS_AGENT_REPLIES, KEYWORDS_AGENT_REQUESTS, KEYWORDS_NOTE } from './games/keywords/schemas';
 import { LANGUAGES } from './language';
 import { MATCH_GAMES } from './match';
 import { EMOTES, MAX_NAME_INPUT } from './protocol';
+import { AGENT_NOTE, code, gameId, playerId, roomId } from './schemaParts';
 
 // The schemas that the server checks every message against (docs/architecture.md). Only the
 // server imports this module, so that the client's bundle doesn't need zod: a schema is built
 // when its module loads, so no bundler can leave it out, and building one probes `new Function`,
-// which the page's own Content Security Policy refuses.
+// which the page's own Content Security Policy refuses. Each game's own messages are in its folder
+// (for the team word guessing game, games/keywords/schemas.ts), which only the server and the
+// agent import too.
 
-// A code as someone typed it, with whatever they put around and between its characters.
-const code = z.string().max(32);
 // The rules for names (names.ts) say what a name may be. This only keeps out what is too long to
 // be looked at, and it is no tighter than they are, so that a name which they would take is never
 // refused here as a bad request.
 const name = z.string().max(MAX_NAME_INPUT);
-const playerId = z.string().max(32);
-const gameId = z.string().max(64);
-const roomId = z.string().max(64);
 // A room may have no word list at all when the chair's own words are enough for a game
 // (docs/games/keywords.md#custom-words); the room says no_words when they aren't. The chair may
 // choose every list in the library at once, so the limit stays well above the number of lists in
@@ -69,6 +67,7 @@ export const ROOM_MESSAGES = {
     version: z.string().max(64),
     language: z.enum(LANGUAGES),
     page: z.enum(FEEDBACK_PAGES),
+    gameId: gameId.optional(),
   }),
   // A room starts with its game's default settings when `settings` is left out. Nobody gives a
   // name: a creator who is logged in has their username, and a guest a number in the room
@@ -103,6 +102,11 @@ export const ROOM_MESSAGES = {
   'room:watch': z.object({ code, roomId: roomId.nullish() }),
   'room:leave': none,
   'room:emote': z.object({ emote: z.enum(EMOTES) }),
+  // A player's rating of the game that has just ended, one of the game's, which the room checks, or
+  // null to dismiss the question; and their guess of who its AI players were, in the game's shape,
+  // which the game checks, or null to skip it (docs/architecture.md#ratings). Each names the game.
+  'room:rate': z.object({ gameId, rating: z.string().max(32).nullable() }),
+  'room:guessAgents': z.object({ gameId, guess: z.unknown() }),
   // A member reports another to the operator, with a note that the rules in feedback.ts judge.
   'room:report': z.object({ playerId, text: z.string().optional() }),
   // The chair's controls. The settings change the word lists, whether every game draws them anew,
@@ -129,7 +133,9 @@ export const ROOM_MESSAGES = {
   'room:spectate': z.object({ playerId }),
   // The chair invites an AI player to a seat, which the game reads (GameModule.seatAgent).
   'room:addAgent': z.object({ persona: z.enum(AGENT_PERSONAS), seat: z.unknown() }),
-  'room:remove': z.object({ playerId }),
+  // The chair removes a player, named by their player ID or by their seat in the game, as the game
+  // reads it, where the room doesn't name who sits there (GameModule.playerAt).
+  'room:remove': z.union([z.object({ playerId }), z.object({ seat: z.unknown() })]),
   'room:chair': z.object({ playerId }),
   'room:dismiss': none,
   'room:close': none,
@@ -158,57 +164,6 @@ export const ROOM_MESSAGES = {
 } as const;
 
 export type RoomMessage = keyof typeof ROOM_MESSAGES;
-
-// The messages of the team word guessing game (docs/games/keywords.md). Each game action names the
-// game and the turn it was meant for, so that a late one can't land in a later turn.
-//
-// The content of an action is for the rules to judge: a clue or a chat message that is too long,
-// or a count that isn't one, gets the game's own answer from them, such as clue_too_long or
-// bad_count, and not bad_request from here. The rules refuse a long text before looking at it,
-// and the server takes no message of more than 16 KB at all (server.ts).
-const moment = { gameId, turn: z.number().int().min(1).max(10_000) };
-
-export const KEYWORDS_MESSAGES = {
-  'keywords:seat': z.object({ team: z.enum(TEAMS).nullable(), role: z.enum(ROLES) }),
-  // The cards the captain marks as the ones the clue is meant for, which the rules check, are up
-  // to the captain; a list longer than the board is no list of its cards.
-  'keywords:clue': z.object({
-    ...moment,
-    word: z.string(),
-    count: z.union([z.number(), z.literal('unlimited')]),
-    targets: z.array(z.number()).max(BOARD_SIZE).optional(),
-  }),
-  // A guesser chooses a card for the group to see, or takes the choice back with null.
-  'keywords:select': z.object({ ...moment, card: z.number().int().nullable() }),
-  // A guesser marks a card for their group, or clears its mark with null. It names the game but
-  // not the turn: a group may mark cards in either group's turn.
-  'keywords:mark': z.object({ gameId, card: z.number().int(), mark: z.enum(MARKS).nullable() }),
-  'keywords:reveal': z.object({ ...moment, card: z.number().int() }),
-  'keywords:pass': z.object(moment),
-  // A guesser writes one line to their group. It names the game but not the turn: a message is
-  // welcome in whatever turn it arrives.
-  'keywords:say': z.object({ gameId, text: z.string() }),
-  // The chair pauses the game and resumes it, in whatever turn.
-  'keywords:pause': z.object({ gameId }),
-  'keywords:resume': z.object({ gameId }),
-  // A group asks for its extension of the phase it is in.
-  'keywords:extend': z.object(moment),
-} as const;
-
-export type KeywordsMessage = keyof typeof KEYWORDS_MESSAGES;
-
-// The settings of a room of the game (settings.ts). The schema only takes their shape: whether
-// the numbers are whole and in range is for settingsProblems() to say, which the room setup runs
-// too.
-export const KEYWORDS_SETTINGS = z.object({
-  guessRule: z.enum(GUESS_RULES),
-  clueRule: z.enum(CLUE_RULES),
-  clueLength: z.number(),
-  firstClueTime: z.number(),
-  clueTime: z.number(),
-  guessTime: z.number(),
-  extensions: z.boolean(),
-});
 
 // The handshake (`Handshake` in protocol.ts). A field that isn't what it should be counts as
 // missing, rather than spoil the others or the connection.
@@ -250,98 +205,24 @@ export const ACCOUNT_REQUESTS = {
   unlike: z.object({ handle: z.string().regex(HANDLE) }),
 } as const;
 
-// What the game server and the agent say to each other (agent.ts). Each side reads the other's
-// lines with these, and takes nothing that has a field more or less than it should: the agent
-// plays only with what a seat may see, and the server takes only a clue or cards that it can check.
-const cardIndex = z
-  .number()
-  .int()
-  .min(0)
-  .max(BOARD_SIZE - 1);
-const count = z.union([z.number().int().min(0).max(MAX_CLUE_NUMBER), z.literal('unlimited')]);
-const term = z.string().max(200);
-const color = z.enum([...TEAMS, 'neutral', 'reviewer2']);
-const terms = z.array(term).max(50);
-const agentGame = {
-  game: z.literal('keywords'),
-  language: z.enum(LANGUAGES),
-  settings: KEYWORDS_SETTINGS.strict(),
-  team: z.enum(TEAMS),
-  cards: z
-    .array(
-      z.strictObject({
-        word: term,
-        revealed: z.boolean(),
-        color: color.optional(),
-        translations: terms.optional(),
-        forms: terms.optional(),
-        pinyin: term.optional(),
-        // The English meanings of up to five characters (BoardWord.glosses), a few each.
-        glosses: z.array(term).max(200).optional(),
-      }),
-    )
-    .length(BOARD_SIZE),
-  clues: z.array(z.strictObject({ team: z.enum(TEAMS), word: term, count })).max(200),
-};
-const asked = {
-  v: z.literal(1),
-  persona: z.enum(AGENT_PERSONAS),
-  waitMs: z.number().int().min(1).max(MAX_AGENT_WAIT_MS),
-};
-
+// What the game server and the agent say to each other (agent.ts): a ping, or one of a game's own
+// requests (for the team word guessing game, games/keywords/schemas.ts, and for the hidden word
+// game, games/impostor/schemas.ts), whose kinds are each of one game. Each side reads the other's lines with these, and takes nothing that has a field more
+// or less than it should: the agent plays only with what a seat may see, and the server takes only
+// an answer that it can check.
 export const AGENT_REQUEST = z.discriminatedUnion('kind', [
   z.strictObject({ v: z.literal(1), kind: z.literal('ping') }),
-  z.strictObject({ ...asked, kind: z.literal('clue'), ...agentGame }),
-  z.strictObject({
-    ...asked,
-    kind: z.literal('guess'),
-    ...agentGame,
-    clue: z.strictObject({ word: term, count }),
-    guessesLeft: z.number().int().min(0).max(BOARD_SIZE).nullable(),
-  }),
+  ...KEYWORDS_AGENT_REQUESTS,
+  ...IMPOSTOR_AGENT_REQUESTS,
 ]);
-
-const note = z.strictObject({
-  model: z.string().max(200),
-  prompt: z.string().max(64),
-  ms: z.number().min(0),
-  candidates: z
-    .array(
-      z.strictObject({
-        word: term,
-        count: z.number().int().min(0).max(BOARD_SIZE),
-        targets: z.array(cardIndex).max(BOARD_SIZE),
-        problem: z.string().max(64).nullable(),
-        rehearsal: z
-          .strictObject({
-            picks: z.array(cardIndex).max(BOARD_SIZE),
-            found: z.number().int().min(0).max(BOARD_SIZE),
-            stop: color.nullable(),
-          })
-          .optional(),
-      }),
-    )
-    .max(10)
-    .optional(),
-  reason: z.string().max(MAX_AGENT_REASON).optional(),
-});
 
 export const AGENT_REPLY = z.union([
   z.strictObject({ ok: z.literal(true), kind: z.literal('ping'), model: z.string().max(200) }),
+  ...KEYWORDS_AGENT_REPLIES,
+  ...IMPOSTOR_AGENT_REPLIES,
   z.strictObject({
-    ok: z.literal(true),
-    kind: z.literal('clue'),
-    word: term,
-    count: z.number().int().min(1).max(BOARD_SIZE),
-    targets: z.array(cardIndex).max(BOARD_SIZE),
-    note,
+    ok: z.literal(false),
+    error: z.enum(AGENT_ERRORS),
+    note: z.union([KEYWORDS_NOTE, IMPOSTOR_NOTE, AGENT_NOTE]).optional(),
   }),
-  z.strictObject({
-    ok: z.literal(true),
-    kind: z.literal('guess'),
-    picks: z.array(cardIndex).max(BOARD_SIZE),
-    reason: z.string().max(MAX_AGENT_REASON),
-    note,
-  }),
-  z.strictObject({ ok: z.literal(false), error: z.enum(AGENT_ERRORS), note: note.optional() }),
 ]);

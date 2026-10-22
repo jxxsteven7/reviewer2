@@ -1,11 +1,12 @@
 <script lang="ts">
-import type { Team } from '@reviewer2/shared';
+import type { Tint } from '../tints';
 
-// A number to rise: its text, such as "+1", and the group whose color it takes; once shown, with a
-// key that tells it from the one before, so that one right after another starts its own.
+// A number to rise: its text, such as "+1", and the tint of the side whose color it takes, or none
+// for ink; once shown, with a key that tells it from the one before, so that one right after
+// another starts its own.
 export interface Float {
   text: string;
-  team: Team;
+  tint: Tint | null;
 }
 export type Shown = Float & { key: number };
 </script>
@@ -13,16 +14,16 @@ export type Shown = Float & { key: number };
 <script setup lang="ts">
 // A number that rises from where points were won or lost and fades as it goes, as in a game
 // (docs/games/keywords.md#points-as-they-come): handwritten, in the color of the group it is for,
-// with no ground under it but a ring of paper around each stroke, so that it reads on a card of its
-// own color too. It starts a little below the middle of what it stands on, which its parent makes
-// the containing block, and rises a short way: on a card (`card`), on an avatar (`avatar`), or, big,
-// in the middle of the screen at the end of the game (`end`). With reduced motion it fades in and
-// out where it is. It is for the eye alone, and lets every tap through.
+// or ink, with no ground under it but a ring of paper around each stroke, so that it reads on a
+// card of its own color too. It starts a little below the middle of what it stands on, which its
+// parent makes the containing block, and rises a short way: on a card (`card`), on an avatar
+// (`avatar`), or, big, in the middle of the screen at the end of the game (`end`). With reduced
+// motion it fades in and out where it is. It is for the eye alone, and lets every tap through.
 withDefaults(defineProps<{ float: Float; size?: 'card' | 'avatar' | 'end' }>(), { size: 'card' });
 </script>
 
 <template>
-  <span class="score-float" :class="[float.team, `on-${size}`]" aria-hidden="true">{{ float.text }}</span>
+  <span class="score-float" :class="[float.tint, `on-${size}`]" aria-hidden="true">{{ float.text }}</span>
 </template>
 
 <style scoped>
