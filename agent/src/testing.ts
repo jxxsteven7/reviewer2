@@ -1,11 +1,11 @@
-import { type AgentReply } from '@reviewer2/shared';
+import { type AgentReply, type ReasoningLevel } from '@reviewer2/shared';
 import type { ImpostorAgentGame } from '@reviewer2/shared/impostor';
 import { defaultSettings, type CardColor, type CardView } from '@reviewer2/shared/keywords';
 import { AGENT_REPLY } from '@reviewer2/shared/schemas';
 import { expect } from 'vitest';
 import type { ImpostorRequest } from './impostor';
 import type { ClueRequest, GuessRequest } from './keywords';
-import { ModelError, type Model, type Question } from './model';
+import { ModelError, type Answer, type Model, type Question } from './model';
 
 // What the agent's tests share: a board, requests on it, and a model that answers from a script.
 
@@ -125,9 +125,13 @@ export function impostorRequest<Kind extends ImpostorRequest['kind']>(
   return request as unknown as Extract<ImpostorRequest, { kind: Kind }>;
 }
 
+// What a scripted model thinks before it answers a question that lets it.
+export const THOUGHT = 'Cards 6 and 7 are both about biology, and nothing else on the board is.';
+
 // A model that answers each question with the next answer scripted for its kind, such as `clue` or
 // `guess` (Question.name): an object, which it gives back, an error, which it throws, or a promise,
-// which it waits for. It keeps the questions it was asked.
+// which it waits for. It thinks at its level when a question lets it, and its answer then comes
+// with THOUGHT. It keeps the questions it was asked.
 export class ScriptedModel implements Model {
   readonly asked: Question[] = [];
   readonly answers: Record<string, unknown[]>;
@@ -136,22 +140,24 @@ export class ScriptedModel implements Model {
   constructor(
     answers: Partial<Record<string, unknown[]>> = {},
     readonly name = 'scripted',
+    readonly reasoning: ReasoningLevel = 'off',
   ) {
     this.answers = Object.fromEntries(Object.entries(answers).map(([kind, list]) => [kind, [...(list ?? [])]]));
   }
 
-  async ask(question: Question, signal: AbortSignal): Promise<Record<string, unknown>> {
+  async ask(question: Question, signal: AbortSignal): Promise<Answer> {
     this.asked.push(question);
+    const thinking = question.think === true && this.reasoning !== 'off' ? THOUGHT : null;
     const next = this.answers[question.name]?.shift();
     if (next === undefined) throw new ModelError(`no answer left for ${question.name}`);
     if (next instanceof Error) throw next;
     if (next instanceof Promise) {
       const aborted = new Promise<never>((_, reject) =>
-        signal.addEventListener('abort', () => reject(new ModelError('aborted')), { once: true }),
+        signal.addEventListener('abort', () => reject(new ModelError('aborted', true)), { once: true }),
       );
-      return (await Promise.race([next, aborted])) as Record<string, unknown>;
+      return { value: (await Promise.race([next, aborted])) as Record<string, unknown>, thinking };
     }
-    return next as Record<string, unknown>;
+    return { value: next as Record<string, unknown>, thinking };
   }
 
   async ping(): Promise<boolean> {

@@ -3,14 +3,16 @@ import type { AgentNote } from '@reviewer2/shared';
 // The AI's side of one game (docs/architecture.md#game-records): for every step that an AI player
 // took, or an AI that played for someone who was offline in their turn, what it was asked, what it
 // answered and how it came to that, as the agent says (AgentNote): the model, the version of the
-// prompts, the clues it considered with what the rules said of them, and the reason it gave. The
+// prompts, how long the model was let think and what it thought, the clues it considered with what
+// the rules said of them and how their rehearsals went, and the reason it gave. The
 // record of the game keeps it beside the game's own log, on the server alone, for the AI players
 // of later versions to learn from. The game's log says what the AI did; this says why.
 
 // The largest log that is kept, as JSON, in bytes, apart from the game's own log, so that the AI's
-// notes never crowd out what happened. A step takes a few hundred bytes, so a game with four AI
-// players fits many times over. Past it, the log keeps no more steps, and says so once.
-export const MAX_AGENT_LOG_BYTES = 64 * 1024;
+// notes never crowd out what happened. A step takes a few hundred bytes, and a few tens of
+// thousands more with what the model thought, mostly before a clue, so a game with two AI PIs
+// fits. Past it, the log keeps no more steps, and says so once.
+export const MAX_AGENT_LOG_BYTES = 1024 * 1024;
 
 // The versions of the AI that are certified, each as the version of the prompts and the model, as
 // the agent's note names them (AgentNote). A game that an AI played in, as an AI player or for
@@ -55,7 +57,7 @@ export interface AgentStep {
 }
 
 export interface AgentLogData {
-  v: 1;
+  v: 2;
   gameId: string;
   steps: AgentStep[];
   truncated?: true;
@@ -96,6 +98,6 @@ export class AgentLog {
   }
 
   data(): AgentLogData {
-    return { v: 1, gameId: this.gameId, steps: this.#steps, ...(this.#truncated ? { truncated: true as const } : {}) };
+    return { v: 2, gameId: this.gameId, steps: this.#steps, ...(this.#truncated ? { truncated: true as const } : {}) };
   }
 }

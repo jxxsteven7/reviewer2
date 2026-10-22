@@ -75,6 +75,7 @@ function room(view: KeywordsView, more: Partial<RoomView> = {}): RoomView {
     chairId: 'ann',
     players: [],
     agents: false,
+    agentsOnline: false,
     screens: 0,
     me: 'bob',
     match: null,

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { type Language } from '@reviewer2/shared';
 import {
+  AGENT_THINKING_TIMES,
   CLUE_LENGTH,
   CLUE_RULES,
   GUESS_RULES,
+  hurriesAgent,
   settingsProblems,
   TIME_LIMIT,
   TIME_SETTINGS,
@@ -16,8 +18,10 @@ import UiField from '../../core/components/UiField.vue';
 // The settings of a room, for the room setup and the chair's desk: how the students guess, how
 // strict the clue check is, how long a clue may be, and how much time each phase has. The numbers
 // are typed, so one can be wrong while it is being typed: the form says what is wrong with each,
-// and `valid` says whether the settings can be sent. The server checks them again.
-const props = defineProps<{ language: Language }>();
+// and `valid` says whether the settings can be sent. The server checks them again. In a room that
+// may have AI players or has them (`agents`), it warns in red, as they are typed, of times too
+// short for Reviewer 1 to think, which still will do.
+const props = withDefaults(defineProps<{ language: Language; agents?: boolean }>(), { agents: false });
 const model = defineModel<KeywordsSettings>({ required: true });
 const valid = defineModel<boolean>('valid', { default: true });
 const { t } = useI18n();
@@ -59,6 +63,7 @@ const problems = computed(() => settingsProblems(model.value, props.language));
 watch(problems, (found) => (valid.value = Object.keys(found).length === 0), { immediate: true });
 
 const length = computed(() => CLUE_LENGTH[props.language]);
+const hurried = computed(() => props.agents && hurriesAgent(model.value));
 
 function error(key: NumberSetting): string | undefined {
   const problem = problems.value[key];
@@ -133,6 +138,9 @@ const choose = (changes: Partial<KeywordsSettings>) => (model.value = { ...model
         />
       </div>
       <p class="hint">{{ t('settings.timesHint') }}</p>
+      <p v-if="hurried" class="warning" role="status">
+        {{ t('settings.agentHurried', { ...AGENT_THINKING_TIMES, name: t('agents.personas.reviewer1') }) }}
+      </p>
     </fieldset>
 
     <fieldset>
@@ -214,6 +222,13 @@ legend {
 .hint {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* A warning that blocks nothing, as of times too short for Reviewer 1 to think. */
+.warning {
+  color: var(--red-deep);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .number {

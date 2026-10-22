@@ -20,6 +20,7 @@ import UiButton from '../../core/components/UiButton.vue';
 import { account } from '../../core/account';
 import { fields, loadFields } from '../../core/fields';
 import { act } from '../../core/socket';
+import { toastError } from '../../core/toast';
 import { ROOM_ACTIONS } from '../../core/useRoomPage';
 import InviteAgent from '../keywords/InviteAgent.vue';
 import SetterForm from './SetterForm.vue';
@@ -59,7 +60,9 @@ const personSeated = computed(() => seated.value.some((player) => player.agent =
 const canInvite = computed(() => isChair.value && props.room.agents && personSeated.value && left.value > 0);
 const hasAgents = computed(() => props.room.players.some((player) => player.agent));
 const agentName = computed(() => t('agents.personas.reviewer1'));
-const invite = () => act('room:addAgent', { persona: 'reviewer1', seat: null });
+// While the AI players are offline, the invitation is held back, and a tap says so.
+const invite = () =>
+  props.room.agentsOnline ? act('room:addAgent', { persona: 'reviewer1', seat: null }) : toastError('agents_offline');
 
 // The chair's settings and word lists, kept until they are saved, as in the first game's desk: each
 // snapshot brings the room's anew, so they are compared by their contents.
@@ -162,7 +165,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
           <p class="vacant">
             {{ left > 0 ? t('games.impostor.lobby.left', { count: left }, left) : t('games.impostor.lobby.full') }}
           </p>
-          <InviteAgent v-if="canInvite" :name="agentName" @click="invite" />
+          <InviteAgent v-if="canInvite" :name="agentName" :held="!room.agentsOnline" @click="invite" />
           <UiButton v-if="!isSetter && !isSeated && left > 0" size="small" @click="sit(true)">
             {{ t('games.impostor.lobby.play') }}
           </UiButton>

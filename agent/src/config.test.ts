@@ -19,6 +19,7 @@ describe('the settings', () => {
       modelUrl: 'http://127.0.0.1:11434/v1',
       model: 'm',
       modelKey: null,
+      reasoning: 'low',
       models: {},
       concurrency: DEFAULT_CONCURRENCY,
       queue: DEFAULT_QUEUE,
@@ -54,11 +55,11 @@ describe('the settings', () => {
     const keyed = { ...base, AGENT_MODEL_URL: 'https://model.test/v1', AGENT_MODEL_KEY: 'k' };
     // The name alone: the first game's address and key.
     expect(loadConfig({ ...keyed, AGENT_IMPOSTOR_MODEL: 'small' }, 1).models).toEqual({
-      impostor: { modelUrl: 'https://model.test/v1', model: 'small', modelKey: 'k' },
+      impostor: { modelUrl: 'https://model.test/v1', model: 'small', modelKey: 'k', reasoning: 'low' },
     });
     // An address of its own, which the first game's key never goes to.
     expect(loadConfig({ ...keyed, AGENT_IMPOSTOR_MODEL_URL: 'http://127.0.0.1:8080/v1/' }, 1).models).toEqual({
-      impostor: { modelUrl: 'http://127.0.0.1:8080/v1', model: 'm', modelKey: null },
+      impostor: { modelUrl: 'http://127.0.0.1:8080/v1', model: 'm', modelKey: null, reasoning: 'low' },
     });
     const file = join(dir, 'key');
     writeFileSync(file, 'own\n');
@@ -67,7 +68,7 @@ describe('the settings', () => {
         { ...keyed, AGENT_IMPOSTOR_MODEL_URL: 'https://other.test/v1', AGENT_IMPOSTOR_MODEL_KEY_FILE: file },
         1,
       ).models.impostor,
-    ).toEqual({ modelUrl: 'https://other.test/v1', model: 'm', modelKey: 'own' });
+    ).toEqual({ modelUrl: 'https://other.test/v1', model: 'm', modelKey: 'own', reasoning: 'low' });
     expect(() =>
       loadConfig({ ...base, AGENT_IMPOSTOR_MODEL_URL: 'http://other.test/v1', AGENT_IMPOSTOR_MODEL_KEY: 'own' }, 1),
     ).toThrow(/AGENT_IMPOSTOR_MODEL_URL must be an https address/);
@@ -82,6 +83,22 @@ describe('the settings', () => {
       modelUrl: 'http://127.0.0.1:11434/v1',
       model: 'm',
       modelKey: 'own',
+      reasoning: 'low',
+    });
+  });
+
+  test('let the model think at the low level unless set otherwise, for each game', () => {
+    expect(loadConfig({ ...base, AGENT_REASONING: 'off' }, 1)).toMatchObject({ reasoning: 'off', models: {} });
+    // A game takes the first game's level, or sets its own, which alone gives it a model of its own.
+    expect(
+      loadConfig({ ...base, AGENT_REASONING: 'off', AGENT_IMPOSTOR_MODEL: 'small' }, 1).models.impostor,
+    ).toMatchObject({
+      model: 'small',
+      reasoning: 'off',
+    });
+    expect(loadConfig({ ...base, AGENT_IMPOSTOR_REASONING: ' off ' }, 1)).toMatchObject({
+      reasoning: 'low',
+      models: { impostor: { modelUrl: 'http://127.0.0.1:11434/v1', model: 'm', modelKey: null, reasoning: 'off' } },
     });
   });
 
@@ -103,6 +120,8 @@ describe('the settings', () => {
       { AGENT_IMPOSTOR_MODEL_URL: 'not an address' },
       { AGENT_IMPOSTOR_MODEL_URL: 'http://model.test/v1?key=1' },
       { AGENT_IMPOSTOR_MODEL_KEY: 'a', AGENT_IMPOSTOR_MODEL_KEY_FILE: '/key' },
+      { AGENT_REASONING: 'high' },
+      { AGENT_IMPOSTOR_REASONING: 'none' },
     ];
     for (const changes of wrong)
       expect(() => loadConfig({ ...base, ...changes }, 1), JSON.stringify(changes)).toThrow();

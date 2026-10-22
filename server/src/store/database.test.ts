@@ -2154,6 +2154,70 @@ describe('a database in DATA_DIR', () => {
     after.close();
   });
 
+  test('of the twenty-seventh release has every note of the AI say that its model was not let think', async () => {
+    const database = await open(dir, MIGRATIONS.slice(0, 27));
+    const note = (ms: number, more: object = {}) => ({ model: 'm', prompt: 'keywords-5', ms, ...more });
+    const clue = { word: 'Lamp', count: 1, targets: [0], problem: null };
+    // g1: a clue, a request that found the agent busy, and a guess for someone offline that came to
+    // nothing; g2: a log cut short; g3: a game that no AI played in.
+    const logs: Record<string, object | null> = {
+      g1: {
+        v: 1,
+        gameId: 'g1',
+        steps: [
+          { t: 1, by: 'a', persona: 'reviewer1', kind: 'clue', answer: { word: 'Lamp', count: 1, targets: [0] } },
+          { t: 2, by: 'b', persona: 'reviewer1', kind: 'guess', error: 'busy' },
+          { t: 3, by: 'p1', persona: 'reviewer1', takeover: true, kind: 'guess', error: 'no_answer' },
+        ],
+      },
+      g2: { v: 1, gameId: 'g2', steps: [], truncated: true },
+      g3: null,
+    };
+    const g1 = logs.g1 as { steps: Record<string, unknown>[] };
+    Object.assign(g1.steps[0] as object, { note: note(900, { candidates: [clue] }) });
+    Object.assign(g1.steps[2] as object, { note: note(5) });
+    const kept = (id: string) =>
+      `('${id}', 'keywords', 'now', '{"v":2,"game":"keywords","gameId":"${id}","start":null,"entries":[]}', ` +
+      `${logs[id] ? `'${JSON.stringify(logs[id])}'` : 'NULL'}, 'abandoned', NULL, NULL, 'now', NULL, 1, 0, ` +
+      `${logs[id] ? 1 : 0}, 0, 0, 0, 'en', '["general"]', 'v', 6, 'w', NULL, NULL, NULL, ${logs[id] ? 1 : 0})`;
+    database.db.exec(`
+      INSERT INTO replays (game_id, game, ended_at, log, agent_log, ending, winner, reason, started_at, setup, accounts, guests,
+        agents, takeover, in_match, practice, language, fields, version, rules, words, match_id, match_game, match_games,
+        scores_nothing) VALUES ${kept('g1')}, ${kept('g2')}, ${kept('g3')};
+    `);
+    database.db.close();
+    const migrated = await open(dir, MIGRATIONS.slice(0, 28));
+    expect(migrated).toMatchObject({ schema: 28, migratedFrom: 27 });
+    const { db } = migrated;
+    const fresh = await open(null, MIGRATIONS.slice(0, 28));
+    const schema = (database: DatabaseSync) =>
+      database
+        .prepare("SELECT type, name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name")
+        .all();
+    expect(schema(db)).toEqual(schema(fresh.db));
+    const after = Object.fromEntries(
+      db
+        .prepare('SELECT game_id AS id, agent_log AS log FROM replays ORDER BY game_id')
+        .all()
+        .map(({ id, log }) => [id, log === null ? null : JSON.parse(log as string)]),
+    );
+    // Every note says that the model wasn't let think, and the rest of each step is as it was, in
+    // its place.
+    expect(after).toEqual({
+      g1: {
+        v: 2,
+        gameId: 'g1',
+        steps: [
+          { ...g1.steps[0], note: note(900, { candidates: [clue], reasoning: 'off' }) },
+          g1.steps[1],
+          { ...g1.steps[2], note: note(5, { reasoning: 'off' }) },
+        ],
+      },
+      g2: { v: 2, gameId: 'g2', steps: [], truncated: true },
+      g3: null,
+    });
+  });
+
   test('runs a migration with foreign keys off, so that it can rebuild a table that others point at', async () => {
     const two = [
       'CREATE TABLE a (id INTEGER PRIMARY KEY) STRICT',

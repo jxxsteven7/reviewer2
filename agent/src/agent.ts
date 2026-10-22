@@ -34,6 +34,13 @@ export interface AgentOptions {
 // How long a ping may take: it only asks the service which models it has.
 const PING_MS = 5_000;
 
+// How long a request takes the model without thinking, generously: a second or two, measured, and
+// twice that for one that was let think and is asked again. The requests that wait for the model
+// are promised this much of it each, and those with it stop thinking, and a PI rehearsing its clues
+// (keywords.ts), in time for that (hurryAt). One whose answer without thinking the rules refuse is
+// asked again, once or twice, which is rare, and may make a waiting one late.
+const QUICK_MS = 3_000;
+
 // A turn of a game, with the game's own code.
 function playGame(request: Exclude<AgentRequest, { kind: 'ping' }>, turn: Turn): Promise<AgentReply> {
   switch (request.game) {
@@ -53,10 +60,39 @@ export function createAgent({
   readMs = 2_000,
   now = () => performance.now(),
 }: AgentOptions) {
-  // The requests that wait for the model, the earliest first, each as what gives it its turn, and
-  // how many requests the model is answering.
-  const waiting: (() => void)[] = [];
+  // The requests that wait for the model, the earliest first, each as when its wait ends and what
+  // gives it its turn; how many requests the model is answering; and what hurries each of those
+  // (Turn.hurry), which is aborted when they must stop thinking.
+  const waiting: { until: number; take: () => void }[] = [];
   let running = 0;
+  const hurries = new Set<AbortController>();
+  let hurrying: NodeJS.Timeout | null = null;
+
+  // When the requests with the model must stop thinking, so that those waiting are answered in
+  // time, or Infinity while none waits. Thinking takes long (thinking.ts), and the waiting ones
+  // would be late for it: once the requests with the model are told to stop, each answers without
+  // thinking within QUICK_MS, and the waiting ones take their turns, `concurrency` at a time, each
+  // answered within QUICK_MS; so the one in place i has its turn QUICK_MS * (i / concurrency + 1)
+  // after the stop, and needs it QUICK_MS before its wait ends. One that would be late even if the
+  // requests with the model stopped at once, as a request asked again late in a phase is, hurries
+  // nobody: it is busy whatever they do, and their thinking would be lost for nothing.
+  function hurryAt(): number {
+    return waiting.reduce((at, { until }, place) => {
+      const turns = Math.floor(place / concurrency) + 1;
+      return until - now() < QUICK_MS * turns ? at : Math.min(at, until - QUICK_MS * (turns + 1));
+    }, Infinity);
+  }
+
+  // Hurries the requests with the model when that time comes, as the queue stands now; called
+  // whenever it changes.
+  function hurryWhenDue(): void {
+    if (hurrying !== null) clearTimeout(hurrying);
+    hurrying = null;
+    const delay = hurryAt() - now();
+    if (delay === Infinity) return;
+    if (delay > 0) hurrying = setTimeout(hurryWhenDue, delay);
+    else for (const hurry of hurries) hurry.abort();
+  }
 
   // Waits for a turn with the model, or says that there is none to be had: the queue is full, or
   // the request's wait ran out before its turn came, when nobody needs its answer any more. A
@@ -71,8 +107,9 @@ export function createAgent({
     return new Promise<boolean>((resolve) => {
       const timer = setTimeout(
         () => {
-          const place = waiting.indexOf(take);
+          const place = waiting.findIndex((one) => one.take === take);
           if (place !== -1) waiting.splice(place, 1);
+          hurryWhenDue();
           resolve(false);
         },
         Math.max(0, until - now()),
@@ -81,29 +118,38 @@ export function createAgent({
         clearTimeout(timer);
         resolve(true);
       };
-      waiting.push(take);
+      waiting.push({ until, take });
+      hurryWhenDue();
     });
   }
 
   // A request is done with the model: the next one in the queue takes its place.
   function done(): void {
     const next = waiting.shift();
-    if (next) next();
+    if (next) next.take();
     else running -= 1;
+    hurryWhenDue();
   }
 
   async function play(request: Exclude<AgentRequest, { kind: 'ping' }>): Promise<AgentReply> {
     const until = now() + request.waitMs;
     if (!(await turnWith(until))) return { ok: false, error: 'busy' };
+    // A request that gets its turn when the waiting ones can't wait for thinking goes without.
+    const hurry = new AbortController();
+    hurries.add(hurry);
+    if (hurryAt() <= now()) hurry.abort();
     try {
       const turn = {
         model: models[request.game] ?? model,
         persona: PERSONAS[request.persona],
         signal: AbortSignal.timeout(Math.max(1, Math.ceil(until - now()))),
+        until,
+        hurry: hurry.signal,
         now,
       };
       return await playGame(request, turn);
     } finally {
+      hurries.delete(hurry);
       done();
     }
   }

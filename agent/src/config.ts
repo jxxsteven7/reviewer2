@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { REASONING_LEVELS, type ReasoningLevel } from '@reviewer2/shared';
 
 // The agent's settings, from environment variables (docs/development.md). A setting that is wrong
 // stops it, as one does the game server and the mailer.
@@ -11,15 +12,17 @@ export interface AgentConfig {
   socket: string | null;
   // The language model: the address of a service that answers OpenAI's chat completions, such as
   // http://127.0.0.1:11434/v1 for a model that Ollama runs on the same machine, without a slash at
-  // the end; the model's name there; and the key it wants, if any.
+  // the end; the model's name there; the key it wants, if any; and how long it thinks before a
+  // move (REASONING_LEVELS), low unless set: off for a model that can't think.
   modelUrl: string;
   model: string;
   modelKey: string | null;
+  reasoning: ReasoningLevel;
   // The model of a game that has one of its own, set as the first game's is, with the game's name
   // after AGENT_ (GAME_MODELS): AGENT_IMPOSTOR_MODEL and so on. What a game leaves unset is the
-  // first game's: the model's name, its address, and the key, unless the game names an address of
-  // its own, which the first game's key never goes to. A game that sets nothing plays with the
-  // first game's model.
+  // first game's: the model's name, its address, the key, unless the game names an address of its
+  // own, which the first game's key never goes to, and the level. A game that sets nothing plays
+  // with the first game's model.
   models: Partial<Record<GameWithModel, ModelSettings>>;
   // How many requests the agent puts to the model at once, and how many more may wait their turn.
   // A request that finds the queue full is answered `busy` at once.
@@ -31,6 +34,7 @@ export interface ModelSettings {
   modelUrl: string;
   model: string;
   modelKey: string | null;
+  reasoning: ReasoningLevel;
 }
 
 // The games that may have a model of their own, with the prefix of their settings.
@@ -84,13 +88,24 @@ function modelUrl(text: string | undefined, keyed: boolean, name = 'AGENT_MODEL_
   return url.href.replace(/\/+$/, '');
 }
 
+// How long the model thinks, or the fallback when the variable is unset.
+function reasoning(env: NodeJS.ProcessEnv, prefix: string, fallback: ReasoningLevel): ReasoningLevel {
+  const text = env[`${prefix}REASONING`]?.trim() ?? '';
+  if (text === '') return fallback;
+  if (!(REASONING_LEVELS as readonly string[]).includes(text)) {
+    throw new Error(`${prefix}REASONING must be one of ${REASONING_LEVELS.join(', ')}, not "${text}"`);
+  }
+  return text as ReasoningLevel;
+}
+
 // The model of a game with the prefix of its settings, from the first game's where the game sets
 // nothing of its own, or null for a game that sets nothing at all.
 function gameModel(env: NodeJS.ProcessEnv, prefix: string, first: ModelSettings): ModelSettings | null {
   const model = env[`${prefix}MODEL`]?.trim() ?? '';
   const url = env[`${prefix}MODEL_URL`]?.trim() ?? '';
   const key = secret(env, prefix);
-  if (model === '' && url === '' && key === null) return null;
+  const level = env[`${prefix}REASONING`]?.trim() ?? '';
+  if (model === '' && url === '' && key === null && level === '') return null;
   // The first game's key goes only to the first game's address.
   const modelKey = url === '' ? (key ?? first.modelKey) : key;
   // The first game's address was checked for the first game's key alone: a key of the game's own
@@ -105,6 +120,7 @@ function gameModel(env: NodeJS.ProcessEnv, prefix: string, first: ModelSettings)
     modelUrl: url === '' ? first.modelUrl : modelUrl(url, modelKey !== null, `${prefix}MODEL_URL`),
     model: model === '' ? first.model : model,
     modelKey,
+    reasoning: reasoning(env, prefix, first.reasoning),
   };
 }
 
@@ -129,7 +145,12 @@ export function loadConfig(env: NodeJS.ProcessEnv, pid: number): AgentConfig {
   const model = env.AGENT_MODEL?.trim() ?? '';
   if (model === '') throw new Error("set AGENT_MODEL, the model's name");
   const modelKey = secret(env);
-  const first = { modelUrl: modelUrl(env.AGENT_MODEL_URL, modelKey !== null), model, modelKey };
+  const first = {
+    modelUrl: modelUrl(env.AGENT_MODEL_URL, modelKey !== null),
+    model,
+    modelKey,
+    reasoning: reasoning(env, 'AGENT_', 'low'),
+  };
   const models: AgentConfig['models'] = {};
   for (const [game, prefix] of Object.entries(GAME_MODELS) as [GameWithModel, string][]) {
     const own = gameModel(env, prefix, first);

@@ -553,12 +553,13 @@ export class Room {
   }
 
   // The chair invites an AI player as `persona` to a seat, which the game reads (GameModule.seatAgent),
-  // in the waiting room of a room that may have them (agentsAllowed). An AI player has no
-  // connection, browser or account, and is known by its persona alone, so it goes by no name that a
-  // person could take.
+  // in the waiting room of a room that may have them (agentsAllowed), while they are online. An AI
+  // player has no connection, browser or account, and is known by its persona alone, so it goes by
+  // no name that a person could take.
   addAgent(persona: AgentPersona, seat: unknown): Ack<{ member: Member }> {
     if (!this.agentsAllowed() || !this.game.seatAgent) return fail('agents_not_allowed');
     if (this.phase !== 'lobby') return fail('wrong_phase');
+    if (!this.#agents?.up) return fail('agents_offline');
     if (this.full()) return fail('room_full');
     const member: Member = {
       id: newPlayerId(),
@@ -1798,6 +1799,7 @@ export class Room {
         ...(member.takenOver ? { takenOver: true as const } : {}),
       })),
       agents: this.agentsAllowed(),
+      agentsOnline: this.#agents?.up ?? false,
       screens: this.screens.size,
     };
     // The match is the same for everyone, and is built when the first viewer asks, as the game's

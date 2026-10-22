@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { MAX_CUSTOM_INPUT, parseCustomWords, type PlayerView, type RoomView } from '@reviewer2/shared';
 import {
+  AGENT_THINKING_TIMES,
   BOARD_SIZE,
+  hurriesAgent,
   otherTeam,
   sameSettings,
   type KeywordsSettings,
@@ -25,6 +27,7 @@ import { fields, loadFields } from '../../core/fields';
 import { errorKey } from '../../core/errors';
 import { formatList } from '../../core/i18n';
 import { act } from '../../core/socket';
+import { toastError } from '../../core/toast';
 import { ROOM_ACTIONS } from '../../core/useRoomPage';
 import InviteAgent from './InviteAgent.vue';
 import SettingsForm from './SettingsForm.vue';
@@ -90,8 +93,10 @@ const problemKey = (item: StartProblem) =>
 
 // The chair invites AI players where the room may have them (docs/games/keywords.md#ai-players): a
 // group's PI, in its empty seat, and one of its students, as long as the group has no AI student,
-// once a person sits in a group. A game with them needs every time limit on, which the chair is
-// reminded of beside the seats while one is off.
+// once a person sits in a group. While they are offline, the invitations are held back, and a tap
+// says so. A game with them needs every time limit on, which the chair is reminded of beside the
+// seats while one is off, and times long enough for Reviewer 1 to think, which everyone is told
+// of beside the seats and the chair at the desk too, as the times are typed.
 const personSeated = computed(() =>
   props.room.players.some((player) => player.agent === undefined && data.value.seats[player.id]?.team),
 );
@@ -105,9 +110,14 @@ const timersOff = computed(() => {
   const { firstClueTime, clueTime, guessTime } = data.value.settings;
   return firstClueTime === 0 || clueTime === 0 || guessTime === 0;
 });
+const agentsHere = computed(() => props.room.agents || hasAgents.value);
+const hurried = computed(() => agentsHere.value && hurriesAgent(data.value.settings));
 const agentName = computed(() => t('agents.personas.reviewer1'));
-const invite = (team: Team, role: 'captain' | 'guesser') =>
-  act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
+const hurriedText = computed(() => t('settings.agentHurried', { ...AGENT_THINKING_TIMES, name: agentName.value }));
+function invite(team: Team, role: 'captain' | 'guesser') {
+  if (!props.room.agentsOnline) return toastError('agents_offline');
+  return act('room:addAgent', { persona: 'reviewer1', seat: { team, role } });
+}
 
 // The chair's choice of word lists, and of whether every game draws them anew, which is only sent
 // when they save it. Every snapshot brings the room's lists as a new array, so they are compared
@@ -271,7 +281,12 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
                       {{ t('lobby.takeCaptain') }}
                     </UiButton>
                   </p>
-                  <InviteAgent v-if="canInvite" :name="agentName" @click="invite(group.team, 'captain')" />
+                  <InviteAgent
+                    v-if="canInvite"
+                    :name="agentName"
+                    :held="!room.agentsOnline"
+                    @click="invite(group.team, 'captain')"
+                  />
                 </template>
               </dd>
               <dt>{{ t('games.keywords.seats.guesser') }}</dt>
@@ -285,6 +300,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
                 <InviteAgent
                   v-if="canInvite && !group.guessers.some((player) => player.agent)"
                   :name="agentName"
+                  :held="!room.agentsOnline"
                   @click="invite(group.team, 'guesser')"
                 />
                 <UiButton
@@ -298,6 +314,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
             </dl>
           </section>
           <p v-if="canInvite && timersOff" class="footnote">{{ t('lobby.problems.needs_timers') }}</p>
+          <p v-if="hurried" class="warning">{{ hurriedText }}</p>
         </div>
 
         <section class="spectators">
@@ -366,7 +383,12 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
               </p>
             </template>
             <h3 class="label">{{ t('settings.title') }}</h3>
-            <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+            <SettingsForm
+              v-model="chosenSettings"
+              v-model:valid="settingsValid"
+              :language="room.language"
+              :agents="agentsHere"
+            />
           </template>
           <div v-if="unsaved" class="save">
             <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
@@ -514,6 +536,13 @@ dd .vacant {
 .footnote {
   color: var(--ink-2);
   font-size: var(--text-sm);
+}
+
+/* A warning that blocks nothing, as of times too short for Reviewer 1 to think. */
+.warning {
+  color: var(--red-deep);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
 }
 
 .label {

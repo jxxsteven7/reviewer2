@@ -137,6 +137,7 @@ function room(me: string, chat?: ChatMessage[], phase: KeywordsView['phase'] = '
     chairId: 'ann',
     players: ['ann', 'bob', 'cat', 'eve'].map((id) => ({ id, name: id[0]?.toUpperCase() + id.slice(1), online: true })),
     agents: false,
+    agentsOnline: false,
     screens: 0,
     me,
     match: null,
@@ -1057,6 +1058,40 @@ describe('TurnStrip', () => {
     expect(screen.get('.phase').text()).toBe('Red group is guessing');
   });
 
+  test('says to everyone that an AI making the move is thinking, and in grey for how long it may', () => {
+    const hint = (seconds: number) => `It thinks before it answers, for up to about ${seconds} seconds.`;
+    const thinking = (changes: Partial<KeywordsView>, seat?: Seat) =>
+      mount(TurnStrip, {
+        props: { game: { ...game, ...changes }, guessRule: 'free', seat, agent: 'reviewer1' },
+        global: global(),
+      });
+    const clue = { phase: 'clue' as const };
+    for (const strip of [thinking(clue, seats.bob), thinking(clue, seats.eve), thinking(clue)]) {
+      expect(strip.get('.phase').text()).toBe('Reviewer 1 is thinking\u2026');
+      expect(strip.get('.note').text()).toBe(hint(90));
+    }
+    // A guess is thought of for 20 seconds at most, and nothing for longer than the phase has.
+    expect(thinking({}, seats.bob).get('.note').text()).toBe(hint(20));
+    expect(
+      thinking({ clock: { left: 10_000, total: 15_000 } }, seats.bob)
+        .get('.note')
+        .text(),
+    ).toBe(hint(15));
+    expect(
+      thinking({ ...clue, clock: { left: 30_000, total: 60_000 } })
+        .get('.note')
+        .text(),
+    ).toBe(hint(60));
+    expect(
+      thinking({ ...clue, clock: { left: 30_000, total: 120_000 } })
+        .get('.note')
+        .text(),
+    ).toBe(hint(90));
+    // A person's move has no note.
+    const person = mount(TurnStrip, { props: { game, guessRule: 'free', seat: seats.bob }, global: global() });
+    expect(person.find('.note').exists()).toBe(false);
+  });
+
   test('shows how many guesses are left under the standard rule only', () => {
     const standard = mount(TurnStrip, { props: { game, guessRule: 'standard' }, global: global() });
     expect(standard.get('.left').text()).toBe('3 more to reveal');
@@ -1787,6 +1822,41 @@ describe('SettingsForm', () => {
     expect(valid(wrapper)).toBe(true);
   });
 
+  test('warns in red, in a room with AI players, of times too short for Reviewer 1 to think', async () => {
+    const warning =
+      'With under 40 seconds for a clue or 20 for a guess, Reviewer 1 has no time to think and may be even further off.';
+    const wrapper = mount(SettingsForm, {
+      props: { modelValue: defaultSettings('en'), language: 'en', agents: true },
+      global: global(),
+    });
+    const [, first, clue, guess] = boxes(wrapper);
+    expect(wrapper.find('.warning').exists()).toBe(false);
+    await clue?.setValue('39');
+    await take(wrapper);
+    expect(wrapper.get('.warning').text()).toBe(warning);
+    // It blocks nothing.
+    expect(valid(wrapper)).toBe(true);
+    await clue?.setValue('40');
+    await take(wrapper);
+    expect(wrapper.find('.warning').exists()).toBe(false);
+    await guess?.setValue('19');
+    await take(wrapper);
+    expect(wrapper.find('.warning').exists()).toBe(true);
+    await guess?.setValue('20');
+    await first?.setValue('10');
+    await take(wrapper);
+    expect(wrapper.find('.warning').exists()).toBe(true);
+    // A limit that is off is no short time.
+    await first?.setValue('0');
+    await take(wrapper);
+    expect(wrapper.find('.warning').exists()).toBe(false);
+    // Without AI players, nothing to warn of.
+    await first?.setValue('10');
+    await take(wrapper);
+    await wrapper.setProps({ agents: false });
+    expect(wrapper.find('.warning').exists()).toBe(false);
+  });
+
   test('counts a clue in Chinese characters in a Chinese room', async () => {
     const wrapper = form('zh');
     expect(wrapper.text()).toContain('Characters in a clue');
@@ -2399,6 +2469,20 @@ describe('KeywordsGame', () => {
   const typed = (wrapper: ReturnType<typeof mount>) =>
     (wrapper.get('.clue-panel input').element as HTMLInputElement).value;
   const DRAFT = 'r2.clueDraft';
+
+  test('says, while an AI is the PI on, that it is thinking of a clue, and for how long it may', () => {
+    const view = waiting();
+    const data = view.data as KeywordsRoomData;
+    const agentPi: RoomView = {
+      ...view,
+      players: [...view.players, { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' }],
+      data: { ...data, seats: { ...data.seats, ai: { team: 'blue', role: 'captain' } } },
+    };
+    const wrapper = mount(KeywordsGame, { props: { room: agentPi }, global: global() });
+    expect(wrapper.get('.status').text()).toBe('Waiting for Reviewer 1 to think of a clue.');
+    expect(wrapper.get('.strip .phase').text()).toBe('Reviewer 1 is thinking\u2026');
+    expect(wrapper.get('.strip .note').text()).toBe('It thinks before it answers, for up to about 90 seconds.');
+  });
 
   test('lets a PI prepare the next clue while the other group is on, and give it when their turn comes', async () => {
     const wrapper = mount(KeywordsGame, { props: { room: waiting() }, global: global() });

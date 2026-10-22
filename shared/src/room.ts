@@ -115,6 +115,9 @@ export interface RoomView<Game = unknown> {
   // played for (docs/architecture.md#ai-players): the server has an agent, the room is private and
   // plays no match, and the operator has let the chair's account have AI players.
   agents: boolean;
+  // Whether the AI players are online: the server's agent and its model answer. While they are not,
+  // no AI player can be invited (agents_offline).
+  agentsOnline: boolean;
   // How many screens are watching. They have no name and no seat, so this number is all that
   // anyone sees of them; the chair can send them all away.
   screens: number;

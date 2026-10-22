@@ -31,6 +31,7 @@ import { useStuck } from '../../core/useStuck';
 import { useStickyHeight } from '../../core/useStickyHeight';
 import { useTitleFolds } from '../../core/useTitleFolds';
 import ClockBar from '../../core/components/ClockBar.vue';
+import { agentMoving } from './banner';
 import { periodOf } from './clock';
 import ClueLog from './ClueLog.vue';
 import CluePanel from './CluePanel.vue';
@@ -426,14 +427,21 @@ watch(
   { immediate: true },
 );
 
+// The AI that makes the move now, if one does, which the turn strip and the status line say is
+// thinking (banner.ts).
+const agent = computed(() => agentMoving(game.value, data.value.seats, room.value.players));
+
 // The status line under the board, for whoever has nothing to do just then: whose PI is giving the
-// clue, or which group is guessing. Who the viewer is, the turn strip says, and whom the others in
-// their group chose, the cards; whoever plays from a match's next game is told so under the line.
+// clue, or which group is guessing, or that Reviewer 1 is thinking of either. Who the viewer is, the
+// turn strip says, and whom the others in their group chose, the cards; whoever plays from a
+// match's next game is told so under the line.
 const status = computed(() => {
   if (canClue.value || game.value.result || paused.value || canGuess.value) return null;
-  return game.value.phase === 'clue'
-    ? t('game.waitClue', { group: group.value })
-    : t('game.waitGuess', { group: group.value });
+  const clue = game.value.phase === 'clue';
+  if (agent.value) {
+    return t(clue ? 'game.waitAgentClue' : 'game.waitAgentGuess', { name: t(`agents.personas.${agent.value}`) });
+  }
+  return clue ? t('game.waitClue', { group: group.value }) : t('game.waitGuess', { group: group.value });
 });
 </script>
 
@@ -453,6 +461,7 @@ const status = computed(() => {
       :game="game"
       :guess-rule="data.settings.guessRule"
       :seat="mySeat ?? SPECTATOR"
+      :agent="agent"
       :groups="groups"
       :me="room.me"
       clock-apart

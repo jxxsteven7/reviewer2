@@ -13,7 +13,7 @@ import { gameState } from './testing';
 // from starting, what each seat is asked and what it is told, the messages an answer makes, and the
 // chair's shuffle around them, and what its page counts of the games they played.
 
-const NOTE = { model: 'm', prompt: 'p', ms: 1 };
+const NOTE = { model: 'm', prompt: 'p', ms: 1, reasoning: 'off' as const };
 
 // Red: an AI PI and an AI student, and Rob, a person, as a student too; blue: Bea and Ben.
 const SEATS: [string, Seat][] = [

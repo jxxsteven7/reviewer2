@@ -100,7 +100,7 @@ export class ScriptedAgent implements AgentChannel {
   }
 }
 
-export const SCRIPT_NOTE = { model: 'script', prompt: 'test', ms: 1 };
+export const SCRIPT_NOTE = { model: 'script', prompt: 'test', ms: 1, reasoning: 'off' as const };
 
 export function scriptedPlay(request: Exclude<AgentRequest, { kind: 'ping' }>): AgentReply {
   if (request.kind === 'clue') {

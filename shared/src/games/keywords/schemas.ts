@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { MAX_AGENT_REASON } from '../../agent';
 import { LANGUAGES } from '../../language';
 import { AGENT_ASKED, AGENT_NOTE_FIELDS, gameId, term } from '../../schemaParts';
+import { MAX_REHEARSALS } from './agent';
 import { CLUE_RULES, GUESS_RULES } from './settings';
 import { BOARD_SIZE, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './types';
 
@@ -114,12 +115,15 @@ export const KEYWORDS_NOTE = z.strictObject({
         count: z.number().int().min(0).max(BOARD_SIZE),
         targets: z.array(cardIndex).max(BOARD_SIZE),
         problem: z.string().max(64).nullable(),
-        rehearsal: z
-          .strictObject({
-            picks: z.array(cardIndex).max(BOARD_SIZE),
-            found: z.number().int().min(0).max(BOARD_SIZE),
-            stop: color.nullable(),
-          })
+        rehearsals: z
+          .array(
+            z.strictObject({
+              picks: z.array(cardIndex).max(BOARD_SIZE),
+              found: z.number().int().min(0).max(BOARD_SIZE),
+              stop: color.nullable(),
+            }),
+          )
+          .max(MAX_REHEARSALS)
           .optional(),
       }),
     )

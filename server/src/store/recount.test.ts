@@ -699,10 +699,10 @@ describe('counting the records again', () => {
       persona: 'reviewer1',
       kind: 'press',
       answer: { pressed: true },
-      note: { ...note, ms: 1 },
+      note: { ...note, ms: 1, reasoning: 'off' as const },
     });
     const agentLog = (...notes: { prompt: string; model: string }[]): AgentLogData => ({
-      v: 1,
+      v: 2,
       gameId: 'g1',
       steps: notes.map(answered),
     });

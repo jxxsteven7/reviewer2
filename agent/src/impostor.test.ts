@@ -5,12 +5,14 @@ import { PROMPT_VERSION } from './impostorPrompts';
 import type { Turn } from './keywords';
 import { ModelError } from './model';
 import { PERSONAS } from './personas';
-import { allowed, impostorRequest, ScriptedModel } from './testing';
+import { allowed, impostorRequest, ScriptedModel, THOUGHT } from './testing';
 
-const turn = (model: ScriptedModel, signal = AbortSignal.timeout(10_000)): Turn => ({
+const turn = (model: ScriptedModel, signal = AbortSignal.timeout(10_000), waitMs = 10_000): Turn => ({
   model,
   persona: PERSONAS.reviewer1,
   signal,
+  until: Date.now() + waitMs,
+  hurry: new AbortController().signal,
   now: Date.now,
 });
 
@@ -196,5 +198,84 @@ describe('a failure of the model', () => {
       ok: false,
       error: 'no_answer',
     });
+  });
+});
+
+describe('thinking', () => {
+  test('comes before every move when there is time, and the note keeps it', async () => {
+    const model = new ScriptedModel(
+      {
+        describe: [{ candidates: ['round and red'] }],
+        vote: [{ number: 3, reason: 'Too vague.' }],
+        judge: [{ verdict: 'agree', reason: 'It names the word.' }],
+        comeback: [{ word: 'pear' }],
+      },
+      'scripted',
+      'low',
+    );
+    const long = () => turn(model, AbortSignal.timeout(57_000), 57_000);
+    for (const reply of [
+      await describeWord(impostorRequest('describe'), long()),
+      await vote(impostorRequest('vote'), long()),
+      await judge(impostorRequest('judge'), long()),
+      await comeback(impostorRequest('comeback'), long()),
+    ]) {
+      expect(allowed(reply)).toMatchObject({ ok: true, note: { reasoning: 'low', thinking: THOUGHT } });
+    }
+    expect(model.asked.map(({ think }) => think)).toEqual([true, true, true, true]);
+  });
+
+  test('is cut short when the model fails, and left out when the time is short or for a line asked again', async () => {
+    const model = new ScriptedModel(
+      {
+        describe: [{ candidates: ['an apple a day'] }, { candidates: ['round and red'] }],
+        vote: [new ModelError('unreadable'), { number: 3, reason: '' }],
+      },
+      'scripted',
+      'low',
+    );
+    expect(allowed(await describeWord(impostorRequest('describe'), turn(model)))).toMatchObject({
+      ok: true,
+      note: { reasoning: 'off' },
+    });
+    expect(
+      allowed(await vote(impostorRequest('vote'), turn(model, AbortSignal.timeout(30_000), 30_000))),
+    ).toMatchObject({
+      ok: true,
+      number: 3,
+      note: { reasoning: 'low', fellBack: true },
+    });
+    expect(model.asked.map(({ think }) => think)).toEqual([false, undefined, true, false]);
+  });
+
+  test('is noted as fallen back when the line taken came from a question without thinking', async () => {
+    const model = new ScriptedModel(
+      { describe: [{ candidates: ['an apple a day'] }, { candidates: ['round and red'] }] },
+      'scripted',
+      'low',
+    );
+    const reply = allowed(
+      await describeWord(impostorRequest('describe'), turn(model, AbortSignal.timeout(57_000), 57_000)),
+    );
+    expect(reply).toMatchObject({
+      ok: true,
+      text: 'round and red',
+      note: { reasoning: 'low', thinking: THOUGHT, fellBack: true },
+    });
+    expect(model.asked.map(({ think }) => think)).toEqual([true, undefined]);
+  });
+
+  test('stops when other requests wait for the model, and the move is asked for again without', async () => {
+    const hurry = new AbortController();
+    const model = new ScriptedModel({ vote: [new Promise(() => {}), { number: 3, reason: '' }] }, 'scripted', 'low');
+    const voting = vote(impostorRequest('vote'), {
+      ...turn(model, AbortSignal.timeout(57_000), 57_000),
+      hurry: hurry.signal,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(model.asked).toHaveLength(1);
+    hurry.abort();
+    expect(allowed(await voting)).toMatchObject({ ok: true, number: 3, note: { reasoning: 'low', fellBack: true } });
+    expect(model.asked.map(({ think }) => think)).toEqual([true, false]);
   });
 });

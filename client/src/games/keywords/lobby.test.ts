@@ -8,6 +8,7 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { account } from '../../core/account';
 import { fields } from '../../core/fields';
 import { knowAliases } from '../../core/names';
+import { toasts } from '../../core/toast';
 import en from '../../locales/en.json';
 import KeywordsLobby from './KeywordsLobby.vue';
 
@@ -77,6 +78,7 @@ const view = (me: string, screens: number, settings = data.settings): RoomView =
     { id: 'bob', name: 'Bob', online: true },
   ],
   agents: false,
+  agentsOnline: false,
   screens,
   me,
   match: null,
@@ -98,6 +100,7 @@ const withAgents = (
   return {
     ...room,
     agents: true,
+    agentsOnline: true,
     players: [...room.players, { id: 'ai', name: 'Reviewer 1', online: true, agent: 'reviewer1' }],
     data: { ...data, settings, seats },
   };
@@ -199,6 +202,65 @@ describe('KeywordsLobby', () => {
       global: global(),
     });
     expect(seated.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1')).toHaveLength(2);
+  });
+
+  test('holds the invitations back while the AI players are offline, and says why when one is tapped', async () => {
+    const chair = mount(KeywordsLobby, {
+      props: { room: { ...withAgents('ann'), agentsOnline: false } },
+      global: global(),
+    });
+    const invites = chair.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1');
+    expect(invites).toHaveLength(3);
+    // They look disabled, but a tap still reaches them, to tell the chair why nothing happens.
+    for (const chip of invites) {
+      expect(chip.classes()).toContain('held');
+      expect(chip.classes()).not.toContain('press-host');
+      expect(chip.attributes('aria-disabled')).toBe('true');
+      expect(chip.attributes('disabled')).toBeUndefined();
+    }
+    await invites[0]?.trigger('click');
+    expect(send).not.toHaveBeenCalledWith('room:addAgent', expect.anything());
+    expect(toasts.at(-1)?.key).toBe('errors.agents_offline');
+    // Once they are back, the invitations are as before.
+    await chair.setProps({ room: withAgents('ann') });
+    const back = chair.findAll('button').filter((button) => button.text() === 'Invite Reviewer 1');
+    expect(back[0]?.classes()).toContain('press-host');
+    expect(back[0]?.attributes('aria-disabled')).toBeUndefined();
+  });
+
+  test('warns everyone in red, beside the seats, of times too short for Reviewer 1 to think', async () => {
+    const warning = 'With under 40 seconds for a clue or 20 for a guess, Reviewer 1 has no time to think';
+    // Times long enough, or a room without AI players, need no warning.
+    const fine = mount(KeywordsLobby, { props: { room: withAgents('bob') }, global: global() });
+    expect(fine.find('.warning').exists()).toBe(false);
+    const short = { ...data.settings, guessTime: 15 };
+    const without = mount(KeywordsLobby, { props: { room: view('bob', 0, short) }, global: global() });
+    expect(without.find('.warning').exists()).toBe(false);
+    // A time limit that is off isn't short: the reminder that time limits are needed covers it.
+    const untimed = mount(KeywordsLobby, {
+      props: { room: withAgents('bob', undefined, { ...data.settings, guessTime: 0 }) },
+      global: global(),
+    });
+    expect(untimed.find('.warning').exists()).toBe(false);
+
+    const player = mount(KeywordsLobby, { props: { room: withAgents('bob', undefined, short) }, global: global() });
+    expect(player.get('.groups .warning').text()).toContain(warning);
+    // A room that may have AI players warns before one is invited, too.
+    const allowed = mount(KeywordsLobby, {
+      props: { room: { ...view('bob', 0, { ...data.settings, clueTime: 30 }), agents: true } },
+      global: global(),
+    });
+    expect(allowed.get('.groups .warning').text()).toContain(warning);
+
+    // The chair reads it at the desk as well, as the times are typed.
+    const chair = mount(KeywordsLobby, { props: { room: withAgents('ann') }, global: global() });
+    await flushPromises();
+    expect(chair.find('.desk .warning').exists()).toBe(false);
+    const boxes = chair.findAll('.desk input[inputmode="numeric"]');
+    await boxes.at(-1)?.setValue('15');
+    expect(chair.get('.desk .warning').text()).toContain(warning);
+    // Beside the seats, it waits for the times to be saved.
+    expect(chair.find('.groups .warning').exists()).toBe(false);
   });
 
   test('says what AI players still need before the game can start', () => {

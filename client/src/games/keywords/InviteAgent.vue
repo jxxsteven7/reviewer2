@@ -8,13 +8,20 @@ import PlayerAvatar from '../../core/components/PlayerAvatar.vue';
 // does (`press-part` in base.css, which also keeps it still where the device asks for less
 // motion), with a plus on its corner, which tells the invitation from the AI player once seated,
 // whose avatar opens its page; and the words, in which the AI player's name never breaks over two
-// lines. Its name to a screen reader is the words.
-defineProps<{ name: string }>();
+// lines. Its name to a screen reader is the words. While the AI players are offline (`held`), it
+// looks disabled, grey and still, and a tap still comes through, for the room to say why.
+withDefaults(defineProps<{ name: string; held?: boolean }>(), { held: false });
 defineEmits<{ click: [] }>();
 </script>
 
 <template>
-  <button type="button" class="invite-agent press-host" @click="$emit('click')">
+  <button
+    type="button"
+    class="invite-agent"
+    :class="held ? 'held' : 'press-host'"
+    :aria-disabled="held ? 'true' : undefined"
+    @click="$emit('click')"
+  >
     <span class="face press-part">
       <PlayerAvatar :name="name" agent />
       <span class="plus"></span>
@@ -51,10 +58,24 @@ defineEmits<{ click: [] }>();
 }
 
 @media (hover: hover) {
-  .invite-agent:hover {
+  .invite-agent:not(.held):hover {
     background: var(--neutral-tint);
     box-shadow: inset 0 0 0 var(--line-thin) var(--neutral);
   }
+}
+
+/* Held back: grey, with the avatar flat and without its colors, and the plus grey. */
+.invite-agent.held {
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
+
+.held .face {
+  box-shadow: none;
+}
+
+.held .face > :first-child {
+  filter: grayscale(1);
 }
 
 .face {
@@ -78,6 +99,10 @@ defineEmits<{ click: [] }>();
     linear-gradient(var(--paper), var(--paper)) center / 7px 2px no-repeat,
     linear-gradient(var(--paper), var(--paper)) center / 2px 7px no-repeat,
     var(--ink);
+}
+
+.held .plus {
+  background-color: var(--neutral);
 }
 
 .name {

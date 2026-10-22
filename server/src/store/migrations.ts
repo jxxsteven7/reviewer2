@@ -1438,4 +1438,18 @@ export const MIGRATIONS: readonly string[] = [
   ALTER TABLE replays ADD COLUMN scores_nothing INTEGER NOT NULL DEFAULT 0 CHECK (scores_nothing IN (0, 1));
   UPDATE replays SET scores_nothing = 1 WHERE agents > 0 OR takeover = 1;
   `,
+  // 28: the AI's log of a game, at version 2 (agentLog.ts), says in every note how long the model was
+  // let think (AgentNote in shared/src/agent.ts), and keeps what it thought, and the rehearsals of a
+  // clue of the first game as a list. No model was let think before, so every note that is there
+  // says it wasn't; none has what a model thought, and none a rehearsal, which no AI player made.
+  `
+  UPDATE replays SET agent_log = json_set(agent_log, '$.v', 2, '$.steps', json((
+    SELECT json_group_array(
+      CASE WHEN json_type(step.value, '$.note') = 'object'
+        THEN json_set(step.value, '$.note.reasoning', 'off')
+        ELSE json(step.value) END
+      ORDER BY step.key)
+    FROM json_each(replays.agent_log, '$.steps') AS step
+  ))) WHERE agent_log IS NOT NULL;
+  `,
 ];

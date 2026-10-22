@@ -1,19 +1,23 @@
 import { MAX_AGENT_REASON, type AgentNote, type AgentReply, type AgentRequest } from '@reviewer2/shared';
 import {
+  AGENT_GUESS_THINKING_MS,
   checkClue,
   cleanClue,
   clueCounts,
   clueOptions,
+  MAX_REHEARSALS,
   normalizeClue,
   type AgentCandidate,
   type AgentGame,
+  type AgentRehearsal,
   type CardColor,
   type ClueCount,
   type ClueMatch,
 } from '@reviewer2/shared/keywords';
-import { ModelError, type Model } from './model';
+import { ModelError, type Model, type Question } from './model';
 import type { Persona } from './personas';
 import { CLUE_SCHEMA, clueSystem, clueUser, GUESS_SCHEMA, guessSystem, guessUser, PROMPT_VERSION } from './prompts';
+import { thinker } from './thinking';
 
 // How the agent plays a turn of the team word guessing game (docs/games/keywords.md): a clue as a
 // group's PI, or the cards to reveal as one of its students. The model only proposes; the agent
@@ -25,11 +29,14 @@ export type ClueRequest = Extract<AgentRequest, { kind: 'clue' }>;
 export type GuessRequest = Extract<AgentRequest, { kind: 'guess' }>;
 
 // What a turn needs besides the request: the model, the persona that plays, the signal that ends
-// the wait, and the clock that the note's time is read from.
+// the wait and the time it does so, the signal that tells the model to stop thinking, since other
+// requests wait for it (agent.ts), and the clock that the time and the note's are read from.
 export interface Turn {
   model: Model;
   persona: Persona;
   signal: AbortSignal;
+  until: number;
+  hurry: AbortSignal;
   now: () => number;
 }
 
@@ -40,6 +47,19 @@ const TRIES = 3;
 // The most cards that a student lists for a clue of 0 or "unlimited", which says nothing of how
 // many cards it links.
 const OPEN_LIMIT = 3;
+
+// How long the model thinks (thinking.ts). A PI thinks of a clue until this long before the end of
+// its wait, which leaves time to ask again without thinking, a second or two, and for the
+// rehearsals, about six seconds, with a margin. A student thinks for no longer than
+// AGENT_GUESS_THINKING_MS, which the whose-turn strip tells the players, and stops this long before
+// the end of its wait: measured on fixed boards at the low level, nearly every guess took less than
+// ten seconds, and every one less than fifteen. The rehearsals stop this long before the end of
+// the wait, so that the clue still goes out in time, and one is asked for only with about the
+// time it takes left, a second.
+const CLUE_AFTER_THINKING_MS = 15_000;
+const GUESS_AFTER_THINKING_MS = 5_000;
+const REHEARSALS_END_MS = 1_000;
+const REHEARSAL_MS = 1_000;
 
 // The longest clue that a note keeps of what the model wrote (AGENT_REPLY).
 const MAX_NOTED = 200;
@@ -167,37 +187,42 @@ function failure(error: unknown, note: AgentNote, signal: AbortSignal): AgentRep
   throw error;
 }
 
+// What a student is asked: the cards it would reveal for the clue, at most `limit`, and why.
+function guessQuestion(game: AgentGame, clue: { word: string; count: ClueCount }, limit: number, persona: Persona) {
+  return {
+    system: guessSystem(game, persona, limit),
+    user: guessUser(game, clue),
+    name: 'guess',
+    schema: GUESS_SCHEMA,
+    temperature: persona.temperature,
+  } satisfies Question;
+}
+
 // The cards that a student would reveal: the model's picks, of which there is at least one, since a
 // group that has revealed no card yet can't pass; and the reason, in a sentence.
-async function picksFor(
+function picksOf(
   game: AgentGame,
-  clue: { word: string; count: ClueCount },
+  answer: Record<string, unknown>,
   limit: number,
-  turn: Turn,
-): Promise<{ picks: number[]; reason: string } | null> {
-  const answer = await turn.model.ask(
-    {
-      system: guessSystem(game, turn.persona, limit),
-      user: guessUser(game, clue),
-      name: 'guess',
-      schema: GUESS_SCHEMA,
-      temperature: turn.persona.temperature,
-    },
-    turn.signal,
-  );
+): { picks: number[]; reason: string } | null {
   const picks = covered(game, answer.picks, limit);
   return picks.length > 0 ? { picks, reason: sentence(answer.reason) } : null;
 }
 
 export async function guess(request: GuessRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
+  const thought = thinker(turn);
   const note = (): AgentNote<AgentCandidate> => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
+    ...thought.noted,
   });
   try {
-    const found = await picksFor(request, request.clue, limitFor(request.clue, request.guessesLeft), turn);
+    const limit = limitFor(request.clue, request.guessesLeft);
+    const by = Math.min(started + AGENT_GUESS_THINKING_MS, turn.until - GUESS_AFTER_THINKING_MS);
+    const answer = await thought.think(guessQuestion(request, request.clue, limit, turn.persona), by);
+    const found = picksOf(request, answer, limit);
     // A model that named no card that is still covered gave no answer to go by.
     if (!found) return failed(note(), 'no_answer');
     return {
@@ -214,7 +239,7 @@ export async function guess(request: GuessRequest, turn: Turn): Promise<AgentRep
 
 // How the guesses of a rehearsal go: the student reveals its picks in order, as many as the clue's
 // number, and stops at the first card that isn't the group's own.
-function rehearse(game: AgentGame, picks: number[], count: number): NonNullable<AgentCandidate['rehearsal']> {
+function rehearsal(game: AgentGame, picks: number[], count: number): AgentRehearsal {
   let found = 0;
   let stop: CardColor | null = null;
   for (const card of picks.slice(0, count)) {
@@ -239,10 +264,12 @@ function danger(stop: CardColor | null, team: string): number {
 export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
   const considered: AgentCandidate[] = [];
+  const thought = thinker(turn);
   const note = (): AgentNote<AgentCandidate> => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
+    ...thought.noted,
     candidates: considered,
   });
   // The clues that the rules refused, with what was wrong and why, which the model is told when it
@@ -252,16 +279,19 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
   try {
     let chosen: Judged[] = [];
     for (let attempt = 0; attempt < TRIES && chosen.length === 0; attempt += 1) {
-      const answer = await turn.model.ask(
-        {
-          system: clueSystem(request, turn.persona),
-          user: clueUser(request, refused),
-          name: 'clue',
-          schema: CLUE_SCHEMA,
-          temperature: turn.persona.temperature,
-        },
-        turn.signal,
-      );
+      const question: Question = {
+        system: clueSystem(request, turn.persona),
+        user: clueUser(request, refused),
+        name: 'clue',
+        schema: CLUE_SCHEMA,
+        temperature: turn.persona.temperature,
+      };
+      // The model thinks of the first clues; it is asked again without thinking, in the time that
+      // is left.
+      const answer =
+        attempt === 0
+          ? await thought.think(question, turn.until - CLUE_AFTER_THINKING_MS)
+          : await thought.again(question);
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
       const judged = proposed.map((candidate) => judge(request, candidate, max)).filter((found) => found !== null);
       considered.push(...judged.map(({ candidate }) => candidate));
@@ -274,39 +304,48 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
       chosen = clean.length > 0 ? clean : judged.filter(({ legal }) => legal);
     }
     if (chosen.length === 0) return { ok: false, error: 'no_legal_clue', note: note() };
-    const best = turn.persona.rehearse ? await rehearsed(request, chosen, turn) : chosen[0];
-    const { word, count, targets } = (best ?? (chosen[0] as Judged)).candidate;
+    const best = turn.persona.rehearse && chosen.length > 1 ? await rehearsed(request, chosen, turn) : chosen[0];
+    const { word, count, targets } = (best as Judged).candidate;
     return { ok: true, kind: 'clue', word, count, targets, note: note() };
   } catch (error) {
     return failure(error, note(), turn.signal);
   }
 }
 
-// Has each clue guessed first, by the model playing a student who sees what the group's students
-// see, and gives back the one whose guesses go best (danger()), the earlier among equals. A
-// rehearsal that the model can't answer ends the rehearsals, and the first clue is given as it
-// would have been without them, unless the time is up.
-async function rehearsed(request: ClueRequest, chosen: Judged[], turn: Turn): Promise<Judged | undefined> {
+// Has each clue guessed first, a few times over, by the model playing a student who sees what the
+// group's students see, without thinking, and gives back the one whose guesses go best on average
+// (danger()), the earlier among equals. Measured on fixed boards, one rehearsal a clue was no
+// help, and three ran into the other group's cards half as often; a student that thinks takes too
+// long. The rehearsals go round the clues, one each at a time, so that the time running out leaves
+// every clue with about as many. They stop in time for the clue to go out, when the model can't
+// answer one, or when other requests wait for the model (Turn.hurry): a hurried PI gives its clue
+// on the rehearsals so far, if any, so that the waiting ones have their turn. A clue that had none
+// counts as one whose student found nothing and stopped safely.
+async function rehearsed(request: ClueRequest, chosen: Judged[], turn: Turn): Promise<Judged> {
   const students = {
     ...request,
     cards: request.cards.map(({ color, ...card }) => (card.revealed ? { ...card, color } : card)),
   };
-  const tried: Judged[] = [];
-  for (const judged of chosen) {
-    const { candidate } = judged;
-    let found: { picks: number[] } | null;
-    try {
-      found = await picksFor(students, { word: candidate.word, count: candidate.count }, candidate.count, turn);
-    } catch (error) {
-      if (turn.signal.aborted || !(error instanceof ModelError)) throw error;
-      return chosen[0];
+  const end = turn.until - REHEARSALS_END_MS;
+  rounds: for (let round = 0; round < MAX_REHEARSALS; round += 1) {
+    for (const { candidate } of chosen) {
+      const left = end - turn.now();
+      if (left < REHEARSAL_MS || turn.hurry.aborted) break rounds;
+      const question = guessQuestion(students, candidate, candidate.count, turn.persona);
+      const signal = AbortSignal.any([turn.signal, turn.hurry, AbortSignal.timeout(Math.ceil(left))]);
+      let answer: Record<string, unknown>;
+      try {
+        answer = (await turn.model.ask(question, signal)).value;
+      } catch (error) {
+        if (turn.signal.aborted || !(error instanceof ModelError)) throw error;
+        break rounds;
+      }
+      const picks = picksOf(students, answer, candidate.count)?.picks ?? [];
+      (candidate.rehearsals ??= []).push(rehearsal(request, picks, candidate.count));
     }
-    candidate.rehearsal = rehearse(request, found?.picks ?? [], candidate.count);
-    tried.push(judged);
   }
-  const rank = ({ candidate }: Judged) => {
-    const { found, stop } = candidate.rehearsal ?? { found: 0, stop: null };
-    return danger(stop, request.team) * 100 - found;
-  };
-  return tried.reduce((best, next) => (rank(next) < rank(best) ? next : best), tried[0] as Judged);
+  const rank = ({ candidate: { rehearsals = [] } }: Judged) =>
+    rehearsals.reduce((sum, { found, stop }) => sum + danger(stop, request.team) * 100 - found, 0) /
+    Math.max(1, rehearsals.length);
+  return chosen.reduce((best, next) => (rank(next) < rank(best) ? next : best));
 }

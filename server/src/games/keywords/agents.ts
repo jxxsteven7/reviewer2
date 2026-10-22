@@ -55,7 +55,8 @@ export function totalsOf(seats: readonly unknown[]): KeywordsAgentFeats {
 // How long an AI waits before its moves, in milliseconds, so that people can follow it: a PI gives
 // the clue no sooner than this after the turn began, and a student reveals its first card no sooner
 // than this after the clue, and the next ones this far apart. An AI student that advises people
-// chooses its card at once.
+// chooses its card as soon as it has one, which it thinks of as it does its own guesses
+// (agent/src/keywords.ts), while the people are the ones to move.
 export const CLUE_PACE_MS = 3_000;
 export const GUESS_PACE_MS = 2_000;
 export const STEP_PACE_MS = 1_500;

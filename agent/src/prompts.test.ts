@@ -124,6 +124,6 @@ describe('the clue rules', () => {
   });
 
   test('are noted with a new version of the prompts', () => {
-    expect(PROMPT_VERSION).toBe('keywords-5');
+    expect(PROMPT_VERSION).toBe('keywords-6');
   });
 });

@@ -15,19 +15,27 @@ function log(event: string, fields: Record<string, unknown> = {}): void {
 
 try {
   const config = loadConfig(process.env, process.pid);
-  const model = createModel({ url: config.modelUrl, model: config.model, key: config.modelKey });
+  const model = createModel({
+    url: config.modelUrl,
+    model: config.model,
+    key: config.modelKey,
+    reasoning: config.reasoning,
+  });
   // A game with a model of its own plays with it (config.ts).
   const models = Object.fromEntries(
     Object.entries(config.models).map(([game, own]) => [
       game,
-      createModel({ url: own.modelUrl, model: own.model, key: own.modelKey }),
+      createModel({ url: own.modelUrl, model: own.model, key: own.modelKey, reasoning: own.reasoning }),
     ]),
   );
   const { server } = createAgent({ model, models, log, concurrency: config.concurrency, queue: config.queue });
   const listening = () =>
     log('agent_listening', {
       model: config.model,
-      games: Object.fromEntries(Object.entries(config.models).map(([game, own]) => [game, own.model])),
+      reasoning: config.reasoning,
+      games: Object.fromEntries(
+        Object.entries(config.models).map(([game, own]) => [game, { model: own.model, reasoning: own.reasoning }]),
+      ),
       socket: config.activated ? 'fd 3' : config.socket,
     });
   if (config.activated) {

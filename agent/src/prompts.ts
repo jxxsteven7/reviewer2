@@ -9,7 +9,7 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'keywords-5';
+export const PROMPT_VERSION = 'keywords-6';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 
@@ -97,6 +97,21 @@ function clueRules(game: AgentGame): string {
   );
 }
 
+// In a Chinese room, the characters of the words on the board that are not revealed, none of which
+// a clue may contain (clueRules()), listed so that the model needn't find them itself. Measured on
+// fixed boards, a tenth of the clues that a model thought of had one before the list, and a
+// thirtieth after, and it thought a tenth less. The list comes last, after what stays the same all
+// game.
+function boardCharacters(game: AgentGame): string[] {
+  if (game.language !== 'zh') return [];
+  const covered = game.cards.filter(({ revealed }) => !revealed).map(({ word }) => word);
+  const characters = [...new Set(covered.join('').match(/\p{Script=Han}/gu) ?? [])];
+  if (characters.length === 0) return [];
+  return [
+    `The characters of the words on the board that are not revealed, none of which a clue may contain: ${characters.join(' ')}`,
+  ];
+}
+
 export function clueSystem(game: AgentGame, persona: Persona): string {
   const { min, preferred, max } = persona.targets;
   return [
@@ -115,6 +130,7 @@ export function clueSystem(game: AgentGame, persona: Persona): string {
       'your targets; then think of the clue. Make sure that no NEUTRAL card, none of THEIRS and above all not ' +
       'REVIEWER 2 is close to it.',
     'Answer in JSON: candidates, 3 of them, each with targets (card numbers), clue and count (how many targets).',
+    ...boardCharacters(game),
   ].join('\n');
 }
 
