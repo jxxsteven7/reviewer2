@@ -21,7 +21,14 @@ async function asked<Kind extends Asked>(
   changes: Partial<Extract<ImpostorRequest, { kind: Kind }>> = {},
 ): Promise<{ system: string; fields: string[] }> {
   const model = new ScriptedModel({ [kind]: [ANSWERS[kind]] });
-  const turn = { model, persona: PERSONAS.reviewer1, signal: AbortSignal.timeout(10_000), now: Date.now };
+  const turn = {
+    model,
+    persona: PERSONAS.reviewer1,
+    signal: AbortSignal.timeout(10_000),
+    until: Date.now() + 10_000,
+    hurry: new AbortController().signal,
+    now: Date.now,
+  };
   const reply = allowed(await playImpostor(impostorRequest(kind, changes), turn));
   expect(reply).toMatchObject({ ok: true, note: { prompt: PROMPT_VERSION } });
   const question = model.asked[0];
