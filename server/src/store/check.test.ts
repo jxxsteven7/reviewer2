@@ -779,9 +779,11 @@ describe('the check of the data', () => {
     expect(checked()).toEqual([]);
     practice('pi');
     expect(checked()).toEqual([{ rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] }]);
-    // A game without practice rooms has no practice role at all.
+    // A game without practice rooms has no practice role at all: with the second game's practice
+    // room back in shape, the account's practice room of the test game, for a player, is what fails.
+    practice('player');
     const without = { ...ratedGame, practice: undefined };
-    expect(checkData(db, { games: [keywordsGame, without], now: () => NOW })).toEqual([
+    expect(checkData(db, { games: [keywordsGame, without, impostorGame], now: () => NOW })).toEqual([
       { rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] },
     ]);
   });

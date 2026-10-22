@@ -605,7 +605,7 @@ function isAgentLog(data: unknown, gameId: string): data is AgentLogData {
 // game, each with a room, a practice room or both, in their shapes and no larger than a game's
 // setup may be, the game's settings as the game judges them, and the practice room's role, if
 // there is one, as one that the game has practice rooms for (GameModule.practice), which need not
-// be a role of its records: the second game's is a player's.
+// be a role that its records name.
 function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): boolean {
   if (!isObject(value)) return false;
   return Object.entries(value).every(([id, setup]) => {
