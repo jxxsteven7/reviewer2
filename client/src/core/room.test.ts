@@ -95,6 +95,7 @@ describe('the room page', () => {
         played: 0,
         status: 'on' as const,
         game: 1,
+        chairBound: false,
         standings: [
           { playerId: null, name: 'Guest 1', guest: 1, total: 0, delta: null, games: 1, rank: null, left: true },
         ],
@@ -154,6 +155,7 @@ describe('the room page', () => {
         played: 0,
         status: 'on' as const,
         game: 1,
+        chairBound: false,
         standings: [
           { playerId: 'bob', name: 'Bob', total: 0, delta: null, games: 1, rank: null, left: false },
           { playerId: null, name: 'Bob', total: 0, delta: null, games: 1, rank: null, left: true },

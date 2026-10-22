@@ -209,9 +209,15 @@ export class Match {
     }
   }
 
-  // The match as everyone sees it. `live` is each player's points in the game being played, as
-  // they stand, which the room gives only while a game is being played.
-  view(phase: RoomPhase, gameId: string | null, live: readonly MatchScore[] | null, present: Present): MatchView {
+  // The match as everyone sees it, but for what the room knows of its chair (MatchView.chairBound).
+  // `live` is each player's points in the game being played, as they stand, which the room gives
+  // only while a game is being played.
+  view(
+    phase: RoomPhase,
+    gameId: string | null,
+    live: readonly MatchScore[] | null,
+    present: Present,
+  ): Omit<MatchView, 'chairBound'> {
     const scoredNow = phase === 'ended' && gameId !== null && gameId === this.#lastGameId;
     const now = new Map((live ?? []).map((score) => [score.key, score]));
     const focus = phase === 'playing' || (phase === 'ended' && !scoredNow) ? null : this.#lastGameId;

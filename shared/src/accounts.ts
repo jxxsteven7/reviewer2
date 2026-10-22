@@ -144,8 +144,9 @@ export const EMAIL_STATES = ['none', 'pending', 'bound'] as const;
 export type EmailState = (typeof EMAIL_STATES)[number];
 
 // The titles that an account keeps and shows (docs/architecture.md#titles), each as often as it
-// was won, by the game it was won in. A match of any game that runs its course awards its two to
-// the top and the bottom of its ranking (MATCH_TITLES); a game brings the players with accounts
+// was won, by the game it was won in. A match that runs its course awards its two to the top and
+// the bottom of its ranking (MATCH_TITLES), in a game whose matches award titles (MatchHooks.titles
+// on the server), which the second game's don't in its beta; a game brings the players with accounts
 // whose game goes on the record titles of its own, each time they earn one, which each game
 // declares (GameModule.titles on the server; for the team word guessing game, KEYWORDS_TITLES). The
 // records keep a title by its ID alone, so no two games declare the same one

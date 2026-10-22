@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { gameInfo } from '../../games/info';
 import { act } from '../socket';
 import { useBusy } from '../useBusy';
 import UiButton from './UiButton.vue';
@@ -9,10 +10,11 @@ import UiSheet from './UiSheet.vue';
 // The chair's way to end a match before its last game, once they have confirmed it: in the
 // match's table, and among the tools beside the board while a game is on, where the table is
 // folded away. The confirmation says that nobody is awarded a title, where a match of the game
-// would award titles (`titles`).
-const props = withDefaults(defineProps<{ matchId: string; titles?: boolean }>(), { titles: true });
+// would award titles (GameInfo.matchTitles).
+const props = defineProps<{ matchId: string; game: string }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
+const titles = computed(() => gameInfo(props.game)?.matchTitles !== false);
 
 const ending = ref(false);
 async function end() {

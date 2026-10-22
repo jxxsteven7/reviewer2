@@ -268,8 +268,10 @@ describe('a match', () => {
     expect(room.data.matchPairs).toEqual([]);
     room.send('ann', 'impostor:words', words);
     const started = room.start();
-    // The setter plays in no game of the match.
-    expect(hooks.lineup(room.data)).toEqual(started.players.map((player) => player.id));
+    // The setter plays in no game of the match, and the players are in it in the order they came to
+    // the table, not by their numbers, which the table of an anonymous game would give away.
+    expect(hooks.lineup(room.data)).toEqual(room.data.seats.filter((id) => id !== 'ann'));
+    expect(hooks.lineup(room.data)).not.toEqual(started.players.map((player) => player.id));
     expect(hooks.lineup(room.data)).not.toContain('ann');
     expect(room.data.matchPairs).toEqual([['Apple', 'pear']]);
     room.data = game.again(room.data, room.ctx);

@@ -137,6 +137,34 @@ describe('PlayerPanel', () => {
     wrapper.unmount();
   });
 
+  test('hands the chair on at once, but asks first where that ends the match', async () => {
+    const plain = panel('bob', view('ann', false));
+    button('Make chair').click();
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('room:chair', { playerId: 'bob' });
+    expect(plain.emitted('close')).toHaveLength(1);
+    plain.unmount();
+    send.mockClear();
+
+    // In a match bound to its chair, as a setter's, the chair passing ends the match.
+    const match = { id: 'm1', rules: { games: 3 }, played: 1, status: 'on' as const, game: 2, standings: [] };
+    const bound = panel('bob', { ...view('ann', false), match: { ...match, chairBound: true } });
+    button('Make chair').click();
+    await flushPromises();
+    expect(send).not.toHaveBeenCalled();
+    expect(dialogs()[0]?.textContent).toContain('Make Bob the chair? This match is bound to its chair');
+    button('Cancel').click();
+    await flushPromises();
+    expect(dialogs()[0]?.textContent).not.toContain('bound to its chair');
+    button('Make chair').click();
+    await flushPromises();
+    button('Make chair').click();
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('room:chair', { playerId: 'bob' });
+    expect(bound.emitted('close')).toHaveLength(1);
+    bound.unmount();
+  });
+
   test("shows a guest by the avatar and the name alone, opens an AI player's own page, and gives the chair one action on an AI", async () => {
     const guest = panel('g2', view('cat', false, { id: 'g2', name: 'Guest 2', guest: 2, online: true }));
     expect(dialogs()[0]?.querySelector('h2')?.textContent).toBe('Guest 2');

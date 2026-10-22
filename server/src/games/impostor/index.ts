@@ -437,13 +437,17 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
   scoresNothing: (data) => (data.game?.removed.length ?? 0) > 0,
 
   // A match (docs/games/impostor.md#matches) of 3, 5 or 7 games, with no options of its own, which
-  // awards no titles in the beta. Everyone who plays a game is in it; whoever sets the words, which
-  // the chair does, plays in none, and the match ends without its setter. The points of a game in
-  // progress would tell who voted for a Reviewer 2, so they show once it is over; and a pair of
-  // terms, drawn or set, comes once in a match.
+  // awards no titles in the beta. Everyone who plays a game is in it, in the order they came to the
+  // table, never by their numbers, which the table of an anonymous game would otherwise list them
+  // by; whoever sets the words, which the chair does, plays in none, and the match ends without its
+  // setter. The points of a game in progress would tell who voted for a Reviewer 2, so they show
+  // once it is over; and a pair of terms, drawn or set, comes once in a match.
   match: {
     setup: (data, _ctx, rules) => ({ ...data, matchPairs: rules ? [] : null }),
-    lineup: (data) => data.game?.players.map((player) => player.id) ?? [],
+    lineup: (data) => {
+      const seat = (id: string) => data.seats.indexOf(id);
+      return (data.game?.players.map((player) => player.id) ?? []).sort((a, b) => seat(a) - seat(b));
+    },
     games: IMPOSTOR_MATCH_GAMES,
     titles: false,
     live: false,

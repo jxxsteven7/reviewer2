@@ -1,7 +1,7 @@
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import type { Language, MatchTitle, RecordResult } from '@reviewer2/shared';
 import { certifiedPlay, type AgentLogData } from '../core/agentLog';
-import type { GameModule, GameOutcome, GameTitle, Recount } from '../core/game';
+import { matchAwardsTitles, type GameModule, type GameOutcome, type GameTitle, type Recount } from '../core/game';
 import type { GameLogData } from '../core/gameLog';
 import { rankings, titlesFor } from '../core/match';
 import { jsonOf } from './records';
@@ -634,7 +634,7 @@ export function recountRecords(db: DatabaseSync, games: readonly GameModule[]): 
         }
         report.games += 1;
       }
-      for (const match of countMatches(counted, module.match?.titles !== false).values()) {
+      for (const match of countMatches(counted, matchAwardsTitles(module.match)).values()) {
         const records = held.match(match.id, match);
         let changed = false;
         for (const { id, standing, counted: differs } of records) {

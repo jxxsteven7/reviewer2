@@ -155,6 +155,14 @@ describe('a match of the second game', () => {
       const game = table.game();
       deals.push(game.players.map((player) => `${player.id}:${player.number}:${player.role}`).join(' '));
       pairs.push(pairOf(game));
+      if (played === 1) {
+        // The table lists the players in the order they came to the table, which everyone knows
+        // from the waiting room, and not by their numbers, which would give them away.
+        expect(table.match().standings.map((line) => line.name)).toEqual(['Ann', 'Bob', 'Cat', 'Dan']);
+        const byNumber = game.players.map((player) => table.room().members.get(player.id)?.name);
+        expect(byNumber).not.toEqual(['Ann', 'Bob', 'Cat', 'Dan']);
+        expect(table.match().chairBound).toBe(false);
+      }
       // While the game is on, the table shows nobody's points in it: they would tell who voted for
       // the Reviewer 2.
       expect(table.match().standings.map(({ delta, detail }) => ({ delta, detail }))).toEqual(
@@ -301,10 +309,15 @@ describe("a match of a setter's words", () => {
     await start();
     const table = await matchRoom({ setter: true });
     expect(await setWords(table.ann, 'oboe', 'flute')).toEqual({ ok: true });
+    // The match is bound to its setter from its first game on, which the view says, so that the
+    // setter is asked before handing the chair on or leaving.
+    expect(table.match().chairBound).toBe(false);
     await table.begin();
+    expect(table.match().chairBound).toBe(true);
     expect(table.game().players.map((player) => player.id)).not.toContain(table.ann.me);
     await table.playOut();
     await table.next();
+    expect(table.match().chairBound).toBe(true);
     // The same pair, in either order, in another case or as plurals, has been had.
     for (const [a, b] of [
       ['oboe', 'flute'],
@@ -356,7 +369,7 @@ describe("a match of a setter's words", () => {
     expect(await ann.send('room:leave', {})).toEqual({ ok: true });
     await bob.waitFor((state) => state.match?.status === 'stopped', 'the match to end');
     expect(bob.state?.chairId).toBe(bob.me);
-    expect(table.match()).toMatchObject({ status: 'stopped', played: 1 });
+    expect(table.match()).toMatchObject({ status: 'stopped', played: 1, chairBound: false });
   });
 
   test('stays on when the chair passes before its first game', async () => {

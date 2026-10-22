@@ -286,6 +286,10 @@ export interface MatchHooks<Data> {
   chairBound?(data: Data): boolean;
 }
 
+// Whether a game's matches award their titles: they do unless the game says otherwise
+// (MatchHooks.titles).
+export const matchAwardsTitles = (hooks: { titles?: boolean } | undefined): boolean => hooks?.titles !== false;
+
 export interface GameModule<Data = unknown, View = unknown> {
   id: string;
   // What the game takes from the word library (words/README.md), as the room draws it for each

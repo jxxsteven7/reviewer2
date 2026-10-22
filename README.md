@@ -30,7 +30,7 @@ Four to twelve players each get a term. The students share one; **Reviewer 2** g
 - Reconnects after a locked screen to the same seat
 - Server-authoritative: even with developer tools, guessers can't see unrevealed colors, nor players the others' terms
 - Optional accounts: an avatar, a record of games, friends and friend titles, an academic rank and a public page; see [Privacy](#privacy)
-- Matches: several scored games in a row, with titles
+- Matches: several scored games in a row, ranked by total; the first game's award titles
 - Public rooms: play with strangers, with an account, and report players who misbehave
 - A tutorial for newcomers, in chapters to read in any order: each game step by step, as a student and as the PI, with a finger on what to tap, and the site, from making a room to sending feedback; how far you have read stays on your device
 - AI players, being tried out: Reviewer 1 can play a group's PI or student, advise people, and play the turn of a player who has gone offline; in the second game it describes, votes and judges reports like anyone; it has a page of its own as player number 0; anyone with an account can play with it from the home page, alone, where it takes the other seats, or with friends, where it takes the seats nobody takes; see [Privacy](#privacy)
