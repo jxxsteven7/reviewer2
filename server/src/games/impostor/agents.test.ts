@@ -78,7 +78,9 @@ describe('the AI players', () => {
     });
   });
 
-  it('are told as many whole rounds of a long game as fit in a request', () => {
+  // Each of the 144 long lines is checked against every line before it, which takes a few seconds,
+  // more than the default allows on a slow machine.
+  it('are told as many whole rounds of a long game as fit in a request', { timeout: 30_000 }, () => {
     // Twelve players, lines as long as a room allows, and round after round in which nobody is
     // voted out: the history outgrows the request's share.
     let game = dealt('RSSSSSSSSSSS', { length: 500 });
