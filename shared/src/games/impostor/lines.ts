@@ -222,3 +222,13 @@ export function checkSetterWords(a: string, b: string): SetterProblem | null {
   if (sameOrPlural(wordKey(first), wordKey(second))) return 'words_same';
   return null;
 }
+
+// Whether two pairs of terms are the same pair, in either order (docs/games/impostor.md#matches):
+// each term of one is a term of the other, counting only letters and digits, plain plurals
+// included, as checkSetterWords() tells two terms apart.
+export function samePair(first: readonly [string, string], second: readonly [string, string]): boolean {
+  const same = (a: string, b: string) => sameOrPlural(wordKey(cleanLine(a)), wordKey(cleanLine(b)));
+  const [a, b] = first;
+  const [c, d] = second;
+  return (same(a, c) && same(b, d)) || (same(a, d) && same(b, c));
+}

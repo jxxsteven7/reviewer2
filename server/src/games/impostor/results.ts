@@ -8,6 +8,7 @@ import {
   type ImpostorReason,
   type ImpostorResult,
   type ImpostorRole,
+  type ImpostorScoreDetail,
   type ImpostorSettings,
   type ReportVerdict,
 } from '@reviewer2/shared/impostor';
@@ -199,15 +200,17 @@ export function resultsFrom(facts: Facts): PlayerResult[] | null {
     });
 }
 
-// Everyone's points, by member key, with where they came from: as they stand while the game is on,
-// with nobody winning yet, and at its end. A game that nobody won counts for none.
+// Everyone's points, by member key, with where they came from (ImpostorScoreDetail): as they stand
+// while the game is on, with nobody winning yet, and at its end. A game that nobody won counts for
+// none.
 export function scoresFrom(facts: Facts, keyOf: (playerId: string) => string): MatchScore[] | null {
   if (facts.result !== null && facts.result.winner === null) return null;
   const winner = facts.result?.winner ?? null;
   return facts.players.map(({ id, role }) => {
     const fate = fateOf(facts, id);
-    const detail = detailOf(facts, id);
-    return { key: keyOf(id), points: pointsOf(role, role === winner && fate !== 'left', fate, detail), detail };
+    const won = role === winner && fate !== 'left';
+    const detail: ImpostorScoreDetail = { ...detailOf(facts, id), role, won, fate };
+    return { key: keyOf(id), points: pointsOf(role, won, fate, detail), detail };
   });
 }
 

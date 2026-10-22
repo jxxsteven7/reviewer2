@@ -257,6 +257,42 @@ describe('the waiting room', () => {
   });
 });
 
+describe('a match', () => {
+  const hooks = game.match as NonNullable<typeof game.match>;
+  const words = { a: 'Apple', b: 'pear', field: 'fruit', named: true };
+
+  it('remembers the pair of every game it starts, drawn or set, and has none of them again', () => {
+    const room = table({ settings: { setter: true }, accounts: ['ann'] });
+    expect(room.data.matchPairs).toBeNull();
+    room.data = hooks.setup(room.data, room.ctx, { games: 3 });
+    expect(room.data.matchPairs).toEqual([]);
+    room.send('ann', 'impostor:words', words);
+    const started = room.start();
+    // The setter plays in no game of the match.
+    expect(hooks.lineup(room.data)).toEqual(started.players.map((player) => player.id));
+    expect(hooks.lineup(room.data)).not.toContain('ann');
+    expect(room.data.matchPairs).toEqual([['Apple', 'pear']]);
+    room.data = game.again(room.data, room.ctx);
+    expect(room.try('ann', 'impostor:words', { ...words, a: 'PEARS', b: 'apple' })).toEqual({
+      ok: false,
+      error: 'words_played',
+    });
+    expect(hooks.fresh?.(room.data, WORDS)).toBe(false);
+    expect(hooks.fresh?.(room.data, [{ word: 'plum' }, { word: 'pear' }])).toBe(true);
+    // A room that is no longer a match forgets them.
+    room.data = hooks.setup(room.data, room.ctx, null);
+    expect(room.data.matchPairs).toBeNull();
+    expect(hooks.fresh?.(room.data, WORDS)).toBe(true);
+    expect(room.try('ann', 'impostor:words', words)).toMatchObject({ ok: true });
+  });
+
+  it('takes 3, 5 or 7 games, awards no title, shows no points of a game in progress, and stands with a setter', () => {
+    expect(hooks).toMatchObject({ games: [3, 5, 7], titles: false, live: false });
+    expect(hooks.chairBound?.(table().data)).toBe(false);
+    expect(hooks.chairBound?.(table({ settings: { setter: true } }).data)).toBe(true);
+  });
+});
+
 describe('the setter', () => {
   const setterRoom = (accounts = ['ann']) =>
     table({ players: ['ann', ...PEOPLE.slice(1), 'gus'], settings: { setter: true }, accounts });

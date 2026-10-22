@@ -325,7 +325,7 @@ export function checkData(db: DatabaseSync, { games, avatarDir = null, now = () 
     }
     // The records of a match whose games are all kept and counted, against what they add up to; a
     // match with no game kept, or with a game that can't be counted, is reported as such above.
-    const matches = countMatches(counted.counted);
+    const matches = countMatches(counted.counted, module.match?.titles !== false);
     const uncountable = new Set(counted.uncounted.map(({ matchId }) => matchId));
     const kept = new Set(
       (

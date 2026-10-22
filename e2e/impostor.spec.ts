@@ -1,10 +1,11 @@
 import type { RoomView } from '@reviewer2/shared';
 import type { ImpostorRoomData, ImpostorView } from '@reviewer2/shared/impostor';
-import type { Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import {
   createGameRoom,
   expect,
   interpolate,
+  isPhone,
   joinByLink,
   newPlayer,
   register,
@@ -17,7 +18,8 @@ import {
 // The second game from the room setup to its end (docs/games/impostor.md): four players with
 // accounts describe their terms in turn, one reports another and the others judge it, one reloads
 // in the middle and is back at their number, everyone votes Reviewer 2 out, and each finds the game
-// on their record.
+// on their record. Then its matches (docs/games/impostor.md#matches): one of three games played to
+// the end and ranked, and one that the chair ends between two games.
 
 const text = TEXT.en;
 const impostor = text.games.impostor;
@@ -179,4 +181,158 @@ test('four players describe, judge a report, come back after a reload, vote Revi
     await expect(verdict).toHaveText(impostor.letter.short[caught ? 'voted_out' : 'alive']);
     expect(await verdict.evaluate((part) => part.scrollWidth <= part.clientWidth)).toBe(true);
   }
+});
+
+// A room of four for a match, with no time limits, so that the test sets the pace: the chair picks
+// how many games, and three others join to play.
+async function matchTable(browser: Browser, games: number): Promise<Page[]> {
+  const chair = await newPlayer(browser);
+  const url = await createGameRoom(chair, 'impostor', 'en', async (page) => {
+    await setSetting(page, impostor.settings.boxes.describeTime, 0);
+    await setSetting(page, impostor.settings.boxes.voteTime, 0);
+    await page.getByRole('radio', { name: new RegExp(`^${text.match.match}`) }).check();
+    // A few numbers of games to pick from, as pills, 3 picked first.
+    const form = page.locator('.match-form');
+    await expect(form).toContainText(impostor.match.note);
+    await expect(form.getByLabel(interpolate(text.match.gamesChoice, { count: '3' }))).toBeChecked();
+    await form.getByText(interpolate(text.match.gamesChoice, { count: String(games) }), { exact: true }).click();
+  });
+  const players = [chair];
+  for (let joined = 0; joined < 3; joined += 1) {
+    const page = await newPlayer(browser);
+    await joinByLink(page, url, 'en');
+    players.push(page);
+  }
+  return players;
+}
+
+// The chair starts a game of the match, which the four play to its end: each describes in turn, and
+// all vote Reviewer 2 out, who votes for someone else. Every game deals the numbers anew.
+async function playGame(players: Page[]): Promise<ImpostorView> {
+  const [chair] = players as [Page];
+  const before = latest(chair)?.gameId ?? null;
+  await chair.getByRole('button', { name: text.lobby.start, exact: true }).click();
+  for (const page of players) {
+    await expect.poll(() => latest(page)?.gameId ?? before).not.toBe(before);
+    await expect(page.locator('.impostor-game')).toBeVisible();
+  }
+  await expect.poll(() => new Set(players.map(numberOf).filter(Boolean)).size).toBe(4);
+  const termOf = (page: Page) => latest(page)?.you?.word?.word ?? null;
+  const terms = players.map(termOf);
+  const reviewer2 = players.find((page) => terms.filter((term) => term === termOf(page)).length === 1);
+  if (!reviewer2) throw new Error('no player has a term of their own');
+  for (const line of LINES) await describe(players, line);
+  await expect.poll(() => latest(chair)?.phase).toBe('vote');
+  const target = numberOf(reviewer2);
+  for (const page of players) {
+    const choice = page === reviewer2 ? numberOf(players.find((other) => other !== reviewer2)!) : target;
+    await page
+      .locator('.board label.seat-card')
+      .filter({ has: page.locator(`input[value="${choice}"]`) })
+      .locator('.text')
+      .click();
+    await page.getByRole('button', { name: interpolate(impostor.vote.submit, { number: String(choice) }) }).click();
+  }
+  for (const page of players) await expect(page.locator('.letter .verdict')).toHaveText(impostor.letter.results.caught);
+  return latest(chair)!;
+}
+
+// The chair goes on to the next game, which brings everyone back to the waiting room.
+async function nextGame(players: Page[]): Promise<void> {
+  await players[0]!.getByRole('button', { name: text.match.next }).click();
+  for (const page of players) await expect(page.locator('.lobby')).toBeVisible();
+}
+
+test('four players play a match of three games, each dealt anew, and are ranked with no title', async ({ browser }) => {
+  const players = await matchTable(browser, 3);
+  const [chair, other] = players as [Page, Page];
+
+  const first = await playGame(players);
+  // Under the result, the match's table, with where each player's points came from, their role
+  // first; the chair goes on, and the others wait.
+  for (const page of players) {
+    const table = page.locator('.match-table');
+    await expect(table).toContainText(interpolate(text.match.progress, { game: '1', games: '3' }));
+    await expect(table.locator('.detail.below').first()).toContainText(
+      new RegExp(`^(${impostor.roles.student}|${impostor.roles.reviewer2})`),
+    );
+    await expect(table).toContainText(impostor.match.scoringLead);
+  }
+  await expect(other.getByText(text.match.waitNext)).toBeVisible();
+  await nextGame(players);
+  // The waiting room has the table first.
+  await expect(chair.locator('.lobby .match-table')).toContainText(
+    interpolate(text.match.progress, { game: '2', games: '3' }),
+  );
+
+  const second = await playGame(players);
+  expect(second.words).not.toEqual(first.words);
+  await nextGame(players);
+
+  // During a game, the table opens in a sheet, with each player's total and not the points of the
+  // game, which come only at its end.
+  await players[0]!.getByRole('button', { name: text.lobby.start, exact: true }).click();
+  await expect(other.locator('.impostor-game')).toBeVisible();
+  await other
+    .getByRole('button', { name: isPhone(other) ? text.game.buttons.match : text.match.progressTitle, exact: true })
+    .click();
+  const sheet = other.getByRole('dialog', { name: text.match.progressTitle });
+  await expect(sheet.locator('.match-table')).toContainText(
+    interpolate(text.match.progress, { game: '3', games: '3' }),
+  );
+  await expect(sheet.locator('thead th')).toHaveCount(3);
+  await other.keyboard.press('Escape');
+  await expect(other.getByRole('dialog')).toHaveCount(0);
+  // The chair ends the game, which the match plays again.
+  await chair.getByRole('button', { name: text.game.end, exact: true }).click();
+  await chair.getByRole('dialog').getByRole('button', { name: text.game.end, exact: true }).click();
+  for (const page of players) {
+    await expect(page.locator('.match-table .note')).toHaveText(
+      interpolate(impostor.match.unscored.withdrawn, { game: '3' }),
+    );
+  }
+  await nextGame(players);
+
+  const third = await playGame(players);
+  expect(new Set([first, second, third].map((game) => JSON.stringify(game.words))).size).toBe(3);
+  // The final ranking, which awards no title while the game is in beta; nothing offers another game.
+  for (const page of players) {
+    const results = page.locator('.match-results');
+    await expect(results.getByRole('heading', { name: text.match.over })).toBeVisible();
+    await expect(results).toContainText(interpolate(text.match.gamesPlayed, { played: '3', games: '3' }));
+    await expect(results.locator('li')).toHaveCount(4);
+    await expect(results.locator('li .rank').first()).toHaveText('1');
+    await expect(results).not.toContainText(text.match.titleNames.best_paper);
+    await expect(results).not.toContainText(text.match.titleNames.black_hole);
+    await expect(page.getByRole('button', { name: text.match.next })).toHaveCount(0);
+  }
+  const standings = snapshotsOf(chair).at(-1)?.match?.standings ?? [];
+  expect(standings.map((line) => line.games)).toEqual([3, 3, 3, 3]);
+  expect(standings.every((line) => line.title === undefined)).toBe(true);
+});
+
+test('the chair ends a match between two games, and the waiting room offers no start', async ({ browser }) => {
+  const players = await matchTable(browser, 5);
+  const [chair, other] = players as [Page, Page];
+  await playGame(players);
+  await nextGame(players);
+  const table = chair.locator('.lobby .match-table');
+  await expect(table).toContainText(interpolate(text.match.progress, { game: '2', games: '5' }));
+  await table.getByRole('button', { name: text.match.end, exact: true }).click();
+  const confirm = chair.getByRole('dialog', { name: text.match.end });
+  await expect(confirm).toContainText(text.match.endConfirmUntitled);
+  await confirm.getByRole('button', { name: text.match.end, exact: true }).click();
+  // Everyone sees the ranking by the one game that counted, with nothing on titles; the chair has
+  // no start, which the server would refuse, but another match or an ordinary room.
+  for (const page of [chair, other]) {
+    const results = page.locator('.match-results');
+    await expect(results.getByRole('heading', { name: text.match.stopped })).toBeVisible();
+    await expect(results).toContainText(interpolate(text.match.gamesPlayed, { played: '1', games: '5' }));
+    await expect(results).not.toContainText(text.match.stoppedNote);
+    await expect(page.getByRole('button', { name: text.lobby.start, exact: true })).toHaveCount(0);
+  }
+  await expect(chair.locator('.desk')).toHaveCount(0);
+  await chair.getByRole('button', { name: text.match.ordinaryRoom }).click();
+  await expect(chair.getByRole('button', { name: text.lobby.start, exact: true })).toBeVisible();
+  await expect(chair.locator('.match-results, .match-table')).toHaveCount(0);
 });

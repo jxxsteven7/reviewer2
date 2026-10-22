@@ -2,6 +2,7 @@
 import type { TitleCount } from '@reviewer2/shared';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { gameInfo } from '../../games/info';
 import { points, signedPoints } from '../points';
 import type { ShownMatch, ShownRoom } from '../room';
 import { useTitleFolds } from '../useTitleFolds';
@@ -21,20 +22,29 @@ import TitleLine from './TitleLine.vue';
 // under it where even then the first title wouldn't fit whole. On a wide table, the description
 // comes on the name's line too, and the titles at its right end. The chair may end the match early
 // from here, unless the game puts that button elsewhere (`endable`).
+//
+// A game says what else the table shows: a line under its head, as why the game that has just
+// ended doesn't count (`note`); no column of the game in focus during a game whose points come
+// only at its end (`delta`); and, during a game whose players are only numbers, nobody as offline
+// or gone, which could tell whose number had let time run out (`presence`): everyone who has
+// played a game that counted is ranked then, and no avatar opens a panel.
 const props = withDefaults(
   defineProps<{
     room: ShownRoom;
     describe?: ((detail: unknown) => string) | null;
     titlesOf?: ((playerId: string) => TitleCount[]) | null;
     endable?: boolean;
+    note?: string | null;
+    delta?: boolean;
+    presence?: boolean;
   }>(),
-  { describe: null, titlesOf: null, endable: true },
+  { describe: null, titlesOf: null, endable: true, note: null, delta: true, presence: true },
 );
 // A line's player while they are still in the room, whose panel a tap on the avatar opens.
 const inRoom = (id: string | null) =>
-  id !== null && props.room.players.some((player) => player.id === id) ? id : null;
+  props.presence && id !== null && props.room.players.some((player) => player.id === id) ? id : null;
 const offline = (id: string | null) =>
-  id !== null && props.room.players.some((player) => player.id === id && !player.online);
+  props.presence && id !== null && props.room.players.some((player) => player.id === id && !player.online);
 const { t } = useI18n();
 const titles = (id: string | null) => (id !== null && props.titlesOf ? props.titlesOf(id) : []);
 // The lines whose titles are unfolded; a tap on the line, but on a button, folds them again.
@@ -42,6 +52,19 @@ const { unfolded, setOpen, fold } = useTitleFolds();
 
 const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
+// The lines as the server ranked them, or, where the table shows nobody as gone, ranked again over
+// everyone who has played a game that counted, as the server ranks those still in the room, the
+// others after them by total.
+const lines = computed(() => {
+  const { standings } = match.value;
+  if (props.presence) return standings;
+  const ranked = standings.filter((line) => line.games > 0);
+  const rankOf = (total: number) => 1 + ranked.filter((other) => other.total > total).length;
+  return standings
+    .map((line) => ({ ...line, left: false, rank: line.games > 0 ? rankOf(line.total) : null }))
+    .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity) || b.total - a.total);
+});
+const titlesAwarded = computed(() => gameInfo(props.room.game)?.matchTitles !== false);
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.
 const deltaLabel = computed(() => (props.room.phase === 'lobby' ? t('match.lastDelta') : t('match.delta')));
@@ -55,6 +78,7 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
       <h2 class="section-title">{{ t('match.table') }}</h2>
       <p class="progress">{{ t('match.progress', { game: match.game, games: match.rules.games }) }}</p>
     </header>
+    <p v-if="note" class="note">{{ note }}</p>
     <p v-if="!match.standings.length" class="none">{{ t('match.none') }}</p>
     <table v-else>
       <thead>
@@ -66,12 +90,12 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
             <span class="sr-only">{{ t('match.player') }}</span>
           </th>
           <th scope="col" class="number">{{ t('match.total') }}</th>
-          <th scope="col" class="number" :aria-label="deltaLabel">{{ deltaHead }}</th>
+          <th v-if="delta" scope="col" class="number" :aria-label="deltaLabel">{{ deltaHead }}</th>
         </tr>
       </thead>
       <tbody>
         <tr
-          v-for="(line, index) in match.standings"
+          v-for="(line, index) in lines"
           :key="line.playerId ?? `left-${index}`"
           :class="{ me: line.playerId !== null && line.playerId === room.me, left: line.left }"
           @click="fold(line.playerId, $event)"
@@ -108,6 +132,7 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
           </td>
           <td class="number total num">{{ points(line.total) }}</td>
           <td
+            v-if="delta"
             class="number delta num"
             :class="{ up: line.delta !== null && line.delta > 0, down: line.delta !== null && line.delta < 0 }"
           >
@@ -117,7 +142,12 @@ const deltaHead = computed(() => (props.room.phase === 'lobby' ? t('match.lastDe
       </tbody>
     </table>
     <slot />
-    <EndMatchButton v-if="endable && isChair && match.status === 'on'" class="end" :match-id="match.id" />
+    <EndMatchButton
+      v-if="endable && isChair && match.status === 'on'"
+      class="end"
+      :match-id="match.id"
+      :titles="titlesAwarded"
+    />
   </section>
 </template>
 
@@ -149,7 +179,8 @@ header {
   font-weight: var(--weight-bold);
 }
 
-.none {
+.none,
+.note {
   color: var(--ink-2);
   font-size: var(--text-sm);
 }

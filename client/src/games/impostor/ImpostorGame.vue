@@ -1,11 +1,20 @@
 <script setup lang="ts">
 import { textLength } from '@reviewer2/shared';
-import { checkDescription, type ImpostorView, type LineProblem, type SeatView } from '@reviewer2/shared/impostor';
+import {
+  checkDescription,
+  type ImpostorScoreDetail,
+  type ImpostorView,
+  type LineProblem,
+  type SeatView,
+} from '@reviewer2/shared/impostor';
 import { computed, ref, toRef, useId, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ClockBar from '../../core/components/ClockBar.vue';
 import DuoNotices from '../../core/components/DuoNotices.vue';
 import EmoteButton from '../../core/components/EmoteButton.vue';
+import EndMatchButton from '../../core/components/EndMatchButton.vue';
+import MatchResults from '../../core/components/MatchResults.vue';
+import MatchTable from '../../core/components/MatchTable.vue';
 import RatingCard from '../../core/components/RatingCard.vue';
 import StreakNotices from '../../core/components/StreakNotices.vue';
 import UiButton from '../../core/components/UiButton.vue';
@@ -49,6 +58,14 @@ import { playerAt, useImpostor } from './useImpostor';
 // Once the game is over: the guess of who the AI players were, where there is one (AgentGuess.vue),
 // the streaks, who everyone was (RevealList.vue), the question of how the words were
 // (RatingCard.vue), and the review, which opens the record of every round.
+//
+// In a match (docs/games/impostor.md#matches), as in the first game's room (KeywordsGame.vue): its
+// table opens in a sheet while the game is on, from the bar of buttons on a phone and among the
+// tools on a wide screen, without the points of the game, which come only at its end, and, in an
+// anonymous game, without saying who is offline or gone; the chair's button to end the match stands
+// beside the one to end the game. Once the game is over, the table follows the question of how the
+// words were, with where each player's points came from, their role included, or the final ranking
+// does when the match is over.
 const props = defineProps<{ room: ShownRoom }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
@@ -234,11 +251,50 @@ watch(over, (ended) => {
   if (ended) ending.value = false;
 });
 const rated = computed(() => (game.value.words ? `${game.value.words.student} / ${game.value.words.reviewer2}` : null));
+
+const match = computed(() => room.value.match);
+const matchOpen = ref(false);
+watch(over, (ended) => {
+  if (ended) matchOpen.value = false;
+});
+function describeScore(detail: unknown): string {
+  const { role, won, fate, out, hits, wrong, comeback, missedLines, missedVotes, failedReports } =
+    detail as ImpostorScoreDetail;
+  const count = (key: string, value: number) =>
+    value > 0 ? t(`games.impostor.match.detail.${key}`, { count: value }, value) : null;
+  return [
+    t(`games.impostor.roles.${role}`),
+    won ? t('games.impostor.match.detail.won') : null,
+    won && fate === 'alive' ? t('games.impostor.match.detail.lasted') : null,
+    fate === 'voted_out' ? t('games.impostor.match.detail.outIn', { round: out ?? 0 }) : null,
+    fate === 'violation' ? t('games.impostor.match.detail.violation') : null,
+    fate === 'left' ? t('games.impostor.match.detail.left') : null,
+    count('hits', hits),
+    count('wrong', wrong),
+    comeback === 'right' ? t('games.impostor.match.detail.comebackRight') : null,
+    comeback === 'wrong' ? t('games.impostor.match.detail.comebackWrong') : null,
+    count('missedLines', missedLines),
+    count('missedVotes', missedVotes),
+    count('failedReports', failedReports),
+  ]
+    .filter((part) => part !== null)
+    .join(' \u00b7 ');
+}
+const scoring = computed(() => `${t('games.impostor.match.scoringLead')} ${t('games.impostor.rules.points')}`);
+// Why the game that has just ended doesn't count, which the match plays again: it was withdrawn, a
+// Reviewer 2 left it, or the chair removed a player (docs/games/impostor.md#matches).
+const unscored = computed(() => {
+  const shown = match.value;
+  if (!over.value || shown?.status !== 'on' || shown.game <= shown.played) return null;
+  const { result } = game.value;
+  const why = result === null ? 'withdrawn' : result.reason === 'reviewer2_left' ? 'reviewer2_left' : 'removed';
+  return t(`games.impostor.match.unscored.${why}`, { game: shown.game });
+});
 </script>
 
 <template>
   <section class="impostor-game">
-    <ImpostorLetter v-if="over" :game="game" :is-chair="isChair" :busy="busy" @again="again" />
+    <ImpostorLetter v-if="over" :game="game" :is-chair="isChair" :busy="busy" :match="match" @again="again" />
     <ImpostorStrip v-else :game="game" :setter="isSetter" :agents="agents" :must-act="mustAct" />
     <div
       v-if="(game.clock && !over) || data.mayEmote"
@@ -262,6 +318,12 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
         :question="t('games.impostor.rating')"
         :rated="rated"
       />
+      <template v-if="match">
+        <MatchResults v-if="match.status !== 'on'" :room="room" />
+        <MatchTable v-else :room="room" :describe="describeScore" :note="unscored" class="between">
+          <p class="scoring">{{ scoring }}</p>
+        </MatchTable>
+      </template>
     </template>
 
     <div class="layout">
@@ -338,6 +400,9 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
             <UiButton v-if="readsOffField" size="small" @click="sheet = 'offField'">
               {{ t(over ? 'games.impostor.buttons.talk' : 'games.impostor.buttons.offField') }}
             </UiButton>
+            <UiButton v-if="match && !over" size="small" @click="matchOpen = true">
+              {{ t('game.buttons.match') }}
+            </UiButton>
           </div>
         </div>
       </div>
@@ -362,6 +427,9 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
           <RoundLog :game="game" />
         </section>
         <div class="tools">
+          <UiButton v-if="match && !over" size="small" @click="matchOpen = true">
+            {{ t('match.progressTitle') }}
+          </UiButton>
           <ImpostorRules :settings="data.settings" :language="room.language" />
         </div>
       </aside>
@@ -369,6 +437,7 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
 
     <div v-if="isChair && !over" class="foot">
       <UiButton variant="quiet" size="small" @click="ending = true">{{ t('game.end') }}</UiButton>
+      <EndMatchButton v-if="match?.status === 'on'" :match-id="match.id" :titles="false" />
     </div>
 
     <UiSheet
@@ -394,6 +463,19 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
         :open="openSeat"
         @send="say"
       />
+    </UiSheet>
+
+    <UiSheet :open="matchOpen" :title="t('match.progressTitle')" @close="matchOpen = false">
+      <MatchTable
+        v-if="match"
+        :room="room"
+        :endable="false"
+        :delta="false"
+        :presence="!data.settings.anonymous"
+        class="in-sheet"
+      >
+        <p class="scoring">{{ scoring }}</p>
+      </MatchTable>
     </UiSheet>
 
     <SeatPanel :game="game" :number="opened" :name="openedName" :is-chair="isChair" @close="opened = null" />
@@ -563,6 +645,27 @@ const rated = computed(() => (game.value.words ? `${game.value.words.student} / 
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+/* A match's table, as in the first game's room (KeywordsGame.vue): under the result, apart from
+   the board, and in its sheet without the panel's frame and title, which the sheet has. */
+.scoring {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+}
+
+.between {
+  margin-bottom: var(--space-4);
+}
+
+.in-sheet.in-sheet {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.in-sheet :deep(.section-title) {
+  display: none;
 }
 
 @media (min-width: 40rem) {

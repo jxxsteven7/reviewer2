@@ -145,4 +145,7 @@ export interface ImpostorData {
   seats: string[];
   setterWords: SetterWords | null;
   game: ImpostorGame | null;
+  // In a match, the two words of each game it has started, in the room's language, which no game of
+  // the match plays again (docs/games/impostor.md#matches); null in a room that isn't a match.
+  matchPairs: [string, string][] | null;
 }

@@ -68,6 +68,10 @@ export class Match {
   // Names the match on the records and titles of accounts, and in the chair's messages about it.
   readonly id = randomId();
   readonly rules: MatchRules;
+  // Whether the match awards its titles once it has run its course (MatchHooks.titles).
+  readonly titles: boolean;
+  // How many games have started, and how many have been scored.
+  #started = 0;
   #played = 0;
   #status: MatchStatus = 'on';
   // The last game that was scored, which no end can score twice.
@@ -81,8 +85,19 @@ export class Match {
   // The places at the end, which stay as they were then, whoever leaves afterwards.
   #final: Map<string, Placing> | null = null;
 
-  constructor(rules: MatchRules) {
+  constructor(rules: MatchRules, titles = true) {
     this.rules = { ...rules };
+    this.titles = titles;
+  }
+
+  // How many games have started, scored or not.
+  get started(): number {
+    return this.#started;
+  }
+
+  // A game of the match starts.
+  begin(): void {
+    this.#started += 1;
   }
 
   // How many games have been scored.
@@ -138,14 +153,14 @@ export class Match {
     if (this.#played >= this.rules.games) this.finish('over', present);
   }
 
-  // Ends the match: it is over, or the chair stopped it early. The players who took part in a
-  // scored game and are still in the room are ranked; only a match that is over awards titles.
+  // Ends the match: it is over, or it was stopped early. The players who took part in a scored game
+  // and are still in the room are ranked; only a match that is over awards titles, if it awards any.
   finish(status: 'over' | 'stopped', present: Present): void {
     if (this.#status !== 'on') return;
     this.#status = status;
     const ranked = this.ranked(present);
     const ranks = rankings(ranked);
-    const titles = status === 'over' ? titlesFor(ranked) : new Map<string, MatchTitle>();
+    const titles = status === 'over' && this.titles ? titlesFor(ranked) : new Map<string, MatchTitle>();
     this.#final = new Map(
       ranked.map(({ key, total }) => [key, { rank: ranks.get(key) as number, total, title: titles.get(key) ?? null }]),
     );

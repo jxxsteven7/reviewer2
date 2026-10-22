@@ -8,8 +8,9 @@ import UiSheet from './UiSheet.vue';
 
 // The chair's way to end a match before its last game, once they have confirmed it: in the
 // match's table, and among the tools beside the board while a game is on, where the table is
-// folded away.
-const props = defineProps<{ matchId: string }>();
+// folded away. The confirmation says that nobody is awarded a title, where a match of the game
+// would award titles (`titles`).
+const props = withDefaults(defineProps<{ matchId: string; titles?: boolean }>(), { titles: true });
 const { t } = useI18n();
 const { busy, run } = useBusy();
 
@@ -25,7 +26,7 @@ async function end() {
     <UiButton variant="quiet" size="small" @click="ending = true">{{ t('match.end') }}</UiButton>
     <UiSheet :open="ending" :title="t('match.end')" @close="ending = false">
       <div class="confirm">
-        <p>{{ t('match.endConfirm') }}</p>
+        <p>{{ t(titles ? 'match.endConfirm' : 'match.endConfirmUntitled') }}</p>
         <UiButton variant="danger" :disabled="busy" @click="end">{{ t('match.end') }}</UiButton>
         <UiButton variant="quiet" @click="ending = false">{{ t('lobby.manage.cancel') }}</UiButton>
       </div>

@@ -22,8 +22,8 @@ export interface MatchRules {
 export const matchGamesValid = (games: unknown): boolean =>
   Number.isInteger(games) && (games as number) >= MATCH_GAMES.min && (games as number) <= MATCH_GAMES.max;
 
-// 'on' while games are left to play, 'over' once the last has been scored, and 'stopped' when the
-// chair ended it early, which awards no titles.
+// 'on' while games are left to play, 'over' once the last has been scored, and 'stopped' when it
+// ended early, as when the chair ended it, which awards no titles.
 export type MatchStatus = 'on' | 'over' | 'stopped';
 
 // One line of the match's table. Everyone who has played in it is listed, also after leaving the
