@@ -5,11 +5,13 @@ import type { Persona } from './personas';
 // What the agent tells the model and asks it, for the hidden word game (docs/games/impostor.md).
 // As for the first game, the prompts are in English, the language the models follow best, and the
 // model answers in the language of the room. The model is told what everyone at the table knows,
-// its own number and its own word, and nothing else: a Reviewer 2 is never told that it is one.
+// its own number and its own word, and nothing else: a Reviewer 2 is never told that it is one. So
+// a model with a word is taught one way to play, which holds whichever word it has: hold the word
+// against the others' lines, and play as the odd one when most of them fit another word better.
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'impostor-1';
+export const PROMPT_VERSION = 'impostor-2';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 
@@ -32,7 +34,9 @@ function rules(game: ImpostorAgentGame): string {
   ].join(' ');
 }
 
-// What the model knows of its own word. It doesn't know whether its word is the students' one.
+// What the model knows of its own word. It doesn't know whether its word is the students' one, and
+// is told to work that out from the others' lines rather than take it that they share its word, as
+// a Reviewer 2 otherwise does.
 function yourWord(game: ImpostorAgentGame): string {
   if (game.word === null) {
     return (
@@ -41,8 +45,10 @@ function yourWord(game: ImpostorAgentGame): string {
     );
   }
   return (
-    `Your word: ${game.word.word}. You don't know whether the others share it: if most of their lines fit a ` +
-    'different word better, yours is probably the odd one, and you should blend in with them.'
+    `Your word: ${game.word.word}. Nobody is told whether their word is the students' one or the odd one, and ` +
+    'that goes for you too: you may be a Reviewer 2 without knowing it. So never take it that the others share ' +
+    'your word: hold it against their lines first. If most of them fit a different, related word better than ' +
+    'yours, yours is probably the odd one, and you are probably a Reviewer 2.'
   );
 }
 
@@ -86,6 +92,73 @@ function history(game: ImpostorAgentGame): string {
 
 const state = (game: ImpostorAgentGame) => [table(game), history(game)].join('\n\n');
 
+// What makes a good line. The PI, who has no word, is told what it always was. A player with a word
+// says, in the first round, where there is little to hold its word against, only what its word
+// shares with the words closest to it; after that, it leans toward the word that most players seem
+// to have when that is not its own.
+function goodLine(game: ImpostorAgentGame, tie: boolean): string {
+  const fitIn = 'Fit in with what the others said, without repeating it.';
+  const good =
+    'good line is true of your word but vague: specific enough that the players who share your word recognize ' +
+    "it, and vague enough that a player with the other word can't work yours out.";
+  if (game.word === null) return `A ${good} ${fitIn}`;
+  if (game.round === 1 && !tie) {
+    return [
+      'This is the first round, so there is little to hold your word against yet, if anything: stay broad. Say ' +
+        'only what your word shares with the words closest to it, never a detail that tells it apart from them, so ' +
+        'that your line fits whichever of two close words the others have.',
+      'If most of the lines so far already fit another word better than yours, lean toward that word.',
+      fitIn,
+    ].join(' ');
+  }
+  return [
+    'If most of the lines fit another word better than yours, yours is probably the odd one: say only what your ' +
+      'word shares with that word, leaning toward it, as vaguely as you can, and never anything that only your ' +
+      'word has.',
+    `If they fit your word, a ${good}`,
+    fitIn,
+  ].join(' ');
+}
+
+// Whom to vote for. The PI is told what it always was. A player with a word first works out the
+// word that most players seem to have; when that is not its own, it is probably a Reviewer 2, and
+// votes as a student would rather than for the students. The points of a vote are those of the
+// rules (docs/games/impostor.md#points).
+function howToVote(game: ImpostorAgentGame): string {
+  if (game.word === null) {
+    return (
+      'It is time to vote. Vote for the player whose lines fit the word that most players seem to have the ' +
+      'least: that player probably has another word, or none. Voting out a student costs you a point; abstaining ' +
+      'costs nothing, but helps nobody.'
+    );
+  }
+  return [
+    'It is time to vote. First work out from the lines alone the word that most players seem to have: it may ' +
+      'not be yours.',
+    'If it is yours, vote for the player whose lines fit it the least: that player probably has another word, or ' +
+      'none.',
+    'If it is not, you are probably a Reviewer 2, and the players whose lines fit it are probably students: never ' +
+      'vote for one of them, which would give you away. Vote, as a student would, for the player whose lines fit ' +
+      'that word the least, or abstain.',
+    'A vote for a Reviewer 2 or the PI brings you a point, whatever comes of it; a vote that puts a student out ' +
+      'costs you one; abstaining costs nothing, but helps nobody. Choose the vote that these points favor most.',
+  ].join(' ');
+}
+
+// The one sentence of a reason, all in the language of the room. Told the game in English, the
+// model otherwise writes the players and the roles in English in a Chinese room ("Player 5").
+function reason(game: ImpostorAgentGame, persona: Persona): string {
+  const language = LANGUAGE_NAMES[game.language];
+  const names =
+    game.language === 'zh'
+      ? ': name the players and the roles in Chinese too, never as "Player 3", "PI" or "Reviewer 2"'
+      : '';
+  return (
+    `Give your reason in one short sentence in ${language}, ${persona.tone}. Write all of it in ${language}, ` +
+    `with no words of another language${names}.`
+  );
+}
+
 export function describeSystem(game: ImpostorAgentGame, persona: Persona, tie: boolean): string {
   const language = LANGUAGE_NAMES[game.language];
   const unit = game.language === 'zh' ? 'Chinese characters' : 'characters';
@@ -96,9 +169,7 @@ export function describeSystem(game: ImpostorAgentGame, persona: Persona, tie: b
       ? 'You are tied with others for the most votes: describe your word once more, so that the others believe ' +
         'that you are a student.'
       : 'It is your turn to describe your word.',
-    'A good line is true of your word but vague: specific enough that the players who share your word recognize ' +
-      "it, and vague enough that a player with the other word can't work yours out. Fit in with what the others " +
-      'said, without repeating it.',
+    goodLine(game, tie),
     `Write in ${language}, at most ${game.length} ${unit} a line, ${persona.tone}. Never use your word or any ` +
       'part of it, a character of it, its plural, its translation or its pinyin, and never repeat a line that was ' +
       'said before, or nearly so.',
@@ -125,11 +196,9 @@ export function voteSystem(game: ImpostorAgentGame, persona: Persona, candidates
   return [
     rules(game),
     yourWord(game),
-    'It is time to vote. Vote for the player whose lines fit the word that most players seem to have the least: ' +
-      'that player probably has another word, or none. Voting out a student costs you a point; abstaining ' +
-      'costs nothing, but helps nobody.',
+    howToVote(game),
     `You may vote for one of the players ${candidates.join(', ')}, or answer 0 to abstain.`,
-    `Give your reason in one short sentence in ${LANGUAGE_NAMES[game.language]}, ${persona.tone}.`,
+    reason(game, persona),
     'Answer in JSON: number and reason.',
   ].join('\n');
 }
@@ -149,7 +218,7 @@ export function judgeSystem(
     "The rules: a line describes the player's own word, and must not give the word away, nor say who has which " +
       'word. A report that passes puts the player out; one that fails costs the reporter a point. Agree only ' +
       "when the rules were clearly broken; disagree when they were not; abstain when you can't tell.",
-    `Give your reason in one short sentence in ${LANGUAGE_NAMES[game.language]}, ${persona.tone}.`,
+    reason(game, persona),
     'Answer in JSON: verdict (agree, disagree or abstain) and reason.',
   ].join('\n');
 }
