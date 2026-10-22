@@ -54,10 +54,12 @@ const OPEN_LIMIT = 3;
 // AGENT_GUESS_THINKING_MS, which the whose-turn strip tells the players, and stops this long before
 // the end of its wait: measured on fixed boards at the low level, nearly every guess took less than
 // ten seconds, and every one less than fifteen. The rehearsals stop this long before the end of
-// the wait, so that the clue still goes out in time.
+// the wait, so that the clue still goes out in time, and one is asked for only with about the
+// time it takes left, a second.
 const CLUE_AFTER_THINKING_MS = 15_000;
 const GUESS_AFTER_THINKING_MS = 5_000;
 const REHEARSALS_END_MS = 1_000;
+const REHEARSAL_MS = 1_000;
 
 // The longest clue that a note keeps of what the model wrote (AGENT_REPLY).
 const MAX_NOTED = 200;
@@ -315,9 +317,10 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
 // (danger()), the earlier among equals. Measured on fixed boards, one rehearsal a clue was no
 // help, and three ran into the other group's cards half as often; a student that thinks takes too
 // long. The rehearsals go round the clues, one each at a time, so that the time running out leaves
-// every clue with about as many. They stop in time for the clue to go out, or when the model can't
-// answer one, and a clue that had none counts as one whose student found nothing and stopped
-// safely.
+// every clue with about as many. They stop in time for the clue to go out, when the model can't
+// answer one, or when other requests wait for the model (Turn.hurry): a hurried PI gives its clue
+// on the rehearsals so far, if any, so that the waiting ones have their turn. A clue that had none
+// counts as one whose student found nothing and stopped safely.
 async function rehearsed(request: ClueRequest, chosen: Judged[], turn: Turn): Promise<Judged> {
   const students = {
     ...request,
@@ -327,12 +330,12 @@ async function rehearsed(request: ClueRequest, chosen: Judged[], turn: Turn): Pr
   rounds: for (let round = 0; round < MAX_REHEARSALS; round += 1) {
     for (const { candidate } of chosen) {
       const left = end - turn.now();
-      if (left <= 0) break rounds;
+      if (left < REHEARSAL_MS || turn.hurry.aborted) break rounds;
       const question = guessQuestion(students, candidate, candidate.count, turn.persona);
+      const signal = AbortSignal.any([turn.signal, turn.hurry, AbortSignal.timeout(Math.ceil(left))]);
       let answer: Record<string, unknown>;
       try {
-        answer = (await turn.model.ask(question, AbortSignal.any([turn.signal, AbortSignal.timeout(Math.ceil(left))])))
-          .value;
+        answer = (await turn.model.ask(question, signal)).value;
       } catch (error) {
         if (turn.signal.aborted || !(error instanceof ModelError)) throw error;
         break rounds;

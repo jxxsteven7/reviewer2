@@ -27,20 +27,38 @@ function agent(
   return { ...created, logged };
 }
 
-// A model that thinks for as long as it is let, and answers at once when it isn't let.
+// A model that thinks for as long as it is let, and answers without thinking in `quickMs`, at once
+// unless a test says otherwise: three clean clues, a card, or a number.
 class ThinkingModel implements Model {
   readonly name = 'thinker';
   readonly reasoning = 'low' as const;
-  // Whether each question let it think.
-  readonly asked: boolean[] = [];
+  // Each question, by its kind and whether it let the model think.
+  readonly asked: { name: string; think: boolean }[] = [];
+
+  constructor(private readonly quickMs = 0) {}
 
   async ask(question: Question, signal: AbortSignal): Promise<Answer> {
-    this.asked.push(question.think === true);
-    if (question.think) {
-      await new Promise<never>((_, reject) =>
-        signal.addEventListener('abort', () => reject(new ModelError('aborted', true)), { once: true }),
+    this.asked.push({ name: question.name, think: question.think === true });
+    await new Promise<void>((resolve, reject) => {
+      const timer = question.think ? null : setTimeout(resolve, this.quickMs);
+      signal.addEventListener(
+        'abort',
+        () => {
+          if (timer !== null) clearTimeout(timer);
+          reject(new ModelError('aborted', true));
+        },
+        { once: true },
       );
+    });
+    if (question.name === 'clue') {
+      const clues: [string, number[]][] = [
+        ['Biology', [6, 7]],
+        ['Algebra', [1, 3]],
+        ['Chemistry', [4, 8]],
+      ];
+      return { value: { candidates: clues.map(([clue, targets]) => ({ clue, targets, count: 2 })) }, thinking: null };
     }
+    if (question.name === 'guess') return { value: { picks: [6], reason: 'Odd.' }, thinking: null };
     return { value: { number: 3, reason: 'Odd.' }, thinking: null };
   }
 
@@ -195,13 +213,13 @@ describe('the queue', () => {
         handle(JSON.stringify(impostorRequest('vote', { waitMs: 27_000 }))),
       );
       await vi.advanceTimersByTimeAsync(17_900);
-      expect(model.asked).toEqual([true, true]);
+      expect(model.asked.map(({ think }) => think)).toEqual([true, true]);
       // At 18 seconds the third in line would be late for its 3 seconds of the model, after the
       // two with it had theirs without thinking and the two before it had theirs: the two stop
       // thinking and answer without, and the rest, with too little time left to think, go without
       // from the start. Every vote is in.
       await vi.advanceTimersByTimeAsync(200);
-      expect(model.asked).toEqual([true, true, false, false, false, false, false]);
+      expect(model.asked.map(({ think }) => think)).toEqual([true, true, false, false, false, false, false]);
       const answered = await Promise.all(votes);
       expect(answered.map((reply) => (reply.ok && reply.kind === 'vote' ? reply.note : reply))).toEqual([
         expect.objectContaining({ reasoning: 'low', fellBack: true }),
@@ -216,6 +234,66 @@ describe('the queue', () => {
       expect(model.asked).toHaveLength(8);
       await vi.advanceTimersByTimeAsync(200);
       expect(allowed(await alone)).toMatchObject({ ok: true, note: { reasoning: 'low', fellBack: true } });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test('stops the rehearsals of a hurried clue too, so that the waiting ones have their turn', async () => {
+    vi.useFakeTimers();
+    try {
+      // Each question without thinking takes the model 1.2 seconds.
+      const model = new ThinkingModel(1_200);
+      const { handle } = agent(model, { concurrency: 2, now: Date.now });
+      // The AI PIs of two rooms think of their clues, with 87 seconds each; two seconds later, an
+      // AI student of a third room asks for its guess, with 17.
+      const clues = [1, 2].map(() => handle(JSON.stringify(clueRequest({ waitMs: 87_000 }))));
+      await vi.advanceTimersByTimeAsync(2_000);
+      const guess = handle(JSON.stringify(guessRequest({ waitMs: 17_000 })));
+      // At 13 seconds the PIs are hurried: each is asked once without thinking, and gives its clue
+      // without rehearsing the three it has to choose from, which would hold the model for long.
+      await vi.advanceTimersByTimeAsync(10_900);
+      expect(model.asked.map(({ think }) => think)).toEqual([true, true]);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(model.asked).toEqual([
+        { name: 'clue', think: true },
+        { name: 'clue', think: true },
+        { name: 'clue', think: false },
+        { name: 'clue', think: false },
+      ]);
+      // The student has its turn as soon as the clues are given, and its guess in time.
+      await vi.advanceTimersByTimeAsync(1_300);
+      expect(model.asked.at(-1)).toEqual({ name: 'guess', think: false });
+      await vi.advanceTimersByTimeAsync(1_300);
+      expect(allowed(await guess)).toMatchObject({ ok: true, kind: 'guess', picks: [6] });
+      for (const reply of await Promise.all(clues)) {
+        expect(allowed(reply)).toMatchObject({ ok: true, kind: 'clue', note: { reasoning: 'low', fellBack: true } });
+        if (!reply.ok || reply.kind !== 'clue') throw new Error('no clue');
+        expect(reply.note.candidates?.map(({ rehearsals }) => rehearsals)).toEqual([undefined, undefined, undefined]);
+      }
+      expect(model.asked).toHaveLength(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("leaves the thinking alone for a request that couldn't be answered in time anyway", async () => {
+    vi.useFakeTimers();
+    try {
+      const model = new ThinkingModel();
+      const { handle } = agent(model, { concurrency: 1, now: Date.now });
+      const thinking = handle(JSON.stringify(impostorRequest('vote', { waitMs: 27_000 })));
+      await vi.advanceTimersByTimeAsync(10_000);
+      // A request with two seconds left, as one asked again late in a phase, would be late even if
+      // the thinking stopped at once: it is busy when its wait ends, and the thinking goes on.
+      const late = handle(JSON.stringify(impostorRequest('vote', { waitMs: 2_000 })));
+      await vi.advanceTimersByTimeAsync(2_100);
+      expect(await late).toEqual({ ok: false, error: 'busy' });
+      expect(model.asked.map(({ think }) => think)).toEqual([true]);
+      await vi.advanceTimersByTimeAsync(8_800);
+      expect(model.asked).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(allowed(await thinking)).toMatchObject({ ok: true, note: { reasoning: 'low', fellBack: true } });
     } finally {
       vi.useRealTimers();
     }

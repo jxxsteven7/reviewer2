@@ -267,6 +267,33 @@ describe('a clue', () => {
     expect(unrehearsed.asked).toHaveLength(1);
   });
 
+  test('is given on the rehearsals so far when other requests come to wait for the model', async () => {
+    const hurry = new AbortController();
+    const model = new ScriptedModel({
+      clue: [{ candidates: [candidate('Biology', [6, 7]), candidate('Cell', [6, 8])] }],
+      // The first rehearsal of Biology leads to Reviewer 2, and Cell's is under way when the hurry
+      // comes, which cuts it short and ends the rehearsals.
+      guess: [{ picks: [24], reason: '' }, new Promise(() => {}), { picks: [6, 7], reason: '' }],
+    });
+    const clue = giveClue(clueRequest(), { ...turn(model), hurry: hurry.signal });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(model.asked).toHaveLength(3);
+    hurry.abort();
+    const reply = allowed(await clue);
+    expect(reply).toMatchObject({ ok: true, word: 'Cell', note: { reasoning: 'off' } });
+    if (!reply.ok || reply.kind !== 'clue') throw new Error('no clue');
+    expect(reply.note.candidates?.map(({ rehearsals }) => rehearsals?.length)).toEqual([1, undefined]);
+    expect(model.asked).toHaveLength(3);
+    // The clues of a PI that is hurried from the start aren't rehearsed at all.
+    const hurried = new ScriptedModel({
+      clue: [{ candidates: [candidate('Biology', [6, 7]), candidate('Cell', [6, 8])] }],
+    });
+    expect(await giveClue(clueRequest(), { ...turn(hurried), hurry: AbortSignal.abort() })).toMatchObject({
+      word: 'Biology',
+    });
+    expect(hurried.asked).toHaveLength(1);
+  });
+
   test('is thought of first, and the note keeps what the model thought', async () => {
     const model = new ScriptedModel({ clue: [{ candidates: [candidate('Biology', [6, 7])] }] }, 'scripted', 'low');
     const reply = allowed(await giveClue(clueRequest(), turn(model)));

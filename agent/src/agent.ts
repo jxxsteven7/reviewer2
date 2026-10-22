@@ -36,7 +36,9 @@ const PING_MS = 5_000;
 
 // How long a request takes the model without thinking, generously: a second or two, measured, and
 // twice that for one that was let think and is asked again. The requests that wait for the model
-// are promised this much of it each, and those with it stop thinking in time for that (hurryAt).
+// are promised this much of it each, and those with it stop thinking, and a PI rehearsing its clues
+// (keywords.ts), in time for that (hurryAt). One whose answer without thinking the rules refuse is
+// asked again, once or twice, which is rare, and may make a waiting one late.
 const QUICK_MS = 3_000;
 
 // A turn of a game, with the game's own code.
@@ -71,12 +73,14 @@ export function createAgent({
   // would be late for it: once the requests with the model are told to stop, each answers without
   // thinking within QUICK_MS, and the waiting ones take their turns, `concurrency` at a time, each
   // answered within QUICK_MS; so the one in place i has its turn QUICK_MS * (i / concurrency + 1)
-  // after the stop, and needs it QUICK_MS before its wait ends.
+  // after the stop, and needs it QUICK_MS before its wait ends. One that would be late even if the
+  // requests with the model stopped at once, as a request asked again late in a phase is, hurries
+  // nobody: it is busy whatever they do, and their thinking would be lost for nothing.
   function hurryAt(): number {
-    return waiting.reduce(
-      (at, { until }, place) => Math.min(at, until - QUICK_MS * (Math.floor(place / concurrency) + 2)),
-      Infinity,
-    );
+    return waiting.reduce((at, { until }, place) => {
+      const turns = Math.floor(place / concurrency) + 1;
+      return until - now() < QUICK_MS * turns ? at : Math.min(at, until - QUICK_MS * (turns + 1));
+    }, Infinity);
   }
 
   // Hurries the requests with the model when that time comes, as the queue stands now; called
