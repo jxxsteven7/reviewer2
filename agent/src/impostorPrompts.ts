@@ -1,5 +1,5 @@
 import type { Language } from '@reviewer2/shared';
-import type { ImpostorAgentGame, ImpostorRole } from '@reviewer2/shared/impostor';
+import { POINTS, roleCounts, WIN_POINTS, type ImpostorAgentGame, type ImpostorRole } from '@reviewer2/shared/impostor';
 import type { Persona } from './personas';
 
 // What the agent tells the model and asks it, for the hidden word game (docs/games/impostor.md).
@@ -94,8 +94,9 @@ const state = (game: ImpostorAgentGame) => [table(game), history(game)].join('\n
 
 // What makes a good line. The PI, who has no word, is told what it always was. A player with a word
 // says, in the first round, where there is little to hold its word against, only what its word
-// shares with the words closest to it; after that, it leans toward the word that most players seem
-// to have when that is not its own.
+// shares with the words closest to it, and leans toward another word only once half of the other
+// players have spoken, since one or two lines, perhaps a Reviewer 2's, are too few to go by; after
+// that, it leans toward the word that most players seem to have when that is not its own.
 function goodLine(game: ImpostorAgentGame, tie: boolean): string {
   const fitIn = 'Fit in with what the others said, without repeating it.';
   const good =
@@ -103,11 +104,15 @@ function goodLine(game: ImpostorAgentGame, tie: boolean): string {
     "it, and vague enough that a player with the other word can't work yours out.";
   if (game.word === null) return `A ${good} ${fitIn}`;
   if (game.round === 1 && !tie) {
+    const spoken = game.lines.filter(({ round, text }) => round === 1 && text !== null).length;
+    const others = game.seats.filter(({ fate }) => fate === 'alive').length - 1;
     return [
       'This is the first round, so there is little to hold your word against yet, if anything: stay broad. Say ' +
         'only what your word shares with the words closest to it, never a detail that tells it apart from them, so ' +
         'that your line fits whichever of two close words the others have.',
-      'If most of the lines so far already fit another word better than yours, lean toward that word.',
+      spoken * 2 >= others
+        ? 'If most of the lines so far fit another word better than yours, lean toward that word.'
+        : 'Too few have spoken yet to tell which word most players have, so lean toward no other word.',
       fitIn,
     ].join(' ');
   }
@@ -121,9 +126,11 @@ function goodLine(game: ImpostorAgentGame, tie: boolean): string {
 }
 
 // Whom to vote for. The PI is told what it always was. A player with a word first works out the
-// word that most players seem to have; when that is not its own, it is probably a Reviewer 2, and
-// votes as a student would rather than for the students. The points of a vote are those of the
-// rules (docs/games/impostor.md#points).
+// word that most players seem to have; when that is not its own, it is probably a Reviewer 2,
+// whose side wins only while one of them lasts, so it votes neither for the students, which would
+// give it away, nor, in a game with two Reviewer 2s while both are in, for the other one, whose
+// lines lean toward its word as its own do. The points are those of the rules
+// (docs/games/impostor.md#points), told with a win's, which outweighs any one vote.
 function howToVote(game: ImpostorAgentGame): string {
   if (game.word === null) {
     return (
@@ -132,26 +139,49 @@ function howToVote(game: ImpostorAgentGame): string {
       'costs nothing, but helps nobody.'
     );
   }
+  const reviewer2sIn =
+    roleCounts(game.seats.length, false).reviewer2 - game.seats.filter(({ role }) => role === 'reviewer2').length;
+  const partner =
+    reviewer2sIn > 1
+      ? ' A player whose lines lean toward your word, as yours do, is probably the other Reviewer 2, on your ' +
+        'side: never vote for them either.'
+      : '';
   return [
     'It is time to vote. First work out from the lines alone the word that most players seem to have: it may ' +
       'not be yours.',
     'If it is yours, vote for the player whose lines fit it the least: that player probably has another word, or ' +
       'none.',
-    'If it is not, you are probably a Reviewer 2, and the players whose lines fit it are probably students: never ' +
-      'vote for one of them, which would give you away. Vote, as a student would, for the player whose lines fit ' +
-      'that word the least, or abstain.',
-    'A vote for a Reviewer 2 or the PI brings you a point, whatever comes of it; a vote that puts a student out ' +
-      'costs you one; abstaining costs nothing, but helps nobody. Choose the vote that these points favor most.',
+    'If it is not, you are probably a Reviewer 2, and your side wins only while one of you is still in the game. ' +
+      'The players whose lines fit that word are probably students: never vote for one of them, which would give ' +
+      `you away.${partner} Vote for a player whose lines fit neither word, who is probably the PI, or abstain.`,
+    `The points: a vote for a Reviewer 2 or the PI is worth +${POINTS.hit}, whatever comes of it; a vote that ` +
+      `puts a student out, ${POINTS.wrong}; abstaining, 0. Your side winning is worth +${WIN_POINTS.student} to a ` +
+      `student, +${WIN_POINTS.reviewer2} to a Reviewer 2 and +${WIN_POINTS.pi} to the PI, and +${POINTS.lasted} ` +
+      'more when you are still in the game then, so keeping your side in the game outweighs any one vote. ' +
+      'Choose the vote that these points favor most.',
   ].join(' ');
 }
 
+// The names of the players and the roles as the game shows them in a Chinese room
+// (client/src/locales/zh.json, games.impostor), as escapes, so that the source stays in English: a
+// number followed by the character for one, then the student, the Reviewer 2 and the PI.
+const CHINESE_NAMES = {
+  player: '3 \u53f7',
+  student: '\u5b66\u751f',
+  reviewer2: '\u4e8c\u53f7\u5ba1\u7a3f\u4eba',
+  pi: '\u5bfc\u5e08',
+};
+
 // The one sentence of a reason, all in the language of the room. Told the game in English, the
-// model otherwise writes the players and the roles in English in a Chinese room ("Player 5").
+// model otherwise writes the players and the roles in English in a Chinese room ("Player 5"), or
+// translates them its own way, so it is told the names the game shows.
 function reason(game: ImpostorAgentGame, persona: Persona): string {
   const language = LANGUAGE_NAMES[game.language];
+  const { player, student, reviewer2, pi } = CHINESE_NAMES;
   const names =
     game.language === 'zh'
-      ? ': name the players and the roles in Chinese too, never as "Player 3", "PI" or "Reviewer 2"'
+      ? `: write a player by number as "${player}", and the roles as ${student}, ${reviewer2} and ${pi}, never ` +
+        'as "Player 3", "PI" or "Reviewer 2"'
       : '';
   return (
     `Give your reason in one short sentence in ${language}, ${persona.tone}. Write all of it in ${language}, ` +
