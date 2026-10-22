@@ -49,11 +49,25 @@ export interface ImpostorCandidate {
   problem: string | null;
 }
 
+// What a player with a word worked out before its line or its vote (`judges` in the agent's
+// impostorPrompts.ts), as its note keeps it for the AI's log alone: the other word closest to its
+// own, in the model's own words, and, once there were lines to go by, which of the two the others'
+// lines fit: its own, the closest, or neither clearly.
+export const FITS = ['mine', 'closest', 'unclear'] as const;
+export type ImpostorFit = (typeof FITS)[number];
+
+export interface ImpostorJudgment {
+  closest: string;
+  fit?: ImpostorFit;
+}
+
+export type ImpostorNote = AgentNote<ImpostorCandidate> & { judgment?: ImpostorJudgment };
+
 // The line, the vote, by number or null to abstain, the verdict or the guess, null to make none,
 // each with the reason in a sentence. When the agent has no line that the checks take, it answers
 // `no_legal_move`.
 export type ImpostorAgentReply =
-  | { ok: true; kind: 'describe'; text: string; note: AgentNote<ImpostorCandidate> }
-  | { ok: true; kind: 'vote'; number: number | null; reason: string; note: AgentNote<ImpostorCandidate> }
-  | { ok: true; kind: 'judge'; verdict: ReportVerdict; reason: string; note: AgentNote<ImpostorCandidate> }
-  | { ok: true; kind: 'comeback'; word: string | null; note: AgentNote<ImpostorCandidate> };
+  | { ok: true; kind: 'describe'; text: string; note: ImpostorNote }
+  | { ok: true; kind: 'vote'; number: number | null; reason: string; note: ImpostorNote }
+  | { ok: true; kind: 'judge'; verdict: ReportVerdict; reason: string; note: ImpostorNote }
+  | { ok: true; kind: 'comeback'; word: string | null; note: ImpostorNote };

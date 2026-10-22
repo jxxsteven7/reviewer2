@@ -179,7 +179,7 @@ describe('AI players', () => {
     expect(row.game).toBe('impostor');
     const steps = (JSON.parse(row.agentLog) as { steps: { kind: string; note?: { prompt: string } }[] }).steps;
     expect(new Set(steps.map(({ kind }) => kind))).toEqual(new Set(['describe', 'vote', 'judge', 'comeback']));
-    expect(steps.every(({ note }) => note?.prompt === 'impostor-1')).toBe(true);
+    expect(steps.every(({ note }) => note?.prompt === 'impostor-2')).toBe(true);
   });
 });
 

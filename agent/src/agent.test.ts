@@ -50,7 +50,7 @@ describe('a request', () => {
       ok: true,
       kind: 'describe',
       text: 'round and red',
-      note: { model: 'small', prompt: 'impostor-1' },
+      note: { model: 'small', prompt: 'impostor-2' },
     });
     expect(allowed(await handle(JSON.stringify(clueRequest())))).toMatchObject({ ok: true, kind: 'clue' });
     expect([first.asked.map(({ name }) => name), own.asked.map(({ name }) => name)]).toEqual([['clue'], ['describe']]);
