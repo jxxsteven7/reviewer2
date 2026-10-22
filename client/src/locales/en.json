@@ -2195,6 +2195,7 @@
   },
   "rating": {
     "dismiss": "Don't rate",
+    "close": "Close, keeping your rating",
     "options": {
       "good": "Good",
       "hard": "Too hard",
@@ -2202,6 +2203,7 @@
       "problem": "Something's wrong"
     },
     "hint": "Tap × not to rate; you can change it before you leave.",
+    "noted": "Noted, thanks for the feedback. You can change it before you leave.",
     "say": "Say something"
   }
 }

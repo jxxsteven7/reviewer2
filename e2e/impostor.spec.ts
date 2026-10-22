@@ -154,9 +154,16 @@ test('four players describe, judge a report, come back after a reload, vote Revi
     await expect(page.locator('.reveal li')).toHaveCount(4);
     await expect(page.getByRole('region', { name: impostor.rating })).toBeVisible();
   }
+  // The chair rates it: the option stays pressed, a line says it was noted, and the × then only
+  // closes the card, keeping the rating rather than dismissing the question.
   const rating = chair.getByRole('region', { name: impostor.rating });
-  await rating.getByText(text.rating.options.good, { exact: true }).click();
-  await expect(rating.locator('label.chosen')).toHaveText(text.rating.options.good);
+  const good = rating.getByRole('button', { name: text.rating.options.good, exact: true });
+  await good.click();
+  await expect(good).toHaveAttribute('aria-pressed', 'true');
+  await expect(rating.getByRole('status')).toHaveText(text.rating.noted);
+  await rating.getByRole('button', { name: text.rating.close }).click();
+  await expect(rating).toBeHidden();
+  expect(snapshotsOf(chair).at(-1)?.rating?.rating).toBe('good');
   expect(gameIn(snapshotsOf(chair).at(-1))?.result).toEqual({ winner: 'student', reason: 'caught' });
 
   // Each finds the game on their record of the second game, with their role and how their game
