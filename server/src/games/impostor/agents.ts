@@ -46,7 +46,9 @@ export function practiceSeats(role: string): PracticeSeats | null {
 // The agent takes a request of MAX_AGENT_REQUEST at most (agent/src/agent.ts), which the history of
 // a game of many rounds would outgrow: the lines, the votes and the reports go to the agent from
 // the newest round back, as many whole rounds as fit in the history's share of the request, which
-// leaves the rest of it, the words and the seats, what it needs.
+// leaves the rest of it, the words and the seats, what it needs. The agent then holds its lines
+// against the rounds it was told alone, so in such a game it may write one all but the same as a
+// line of a round it wasn't, which the rules refuse (docs/games/impostor.md#ai-players).
 export const HISTORY_BYTES = MAX_AGENT_REQUEST - 8 * 1024;
 
 function fitted(game: ImpostorAgentGame): ImpostorAgentGame {
@@ -134,13 +136,15 @@ export function agentTask(data: ImpostorData, ctx: GameContext, playerId: string
       return null;
     }
     const number = (id: string) => playerOf(game, id)?.number ?? 0;
+    // The line the report points at, by its text: the agent may not be told the round it is of.
+    const pointed = report.line === null ? null : (game.lines[report.line]?.text ?? null);
     return task(
       `${at}:report:${game.reports.length}`,
       'judge',
       {
         kind: 'judge',
         ...base,
-        report: { by: number(report.by), target: number(report.target), line: report.line, reason: report.reason },
+        report: { by: number(report.by), target: number(report.target), text: pointed, reason: report.reason },
       },
       VOTE_PACE_MS,
     );

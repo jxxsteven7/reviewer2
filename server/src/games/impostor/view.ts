@@ -83,8 +83,9 @@ export const guessing = (game: ImpostorGame, id: string | null): boolean => {
 };
 
 // The words that the viewer knows, which their lines off the field may not name while the game is
-// on (talk() in rules.ts), as the page knows them too: a player's own, both for the setter and
-// with the god view, none for the PI or for whoever only watches.
+// on (talk() in rules.ts): a player's own, both for the setter and with the god view, none for the
+// PI or for whoever only watches. The view carries them too (`known`), so that the page holds a
+// line against the same words, with their forms, before it sends the line.
 export function knownWords(game: ImpostorGame, watcher: Watcher): BoardWord[] {
   if (watcher.setter || watcher.godView) return [game.words.student, game.words.reviewer2];
   const player = watcher.id === null ? undefined : playerOf(game, watcher.id);
@@ -154,7 +155,7 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
   const offFieldLines: OffFieldLine[] | null = talking
     ? game.talk.map((line) => {
         const player = playerOf(game, line.by);
-        const named = !player || !game.settings.anonymous || revealed;
+        const named = !player || !game.settings.anonymous || revealed || watcher.godView;
         return {
           id: line.id,
           number: player ? player.number : null,
@@ -188,6 +189,7 @@ export function viewOf(game: ImpostorGame, watcher: Watcher, at: number): Impost
     setterWords: watcher.setter
       ? [game.words.student.word, game.words.reviewer2.word].sort((a, b) => a.localeCompare(b))
       : null,
+    known: knownWords(game, watcher).map(ownWord),
     setter: game.source.kind === 'setter' ? game.source.setter : null,
     seats,
     speaker: game.speaker === null ? null : number(game.speaker),

@@ -372,6 +372,11 @@ export const judgedBy = (game: ImpostorGame): string[] => game.report?.eligible.
 const tieBroken = (game: ImpostorGame): boolean =>
   (game.phase === 'tie' || game.phase === 'revote') && game.tied.length < 2;
 
+// The clock as it goes on after a report held it, from where it stood (report()), or none where
+// the phase had none.
+const resumed = (paused: ImpostorGame['paused'], now: number): Clock | null =>
+  paused?.left === null || !paused ? null : { ends: now + paused.left, length: paused.length };
+
 // The game goes on from what players who left, now or while a report stopped it, left undone: a
 // tie they broke ends the round, the line of the one describing is missed, and a vote that waited
 // only for them is revealed.
@@ -405,9 +410,8 @@ function settle(game: ImpostorGame, now: number): ImpostorGame {
   const agree = Object.values(verdicts).filter((verdict) => verdict === 'agree').length;
   const passed = agree > judges.length / 2;
   const settled: Report = { ...open, eligible: judges, verdicts, passed };
-  const resumed = game.paused;
+  const clock = resumed(game.paused, now);
   let next: ImpostorGame = { ...game, report: null, reports: [...game.reports, settled], paused: null };
-  const clock = resumed?.left === null || !resumed ? null : { ends: now + resumed.left, length: resumed.length };
   if (!passed || !isAlive(next, open.target)) return carryOn({ ...next, clock }, now);
   next = putOut(next, open.target, 'violation');
   return endOr(next, (going) => {
@@ -513,13 +517,12 @@ export function leave(game: ImpostorGame, playerId: string, removed: boolean, no
   if (next.phase === 'comeback') return next;
   const report = next.report;
   if (report?.target === playerId) {
-    const resumed = next.paused;
     next = {
       ...next,
       report: null,
       paused: null,
       dropped: [...next.dropped, { round: report.round, by: report.by }],
-      clock: resumed?.left === null || !resumed ? null : { ends: now + resumed.left, length: resumed.length },
+      clock: resumed(next.paused, now),
     };
   }
   const result = winnerOf(next);

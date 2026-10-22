@@ -35,9 +35,10 @@ export interface ImpostorAgentGame {
 export type ImpostorAgentRequest =
   | (AgentAsked & { kind: 'describe'; tie: boolean } & ImpostorAgentGame)
   | (AgentAsked & { kind: 'vote'; candidates: number[] } & ImpostorAgentGame)
+  // The report carries the line it points at, if any: the agent may not be told the round it is of.
   | (AgentAsked & {
       kind: 'judge';
-      report: { by: number; target: number; line: number | null; reason: string };
+      report: { by: number; target: number; text: string | null; reason: string };
     } & ImpostorAgentGame)
   | (AgentAsked & { kind: 'comeback' } & ImpostorAgentGame);
 

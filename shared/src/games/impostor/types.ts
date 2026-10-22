@@ -211,6 +211,11 @@ export interface ImpostorView {
   // PI. The setter's two words, in no order.
   you: { number: number; role: ImpostorRole | null; word: OwnWord | null } | null;
   setterWords: string[] | null;
+  // The words the viewer knows, which their lines off the field may not name while the game is on
+  // (knownWords() in view.ts): their own, both for the setter and with the god view, none for the
+  // PI or whoever only watches, each with what a line may not give away of it, as the server holds
+  // the line against them.
+  known: OwnWord[];
   // Who set the words of the game, by player ID, for everyone, as the waiting room showed it, or
   // null for a game of words from the library. The chair may have passed to someone else since.
   setter: string | null;

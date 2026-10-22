@@ -106,10 +106,12 @@ export const IMPOSTOR_AGENT_REQUESTS = [
     candidates: z.array(number).max(MAX_PLAYERS),
     ...agentGame,
   }),
+  // The report carries the line it points at, since the agent is told only the latest rounds of a
+  // long game (agents.ts on the server), in which the line's place among the lines says nothing.
   z.strictObject({
     ...AGENT_ASKED,
     kind: z.literal('judge'),
-    report: z.strictObject({ by: number, target: number, line: z.number().int().min(0).nullable(), reason: line }),
+    report: z.strictObject({ by: number, target: number, text: line.nullable(), reason: line }),
     ...agentGame,
   }),
   z.strictObject({ ...AGENT_ASKED, kind: z.literal('comeback'), ...agentGame }),

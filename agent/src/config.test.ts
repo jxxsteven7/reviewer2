@@ -71,6 +71,18 @@ describe('the settings', () => {
     expect(() =>
       loadConfig({ ...base, AGENT_IMPOSTOR_MODEL_URL: 'http://other.test/v1', AGENT_IMPOSTOR_MODEL_KEY: 'own' }, 1),
     ).toThrow(/AGENT_IMPOSTOR_MODEL_URL must be an https address/);
+    // A key of its own goes to the first game's address only where the first game's key could: the
+    // address passed without a key, and takes none over the network in the clear.
+    const clear = { ...base, AGENT_MODEL_URL: 'http://model.test/v1' };
+    expect(loadConfig({ ...clear, AGENT_IMPOSTOR_MODEL: 'small' }, 1).models.impostor?.modelKey).toBeNull();
+    expect(() => loadConfig({ ...clear, AGENT_IMPOSTOR_MODEL_KEY: 'own' }, 1)).toThrow(
+      /AGENT_MODEL_URL must be an https address when AGENT_IMPOSTOR_MODEL_KEY is set/,
+    );
+    expect(loadConfig({ ...base, AGENT_IMPOSTOR_MODEL_KEY: 'own' }, 1).models.impostor).toEqual({
+      modelUrl: 'http://127.0.0.1:11434/v1',
+      model: 'm',
+      modelKey: 'own',
+    });
   });
 
   test('that are wrong stop the agent', () => {

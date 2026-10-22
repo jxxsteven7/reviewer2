@@ -135,9 +135,16 @@ const mayVote = computed(
 );
 const choice = ref<number | 'abstain' | null>(null);
 watch(
-  () =>
-    `${game.value.gameId}-${game.value.round}-${game.value.phase}-${game.value.ballots.length}-${game.value.reports.length}`,
+  () => `${game.value.gameId}-${game.value.round}-${game.value.phase}-${game.value.ballots.length}`,
   () => (choice.value = null),
+);
+// A number that can no longer be voted for, as one put out by a report that passed, is no choice:
+// the vote starts again without it, and the choice of anyone else stands.
+watch(
+  () => game.value.candidates,
+  (candidates) => {
+    if (typeof choice.value === 'number' && !candidates.includes(choice.value)) choice.value = null;
+  },
 );
 const choosable = (seat: SeatView) =>
   mayVote.value && seat.number !== myNumber.value && game.value.candidates.includes(seat.number);

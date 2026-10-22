@@ -35,6 +35,7 @@ import {
   report,
   talk,
   vote,
+  votersOf,
   type Outcome,
 } from './rules';
 import type { ImpostorData, ImpostorGame, SetterWords } from './state';
@@ -457,9 +458,8 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     if (game.report) return judgedBy(game).filter((id) => !Object.hasOwn(game.report?.verdicts ?? {}, id));
     if (game.phase === 'comeback') return game.comeback === null ? [] : [game.comeback];
     if (game.phase === 'vote' || game.phase === 'revote') {
-      return game.players
-        .filter((player) => player.fate === 'alive' && !Object.hasOwn(game.pending, player.id))
-        .filter((player) => game.phase !== 'revote' || !game.tied.includes(player.id))
+      return votersOf(game)
+        .filter((player) => !Object.hasOwn(game.pending, player.id))
         .map((player) => player.id);
     }
     return game.speaker === null ? [] : [game.speaker];

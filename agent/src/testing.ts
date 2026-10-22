@@ -117,7 +117,7 @@ export function impostorRequest<Kind extends ImpostorRequest['kind']>(
   const asked = {
     describe: { tie: false },
     vote: { candidates: [1, 3, 5] },
-    judge: { report: { by: 3, target: 5, line: 3, reason: 'It names the word' } },
+    judge: { report: { by: 3, target: 5, text: 'often eaten raw', reason: 'It names the word' } },
     comeback: {},
   }[kind];
   const request = { v: 1, kind, persona: 'reviewer1', waitMs: 10_000, ...game, ...asked, ...changes };

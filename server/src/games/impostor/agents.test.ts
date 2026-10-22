@@ -99,6 +99,12 @@ describe('the AI players', () => {
     expect(rounds.size).toBeLessThan(12);
     expect(Math.max(...rounds)).toBe(12);
     expect(Math.min(...question.ballots.map((ballot) => ballot.round))).toBe(Math.min(...rounds));
+    // A report of a line of a round the agent isn't told carries the line itself.
+    const first = game.lines[0] as { by: string; text: string };
+    const reported = accepted(rules.report(game, 'p2', { ...at(game), number: 1, line: 0, reason: 'odd' }, 0));
+    const judging = agentTask(dataOf(reported, ['p3']), context(['p3']), 'p3');
+    expect(judging?.question).toMatchObject({ kind: 'judge', report: { by: 2, target: 1, text: first.text } });
+    expect((judging?.question as { lines: { round: number }[] }).lines.some((line) => line.round === 1)).toBe(false);
   });
 
   it('are told a line of family emoji as the game took it, however many code points it is', () => {
@@ -156,7 +162,7 @@ describe('the AI players', () => {
     expect(task).toMatchObject({ kind: 'judge', moment: 'g1:1:report:0:p2' });
     expect(task?.question).toMatchObject({
       kind: 'judge',
-      report: { by: 1, target: 3, line: null, reason: 'too plain' },
+      report: { by: 1, target: 3, text: null, reason: 'too plain' },
     });
     expect(agentTask(data, context(agents), 'p3')).toBeNull();
     const move = agentMove(

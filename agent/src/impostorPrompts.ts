@@ -139,14 +139,13 @@ export const voteUser = state;
 export function judgeSystem(
   game: ImpostorAgentGame,
   persona: Persona,
-  report: { by: number; target: number; line: number | null; reason: string },
+  report: { by: number; target: number; text: string | null; reason: string },
 ): string {
-  const pointed = report.line === null ? null : game.lines[report.line];
   return [
     rules(game),
     yourWord(game),
     `Player ${report.by} has reported player ${report.target} for breaking the rules, saying: "${report.reason}".` +
-      (pointed ? ` The report is about this line of theirs: "${pointed.text ?? ''}".` : ''),
+      (report.text === null ? '' : ` The report is about this line of theirs: "${report.text}".`),
     "The rules: a line describes the player's own word, and must not give the word away, nor say who has which " +
       'word. A report that passes puts the player out; one that fails costs the reporter a point. Agree only ' +
       "when the rules were clearly broken; disagree when they were not; abstain when you can't tell.",

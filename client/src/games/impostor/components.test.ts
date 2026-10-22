@@ -81,6 +81,7 @@ function view(overrides: Partial<ImpostorView> = {}): ImpostorView {
     players: 6,
     you: { number: 4, role: null, word: { word: 'preprint' } },
     setterWords: null,
+    known: [{ word: 'preprint' }],
     setter: null,
     seats: [1, 2, 3, 4, 5, 6].map((number) =>
       seat(number, {
@@ -353,6 +354,24 @@ describe('ImpostorGame', () => {
     expect(wrapper.text()).toContain('Choose someone first');
     await wrapper.findAll('.board input[type="radio"]')[1]!.setValue(true);
     expect(vote()?.text()).toBe('Vote for #2');
+    // A report that fails changes nothing of the vote, and one that passes against someone else
+    // starts it again without them: the choice of #2 stands both times.
+    const failed: ReportView = {
+      ...settled,
+      target: 6,
+      verdicts: { 1: 'disagree', 2: 'disagree', 4: 'agree' },
+      passed: false,
+    };
+    await wrapper.setProps({ room: room(view({ ...restarted, reports: [settled, failed] })) });
+    expect(vote()?.text()).toBe('Vote for #2');
+    const another = view({
+      ...restarted,
+      candidates: [1, 2, 4],
+      reports: [settled, failed, { ...settled, target: 6 }],
+      seats: restarted.seats.map((one) => (one.number === 6 ? { ...one, fate: 'violation', out: 2, role: 'pi' } : one)),
+    });
+    await wrapper.setProps({ room: room(another) });
+    expect(vote()?.text()).toBe('Vote for #2');
     await wrapper.get('.abstain-card input').setValue(true);
     const abstain = wrapper.findAll('.actions button').find((button) => button.text() === 'Abstain');
     await abstain!.trigger('click');
@@ -414,6 +433,31 @@ describe('OffField', () => {
     });
     const names = wrapper.findAll('.message .name').map((name) => name.text());
     expect(names).toEqual(['#1 Bob', '#2', 'Eve \u00b7 setter']);
+  });
+
+  test('holds a line against the words the view says the viewer knows, with their forms', async () => {
+    // A viewer who knows both words, as the setter or with the god view: a translation of one is
+    // refused as the server would refuse it, and a line that names neither may go.
+    const game = view({
+      you: null,
+      known: [
+        { word: '\u5b9e\u9a8c', translations: ['Experiment'] },
+        { word: '\u4eff\u771f', forms: ['simulate'] },
+      ],
+      mayTalk: true,
+    });
+    const wrapper = mount(OffField, {
+      props: { room: room(game, 'zed'), game, setterId: null, sending: false, open: () => {}, draft: '' },
+      global: global(),
+    });
+    const send = () => wrapper.get('button[type="submit"]');
+    for (const line of ['is it Experiment?', 'they simulate it']) {
+      await wrapper.setProps({ draft: line });
+      expect(send().attributes('disabled'), line).toBeDefined();
+      expect(wrapper.text()).toContain("You can't write a term you know.");
+    }
+    await wrapper.setProps({ draft: 'is it the lab?' });
+    expect(send().attributes('disabled')).toBeUndefined();
   });
 });
 

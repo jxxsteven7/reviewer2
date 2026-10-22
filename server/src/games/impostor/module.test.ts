@@ -321,6 +321,7 @@ describe('the setter', () => {
     // The setter sees both words, without knowing who has which, and talks off the field.
     const view = room.view({ playerId: 'ann' }).game;
     expect(view).toMatchObject({ you: null, setterWords: ['Apple', 'pear'], words: null, mayTalk: true });
+    expect(view?.known.map((word) => word.word).sort()).toEqual(['Apple', 'pear']);
     expect(view?.seats.every((seat) => seat.role === null)).toBe(true);
     // Everyone knows who set the words, and the log says so of the setter, who reacts freely, as
     // someone who watches does.
@@ -401,16 +402,32 @@ describe('what each viewer sees', () => {
     expect(room.view({ playerId: 'ann' }).game?.words).toBeNull();
     expect(room.view({ screen: true }).game?.words).toBeNull();
     // Off the field, a line is held against the words the writer knows: both with the god view,
-    // one's own for a player who is out, none for a spectator without it.
+    // one's own for a player who is out, none for a spectator without it. The view says which,
+    // with their forms, so that the page holds the line against the same.
     const { student, reviewer2 } = started.words;
+    expect(watcher?.known).toEqual([{ word: student.word }, { word: reviewer2.word }]);
+    const current = room.data.game as NonNullable<ImpostorData['game']>;
+    room.data = {
+      ...room.data,
+      game: { ...current, words: { student: { ...student, forms: ['apples'] }, reviewer2 } },
+    };
+    expect(room.view({ playerId: 'zed' }).game?.known[0]).toEqual({ word: student.word, forms: ['apples'] });
     for (const word of [student.word, reviewer2.word]) {
       expect(room.try('zed', 'impostor:say', { gameId: 'g1', text: `is it ${word}?` })).toEqual({
         ok: false,
         error: 'chat_has_word',
       });
     }
+    // With the god view, the lines of players off the field are named, as the seats are.
+    room.deal('SSSSSR');
+    room.describeAll();
+    room.voteFor('ann', 'bob');
+    expect(room.try('ann', 'impostor:say', { gameId: 'g1', text: 'out already' }).ok).toBe(true);
+    expect(room.view({ playerId: 'zed' }).game?.offField?.at(-1)).toMatchObject({ number: 1, playerId: 'ann' });
+    expect(room.view({ playerId: 'ann' }).game?.offField?.at(-1)).toMatchObject({ number: 1, playerId: null });
     const plain = table({ players: PEOPLE.slice(0, 5) });
     const dealt = plain.start();
+    expect(plain.view({ playerId: 'zed' }).game?.known).toEqual([]);
     for (const word of [dealt.words.student.word, dealt.words.reviewer2.word]) {
       expect(plain.try('zed', 'impostor:say', { gameId: 'g1', text: `is it ${word}?` }).ok).toBe(true);
     }
@@ -418,6 +435,7 @@ describe('what each viewer sees', () => {
     plain.describeAll();
     plain.voteFor('ann', 'bob');
     expect(plain.data.game?.players[0]?.fate).toBe('voted_out');
+    expect(plain.view({ playerId: 'ann' }).game?.known).toEqual([plain.view({ playerId: 'ann' }).game?.you?.word]);
     expect(plain.try('ann', 'impostor:say', { gameId: 'g1', text: `not ${dealt.words.reviewer2.word}` }).ok).toBe(true);
     expect(plain.try('ann', 'impostor:say', { gameId: 'g1', text: `not ${dealt.words.student.word}` })).toEqual({
       ok: false,

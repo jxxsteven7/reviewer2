@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { checkChat, type BoardWord } from '@reviewer2/shared';
+import { checkChat } from '@reviewer2/shared';
 import { checkTalk, type ImpostorView, type OffFieldLine } from '@reviewer2/shared/impostor';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -14,7 +14,8 @@ import SeatAvatar from './SeatAvatar.vue';
 // ended, under a heading of its own. Whoever played writes by their number, with how their game
 // went, until the game is over and the numbers are known; whoever only watched or set the words, by
 // name. A line may not name a word that the viewer knows while the game is on: the chat checks it
-// against those, as the server does. The line and its sending are the page's.
+// against those, as the view carries them with their forms and the server holds the line against
+// them (`known`). The line and its sending are the page's.
 const props = defineProps<{
   room: ShownRoom;
   game: ImpostorView;
@@ -68,15 +69,8 @@ const sections = computed<ChatSection<Message>[]>(() => {
   ];
 });
 
-// The words that the viewer knows, which a line may not name while the game is on.
-const known = computed<BoardWord[]>(() => {
-  const words: BoardWord[] = props.game.you?.word ? [props.game.you.word] : [];
-  for (const word of props.game.setterWords ?? []) words.push({ word });
-  if (props.game.words) words.push({ word: props.game.words.student }, { word: props.game.words.reviewer2 });
-  return words;
-});
 const over = computed(() => props.game.phase === 'over');
-const check = (text: string) => (over.value ? checkChat(text) : checkTalk(text, known.value));
+const check = (text: string) => (over.value ? checkChat(text) : checkTalk(text, props.game.known));
 const note = computed(() => {
   if (!props.game.mayTalk) return t('games.impostor.offField.readOnly');
   return over.value ? t('games.impostor.offField.afterNote') : t('games.impostor.offField.note');

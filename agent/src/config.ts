@@ -60,6 +60,10 @@ function secret(env: NodeJS.ProcessEnv, prefix = 'AGENT_'): string | null {
 // The hosts that are this machine, where a key may go over plain HTTP.
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 
+// Whether a key sent to the address would go over the network in the clear: plain HTTP to a host
+// that isn't this machine.
+const inTheClear = (url: URL): boolean => url.protocol === 'http:' && !LOOPBACK.has(url.hostname);
+
 // The model's address. With a key, it is HTTPS, so that the key never goes over the network in the
 // clear, unless the model runs on this machine.
 function modelUrl(text: string | undefined, keyed: boolean, name = 'AGENT_MODEL_URL'): string {
@@ -74,7 +78,7 @@ function modelUrl(text: string | undefined, keyed: boolean, name = 'AGENT_MODEL_
   if (!['https:', 'http:'].includes(url.protocol) || url.search || url.hash || url.username || url.password) {
     throw new Error(`${name} must be an http or https address without a query, not "${trimmed}"`);
   }
-  if (keyed && url.protocol === 'http:' && !LOOPBACK.has(url.hostname)) {
+  if (keyed && inTheClear(url)) {
     throw new Error(`${name} must be an https address when a key is set, unless it is on this machine`);
   }
   return url.href.replace(/\/+$/, '');
@@ -89,6 +93,14 @@ function gameModel(env: NodeJS.ProcessEnv, prefix: string, first: ModelSettings)
   if (model === '' && url === '' && key === null) return null;
   // The first game's key goes only to the first game's address.
   const modelKey = url === '' ? (key ?? first.modelKey) : key;
+  // The first game's address was checked for the first game's key alone: a key of the game's own
+  // goes to it only where that key would go too.
+  if (url === '' && key !== null && inTheClear(new URL(first.modelUrl))) {
+    throw new Error(
+      `AGENT_MODEL_URL must be an https address when ${prefix}MODEL_KEY is set without ${prefix}MODEL_URL, ` +
+        'unless it is on this machine',
+    );
+  }
   return {
     modelUrl: url === '' ? first.modelUrl : modelUrl(url, modelKey !== null, `${prefix}MODEL_URL`),
     model: model === '' ? first.model : model,
