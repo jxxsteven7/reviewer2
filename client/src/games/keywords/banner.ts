@@ -27,8 +27,9 @@ export interface Banner {
 
 // The AI that makes the move now, if one does (docs/architecture.md#ai-players): the PI of the group
 // whose turn it is in its clue phase, or every one of its students in its guess phase, is an AI
-// player or a person whom an AI plays for while they are offline, Reviewer 1 as the server has it.
-// Its move may take a while, since it thinks first, and everyone is told so.
+// player that is online or a person whom an AI plays for while they are offline, Reviewer 1 as the
+// server has it. Its move may take a while, since it thinks first, and everyone is told so. While
+// the AI players are offline, nothing is being thought of, and the clock runs the move out.
 export function agentMoving(
   game: KeywordsView,
   seats: Readonly<Record<string, Seat>>,
@@ -37,7 +38,8 @@ export function agentMoving(
   if (game.result || game.phase === 'over' || game.paused) return null;
   const role = game.phase === 'clue' ? 'captain' : 'guesser';
   const movers = players.filter(({ id }) => seats[id]?.team === game.team && seats[id]?.role === role);
-  if (movers.length === 0 || !movers.every((player) => player.agent !== undefined || player.takenOver)) return null;
+  const moving = (player: PlayerView) => (player.agent !== undefined && player.online) || player.takenOver === true;
+  if (movers.length === 0 || !movers.every(moving)) return null;
   return movers.find((player) => player.agent !== undefined)?.agent ?? AGENT_PERSONAS[0];
 }
 

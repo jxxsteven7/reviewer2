@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MAX_AGENT_WAIT_MS, type AgentPersona } from '@reviewer2/shared';
-import type { GuessRule, KeywordsView, Seat } from '@reviewer2/shared/keywords';
+import { AGENT_GUESS_THINKING_MS, type GuessRule, type KeywordsView, type Seat } from '@reviewer2/shared/keywords';
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUrgentTitle } from '../../core/head';
@@ -28,7 +28,8 @@ import GroupBars, { type Group } from './GroupBars.vue';
 // themselves have to act (ClockBar.vue).
 //
 // While an AI makes the move (`agent`, banner.ts), the strip says to everyone that it is thinking,
-// and under that, in grey, that it may think for up to the longest wait the agent is given.
+// and under that, in grey, for how long it may: most of the longest wait the agent is given before
+// a clue, 20 seconds before a guess, and no longer than the phase has.
 //
 // In the tutorial (`demo`), where the game is invented, the strip leaves the tab's title alone,
 // and its clock stands at what the step gives, since no server will end the phase.
@@ -71,7 +72,11 @@ const line = computed(() => {
     name: agentName.value,
   });
 });
-const note = computed(() => (props.agent ? t('banner.agentHint', { seconds: MAX_AGENT_WAIT_MS / 1000 }) : null));
+const seconds = computed(() => {
+  const most = props.game.phase === 'clue' ? MAX_AGENT_WAIT_MS : AGENT_GUESS_THINKING_MS;
+  return Math.ceil(Math.min(most, props.game.clock?.total ?? most) / 1000);
+});
+const note = computed(() => (props.agent ? t('banner.agentHint', { seconds: seconds.value }) : null));
 const count = computed(() => {
   const value = props.game.clue?.count;
   return value === 'unlimited' ? '\u221e' : String(value ?? '');

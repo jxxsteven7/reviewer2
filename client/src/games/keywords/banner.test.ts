@@ -115,6 +115,8 @@ describe('the AI that makes the move', () => {
     expect(agentMoving(game('blue', 'clue'), seats, [ai('pi'), player('blue')])).toBeNull();
     expect(agentMoving({ ...game('red', 'clue'), paused: true }, seats, [ai('pi')])).toBeNull();
     expect(agentMoving(game('red', 'clue', true), seats, [ai('pi')])).toBeNull();
+    // Nor has one whose AI players are offline: nothing is being thought of then.
+    expect(agentMoving(game('red', 'clue'), seats, [player('pi', { agent: 'reviewer1', online: false })])).toBeNull();
   });
 
   test('is every student of the group in its guess phase, or none while a person guesses', () => {
@@ -123,5 +125,7 @@ describe('the AI that makes the move', () => {
     expect(agentMoving(game('red', 'guess'), seats, [player('pi'), offline])).toBe('reviewer1');
     expect(agentMoving(game('red', 'guess'), seats, [player('pi'), ai('s1'), player('s2')])).toBeNull();
     expect(agentMoving(game('red', 'guess'), seats, [ai('pi')])).toBeNull();
+    const down = player('s1', { agent: 'reviewer1', online: false });
+    expect(agentMoving(game('red', 'guess'), seats, [player('pi'), down])).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { MAX_AGENT_REASON, type AgentNote, type AgentReply, type AgentRequest } from '@reviewer2/shared';
 import {
+  AGENT_GUESS_THINKING_MS,
   checkClue,
   cleanClue,
   clueCounts,
@@ -16,7 +17,7 @@ import {
 import { ModelError, type Model, type Question } from './model';
 import type { Persona } from './personas';
 import { CLUE_SCHEMA, clueSystem, clueUser, GUESS_SCHEMA, guessSystem, guessUser, PROMPT_VERSION } from './prompts';
-import { askThinking, type Thinking } from './thinking';
+import { thinker } from './thinking';
 
 // How the agent plays a turn of the team word guessing game (docs/games/keywords.md): a clue as a
 // group's PI, or the cards to reveal as one of its students. The model only proposes; the agent
@@ -28,12 +29,14 @@ export type ClueRequest = Extract<AgentRequest, { kind: 'clue' }>;
 export type GuessRequest = Extract<AgentRequest, { kind: 'guess' }>;
 
 // What a turn needs besides the request: the model, the persona that plays, the signal that ends
-// the wait and the time it does so, and the clock that this time and the note's are read from.
+// the wait and the time it does so, the signal that tells the model to stop thinking, since other
+// requests wait for it (agent.ts), and the clock that the time and the note's are read from.
 export interface Turn {
   model: Model;
   persona: Persona;
   signal: AbortSignal;
   until: number;
+  hurry: AbortSignal;
   now: () => number;
 }
 
@@ -47,12 +50,12 @@ const OPEN_LIMIT = 3;
 
 // How long the model thinks (thinking.ts). A PI thinks of a clue until this long before the end of
 // its wait, which leaves time to ask again without thinking, a second or two, and for the
-// rehearsals, about six seconds. A student thinks for no longer than GUESS_THINKING_MS and stops
-// this long before the end of its wait: measured on fixed boards at the low level, nearly every
-// guess took less than ten seconds, and every one less than fifteen. The rehearsals stop this long
-// before the end of the wait, so that the clue still goes out in time.
-const CLUE_AFTER_THINKING_MS = 10_000;
-const GUESS_THINKING_MS = 20_000;
+// rehearsals, about six seconds, with a margin. A student thinks for no longer than
+// AGENT_GUESS_THINKING_MS, which the whose-turn strip tells the players, and stops this long before
+// the end of its wait: measured on fixed boards at the low level, nearly every guess took less than
+// ten seconds, and every one less than fifteen. The rehearsals stop this long before the end of
+// the wait, so that the clue still goes out in time.
+const CLUE_AFTER_THINKING_MS = 15_000;
 const GUESS_AFTER_THINKING_MS = 5_000;
 const REHEARSALS_END_MS = 1_000;
 
@@ -206,19 +209,18 @@ function picksOf(
 
 export async function guess(request: GuessRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
-  let thinking: Thinking = { reasoning: 'off' };
+  const thought = thinker(turn);
   const note = (): AgentNote<AgentCandidate> => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
-    ...thinking,
+    ...thought.noted,
   });
   try {
     const limit = limitFor(request.clue, request.guessesLeft);
-    const by = Math.min(started + GUESS_THINKING_MS, turn.until - GUESS_AFTER_THINKING_MS);
-    const answer = await askThinking(guessQuestion(request, request.clue, limit, turn.persona), by, turn);
-    thinking = answer.thinking;
-    const found = picksOf(request, answer.value, limit);
+    const by = Math.min(started + AGENT_GUESS_THINKING_MS, turn.until - GUESS_AFTER_THINKING_MS);
+    const answer = await thought.think(guessQuestion(request, request.clue, limit, turn.persona), by);
+    const found = picksOf(request, answer, limit);
     // A model that named no card that is still covered gave no answer to go by.
     if (!found) return failed(note(), 'no_answer');
     return {
@@ -260,12 +262,12 @@ function danger(stop: CardColor | null, team: string): number {
 export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentReply> {
   const started = turn.now();
   const considered: AgentCandidate[] = [];
-  let thinking: Thinking = { reasoning: 'off' };
+  const thought = thinker(turn);
   const note = (): AgentNote<AgentCandidate> => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
-    ...thinking,
+    ...thought.noted,
     candidates: considered,
   });
   // The clues that the rules refused, with what was wrong and why, which the model is told when it
@@ -283,15 +285,11 @@ export async function giveClue(request: ClueRequest, turn: Turn): Promise<AgentR
         temperature: turn.persona.temperature,
       };
       // The model thinks of the first clues; it is asked again without thinking, in the time that
-      // is left, and the note says how the first were found.
-      let answer: Record<string, unknown>;
-      if (attempt === 0) {
-        const thought = await askThinking(question, turn.until - CLUE_AFTER_THINKING_MS, turn);
-        thinking = thought.thinking;
-        answer = thought.value;
-      } else {
-        answer = (await turn.model.ask(question, turn.signal)).value;
-      }
+      // is left.
+      const answer =
+        attempt === 0
+          ? await thought.think(question, turn.until - CLUE_AFTER_THINKING_MS)
+          : await thought.again(question);
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
       const judged = proposed.map((candidate) => judge(request, candidate, max)).filter((found) => found !== null);
       considered.push(...judged.map(({ candidate }) => candidate));

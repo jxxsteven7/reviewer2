@@ -12,6 +12,7 @@ const turn = (model: ScriptedModel, signal = AbortSignal.timeout(10_000), waitMs
   persona: PERSONAS.reviewer1,
   signal,
   until: Date.now() + waitMs,
+  hurry: new AbortController().signal,
   now: Date.now,
 });
 
@@ -245,5 +246,36 @@ describe('thinking', () => {
       note: { reasoning: 'low', fellBack: true },
     });
     expect(model.asked.map(({ think }) => think)).toEqual([false, undefined, true, false]);
+  });
+
+  test('is noted as fallen back when the line taken came from a question without thinking', async () => {
+    const model = new ScriptedModel(
+      { describe: [{ candidates: ['an apple a day'] }, { candidates: ['round and red'] }] },
+      'scripted',
+      'low',
+    );
+    const reply = allowed(
+      await describeWord(impostorRequest('describe'), turn(model, AbortSignal.timeout(57_000), 57_000)),
+    );
+    expect(reply).toMatchObject({
+      ok: true,
+      text: 'round and red',
+      note: { reasoning: 'low', thinking: THOUGHT, fellBack: true },
+    });
+    expect(model.asked.map(({ think }) => think)).toEqual([true, undefined]);
+  });
+
+  test('stops when other requests wait for the model, and the move is asked for again without', async () => {
+    const hurry = new AbortController();
+    const model = new ScriptedModel({ vote: [new Promise(() => {}), { number: 3, reason: '' }] }, 'scripted', 'low');
+    const voting = vote(impostorRequest('vote'), {
+      ...turn(model, AbortSignal.timeout(57_000), 57_000),
+      hurry: hurry.signal,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(model.asked).toHaveLength(1);
+    hurry.abort();
+    expect(allowed(await voting)).toMatchObject({ ok: true, number: 3, note: { reasoning: 'low', fellBack: true } });
+    expect(model.asked.map(({ think }) => think)).toEqual([true, false]);
   });
 });

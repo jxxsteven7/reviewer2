@@ -65,12 +65,18 @@ export type KeywordsAgentReply =
   | { ok: true; kind: 'clue'; word: string; count: number; targets: number[]; note: AgentNote<AgentCandidate> }
   | { ok: true; kind: 'guess'; picks: number[]; reason: string; note: AgentNote<AgentCandidate> };
 
+// How long the agent lets the model think of a guess at most, in milliseconds (agent/src/keywords.ts),
+// which the whose-turn strip tells the players while an AI student thinks; of a clue it thinks for
+// most of the longest wait (MAX_AGENT_WAIT_MS).
+export const AGENT_GUESS_THINKING_MS = 20_000;
+
 // The shortest times, in seconds, that leave Reviewer 1 time to think (docs/games/keywords.md#ai-players):
-// for a clue, the first one included, and for a guess. The agent thinks of a clue until about 13
-// seconds before the clue's time runs out, and of a guess until 8 seconds before, for 20 seconds at
-// most. Measured on fixed boards, with less time few of its clues were thought out in time, and
-// with less than about 12 seconds to think, fewer of its guesses were. A room with shorter times
-// still plays, and its waiting room says that Reviewer 1 may then be even further off.
+// for a clue, the first one included, and for a guess. The agent thinks of a clue until about 18
+// seconds before the clue's time runs out, and of a guess until 8 seconds before, for
+// AGENT_GUESS_THINKING_MS at most. Measured on fixed boards, with less time few of its clues were
+// thought out in time, and with less than about 12 seconds to think, fewer of its guesses were. A
+// room with shorter times still plays, and its waiting room says that Reviewer 1 may then be even
+// further off.
 export const AGENT_THINKING_TIMES = { clue: 40, guess: 20 } as const;
 
 // Whether a room's times are shorter than Reviewer 1 needs to think, where they set a limit at all.

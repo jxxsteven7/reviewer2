@@ -1059,16 +1059,34 @@ describe('TurnStrip', () => {
   });
 
   test('says to everyone that an AI making the move is thinking, and in grey for how long it may', () => {
-    const hint = 'It thinks before it answers, for up to about 90 seconds.';
-    const thinking = (seat?: Seat) =>
+    const hint = (seconds: number) => `It thinks before it answers, for up to about ${seconds} seconds.`;
+    const thinking = (changes: Partial<KeywordsView>, seat?: Seat) =>
       mount(TurnStrip, {
-        props: { game: { ...game, phase: 'clue' }, guessRule: 'free', seat, agent: 'reviewer1' },
+        props: { game: { ...game, ...changes }, guessRule: 'free', seat, agent: 'reviewer1' },
         global: global(),
       });
-    for (const strip of [thinking(seats.bob), thinking(seats.eve), thinking()]) {
+    const clue = { phase: 'clue' as const };
+    for (const strip of [thinking(clue, seats.bob), thinking(clue, seats.eve), thinking(clue)]) {
       expect(strip.get('.phase').text()).toBe('Reviewer 1 is thinking\u2026');
-      expect(strip.get('.note').text()).toBe(hint);
+      expect(strip.get('.note').text()).toBe(hint(90));
     }
+    // A guess is thought of for 20 seconds at most, and nothing for longer than the phase has.
+    expect(thinking({}, seats.bob).get('.note').text()).toBe(hint(20));
+    expect(
+      thinking({ clock: { left: 10_000, total: 15_000 } }, seats.bob)
+        .get('.note')
+        .text(),
+    ).toBe(hint(15));
+    expect(
+      thinking({ ...clue, clock: { left: 30_000, total: 60_000 } })
+        .get('.note')
+        .text(),
+    ).toBe(hint(60));
+    expect(
+      thinking({ ...clue, clock: { left: 30_000, total: 120_000 } })
+        .get('.note')
+        .text(),
+    ).toBe(hint(90));
     // A person's move has no note.
     const person = mount(TurnStrip, { props: { game, guessRule: 'free', seat: seats.bob }, global: global() });
     expect(person.find('.note').exists()).toBe(false);

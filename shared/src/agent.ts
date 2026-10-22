@@ -88,9 +88,11 @@ export type ReasoningLevel = (typeof REASONING_LEVELS)[number];
 // (docs/architecture.md#game-records) and never shows anyone: the model and the version of the
 // prompts that it asked, how long that took, what it considered, in the game's own shape, such as
 // the clues of the team word guessing game (AgentCandidate), and the reason it gave in a sentence.
-// `reasoning` is how long the model was let think; `fellBack` says that it was let think but ran
-// out of time, so that it was asked again without thinking, and the answer is that one; `thinking`
-// is what the model thought before it answered, when it did, cut to MAX_AGENT_THINKING characters.
+// `reasoning` is how long the model was let think; `fellBack` says that it was let think, and the
+// answer came from a question asked without thinking after that: its thinking ran out of time or
+// failed, or the rules refused what it thought of and it was asked again; `thinking` is what the
+// model thought, when it did, cut to MAX_AGENT_THINKING characters, whether or not the answer came
+// of it.
 export interface AgentNote<Candidate = unknown> {
   model: string;
   prompt: string;

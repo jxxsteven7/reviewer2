@@ -33,7 +33,7 @@ import {
   voteUser,
   type RefusedLine,
 } from './impostorPrompts';
-import { askThinking, type Thinking } from './thinking';
+import { thinker } from './thinking';
 
 // How the agent plays a turn of the hidden word game (docs/games/impostor.md#ai-players): a line
 // that describes its word, its vote, its verdict on a report, and its guess of the students' word
@@ -91,31 +91,29 @@ function judgment(answer: Record<string, unknown>): ImpostorJudgment | undefined
 }
 
 // The note of a turn: the model and the prompts, the time it took, how the model thought, the lines
-// considered, the judgment the model made first, if it was to, and the reason it gave.
+// considered, the judgment the model made first, if it was to, and the reason it gave. The turn's
+// first question lets the model think (`ask`); one after it goes without (`again`), and the note
+// says that the answer fell back (thinking.ts).
 function noter(turn: Turn, considered: ImpostorCandidate[] = []) {
   const started = turn.now();
-  let thinking: Thinking = { reasoning: 'off' };
+  const thought = thinker(turn);
   const note = (found: { judgment?: ImpostorJudgment; reason?: string } = {}): ImpostorNote => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
-    ...thinking,
+    ...thought.noted,
     ...(considered.length > 0 ? { candidates: considered } : {}),
     ...(found.judgment ? { judgment: found.judgment } : {}),
     ...(found.reason ? { reason: found.reason } : {}),
   });
-  // Asks the question, letting the model think, and notes how it did.
-  const ask = async (question: Question): Promise<Record<string, unknown>> => {
-    const thought = await askThinking(question, turn.until - AFTER_THINKING_MS, turn);
-    thinking = thought.thinking;
-    return thought.value;
-  };
-  return { note, ask };
+  const ask = (question: Question) => thought.think(question, turn.until - AFTER_THINKING_MS);
+  const again = (question: Question) => thought.again(question);
+  return { note, ask, again };
 }
 
 export async function describe(request: Request<'describe'>, turn: Turn): Promise<AgentReply> {
   const considered: ImpostorCandidate[] = [];
-  const { note, ask } = noter(turn, considered);
+  const { note, ask, again } = noter(turn, considered);
   const word: BoardWord | null = request.word;
   const earlier = request.lines.flatMap(({ text }) => (text === null ? [] : [text]));
   const refused: RefusedLine[] = [];
@@ -130,8 +128,8 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
         temperature: turn.persona.temperature,
       };
       // The model thinks of the first lines; it is asked again without thinking, in the time that
-      // is left, and the note says how the first were found.
-      const answer = attempt === 0 ? await ask(question) : (await turn.model.ask(question, turn.signal)).value;
+      // is left.
+      const answer = attempt === 0 ? await ask(question) : await again(question);
       judged = judgment(answer) ?? judged;
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
       for (const text of proposed) {

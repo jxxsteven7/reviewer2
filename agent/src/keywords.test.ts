@@ -13,6 +13,7 @@ const turn = (model: ScriptedModel, persona: Persona = PERSONAS.reviewer1, waitM
   persona,
   signal: AbortSignal.timeout(waitMs),
   until: Date.now() + waitMs,
+  hurry: new AbortController().signal,
   now: Date.now,
 });
 
@@ -289,8 +290,8 @@ describe('a clue', () => {
       'low',
     );
     const thinking = giveClue(clueRequest(), turn(slow, PERSONAS.reviewer1, 40_000));
-    // The model may think until ten seconds before the end of the wait.
-    await vi.advanceTimersByTimeAsync(29_000);
+    // The model may think until fifteen seconds before the end of the wait.
+    await vi.advanceTimersByTimeAsync(24_000);
     expect(slow.asked).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1_000);
     const reply = allowed(await thinking);
@@ -318,9 +319,60 @@ describe('a clue', () => {
       'scripted',
       'low',
     );
-    const reply2 = allowed(await giveClue(clueRequest(), turn(hurried, PERSONAS.reviewer1, 14_000)));
+    const reply2 = allowed(await giveClue(clueRequest(), turn(hurried, PERSONAS.reviewer1, 19_000)));
     expect(reply2).toMatchObject({ ok: true, word: 'Biology', note: { reasoning: 'off' } });
     expect(hurried.asked.map(({ think }) => think)).toEqual([false, undefined]);
+    if (!reply2.ok || reply2.kind !== 'clue') throw new Error('no clue');
+    expect(reply2.note.fellBack).toBeUndefined();
+  });
+
+  test('stops being thought of when other requests wait for the model, and is asked for again without', async () => {
+    const hurry = new AbortController();
+    const slow = new ScriptedModel(
+      { clue: [new Promise(() => {}), { candidates: [candidate('Biology', [6, 7])] }] },
+      'scripted',
+      'low',
+    );
+    const thinking = giveClue(clueRequest(), { ...turn(slow), hurry: hurry.signal });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(slow.asked).toHaveLength(1);
+    hurry.abort();
+    expect(allowed(await thinking)).toMatchObject({
+      ok: true,
+      word: 'Biology',
+      note: { reasoning: 'low', fellBack: true },
+    });
+    expect(slow.asked.map(({ think }) => think)).toEqual([true, false]);
+    // One that is hurried from the start goes without thinking.
+    const hurried = new ScriptedModel({ clue: [{ candidates: [candidate('Biology', [6, 7])] }] }, 'scripted', 'low');
+    const reply = allowed(await giveClue(clueRequest(), { ...turn(hurried), hurry: AbortSignal.abort() }));
+    expect(reply).toMatchObject({ ok: true, word: 'Biology', note: { reasoning: 'off' } });
+    expect(hurried.asked.map(({ think }) => think)).toEqual([false]);
+  });
+
+  test('that the rules took from a later answer notes that it fell back, keeping what the model thought', async () => {
+    const model = new ScriptedModel(
+      { clue: [{ candidates: [candidate('Kernels', [2])] }, { candidates: [candidate('Biology', [6, 7])] }] },
+      'scripted',
+      'low',
+    );
+    const reply = allowed(await giveClue(clueRequest(), turn(model)));
+    expect(reply).toMatchObject({
+      ok: true,
+      word: 'Biology',
+      note: { reasoning: 'low', thinking: THOUGHT, fellBack: true },
+    });
+    expect(model.asked.map(({ think }) => think)).toEqual([true, undefined]);
+    // A clue that comes of what the model thought didn't fall back, though the rules refused some.
+    const first = new ScriptedModel(
+      { clue: [{ candidates: [candidate('Kernels', [2]), candidate('Biology', [6, 7])] }] },
+      'scripted',
+      'low',
+    );
+    const kept = allowed(await giveClue(clueRequest(), turn(first)));
+    expect(kept).toMatchObject({ ok: true, word: 'Biology', note: { reasoning: 'low', thinking: THOUGHT } });
+    if (!kept.ok || kept.kind !== 'clue') throw new Error('no clue');
+    expect(kept.note.fellBack).toBeUndefined();
   });
 
   test('lists the characters that a clue in a Chinese room may not contain', async () => {

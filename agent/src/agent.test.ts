@@ -3,15 +3,16 @@ import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MAX_AGENT_REQUEST } from '@reviewer2/shared';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createAgent } from './agent';
+import { ModelError, type Answer, type Model, type Question } from './model';
 import { allowed, clueRequest, guessRequest, impostorRequest, ScriptedModel } from './testing';
 
 type Logged = [string, Record<string, unknown> | undefined];
 
 function agent(
-  model: ScriptedModel,
-  limits: { concurrency?: number; queue?: number } = {},
+  model: Model,
+  limits: { concurrency?: number; queue?: number; now?: () => number } = {},
   models: { impostor?: ScriptedModel } = {},
 ) {
   const logged: Logged[] = [];
@@ -21,8 +22,31 @@ function agent(
     log: (event, fields) => logged.push([event, fields]),
     concurrency: limits.concurrency ?? 2,
     queue: limits.queue ?? 32,
+    now: limits.now,
   });
   return { ...created, logged };
+}
+
+// A model that thinks for as long as it is let, and answers at once when it isn't let.
+class ThinkingModel implements Model {
+  readonly name = 'thinker';
+  readonly reasoning = 'low' as const;
+  // Whether each question let it think.
+  readonly asked: boolean[] = [];
+
+  async ask(question: Question, signal: AbortSignal): Promise<Answer> {
+    this.asked.push(question.think === true);
+    if (question.think) {
+      await new Promise<never>((_, reject) =>
+        signal.addEventListener('abort', () => reject(new ModelError('aborted', true)), { once: true }),
+      );
+    }
+    return { value: { number: 3, reason: 'Odd.' }, thinking: null };
+  }
+
+  async ping(): Promise<boolean> {
+    return true;
+  }
 }
 
 const clueAnswer = { candidates: [{ clue: 'Biology', targets: [6, 7], count: 2 }] };
@@ -159,6 +183,42 @@ describe('the queue', () => {
       ok: false,
       error: 'no_answer',
     });
+  });
+
+  test('hurries the requests with the model when those waiting would be late otherwise', async () => {
+    vi.useFakeTimers();
+    try {
+      const model = new ThinkingModel();
+      const { handle } = agent(model, { concurrency: 2, now: Date.now });
+      // Five AI players vote at once, with 27 seconds each: two think, and three wait.
+      const votes = Array.from({ length: 5 }, () =>
+        handle(JSON.stringify(impostorRequest('vote', { waitMs: 27_000 }))),
+      );
+      await vi.advanceTimersByTimeAsync(17_900);
+      expect(model.asked).toEqual([true, true]);
+      // At 18 seconds the third in line would be late for its 3 seconds of the model, after the
+      // two with it had theirs without thinking and the two before it had theirs: the two stop
+      // thinking and answer without, and the rest, with too little time left to think, go without
+      // from the start. Every vote is in.
+      await vi.advanceTimersByTimeAsync(200);
+      expect(model.asked).toEqual([true, true, false, false, false, false, false]);
+      const answered = await Promise.all(votes);
+      expect(answered.map((reply) => (reply.ok && reply.kind === 'vote' ? reply.note : reply))).toEqual([
+        expect.objectContaining({ reasoning: 'low', fellBack: true }),
+        expect.objectContaining({ reasoning: 'low', fellBack: true }),
+        expect.objectContaining({ reasoning: 'off' }),
+        expect.objectContaining({ reasoning: 'off' }),
+        expect.objectContaining({ reasoning: 'off' }),
+      ]);
+      // With nobody waiting, a request thinks for as long as its move lets it.
+      const alone = handle(JSON.stringify(impostorRequest('vote', { waitMs: 27_000 })));
+      await vi.advanceTimersByTimeAsync(20_900);
+      expect(model.asked).toHaveLength(8);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(allowed(await alone)).toMatchObject({ ok: true, note: { reasoning: 'low', fellBack: true } });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
