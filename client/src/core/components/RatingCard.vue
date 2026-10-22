@@ -86,8 +86,9 @@ header {
   overflow-wrap: anywhere;
 }
 
-/* The options, two to a row, as secondary buttons, with room between them for the shadows and
-   the pills' narrower padding, so that a label wraps only where it must; the chosen one is yellow. */
+/* The options, two to a row, as secondary buttons, with room between them for the shadows. They
+   keep a narrower padding than a button's own, so that a label wraps only where it must. The
+   chosen one is yellow. */
 .options {
   display: grid;
   grid-template-columns: 1fr 1fr;
