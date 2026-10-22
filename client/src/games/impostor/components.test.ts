@@ -667,6 +667,8 @@ describe('ImpostorLobby', () => {
 const standing = (name: string, overrides: Partial<StandingView> = {}): StandingView => ({
   playerId: name.toLowerCase(),
   name,
+  // The match numbers the players in the order they came to the table.
+  number: ['Ann', 'Bob', 'Cat', 'Dan'].indexOf(name) + 1,
   total: 0,
   delta: null,
   games: 1,
@@ -903,6 +905,20 @@ describe('ImpostorLobby in a match', () => {
       });
       expect(player.find('.waiting').exists()).toBe(false);
     }
+  });
+
+  // The pairs of the match that is over would still be refused (words_played) until the chair has
+  // chosen what comes next, which forgets them.
+  test("hides the setter's form once the match is over", () => {
+    const setter = { settings: { ...defaultSettings('en'), setter: true } };
+    const on = mount(ImpostorLobby, { props: { room: inMatch(room(null, 'ann', setter)) }, global: global() });
+    expect(on.find('.setter').exists()).toBe(true);
+    const over = mount(ImpostorLobby, {
+      props: { room: inMatch(room(null, 'ann', setter), { status: 'stopped' }) },
+      global: global(),
+    });
+    expect(over.find('.setter').exists()).toBe(false);
+    expect(over.find('.match-results').exists()).toBe(true);
   });
 });
 

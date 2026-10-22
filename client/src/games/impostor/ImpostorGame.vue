@@ -254,7 +254,7 @@ watch(over, (ended) => {
   if (ended) matchOpen.value = false;
 });
 const scoreLine = (detail: unknown) => describeScore(t, detail);
-const scoring = computed(() => `${t('games.impostor.match.scoringLead')} ${t('games.impostor.rules.points')}`);
+const scoring = computed(() => t('games.impostor.match.scoring', { points: t('games.impostor.rules.points') }));
 const unscored = computed(() => unscoredNote(t, match.value, game.value));
 </script>
 

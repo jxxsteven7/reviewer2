@@ -256,7 +256,7 @@ test('four players play a match of three games, each dealt anew, and are ranked 
     await expect(table.locator('.detail.below').first()).toContainText(
       new RegExp(`^(${impostor.roles.student}|${impostor.roles.reviewer2})`),
     );
-    await expect(table).toContainText(impostor.match.scoringLead);
+    await expect(table).toContainText(interpolate(impostor.match.scoring, { points: impostor.rules.points }));
   }
   await expect(other.getByText(text.match.waitNext)).toBeVisible();
   await nextGame(players);

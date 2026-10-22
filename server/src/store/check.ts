@@ -644,12 +644,13 @@ function isRoomSetup(value: unknown, games: ReadonlyMap<string, GameModule>): bo
   });
 }
 
-// Whether a value is the rules of a match of the game (MatchRules): the number of games, and the
-// game's own options, as the game takes them (MatchHooks.options), or none for a game that has
-// none.
+// Whether a value is the rules of a match of the game (MatchRules): the number of games, one of
+// those the game takes where it takes only some (MatchHooks.games), and the game's own options, as
+// the game takes them (MatchHooks.options), or none for a game that has none.
 const isMatchRules = (value: unknown, game: GameModule): boolean => {
   const hooks = game.match;
   if (!isObject(value) || hooks === undefined || !matchGamesValid(value.games)) return false;
+  if (hooks.games && !hooks.games.includes(value.games as number)) return false;
   if (!Object.keys(value).every((key) => key === 'games' || key === 'options')) return false;
   return hooks.options ? hooks.options(value.options) !== null : value.options === undefined;
 };

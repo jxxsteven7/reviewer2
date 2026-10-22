@@ -234,7 +234,7 @@
     "impostor": {
       "match": {
         "note": "The settings stay the same for the whole match. Every game deals the numbers and the roles anew, so a number tells nothing about the game before, and no pair of terms comes twice. A match has no AI players.",
-        "scoringLead": "Scores in a match, as in any game (beta):",
+        "scoring": "Scores in a match, as in any game (beta): {points}",
         "detail": {
           "won": "won",
           "lasted": "lasted",

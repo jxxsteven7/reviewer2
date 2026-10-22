@@ -170,10 +170,21 @@ describe('the table of a match', () => {
     const view = match.view('playing', 'g1', scores({ ann: 2, bob: -1 }), here);
     expect(view).toMatchObject({ game: 1, played: 0, status: 'on' });
     expect(view.standings).toEqual([
-      { playerId: 'id-ann', name: 'ann', total: 0, delta: 2, detail: { value: 2 }, games: 0, rank: null, left: false },
+      {
+        playerId: 'id-ann',
+        name: 'ann',
+        number: 1,
+        total: 0,
+        delta: 2,
+        detail: { value: 2 },
+        games: 0,
+        rank: null,
+        left: false,
+      },
       {
         playerId: 'id-bob',
         name: 'bob',
+        number: 2,
         total: 0,
         delta: -1,
         detail: { value: -1 },
