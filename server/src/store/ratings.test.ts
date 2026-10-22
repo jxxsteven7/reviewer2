@@ -20,11 +20,14 @@ let db: DatabaseSync;
 let accounts: AccountStore;
 let replays: ReplayStore;
 let ratings: RatingStore;
+// When the next game kept ends.
+let endsAt = NOW;
 
 beforeEach(async () => {
   ({ db } = await openDatabase(null));
+  endsAt = NOW;
   accounts = new AccountStore(db, () => NOW);
-  replays = new ReplayStore(db, () => NOW);
+  replays = new ReplayStore(db, () => endsAt);
   ratings = new RatingStore(db, () => NOW);
 });
 
@@ -36,16 +39,23 @@ const account = (name: string) => {
   return created.id;
 };
 
-// A kept game of the second game, with its pair or its setter, and the accounts that took part.
-function kept(gameId: string, source: object, players: [string, number][], ending = 'finished') {
+// A kept game of the second game, or of another, with its pair or its setter, the students' term and
+// the Reviewer 2s', and the accounts that took part.
+function kept(
+  gameId: string,
+  source: object,
+  players: [string, number][],
+  ending = 'finished',
+  { game = 'impostor', words = ['Apple', 'Pear'] }: { game?: string; words?: [string, string] } = {},
+) {
   replays.add({
-    game: 'impostor',
+    game,
     gameId,
     ending: ending as 'finished',
     outcome: ending === 'finished' ? { winner: 'student', reason: 'caught' } : null,
     durationMs: 1000,
-    setup: { source },
-    log: { v: 2, game: 'impostor', gameId, start: null, entries: [{ t: 1, by: null, type: 'end' }] },
+    setup: { words: { student: words[0], reviewer2: words[1] }, source },
+    log: { v: 2, game, gameId, start: null, entries: [{ t: 1, by: null, type: 'end' }] },
     agentLog: null,
     players: players.map(([playerId, accountId]) => ({ playerId, accountId })),
     counts: { accounts: players.length, guests: 0, agents: 0 },
@@ -148,6 +158,59 @@ describe('the ratings', () => {
     // Bob played in those games and set none.
     expect(ratings.setterCounts('impostor', PATHS.setter, bob)).toEqual({ games: 0, good: 0 });
   });
+
+  test('list the latest games that finished whose words an account set, with how players rated each', () => {
+    const ann = account('Ann');
+    const bob = account('Bob');
+    const minute = 60_000;
+    const setBy = (
+      gameId: string,
+      setter: number,
+      { ending, ...more }: { ending?: string; game?: string; words?: [string, string] } = {},
+    ) => {
+      endsAt += minute;
+      kept(
+        gameId,
+        { kind: 'setter', setter: 's', field: 'fruit', named: true },
+        [
+          ['s', setter],
+          ['p1', setter === ann ? bob : ann],
+        ],
+        ending,
+        more,
+      );
+    };
+    // Ann set the words of g1 and g2, which finished, of g3, which didn't, and of a game of another
+    // game; Bob set those of g4, which Ann played in.
+    setBy('g1', ann, { words: ['Apple', 'Pear'] });
+    setBy('g2', ann, { words: ['Cat', 'Dog'] });
+    setBy('g3', ann, { ending: 'abandoned' });
+    setBy('g9', ann, { game: 'keywords' });
+    setBy('g4', bob);
+    // Of g1, two players rated it good, one too hard and one dismissed the question; nobody rated g2.
+    ratings.rate('impostor', 'g1', 'p1', 'good');
+    ratings.rate('impostor', 'g1', 'p2', 'good');
+    ratings.rate('impostor', 'g1', 'p3', 'hard');
+    ratings.rate('impostor', 'g1', 'p4', null);
+    ratings.rate('impostor', 'g3', 'p1', 'good');
+    ratings.rate('impostor', 'g4', 'p1', 'good');
+    const at = (minutes: number) => new Date(NOW + minutes * minute).toISOString();
+    const setup = (student: string, reviewer2: string) => ({
+      words: { student, reviewer2 },
+      source: { kind: 'setter', setter: 's', field: 'fruit', named: true },
+    });
+    expect(ratings.setterGames('impostor', PATHS.setter, ann)).toEqual([
+      { gameId: 'g2', endedAt: at(2), setup: setup('Cat', 'Dog'), good: 0, rated: 0 },
+      { gameId: 'g1', endedAt: at(1), setup: setup('Apple', 'Pear'), good: 2, rated: 3 },
+    ]);
+    expect(ratings.setterGames('impostor', PATHS.setter, bob).map((row) => row.gameId)).toEqual(['g4']);
+    // The latest 20, the latest first.
+    for (let index = 10; index < 31; index += 1) setBy(`g${index}`, ann);
+    const latest = ratings.setterGames('impostor', PATHS.setter, ann).map((row) => row.gameId);
+    expect(latest).toHaveLength(20);
+    expect(latest[0]).toBe('g30');
+    expect(latest.at(-1)).toBe('g11');
+  });
 });
 
 describe("an account's page", () => {
@@ -170,11 +233,32 @@ describe("an account's page", () => {
     expect(service.profileOf(accounts.byId(ann)?.handle as string, null)?.record).toEqual({
       impostor: { ...set, matches: { played: 0, won: 0 } },
     });
+    // Its own record lists the game too, with the words, the students' first, which its public
+    // page doesn't.
     expect(service.recordsOf({ account: accounts.byId(ann) as never, hash: Buffer.alloc(0) })).toEqual({
-      impostor: { ...set, recent: [], matches: { played: 0, won: 0, recent: [] } },
+      impostor: {
+        ...set,
+        recent: [],
+        matches: { played: 0, won: 0, recent: [] },
+        wordsSetRecent: [
+          {
+            game: 'impostor',
+            gameId: 'g1',
+            endedAt: new Date(NOW).toISOString(),
+            words: ['Apple', 'Pear'],
+            good: 1,
+            rated: 1,
+          },
+        ],
+      },
     });
     // Bob played and set nothing.
     expect(service.recordsOf({ account: accounts.byId(bob) as never, hash: Buffer.alloc(0) })).toEqual({});
+    // The setter may watch the game again, as Bob, who played in it, may, and nobody else.
+    const cat = account('Cat');
+    expect(service.replayOf({ account: accounts.byId(ann) as never, hash: Buffer.alloc(0) }, 'g1')).not.toBeNull();
+    expect(service.replayOf({ account: accounts.byId(bob) as never, hash: Buffer.alloc(0) }, 'g1')).not.toBeNull();
+    expect(service.replayOf({ account: accounts.byId(cat) as never, hash: Buffer.alloc(0) }, 'g1')).toBeNull();
   });
 
   test('adds up what its records of a game that asks for it count, game by game', () => {

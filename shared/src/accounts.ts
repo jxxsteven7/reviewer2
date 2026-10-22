@@ -342,11 +342,27 @@ export const emptyGameCounts = (): GameCounts => ({
 // The records of two games are never added up (docs/architecture.md#game-records).
 export type RecordCounts = Record<string, GameCounts>;
 
-// The account's own record of one game: the counts, the latest games, and the latest matches, the
-// latest first.
+// A game that finished whose words the account set (docs/architecture.md#ratings): when it ended,
+// the words as the setter gave them, in the order the game keeps them (GameModule.content: in the
+// second game, the students' term, then the Reviewer 2s'), and how many of its players rated it
+// good, of how many rated it at all, leaving out those who dismissed the question. It can be
+// watched again, which the page asks for with the game's ID.
+export interface WordsSetRecord {
+  game: string;
+  gameId: string;
+  endedAt: string;
+  words: string[];
+  good: number;
+  rated: number;
+}
+
+// The account's own record of one game: the counts, the latest games, the latest matches and, for
+// an account that has set the words of any (`wordsSet`), the latest games whose words it set
+// (`wordsSetRecent`), the latest first. A public profile has the counts alone.
 export interface GameRecords extends GameCounts {
   recent: GameRecord[];
   matches: GameCounts['matches'] & { recent: MatchRecord[] };
+  wordsSetRecent?: WordsSetRecord[];
 }
 
 // The account's own record, of each game it has finished a game or a match of, by the game's ID.

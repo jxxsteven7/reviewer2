@@ -68,6 +68,8 @@ describe('signing in', () => {
     expect(wrapper.find('.agree').exists()).toBe(false);
     await wrapper.findAll('.tab')[1]?.trigger('click');
     expect(wrapper.text()).toContain("used to train and test the game's AI players");
+    // What a setter is shown of the ratings of the games they set (docs/rules/constraints.md, Data).
+    expect(wrapper.text()).toContain('sees how many of its players rated it good, of how many rated it');
     // What the public page shows of the record until the owner turns it off.
     expect(wrapper.text()).toContain('until you turn either off on your account page');
     expect(wrapper.get('.agree').text()).toBe('I have read and agree to how games are recorded, as above');
