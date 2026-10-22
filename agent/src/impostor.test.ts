@@ -44,24 +44,31 @@ describe('a description', () => {
     expect(reply.note?.candidates).toHaveLength(6);
   });
 
-  test("notes what the model took most players' word to be, and whether its own, from its last answer", async () => {
-    const first = { majority: '  Pear \n tree ', mine: false, candidates: ['apples'] };
-    const second = { majority: 'p'.repeat(150), mine: true, candidates: ['round and red'] };
+  test('notes the closest word and the fit of the lines that the model wrote first, from its last answer', async () => {
+    const first = { closest: '  Pear \n tree ', fit: 'closest', candidates: ['apples'] };
+    const second = { closest: 'p'.repeat(150), fit: 'mine', candidates: ['round and red'] };
     const model = new ScriptedModel({ describe: [first, second] });
     const reply = allowed(await describeWord(impostorRequest('describe'), turn(model)));
     if (!reply.ok || reply.kind !== 'describe') throw new Error('no line');
-    expect(reply.note.majority).toEqual({ word: 'p'.repeat(100), mine: true });
-    // A judgment that the model didn't write, or wrote in the wrong shape, is none.
-    for (const answer of [
-      { candidates: ['round and red'] },
-      { majority: 'pear', mine: 'no', candidates: ['round and red'] },
-    ]) {
-      const none = allowed(
+    expect(reply.note.judgment).toEqual({ closest: 'p'.repeat(100), fit: 'mine' });
+    // In the first round, the closest word alone; a fit that is none of the three is none.
+    for (const fit of [{}, { fit: 'yes' }]) {
+      const answer = { closest: 'pear', ...fit, candidates: ['round and red'] };
+      const alone = allowed(
         await describeWord(impostorRequest('describe'), turn(new ScriptedModel({ describe: [answer] }))),
       );
-      if (!none.ok || none.kind !== 'describe') throw new Error('no line');
-      expect(none.note.majority).toBeUndefined();
+      if (!alone.ok || alone.kind !== 'describe') throw new Error('no line');
+      expect(alone.note.judgment).toEqual({ closest: 'pear' });
     }
+    // A judgment that the model didn't write is none.
+    const none = allowed(
+      await describeWord(
+        impostorRequest('describe'),
+        turn(new ScriptedModel({ describe: [{ candidates: ['round and red'] }] })),
+      ),
+    );
+    if (!none.ok || none.kind !== 'describe') throw new Error('no line');
+    expect(none.note.judgment).toBeUndefined();
   });
 
   test('of the PI, who has no word, can be anything that is not said yet', async () => {
@@ -109,11 +116,11 @@ describe('a vote', () => {
     expect(model.asked[0]?.system).toContain('You may vote for one of the players 1, 3, 5, or answer 0 to abstain.');
   });
 
-  test("notes what the model took most players' word to be, and whether its own", async () => {
-    const model = new ScriptedModel({ vote: [{ majority: 'pear', mine: false, number: 5, reason: 'Odd one.' }] });
+  test('notes the closest word and the fit of the lines that the model wrote first', async () => {
+    const model = new ScriptedModel({ vote: [{ closest: 'pear', fit: 'closest', number: 5, reason: 'Odd one.' }] });
     const reply = allowed(await vote(impostorRequest('vote'), turn(model)));
     if (!reply.ok || reply.kind !== 'vote') throw new Error('no vote');
-    expect(reply.note).toMatchObject({ majority: { word: 'pear', mine: false }, reason: 'Odd one.' });
+    expect(reply.note).toMatchObject({ judgment: { closest: 'pear', fit: 'closest' }, reason: 'Odd one.' });
   });
 
   test('for anyone else, or for nobody, is an abstention', async () => {

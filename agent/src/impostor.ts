@@ -8,6 +8,7 @@ import {
 } from '@reviewer2/shared';
 import {
   checkDescription,
+  FITS,
   type ImpostorCandidate,
   type ImpostorJudgment,
   type ImpostorNote,
@@ -74,23 +75,26 @@ function failure(error: unknown, note: AgentNote, signal: AbortSignal): AgentRep
 }
 
 // What the model worked out before its lines or its vote, when it was to (judges in
-// impostorPrompts.ts): the word that most players seem to have, cleaned and cut like a guess, and
-// whether it took that for its own. It goes into the note alone, never into the game.
+// impostorPrompts.ts): the other word closest to its own, cleaned and cut like a guess, and which
+// of the two the others' lines fit, when there were lines to go by. It goes into the note alone,
+// never into the game.
 function judgment(answer: Record<string, unknown>): ImpostorJudgment | undefined {
-  if (typeof answer.majority !== 'string' || typeof answer.mine !== 'boolean') return undefined;
-  return { word: cleanLine(answer.majority).slice(0, MAX_GUESS), mine: answer.mine };
+  if (typeof answer.closest !== 'string') return undefined;
+  const closest = cleanLine(answer.closest).slice(0, MAX_GUESS);
+  const fit = FITS.find((one) => one === answer.fit);
+  return fit === undefined ? { closest } : { closest, fit };
 }
 
 // The note of a turn: the model and the prompts, the time it took, the lines considered, the
 // judgment the model made first, if it was to, and the reason it gave.
 function noter(turn: Turn, considered: ImpostorCandidate[] = []) {
   const started = turn.now();
-  return (found: { majority?: ImpostorJudgment; reason?: string } = {}): ImpostorNote => ({
+  return (found: { judgment?: ImpostorJudgment; reason?: string } = {}): ImpostorNote => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
     ...(considered.length > 0 ? { candidates: considered } : {}),
-    ...(found.majority ? { majority: found.majority } : {}),
+    ...(found.judgment ? { judgment: found.judgment } : {}),
     ...(found.reason ? { reason: found.reason } : {}),
   });
 }
@@ -101,7 +105,7 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
   const word: BoardWord | null = request.word;
   const earlier = request.lines.flatMap(({ text }) => (text === null ? [] : [text]));
   const refused: RefusedLine[] = [];
-  let majority: ImpostorJudgment | undefined;
+  let judged: ImpostorJudgment | undefined;
   try {
     for (let attempt = 0; attempt < TRIES; attempt += 1) {
       const answer = await turn.model.ask(
@@ -114,20 +118,22 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
         },
         turn.signal,
       );
-      majority = judgment(answer) ?? majority;
+      judged = judgment(answer) ?? judged;
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
       for (const text of proposed) {
         if (typeof text !== 'string') continue;
         const check = checkDescription(text, word, earlier, request.length);
         const shown = (check.text || cleanLine(text.slice(0, MAX_NOTED * 2))).slice(0, MAX_NOTED);
         considered.push({ text: shown, problem: check.problem });
-        if (check.problem === null) return { ok: true, kind: 'describe', text: check.text, note: note({ majority }) };
+        if (check.problem === null) {
+          return { ok: true, kind: 'describe', text: check.text, note: note({ judgment: judged }) };
+        }
         refused.push({ text: shown, why: WHY[check.problem] });
       }
     }
-    return { ok: false, error: 'no_legal_move', note: note({ majority }) };
+    return { ok: false, error: 'no_legal_move', note: note({ judgment: judged }) };
   } catch (error) {
-    return failure(error, note({ majority }), turn.signal);
+    return failure(error, note({ judgment: judged }), turn.signal);
   }
 }
 
@@ -147,7 +153,7 @@ export async function vote(request: Request<'vote'>, turn: Turn): Promise<AgentR
     // A number that isn't one of those it may vote for is an abstention: that costs nothing.
     const number = request.candidates.includes(answer.number as number) ? (answer.number as number) : null;
     const reason = sentence(answer.reason);
-    return { ok: true, kind: 'vote', number, reason, note: note({ majority: judgment(answer), reason }) };
+    return { ok: true, kind: 'vote', number, reason, note: note({ judgment: judgment(answer), reason }) };
   } catch (error) {
     return failure(error, note(), turn.signal);
   }
