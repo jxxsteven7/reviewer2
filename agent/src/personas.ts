@@ -17,12 +17,11 @@ export interface Persona {
   // on fixed boards, aiming at up to 4 cards, 3 if it could, raised the number but not the cards
   // found, and ran into the other group's cards more often.
   targets: { min: number; preferred: number; max: number };
-  // As a PI: whether the agent has each clue it would give guessed first, by the model playing a
-  // student who sees no colors, and gives the clue whose guesses go best (keywords.ts). It costs a
-  // question to the model for every clue that the rules take. Measured on fixed boards, it found
-  // more cards and ran into fewer of the other group's when the model that gave the clue guessed
-  // it, but hardly so when another model did, and took two to three times as long, so Reviewer 1
-  // does without it.
+  // As a PI: whether the agent has each clue it would give guessed first, a few times over, by the
+  // model playing a student who sees no colors and doesn't think, and gives the clue whose guesses
+  // go best (keywords.ts). It costs a few quick questions to the model for every clue that the
+  // rules take, about six seconds in all. Measured on fixed boards, the clues so chosen found more
+  // cards, as other students guessed them, and ran into the other group's about half as often.
   rehearse: boolean;
   // As a student: how sure it must be of a card, after the first, to reveal it, in the words the
   // model is told; a student that is less sure stops. And how the one sentence of the reason
@@ -38,7 +37,7 @@ export const PERSONAS: Readonly<Record<AgentPersona, Persona>> = {
     id: 'reviewer1',
     temperature: 0.6,
     targets: { min: 1, preferred: 2, max: 3 },
-    rehearse: false,
+    rehearse: true,
     caution: 'fairly sure',
     tone: 'calm and brief, like a polite senior colleague',
   },

@@ -16,7 +16,7 @@ describe('the AI log of a game', () => {
     log.add(9_000, { by: 'p2', persona: 'reviewer1', takeover: true, kind: 'guess', error: 'busy' });
     expect(log.empty).toBe(false);
     expect(log.data()).toEqual({
-      v: 1,
+      v: 2,
       gameId: 'game-1',
       steps: [
         { t: 3_000, by: 'p1', persona: 'reviewer1', kind: 'clue', answer: { word: 'zebra' } },
@@ -27,7 +27,7 @@ describe('the AI log of a game', () => {
 
   test('stops at its limit and says that it did, staying within it', () => {
     const log = new AgentLog('game-1', 0);
-    const reason = 'x'.repeat(1_000);
+    const reason = 'x'.repeat(20_000);
     for (let i = 0; i < 100; i += 1) log.add(i, { by: 'p1', persona: 'reviewer1', kind: 'guess', answer: { reason } });
     const data = log.data();
     expect(data.truncated).toBe(true);
@@ -43,7 +43,7 @@ describe('the certified versions of the AI', () => {
   const v1 = { prompt: 'keywords-1', model: 'model-a' };
   const v2 = { prompt: 'keywords-2', model: 'model-a' };
   const log = (steps: AgentStep[], more: Partial<AgentLogData> = {}): AgentLogData => ({
-    v: 1,
+    v: 2,
     gameId: 'game-1',
     steps,
     ...more,
@@ -55,7 +55,7 @@ describe('the certified versions of the AI', () => {
     persona: 'reviewer1',
     kind: 'clue',
     answer: { word: 'zebra' },
-    ...(version === null ? {} : { note: { ...version, ms: 1 } }),
+    ...(version === null ? {} : { note: { ...version, ms: 1, reasoning: 'off' as const } }),
     ...more,
   });
   const unanswered: AgentStep = { t: 2, by: 'p1', persona: 'reviewer1', kind: 'clue', error: 'busy' };

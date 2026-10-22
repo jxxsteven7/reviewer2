@@ -214,6 +214,26 @@ describe('inviting AI players', () => {
     expect(await invite(bob, 'blue', 'captain')).toEqual({ ok: false, error: 'not_chair' });
   });
 
+  test('is refused while the agent is down, which the waiting room shows until it is back', async () => {
+    const { chair, code } = await chairRoom();
+    await until(() => chair.state?.agentsOnline === true, 'the agent');
+    await seat(chair, 'blue', 'captain');
+    // The agent goes. The waiting room finds out once something happens in it, a while after the
+    // agent last answered.
+    agent.up = false;
+    server.advance(FRESH_MS);
+    track(await joinRoom(server.url, code, { play: true }));
+    await chair.waitFor((state) => state.agentsOnline === false, 'offline');
+    expect(chair.state?.agents).toBe(true);
+    expect(await invite(chair, 'red', 'captain')).toEqual({ ok: false, error: 'agents_offline' });
+    expect(aiOf(chair.state as RoomView)).toEqual([]);
+    // Back, and the room sees it at once.
+    agent.up = true;
+    server.advance(PING_MS);
+    await chair.waitFor((state) => state.agentsOnline === true, 'online');
+    await expectOk(invite(chair, 'red', 'captain'));
+  });
+
   test('keeps a room with AI players private and out of matches', async () => {
     const { chair } = await chairRoom();
     await until(() => chair.state?.agents === true, 'the agent');

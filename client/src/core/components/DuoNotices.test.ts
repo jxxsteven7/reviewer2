@@ -40,6 +40,7 @@ function room(duos: DuoNotice[]): RoomView {
       { id: 'bob', name: 'Bob', online: true, avatar: '/avatars/b.webp' },
     ],
     agents: false,
+    agentsOnline: false,
     screens: 0,
     me: 'ann',
     match: null,

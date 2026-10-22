@@ -100,6 +100,7 @@ export function createAgent({
         model: models[request.game] ?? model,
         persona: PERSONAS[request.persona],
         signal: AbortSignal.timeout(Math.max(1, Math.ceil(until - now()))),
+        until,
         now,
       };
       return await playGame(request, turn);

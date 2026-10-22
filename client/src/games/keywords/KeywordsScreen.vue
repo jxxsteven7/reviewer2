@@ -13,6 +13,7 @@ import ClueLog from './ClueLog.vue';
 import DecisionLetter from './DecisionLetter.vue';
 import KeywordsBoard from './KeywordsBoard.vue';
 import PausedNotice from './PausedNotice.vue';
+import { agentMoving } from './banner';
 import TurnStrip from './TurnStrip.vue';
 import { useKeywords } from './useKeywords';
 import { useDeadlineHeroes } from './useDeadlineHeroes';
@@ -81,7 +82,13 @@ const turned = useTurnedCard(game);
     />
     <StreakNotices :room="room" large />
     <div class="main" :class="{ over: game.result }">
-      <TurnStrip v-if="!game.result" :game="game" :guess-rule="data.settings.guessRule" :groups="groups" />
+      <TurnStrip
+        v-if="!game.result"
+        :game="game"
+        :guess-rule="data.settings.guessRule"
+        :agent="agentMoving(game, data.seats, room.players)"
+        :groups="groups"
+      />
       <PausedNotice v-if="game.paused" large />
       <KeywordsBoard
         v-else

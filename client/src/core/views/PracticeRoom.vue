@@ -262,7 +262,7 @@ async function start() {
 
         <p class="note">{{ t('home.practice.note') }}</p>
         <p v-if="formError" class="problem" role="alert">{{ formError }}</p>
-        <p v-else-if="offline" class="problem" role="alert">{{ t('home.practice.offline') }}</p>
+        <p v-else-if="offline" class="problem" role="alert">{{ t('errors.agents_offline') }}</p>
         <UiButton variant="primary" size="large" type="submit" class="start" :disabled="busy || !ready">
           {{ t(who === 'me' ? 'home.practice.start' : 'home.practice.open') }}
         </UiButton>

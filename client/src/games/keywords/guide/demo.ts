@@ -431,6 +431,7 @@ export function demoRoom(t: Translate, language: Language, options: RoomOptions)
     chairId: options.chairId ?? ME,
     players: options.players ?? demoPlayers(t),
     agents: options.agents ?? false,
+    agentsOnline: options.agents ?? false,
     screens: 0,
     me: ME,
     match: null,

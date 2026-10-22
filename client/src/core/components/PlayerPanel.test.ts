@@ -50,6 +50,7 @@ const view = (me: string, isPublic: boolean, player: ShownPlayer = bob): ShownRo
   chairId: 'ann',
   players: [{ id: 'ann', name: 'Ann', online: true }, player, { id: 'cat', name: 'Cat', online: true }, ai],
   agents: false,
+  agentsOnline: false,
   screens: 0,
   me,
   match: null,

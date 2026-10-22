@@ -52,6 +52,7 @@ function room(match: Partial<MatchView>, overrides: Partial<RoomView> = {}): Roo
     chairId: 'ann',
     players: [],
     agents: false,
+    agentsOnline: false,
     screens: 0,
     me: 'ann',
     match: {

@@ -18,6 +18,7 @@ import {
   usernameKey,
   type Language,
 } from '@reviewer2/shared';
+import { ANY_AGENT_NOTE } from '@reviewer2/shared/schemas';
 import { AVATAR_FILE } from '../accounts/avatars';
 import type { AgentLogData } from '../core/agentLog';
 import { knownTitles, type GameModule } from '../core/game';
@@ -584,9 +585,10 @@ function isGameLog(data: unknown, game: string, gameId: string): data is GameLog
 }
 
 // Whether an AI's log is in the newest format (agentLog.ts), of this game id: every step says
-// when, which seat, which persona and what it was to do.
+// when, which seat, which persona and what it was to do, and its note, if it has one, is one that
+// the agent may give now.
 function isAgentLog(data: unknown, gameId: string): data is AgentLogData {
-  if (!isObject(data) || data.v !== 1 || data.gameId !== gameId || !Array.isArray(data.steps)) return false;
+  if (!isObject(data) || data.v !== 2 || data.gameId !== gameId || !Array.isArray(data.steps)) return false;
   if (!(data.truncated === undefined || data.truncated === true)) return false;
   return data.steps.every(
     (step) =>
@@ -597,7 +599,8 @@ function isAgentLog(data: unknown, gameId: string): data is AgentLogData {
       typeof step.kind === 'string' &&
       (step.takeover === undefined || step.takeover === true) &&
       (step.late === undefined || step.late === true) &&
-      (step.error === undefined || typeof step.error === 'string'),
+      (step.error === undefined || typeof step.error === 'string') &&
+      (step.note === undefined || ANY_AGENT_NOTE.safeParse(step.note).success),
   );
 }
 

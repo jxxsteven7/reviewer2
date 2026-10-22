@@ -39,6 +39,7 @@ function room(me: string | null, streaks: StreakNotice[]): RoomView {
       { id: 'bob', name: 'Bob', online: true, avatar: '/avatars/b.webp' },
     ],
     agents: false,
+    agentsOnline: false,
     screens: 0,
     me,
     match: null,

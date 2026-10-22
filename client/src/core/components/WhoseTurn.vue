@@ -10,18 +10,20 @@ import type { Tint } from '../tints';
 // that side's tint, so that a player sees at a glance that the game waits for their side. A
 // sentence that waits for someone ends in an ellipsis, which breathes a little, by CSS alone: the
 // words stay as they are. What the game adds to it, such as the clue or the viewer's word, goes in
-// the slot, and the clock and the groups' bars after it (`after`). The lines are read out as they
-// change.
+// the slot, and the clock and the groups' bars after it (`after`). A short grey line under the
+// sentence may say why a wait is long (`note`), as while Reviewer 1 thinks. The lines are read out
+// as they change.
 const props = withDefaults(
   defineProps<{
     line: string;
+    note?: string | null;
     turn?: string | null;
     who?: string | null;
     whoTint?: Tint | null;
     tint?: Tint | null;
     ours?: boolean;
   }>(),
-  { turn: null, who: null, whoTint: null, tint: null, ours: false },
+  { note: null, turn: null, who: null, whoTint: null, tint: null, ours: false },
 );
 
 // The line's words, and the ellipsis it ends in while someone is waited for, if any.
@@ -41,6 +43,7 @@ const parts = computed(() => {
         >
         <span v-if="turn" class="turn num">{{ turn }}</span>
       </p>
+      <p v-if="note" class="note">{{ note }}</p>
       <slot />
     </div>
     <slot name="after" />
@@ -134,6 +137,14 @@ const parts = computed(() => {
 }
 
 .turn {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}
+
+/* Why the wait is long, close under the line. */
+.note {
+  margin-top: calc(-1 * var(--space-2));
+  color: var(--ink-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-bold);
 }

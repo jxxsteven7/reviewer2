@@ -36,8 +36,10 @@ const present = (member: Member, now: number): boolean =>
   member.sockets.size > 0 || (member.offlineSince !== null && now - member.offlineSince < TAKEOVER_MS);
 // How long a request may wait at most, and how long before the end of the phase the driver stops
 // waiting, so that a move doesn't arrive as the clock runs out. A phase without a time limit, which
-// only a game played for someone offline can have, waits MAX_WAIT_MS.
-export const MAX_WAIT_MS = 60_000;
+// only a game played for someone offline can have, waits MAX_WAIT_MS. The agent lets the model
+// think for most of the wait (agent/src/thinking.ts): measured on fixed boards, a PI that could
+// think for 80 seconds rather than 45 gave slightly better clues.
+export const MAX_WAIT_MS = 90_000;
 export const MARGIN_MS = 3_000;
 // How long the driver waits before asking again for a seat whose request brought no answer, as
 // when the agent was busy, doubling each time up to the longest wait, for as long as the phase
@@ -129,8 +131,11 @@ export class AgentDriver {
   }
 
   // Looks at the room after it has changed: who is to be played for, and what each AI seat is to do.
+  // A waiting room that may have AI players shows whether they are online, which is asked again as
+  // for the home page (recheck()).
   poke(room: Room): void {
     const { isOpen, now, broadcast } = this.#options;
+    if (isOpen(room) && room.phase === 'lobby' && room.agentsAllowed()) this.recheck();
     const playing = isOpen(room) && room.phase === 'playing';
     const rev = room.rev;
     const seats = this.#seats(room, playing);
@@ -437,19 +442,15 @@ export class AgentDriver {
     if (this.#ping === null) this.#ping = this.#options.timers.start(() => this.#check(), PING_MS);
   }
 
-  // Everyone in a room with AI players sees them come online or go offline, and the driver looks at
-  // the room again; so does it at every other room that may have an AI play for someone offline,
-  // whom it takes over or lets go of.
+  // Everyone in a room with AI players, or one that may have them, sees them come online or go
+  // offline, and the driver looks at the room again, as the broadcast has it: at the AI players, and
+  // at whom an AI takes over or lets go of.
   #refresh(): void {
     const { isOpen, broadcast } = this.#options;
     for (const room of this.#options.rooms()) {
-      if (!isOpen(room)) continue;
-      if (room.hasAgents()) {
-        room.changed();
-        this.#safely(room, () => broadcast(room));
-      } else if (room.agentsAllowed()) {
-        this.#safely(room, () => this.poke(room));
-      }
+      if (!isOpen(room) || !(room.hasAgents() || room.agentsAllowed())) continue;
+      room.changed();
+      this.#safely(room, () => broadcast(room));
     }
   }
 

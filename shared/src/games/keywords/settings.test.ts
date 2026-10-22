@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import { hurriesAgent } from './agent';
 import {
   restoreSettings,
   clueCounts,
@@ -117,5 +118,18 @@ describe('settings kept from an earlier room', () => {
     // Kept in the same language, or before the language was kept, the length stays.
     expect(restoreSettings({ clueLength: 2 }, 'en', 'en').clueLength).toBe(2);
     expect(restoreSettings({ clueLength: 2 }, 'en', null).clueLength).toBe(2);
+  });
+});
+
+describe('the times that Reviewer 1 needs to think', () => {
+  test('are 40 seconds for a clue, the first one included, and 20 for a guess, where there is a limit', () => {
+    const settings = defaultSettings('en');
+    expect(hurriesAgent(settings)).toBe(false);
+    expect(hurriesAgent({ ...settings, firstClueTime: 39 })).toBe(true);
+    expect(hurriesAgent({ ...settings, clueTime: 39 })).toBe(true);
+    expect(hurriesAgent({ ...settings, guessTime: 19 })).toBe(true);
+    expect(hurriesAgent({ ...settings, firstClueTime: 40, clueTime: 40, guessTime: 20 })).toBe(false);
+    // No limit at all is no hurry, though a room with AI players needs one.
+    expect(hurriesAgent({ ...settings, firstClueTime: 0, clueTime: 0, guessTime: 0 })).toBe(false);
   });
 });

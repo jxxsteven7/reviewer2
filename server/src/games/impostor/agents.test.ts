@@ -11,7 +11,7 @@ import { accepted, at, dealt, describeAll, playRound, SETTINGS } from './testing
 
 // What the AI players are asked to do, and the messages their answers make.
 
-const NOTE = { model: 'script', prompt: 'impostor-1', ms: 1 };
+const NOTE = { model: 'script', prompt: 'impostor-1', ms: 1, reasoning: 'off' as const };
 
 const context = (agents: readonly string[]): GameContext => ({
   phase: 'playing',

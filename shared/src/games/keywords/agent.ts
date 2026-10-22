@@ -38,16 +38,25 @@ export type KeywordsAgentRequest =
 
 // One clue that the agent considered, with the cards it was meant for, and what the rules of the
 // room said of it (checkClue), or null when they took it. When the agent had the clue guessed
-// first, by the model playing a student, the rehearsal says which cards it would have revealed,
-// how many of the group's own it found before it stopped, and the color of the card that stopped
-// it, or null when it ran out of cards to reveal first.
+// first, by the model playing a student, a few times over, each rehearsal says which cards it
+// would have revealed, how many of the group's own it found before it stopped, and the color of the
+// card that stopped it, or null when it ran out of cards to reveal first.
+export interface AgentRehearsal {
+  picks: number[];
+  found: number;
+  stop: CardColor | null;
+}
+
 export interface AgentCandidate {
   word: string;
   count: number;
   targets: number[];
   problem: string | null;
-  rehearsal?: { picks: number[]; found: number; stop: CardColor | null };
+  rehearsals?: AgentRehearsal[];
 }
+
+// The most rehearsals that a clue gets.
+export const MAX_REHEARSALS = 3;
 
 // The clue to give, with the cards it is meant for, or the cards to reveal, the surest first, with
 // the reason. When the agent has no clue that the rules of the room take, it answers
@@ -55,3 +64,21 @@ export interface AgentCandidate {
 export type KeywordsAgentReply =
   | { ok: true; kind: 'clue'; word: string; count: number; targets: number[]; note: AgentNote<AgentCandidate> }
   | { ok: true; kind: 'guess'; picks: number[]; reason: string; note: AgentNote<AgentCandidate> };
+
+// The shortest times, in seconds, that leave Reviewer 1 time to think (docs/games/keywords.md#ai-players):
+// for a clue, the first one included, and for a guess. The agent thinks of a clue until about 13
+// seconds before the clue's time runs out, and of a guess until 8 seconds before, for 20 seconds at
+// most. Measured on fixed boards, with less time few of its clues were thought out in time, and
+// with less than about 12 seconds to think, fewer of its guesses were. A room with shorter times
+// still plays, and its waiting room says that Reviewer 1 may then be even further off.
+export const AGENT_THINKING_TIMES = { clue: 40, guess: 20 } as const;
+
+// Whether a room's times are shorter than Reviewer 1 needs to think, where they set a limit at all.
+export function hurriesAgent({ firstClueTime, clueTime, guessTime }: KeywordsSettings): boolean {
+  const short = (seconds: number, least: number) => seconds > 0 && seconds < least;
+  return (
+    short(firstClueTime, AGENT_THINKING_TIMES.clue) ||
+    short(clueTime, AGENT_THINKING_TIMES.clue) ||
+    short(guessTime, AGENT_THINKING_TIMES.guess)
+  );
+}

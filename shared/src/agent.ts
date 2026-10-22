@@ -79,14 +79,25 @@ export type AgentRequest = { v: 1; kind: 'ping' } | KeywordsAgentRequest | Impos
 type Unasked<Request> = Request extends unknown ? Omit<Request, keyof AgentAsked> : never;
 export type AgentQuestion = Unasked<Exclude<AgentRequest, { kind: 'ping' }>>;
 
+// How long the model may think before it answers (docs/architecture.md#the-agent): not at all, or
+// at the low level of models that think. The agent's settings choose it for each game's model.
+export const REASONING_LEVELS = ['off', 'low'] as const;
+export type ReasoningLevel = (typeof REASONING_LEVELS)[number];
+
 // How the agent came to its answer, which the server keeps with the record of the game
 // (docs/architecture.md#game-records) and never shows anyone: the model and the version of the
 // prompts that it asked, how long that took, what it considered, in the game's own shape, such as
 // the clues of the team word guessing game (AgentCandidate), and the reason it gave in a sentence.
+// `reasoning` is how long the model was let think; `fellBack` says that it was let think but ran
+// out of time, so that it was asked again without thinking, and the answer is that one; `thinking`
+// is what the model thought before it answered, when it did, cut to MAX_AGENT_THINKING characters.
 export interface AgentNote<Candidate = unknown> {
   model: string;
   prompt: string;
   ms: number;
+  reasoning: ReasoningLevel;
+  fellBack?: true;
+  thinking?: string;
   candidates?: Candidate[];
   reason?: string;
 }
@@ -116,11 +127,15 @@ export type AgentReply =
 // An answer to one of a game's requests, as the game turns it into its own messages.
 export type AgentAnswer = Exclude<Extract<AgentReply, { ok: true }>, { kind: 'ping' }>;
 
-// The longest request and answer, as a line of JSON in bytes. A request carries the board with
-// every term's translations and other forms.
-export const MAX_AGENT_REQUEST = 64 * 1024;
-export const MAX_AGENT_REPLY = 16 * 1024;
-// The longest wait that a request may ask for, and the longest reason, in characters, that an
-// answer may give.
-export const MAX_AGENT_WAIT_MS = 60_000;
+// The longest wait that a request may ask for, the longest reason, in characters, that an answer
+// may give, and the most of what the model thought that a note keeps, in characters. A model at the
+// low level thinks up to about 50,000 characters before a clue in the time it has.
+export const MAX_AGENT_WAIT_MS = 90_000;
 export const MAX_AGENT_REASON = 200;
+export const MAX_AGENT_THINKING = 60_000;
+
+// The longest request and answer, as a line of JSON in bytes. A request carries the board with
+// every term's translations and other forms. An answer takes up to 16 KB, and what the model
+// thought up to six bytes a character more, as JSON writes a control character.
+export const MAX_AGENT_REQUEST = 64 * 1024;
+export const MAX_AGENT_REPLY = 16 * 1024 + 6 * MAX_AGENT_THINKING;

@@ -37,7 +37,7 @@
     "practice": {
       "entry": "和一号审稿人一起玩",
       "entryHint": "一个人也能玩，也能叫上朋友，AI 补空位",
-      "offline": "一号审稿人暂时不在线",
+      "offline": "一号审稿人正在被作者调教",
       "intro": "一个人也能玩，也能叫上朋友：没人坐的座位由一号审稿人来坐。",
       "loginTitle": "登录后就能开始",
       "loginHint": "注册只要用户名和密码。",
@@ -802,6 +802,8 @@
     "hidden": "未翻开",
     "waitClue": "等待{group}的导师给出提示。",
     "waitGuess": "{group}正在猜词。",
+    "waitAgentClue": "等{name}想出提示。",
+    "waitAgentGuess": "等{name}想好翻哪几张。",
     "prepareNote": "这是你下一条提示的草稿，只有你看得到，轮到你出题时再给出。",
     "targetGone": "你标的{words}被翻开了，已去掉。 | 你标的{words}被翻开了，已去掉。",
     "clueInput": "你的提示",
@@ -1028,6 +1030,7 @@
     "clueTime": "之后每次出题时间",
     "guessTime": "每次猜词时间",
     "timesHint": "0 表示不限时。",
+    "agentHurried": "出题少于 {clue} 秒或猜词少于 {guess} 秒时，{name}来不及细想，可能更离谱。",
     "timeRange": "填 0，或者 {min} 到 {max} 之间的数。",
     "extensions": "延时",
     "extension": {
@@ -1063,9 +1066,11 @@
       "otherClue": "对方正在出题……",
       "otherGuess": "对方正在猜词……",
       "watchClue": "{group}的导师正在出题……",
-      "watchGuess": "{group}正在猜词……"
+      "watchGuess": "{group}正在猜词……",
+      "agentThinking": "{name}在想……"
     },
-    "tabTitle": "轮到你了！"
+    "tabTitle": "轮到你了！",
+    "agentHint": "它会先想一想再回答，最多约 {seconds} 秒。"
   },
   "emotes": {
     "open": "表情",
@@ -1122,7 +1127,7 @@
     "agents_not_allowed": "这里不能邀请 AI 玩家：AI 只能进私密房间，内测期间也只对部分账号开放。",
     "agents_in_room": "请先移出 AI 玩家：公开房间和比赛里不能有 AI。",
     "player_is_agent": "这是 AI 玩家，房主只能把它移出房间。",
-    "agents_offline": "一号审稿人暂时不在线，过一会儿再试吧。",
+    "agents_offline": "风水轮流转：一号审稿人正在被作者调教，暂停接稿。",
     "private_only": "这种房间只能开成私人房间。",
     "cannot_rate": "现在不能给这局打分。",
     "cannot_guess": "现在不能猜谁是 AI。",

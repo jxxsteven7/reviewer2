@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 // The agent itself, which the server reaches over a socket in production: here it answers in the
 // same process, with a model that plays by a script.
 import { createAgent } from '../../agent/src/agent';
-import type { Model, Question } from '../../agent/src/model';
+import type { Answer, Model, Question } from '../../agent/src/model';
 import type { AgentChannel } from '../src/core/agentChannel';
 import { WordLibrary } from '../src/core/words';
 import { impostorGame } from '../src/games/impostor';
@@ -39,13 +39,18 @@ const library = () =>
 // keeps the names of the questions it was asked.
 class TableModel implements Model {
   readonly name = 'script';
+  readonly reasoning = 'off' as const;
   readonly asked: string[] = [];
   target: () => number = () => 0;
   #lines = 0;
 
-  async ask(question: Question): Promise<Record<string, unknown>> {
+  async ask(question: Question): Promise<Answer> {
     this.asked.push(question.name);
-    switch (question.name) {
+    return { value: this.#answer(question.name), thinking: null };
+  }
+
+  #answer(name: string): Record<string, unknown> {
+    switch (name) {
       case 'describe':
         return { candidates: [1, 2, 3].map(() => `AI line ${(this.#lines += 1)}`) };
       case 'vote':

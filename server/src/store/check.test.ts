@@ -121,7 +121,20 @@ beforeEach(async () => {
   replays.add(
     kept('g3', {
       log: log('g3', { start: { p1: 'player', p2: 'player', a: 'player' }, agents: { a: 'reviewer1' } }),
-      agentLog: { v: 1, gameId: 'g3', steps: [{ t: 1, by: 'a', persona: 'reviewer1', kind: 'press', answer: {} }] },
+      agentLog: {
+        v: 2,
+        gameId: 'g3',
+        steps: [
+          {
+            t: 1,
+            by: 'a',
+            persona: 'reviewer1',
+            kind: 'press',
+            answer: {},
+            note: { model: 'm', prompt: 'p', ms: 1, reasoning: 'low', thinking: 'Press it.' },
+          },
+        ],
+      },
       counts: { accounts: 2, guests: 0, agents: 1 },
       takeover: true,
       scoresNothing: true,
@@ -427,12 +440,22 @@ describe('the check of the data', () => {
     ],
     [
       'games whose AI log is not in the newest format',
-      `UPDATE replays SET agent_log = '{"v":1,"gameId":"g3","steps":[{"t":1}]}' WHERE game_id = 'g3'`,
+      `UPDATE replays SET agent_log = '{"v":2,"gameId":"g3","steps":[{"t":1}]}' WHERE game_id = 'g3'`,
+      ['g3'],
+    ],
+    [
+      'games whose AI log is not in the newest format',
+      `UPDATE replays SET agent_log = json_set(agent_log, '$.v', 1) WHERE game_id = 'g3'`,
+      ['g3'],
+    ],
+    [
+      'games whose AI log is not in the newest format',
+      `UPDATE replays SET agent_log = json_remove(agent_log, '$.steps[0].note.reasoning') WHERE game_id = 'g3'`,
       ['g3'],
     ],
     [
       'games with an AI log that no AI played in',
-      `UPDATE replays SET agent_log = '{"v":1,"gameId":"g4","steps":[]}' WHERE game_id = 'g4'`,
+      `UPDATE replays SET agent_log = '{"v":2,"gameId":"g4","steps":[]}' WHERE game_id = 'g4'`,
       ['g4'],
     ],
     [

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AGENT_PERSONAS, MAX_AGENT_REASON, MAX_AGENT_WAIT_MS } from './agent';
+import { AGENT_PERSONAS, MAX_AGENT_REASON, MAX_AGENT_THINKING, MAX_AGENT_WAIT_MS, REASONING_LEVELS } from './agent';
 
 // The parts that the schemas of the shared layer (schemas.ts) and those of each game (as
 // games/keywords/schemas.ts) are built of. Only the server and the agent import this module, as
@@ -26,6 +26,9 @@ export const AGENT_NOTE_FIELDS = {
   model: z.string().max(200),
   prompt: z.string().max(64),
   ms: z.number().min(0),
+  reasoning: z.enum(REASONING_LEVELS),
+  fellBack: z.literal(true).optional(),
+  thinking: z.string().max(MAX_AGENT_THINKING).optional(),
   reason: z.string().max(MAX_AGENT_REASON).optional(),
 };
 export const AGENT_NOTE = z.strictObject(AGENT_NOTE_FIELDS);

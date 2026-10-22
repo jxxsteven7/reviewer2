@@ -148,6 +148,7 @@ function room(game: ImpostorView | null, me = 'ann', data: Partial<ImpostorRoomD
       online: true,
     })),
     agents: false,
+    agentsOnline: false,
     screens: 0,
     me,
     match: null,
@@ -633,6 +634,28 @@ describe('ImpostorLobby', () => {
       .find((button) => button.text() === 'Play')!
       .trigger('click');
     expect(send).toHaveBeenCalledWith('impostor:seat', { play: true });
+  });
+
+  test('invites Reviewer 1 to a seat left, and while it is offline holds the invitation back', async () => {
+    const invitation = (online: boolean) => {
+      const wrapper = mount(ImpostorLobby, {
+        props: { room: { ...room(null, 'ann'), agents: true, agentsOnline: online } },
+        global: global(),
+      });
+      return { wrapper, chip: wrapper.findAll('button').find((button) => button.text() === 'Invite Reviewer 1')! };
+    };
+    const online = invitation(true);
+    expect(online.chip.classes()).toContain('press-host');
+    await online.chip.trigger('click');
+    expect(send).toHaveBeenCalledWith('room:addAgent', { persona: 'reviewer1', seat: null });
+
+    send.mockClear();
+    const offline = invitation(false);
+    expect(offline.chip.classes()).toContain('held');
+    expect(offline.chip.attributes('aria-disabled')).toBe('true');
+    await offline.chip.trigger('click');
+    expect(send).not.toHaveBeenCalledWith('room:addAgent', expect.anything());
+    expect(toasts.map((shown) => shown.key)).toEqual(['errors.agents_offline']);
   });
 });
 

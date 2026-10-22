@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
+import type { PlayerView } from '@reviewer2/shared';
 import { SPECTATOR, type KeywordsView, type Seat } from '@reviewer2/shared/keywords';
 import { describe, expect, test } from 'vitest';
-import { bannerFor, type BannerLine } from './banner';
+import { agentMoving, bannerFor, type BannerLine } from './banner';
 
 // The locale files as text: imported, they are compiled for vue-i18n, and their strings are gone.
 interface Locale {
@@ -53,6 +54,7 @@ describe('the banner', () => {
       'otherGuess',
       'watchClue',
       'watchGuess',
+      'agentThinking',
     ];
     const moves: BannerLine[] = ['yourClue', 'yourGuess'];
     const rest: BannerLine[] = ['over', 'paused'];
@@ -72,6 +74,17 @@ describe('the banner', () => {
     expect([...waiting, ...moves, ...rest].sort()).toEqual(Object.keys(lines(en)).sort());
   });
 
+  test('tells everyone that an AI is thinking while it makes the move', () => {
+    for (const seat of [redPi, redStudent, SPECTATOR]) {
+      expect(bannerFor(seat, game('red', 'clue'), 'reviewer1')).toEqual({
+        line: 'agentThinking',
+        group: null,
+        urgent: false,
+      });
+      expect(bannerFor(seat, game('red', 'over'), 'reviewer1')).toMatchObject({ line: 'over' });
+    }
+  });
+
   test('says who the viewer is, in front of their seat, without a colon', () => {
     expect(en.banner.seat).toMatch(/^You are /);
     expect(en.banner.spectator).toMatch(/^You are /);
@@ -81,5 +94,34 @@ describe('the banner', () => {
     for (const line of [en.banner.seat, en.banner.spectator, zh.banner.seat, zh.banner.spectator]) {
       expect(line).not.toMatch(/[:\uff1a]/);
     }
+  });
+});
+
+describe('the AI that makes the move', () => {
+  const player = (id: string, more: Partial<PlayerView> = {}): PlayerView => ({ id, name: id, online: true, ...more });
+  const ai = (id: string) => player(id, { agent: 'reviewer1' });
+  const seats: Record<string, Seat> = {
+    pi: redPi,
+    s1: redStudent,
+    s2: redStudent,
+    blue: { team: 'blue', role: 'captain' },
+  };
+
+  test("is the group's PI in its clue phase, an AI player or one that an AI plays for", () => {
+    expect(agentMoving(game('red', 'clue'), seats, [ai('pi'), player('s1')])).toBe('reviewer1');
+    expect(agentMoving(game('red', 'clue'), seats, [player('pi', { takenOver: true })])).toBe('reviewer1');
+    expect(agentMoving(game('red', 'clue'), seats, [player('pi'), ai('s1')])).toBeNull();
+    // The other group's turn, a paused game and one that is over have none.
+    expect(agentMoving(game('blue', 'clue'), seats, [ai('pi'), player('blue')])).toBeNull();
+    expect(agentMoving({ ...game('red', 'clue'), paused: true }, seats, [ai('pi')])).toBeNull();
+    expect(agentMoving(game('red', 'clue', true), seats, [ai('pi')])).toBeNull();
+  });
+
+  test('is every student of the group in its guess phase, or none while a person guesses', () => {
+    const offline = player('s2', { online: false, takenOver: true });
+    expect(agentMoving(game('red', 'guess'), seats, [player('pi'), ai('s1'), offline])).toBe('reviewer1');
+    expect(agentMoving(game('red', 'guess'), seats, [player('pi'), offline])).toBe('reviewer1');
+    expect(agentMoving(game('red', 'guess'), seats, [player('pi'), ai('s1'), player('s2')])).toBeNull();
+    expect(agentMoving(game('red', 'guess'), seats, [ai('pi')])).toBeNull();
   });
 });

@@ -37,7 +37,7 @@
     "practice": {
       "entry": "Play with Reviewer\u00a01",
       "entryHint": "On your own or with friends; AI fills the seats",
-      "offline": "Reviewer\u00a01 is offline for now",
+      "offline": "Reviewer\u00a01 is being trained by the authors",
       "intro": "Play on your own or with friends: Reviewer\u00a01 takes the seats nobody takes.",
       "loginTitle": "Log in to start",
       "loginHint": "Registering takes only a username and a password.",
@@ -802,6 +802,8 @@
     "hidden": "not revealed",
     "waitClue": "Waiting for the PI of the {group} to give a clue.",
     "waitGuess": "The {group} is guessing.",
+    "waitAgentClue": "Waiting for {name} to think of a clue.",
+    "waitAgentGuess": "Waiting for {name} to choose the cards to reveal.",
     "prepareNote": "This is the draft of your next clue. Only you see it, and you give it once it's your turn.",
     "targetGone": "You marked {words}, which has been revealed, so the mark is gone. | You marked {words}, which have been revealed, so the marks are gone.",
     "clueInput": "Your clue",
@@ -1028,6 +1030,7 @@
     "clueTime": "Time for each later clue",
     "guessTime": "Time for guessing",
     "timesHint": "0 means no limit.",
+    "agentHurried": "With under {clue} seconds for a clue or {guess} for a guess, {name} has no time to think and may be even further off.",
     "timeRange": "0, or from {min} to {max}.",
     "extensions": "Extensions",
     "extension": {
@@ -1063,9 +1066,11 @@
       "otherClue": "The other group's PI is thinking of a clue…",
       "otherGuess": "The other group is guessing…",
       "watchClue": "The PI of the {group} is thinking of a clue…",
-      "watchGuess": "The {group} is guessing…"
+      "watchGuess": "The {group} is guessing…",
+      "agentThinking": "{name} is thinking…"
     },
-    "tabTitle": "Your turn!"
+    "tabTitle": "Your turn!",
+    "agentHint": "It thinks before it answers, for up to about {seconds} seconds."
   },
   "emotes": {
     "open": "React",
@@ -1122,7 +1127,7 @@
     "agents_not_allowed": "AI players can't be invited here: they are for private rooms, and only for some accounts while they are tried out.",
     "agents_in_room": "Remove the AI players first: public rooms and matches have none.",
     "player_is_agent": "That's an AI player: the chair can only remove it.",
-    "agents_offline": "Reviewer\u00a01 is offline for now. Try again in a while.",
+    "agents_offline": "The tables have turned: Reviewer\u00a01 is being trained by the authors. Not taking manuscripts.",
     "private_only": "This kind of room can only be private.",
     "cannot_rate": "You can't rate this game now.",
     "cannot_guess": "You can't guess who the AI players are now.",

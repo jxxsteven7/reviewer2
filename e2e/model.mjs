@@ -4,8 +4,10 @@
 // been given, at the first two cards of its group's that are face down. As a student it reveals a
 // card that a test told it of with POST /e2e/picks, once, or else the first card that is face down,
 // whose color it doesn't know; a test names the card by its word, with the words of its board, so
-// that the rooms of tests that run at the same time, whose boards may share a word, keep apart. It
-// lists one model, `e2e-model`.
+// that the rooms of tests that run at the same time, whose boards may share a word, keep apart. The
+// PI's rehearsals of its clues, which the agent asks without thinking, while a student's guesses
+// think, reveal the first card face down and leave the card a test told of to the student. Asked
+// to think, it says what it thought, for the AI's log. It lists one model, `e2e-model`.
 import { createServer } from 'node:http';
 
 export const MODEL = 'e2e-model';
@@ -28,6 +30,8 @@ function cards(question) {
   }));
 }
 
+const thinks = (body) => body.reasoning_effort !== undefined && body.reasoning_effort !== 'none';
+
 function answer(body) {
   const question = body.messages?.at(-1)?.content ?? '';
   const board = cards(question).filter((card) => !card.revealed);
@@ -40,7 +44,7 @@ function answer(body) {
     return { candidates: CLUES.map((clue) => ({ targets, clue, count: targets.length })) };
   }
   const words = new Set(cards(question).map((card) => card.word));
-  const place = told.findIndex((pick) => pick.board.every((word) => words.has(word)));
+  const place = thinks(body) ? told.findIndex((pick) => pick.board.every((word) => words.has(word))) : -1;
   const wanted = place === -1 ? undefined : board.find((card) => card.word === told[place].word);
   if (place !== -1) told.splice(place, 1);
   return { picks: [(wanted ?? board[0])?.number ?? 0], reason: 'It fits the clue.' };
@@ -62,8 +66,10 @@ export function startModel(port) {
         return reply(200, {});
       }
       if (request.method !== 'POST' || request.url !== '/v1/chat/completions') return reply(404, {});
-      const content = JSON.stringify(answer(JSON.parse(text)));
-      reply(200, { choices: [{ message: { role: 'assistant', content } }] });
+      const body = JSON.parse(text);
+      const content = JSON.stringify(answer(body));
+      const reasoning = thinks(body) ? 'The rules of the end-to-end tests decide.' : undefined;
+      reply(200, { choices: [{ message: { role: 'assistant', content, reasoning } }] });
     });
   });
   return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));

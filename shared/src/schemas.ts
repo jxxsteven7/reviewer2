@@ -216,13 +216,13 @@ export const AGENT_REQUEST = z.discriminatedUnion('kind', [
   ...IMPOSTOR_AGENT_REQUESTS,
 ]);
 
+// How the agent came to an answer, in any game's shape (AgentNote), as the AI's log of a game keeps
+// it (server/src/core/agentLog.ts).
+export const ANY_AGENT_NOTE = z.union([KEYWORDS_NOTE, IMPOSTOR_NOTE, AGENT_NOTE]);
+
 export const AGENT_REPLY = z.union([
   z.strictObject({ ok: z.literal(true), kind: z.literal('ping'), model: z.string().max(200) }),
   ...KEYWORDS_AGENT_REPLIES,
   ...IMPOSTOR_AGENT_REPLIES,
-  z.strictObject({
-    ok: z.literal(false),
-    error: z.enum(AGENT_ERRORS),
-    note: z.union([KEYWORDS_NOTE, IMPOSTOR_NOTE, AGENT_NOTE]).optional(),
-  }),
+  z.strictObject({ ok: z.literal(false), error: z.enum(AGENT_ERRORS), note: ANY_AGENT_NOTE.optional() }),
 ]);

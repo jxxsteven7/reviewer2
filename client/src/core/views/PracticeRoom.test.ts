@@ -295,7 +295,8 @@ describe('practicing with Reviewer 1', () => {
     expect(entry.element.disabled).toBe(true);
     // A sticker that lifts and presses as a button does (base.css), but not while it is grey.
     expect(entry.classes()).toContain('press');
-    expect(entry.text()).toContain('Reviewer\u00a01 is offline for now');
+    // On the button, the short line; elsewhere, the long one.
+    expect(entry.text()).toContain('Reviewer\u00a01 is being trained by the authors');
     wrapper.unmount();
 
     // Reviewer 1 is there when the page asks, and gone by the time the room is to be made.
@@ -304,7 +305,7 @@ describe('practicing with Reviewer 1', () => {
     const { wrapper: again, sheet } = await opened();
     await submit(sheet);
     expect(sheet.querySelector('[role=alert]')?.textContent).toBe(
-      'Reviewer\u00a01 is offline for now. Try again in a while.',
+      'The tables have turned: Reviewer\u00a01 is being trained by the authors. Not taking manuscripts.',
     );
     expect(push).not.toHaveBeenCalled();
     expect(again.get<HTMLButtonElement>('button.entry').element.disabled).toBe(true);

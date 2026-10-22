@@ -15,8 +15,8 @@ import {
   type LineProblem,
   type ReportVerdict,
 } from '@reviewer2/shared/impostor';
-import { ModelError } from './model';
 import type { Turn } from './keywords';
+import { ModelError, type Question } from './model';
 import {
   COMEBACK_SCHEMA,
   comebackSystem,
@@ -33,6 +33,7 @@ import {
   voteUser,
   type RefusedLine,
 } from './impostorPrompts';
+import { askThinking, type Thinking } from './thinking';
 
 // How the agent plays a turn of the hidden word game (docs/games/impostor.md#ai-players): a line
 // that describes its word, its vote, its verdict on a report, and its guess of the students' word
@@ -51,6 +52,9 @@ const TRIES = 3;
 // The longest line and guess that a note keeps of what the model wrote (IMPOSTOR_NOTE).
 const MAX_NOTED = 200;
 const MAX_GUESS = 100;
+// How long before the end of its wait the model stops thinking of a move (thinking.ts), which
+// leaves time to ask again without thinking.
+const AFTER_THINKING_MS = 6_000;
 
 // Why a line was refused, as the model is told when it is asked again.
 const WHY: Record<LineProblem, string> = {
@@ -86,39 +90,48 @@ function judgment(answer: Record<string, unknown>): ImpostorJudgment | undefined
   return fit === undefined ? { closest } : { closest, fit };
 }
 
-// The note of a turn: the model and the prompts, the time it took, the lines considered, the
-// judgment the model made first, if it was to, and the reason it gave.
+// The note of a turn: the model and the prompts, the time it took, how the model thought, the lines
+// considered, the judgment the model made first, if it was to, and the reason it gave.
 function noter(turn: Turn, considered: ImpostorCandidate[] = []) {
   const started = turn.now();
-  return (found: { judgment?: ImpostorJudgment; reason?: string } = {}): ImpostorNote => ({
+  let thinking: Thinking = { reasoning: 'off' };
+  const note = (found: { judgment?: ImpostorJudgment; reason?: string } = {}): ImpostorNote => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
+    ...thinking,
     ...(considered.length > 0 ? { candidates: considered } : {}),
     ...(found.judgment ? { judgment: found.judgment } : {}),
     ...(found.reason ? { reason: found.reason } : {}),
   });
+  // Asks the question, letting the model think, and notes how it did.
+  const ask = async (question: Question): Promise<Record<string, unknown>> => {
+    const thought = await askThinking(question, turn.until - AFTER_THINKING_MS, turn);
+    thinking = thought.thinking;
+    return thought.value;
+  };
+  return { note, ask };
 }
 
 export async function describe(request: Request<'describe'>, turn: Turn): Promise<AgentReply> {
   const considered: ImpostorCandidate[] = [];
-  const note = noter(turn, considered);
+  const { note, ask } = noter(turn, considered);
   const word: BoardWord | null = request.word;
   const earlier = request.lines.flatMap(({ text }) => (text === null ? [] : [text]));
   const refused: RefusedLine[] = [];
   let judged: ImpostorJudgment | undefined;
   try {
     for (let attempt = 0; attempt < TRIES; attempt += 1) {
-      const answer = await turn.model.ask(
-        {
-          system: describeSystem(request, turn.persona, request.tie),
-          user: describeUser(request, refused),
-          name: 'describe',
-          schema: describeSchema(request, request.tie),
-          temperature: turn.persona.temperature,
-        },
-        turn.signal,
-      );
+      const question: Question = {
+        system: describeSystem(request, turn.persona, request.tie),
+        user: describeUser(request, refused),
+        name: 'describe',
+        schema: describeSchema(request, request.tie),
+        temperature: turn.persona.temperature,
+      };
+      // The model thinks of the first lines; it is asked again without thinking, in the time that
+      // is left, and the note says how the first were found.
+      const answer = attempt === 0 ? await ask(question) : (await turn.model.ask(question, turn.signal)).value;
       judged = judgment(answer) ?? judged;
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
       for (const text of proposed) {
@@ -139,18 +152,15 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
 }
 
 export async function vote(request: Request<'vote'>, turn: Turn): Promise<AgentReply> {
-  const note = noter(turn);
+  const { note, ask } = noter(turn);
   try {
-    const answer = await turn.model.ask(
-      {
-        system: voteSystem(request, turn.persona, request.candidates),
-        user: voteUser(request),
-        name: 'vote',
-        schema: voteSchema(request),
-        temperature: turn.persona.temperature,
-      },
-      turn.signal,
-    );
+    const answer = await ask({
+      system: voteSystem(request, turn.persona, request.candidates),
+      user: voteUser(request),
+      name: 'vote',
+      schema: voteSchema(request),
+      temperature: turn.persona.temperature,
+    });
     // A number that isn't one of those it may vote for is an abstention: that costs nothing.
     const number = request.candidates.includes(answer.number as number) ? (answer.number as number) : null;
     const reason = sentence(answer.reason);
@@ -163,18 +173,15 @@ export async function vote(request: Request<'vote'>, turn: Turn): Promise<AgentR
 const VERDICTS: readonly ReportVerdict[] = ['agree', 'disagree', 'abstain'];
 
 export async function judge(request: Request<'judge'>, turn: Turn): Promise<AgentReply> {
-  const note = noter(turn);
+  const { note, ask } = noter(turn);
   try {
-    const answer = await turn.model.ask(
-      {
-        system: judgeSystem(request, turn.persona, request.report),
-        user: judgeUser(request),
-        name: 'judge',
-        schema: JUDGE_SCHEMA,
-        temperature: turn.persona.temperature,
-      },
-      turn.signal,
-    );
+    const answer = await ask({
+      system: judgeSystem(request, turn.persona, request.report),
+      user: judgeUser(request),
+      name: 'judge',
+      schema: JUDGE_SCHEMA,
+      temperature: turn.persona.temperature,
+    });
     const verdict = VERDICTS.includes(answer.verdict as ReportVerdict) ? (answer.verdict as ReportVerdict) : 'abstain';
     const reason = sentence(answer.reason);
     return { ok: true, kind: 'judge', verdict, reason, note: note({ reason }) };
@@ -184,18 +191,15 @@ export async function judge(request: Request<'judge'>, turn: Turn): Promise<Agen
 }
 
 export async function comeback(request: Request<'comeback'>, turn: Turn): Promise<AgentReply> {
-  const note = noter(turn);
+  const { note, ask } = noter(turn);
   try {
-    const answer = await turn.model.ask(
-      {
-        system: comebackSystem(request),
-        user: comebackUser(request),
-        name: 'comeback',
-        schema: COMEBACK_SCHEMA,
-        temperature: turn.persona.temperature,
-      },
-      turn.signal,
-    );
+    const answer = await ask({
+      system: comebackSystem(request),
+      user: comebackUser(request),
+      name: 'comeback',
+      schema: COMEBACK_SCHEMA,
+      temperature: turn.persona.temperature,
+    });
     const guessed = typeof answer.word === 'string' ? cleanLine(answer.word).slice(0, MAX_GUESS) : '';
     // Its own word is no guess of the students' one.
     const own = request.word?.word.toLowerCase();
