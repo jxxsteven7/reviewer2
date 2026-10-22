@@ -9,6 +9,8 @@ import {
 import {
   checkDescription,
   type ImpostorCandidate,
+  type ImpostorJudgment,
+  type ImpostorNote,
   type LineProblem,
   type ReportVerdict,
 } from '@reviewer2/shared/impostor';
@@ -18,14 +20,14 @@ import {
   COMEBACK_SCHEMA,
   comebackSystem,
   comebackUser,
-  DESCRIBE_SCHEMA,
+  describeSchema,
   describeSystem,
   describeUser,
   JUDGE_SCHEMA,
   judgeSystem,
   judgeUser,
   PROMPT_VERSION,
-  VOTE_SCHEMA,
+  voteSchema,
   voteSystem,
   voteUser,
   type RefusedLine,
@@ -71,15 +73,25 @@ function failure(error: unknown, note: AgentNote, signal: AbortSignal): AgentRep
   throw error;
 }
 
-// The note of a turn: the model and the prompts, the time it took, and the lines considered.
+// What the model worked out before its lines or its vote, when it was to (judges in
+// impostorPrompts.ts): the word that most players seem to have, cleaned and cut like a guess, and
+// whether it took that for its own. It goes into the note alone, never into the game.
+function judgment(answer: Record<string, unknown>): ImpostorJudgment | undefined {
+  if (typeof answer.majority !== 'string' || typeof answer.mine !== 'boolean') return undefined;
+  return { word: cleanLine(answer.majority).slice(0, MAX_GUESS), mine: answer.mine };
+}
+
+// The note of a turn: the model and the prompts, the time it took, the lines considered, the
+// judgment the model made first, if it was to, and the reason it gave.
 function noter(turn: Turn, considered: ImpostorCandidate[] = []) {
   const started = turn.now();
-  return (reason?: string): AgentNote<ImpostorCandidate> => ({
+  return (found: { majority?: ImpostorJudgment; reason?: string } = {}): ImpostorNote => ({
     model: turn.model.name,
     prompt: PROMPT_VERSION,
     ms: Math.round(turn.now() - started),
     ...(considered.length > 0 ? { candidates: considered } : {}),
-    ...(reason ? { reason } : {}),
+    ...(found.majority ? { majority: found.majority } : {}),
+    ...(found.reason ? { reason: found.reason } : {}),
   });
 }
 
@@ -89,6 +101,7 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
   const word: BoardWord | null = request.word;
   const earlier = request.lines.flatMap(({ text }) => (text === null ? [] : [text]));
   const refused: RefusedLine[] = [];
+  let majority: ImpostorJudgment | undefined;
   try {
     for (let attempt = 0; attempt < TRIES; attempt += 1) {
       const answer = await turn.model.ask(
@@ -96,24 +109,25 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
           system: describeSystem(request, turn.persona, request.tie),
           user: describeUser(request, refused),
           name: 'describe',
-          schema: DESCRIBE_SCHEMA,
+          schema: describeSchema(request, request.tie),
           temperature: turn.persona.temperature,
         },
         turn.signal,
       );
+      majority = judgment(answer) ?? majority;
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
       for (const text of proposed) {
         if (typeof text !== 'string') continue;
         const check = checkDescription(text, word, earlier, request.length);
         const shown = (check.text || cleanLine(text.slice(0, MAX_NOTED * 2))).slice(0, MAX_NOTED);
         considered.push({ text: shown, problem: check.problem });
-        if (check.problem === null) return { ok: true, kind: 'describe', text: check.text, note: note() };
+        if (check.problem === null) return { ok: true, kind: 'describe', text: check.text, note: note({ majority }) };
         refused.push({ text: shown, why: WHY[check.problem] });
       }
     }
-    return { ok: false, error: 'no_legal_move', note: note() };
+    return { ok: false, error: 'no_legal_move', note: note({ majority }) };
   } catch (error) {
-    return failure(error, note(), turn.signal);
+    return failure(error, note({ majority }), turn.signal);
   }
 }
 
@@ -125,7 +139,7 @@ export async function vote(request: Request<'vote'>, turn: Turn): Promise<AgentR
         system: voteSystem(request, turn.persona, request.candidates),
         user: voteUser(request),
         name: 'vote',
-        schema: VOTE_SCHEMA,
+        schema: voteSchema(request),
         temperature: turn.persona.temperature,
       },
       turn.signal,
@@ -133,7 +147,7 @@ export async function vote(request: Request<'vote'>, turn: Turn): Promise<AgentR
     // A number that isn't one of those it may vote for is an abstention: that costs nothing.
     const number = request.candidates.includes(answer.number as number) ? (answer.number as number) : null;
     const reason = sentence(answer.reason);
-    return { ok: true, kind: 'vote', number, reason, note: note(reason) };
+    return { ok: true, kind: 'vote', number, reason, note: note({ majority: judgment(answer), reason }) };
   } catch (error) {
     return failure(error, note(), turn.signal);
   }
@@ -156,7 +170,7 @@ export async function judge(request: Request<'judge'>, turn: Turn): Promise<Agen
     );
     const verdict = VERDICTS.includes(answer.verdict as ReportVerdict) ? (answer.verdict as ReportVerdict) : 'abstain';
     const reason = sentence(answer.reason);
-    return { ok: true, kind: 'judge', verdict, reason, note: note(reason) };
+    return { ok: true, kind: 'judge', verdict, reason, note: note({ reason }) };
   } catch (error) {
     return failure(error, note(), turn.signal);
   }

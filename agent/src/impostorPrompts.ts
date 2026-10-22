@@ -92,11 +92,27 @@ function history(game: ImpostorAgentGame): string {
 
 const state = (game: ImpostorAgentGame) => [table(game), history(game)].join('\n\n');
 
+// Whether there are lines enough to tell which word most players have: after the first round there
+// are, and in it once half of the other players have spoken, since one or two lines, perhaps a
+// Reviewer 2's, are too few to go by; a line that breaks a tie comes after everyone's.
+function linesToGoBy(game: ImpostorAgentGame, tie = false): boolean {
+  if (game.round > 1 || tie) return true;
+  const spoken = game.lines.filter(({ text }) => text !== null).length;
+  const others = game.seats.filter(({ fate }) => fate === 'alive').length - 1;
+  return spoken * 2 >= others;
+}
+
+// Whether the player works out, before its line or its vote, which word most players seem to have
+// and whether that is its own: it has a word to hold against the lines, and lines to go by. Its
+// answer then carries the two first (describeSchema, voteSchema), and the model, which writes the
+// fields in the order of the schema, makes the judgment before it answers by it; with its reasoning
+// off, it otherwise doesn't stop to, and takes its word for everyone's.
+export const judges = (game: ImpostorAgentGame, tie = false): boolean => game.word !== null && linesToGoBy(game, tie);
+
 // What makes a good line. The PI, who has no word, is told what it always was. A player with a word
 // says, in the first round, where there is little to hold its word against, only what its word
-// shares with the words closest to it, and leans toward another word only once half of the other
-// players have spoken, since one or two lines, perhaps a Reviewer 2's, are too few to go by; after
-// that, it leans toward the word that most players seem to have when that is not its own.
+// shares with the words closest to it, leaning toward the word that most players seem to have once
+// there are lines to go by; after that, it leans toward that word when it is not its own.
 function goodLine(game: ImpostorAgentGame, tie: boolean): string {
   const fitIn = 'Fit in with what the others said, without repeating it.';
   const good =
@@ -104,23 +120,20 @@ function goodLine(game: ImpostorAgentGame, tie: boolean): string {
     "it, and vague enough that a player with the other word can't work yours out.";
   if (game.word === null) return `A ${good} ${fitIn}`;
   if (game.round === 1 && !tie) {
-    const spoken = game.lines.filter(({ round, text }) => round === 1 && text !== null).length;
-    const others = game.seats.filter(({ fate }) => fate === 'alive').length - 1;
     return [
       'This is the first round, so there is little to hold your word against yet, if anything: stay broad. Say ' +
         'only what your word shares with the words closest to it, never a detail that tells it apart from them, so ' +
         'that your line fits whichever of two close words the others have.',
-      spoken * 2 >= others
-        ? 'If most of the lines so far fit another word better than yours, lean toward that word.'
+      linesToGoBy(game)
+        ? 'If the word that most players seem to have so far is not yours, lean toward it.'
         : 'Too few have spoken yet to tell which word most players have, so lean toward no other word.',
       fitIn,
     ].join(' ');
   }
   return [
-    'If most of the lines fit another word better than yours, yours is probably the odd one: say only what your ' +
-      'word shares with that word, leaning toward it, as vaguely as you can, and never anything that only your ' +
-      'word has.',
-    `If they fit your word, a ${good}`,
+    'If the word that most players seem to have is not yours, yours is probably the odd one: say only what your ' +
+      'word shares with it, leaning toward it, as vaguely as you can, and never anything that only your word has.',
+    `If it is yours, a ${good}`,
     fitIn,
   ].join(' ');
 }
@@ -189,6 +202,16 @@ function reason(game: ImpostorAgentGame, persona: Persona): string {
   );
 }
 
+// What the answer carries, in the order the model writes it. A player who judges first (judges)
+// writes the word that most players seem to have and whether it is its own, and the rest by that.
+function answerIn(game: ImpostorAgentGame, rest: string, tie = false): string {
+  if (!judges(game, tie)) return `Answer in JSON: ${rest}.`;
+  return (
+    'Answer in JSON: majority, the word that most players seem to have, from their lines alone, in a word or a ' +
+    `short phrase of your own; mine, whether that is your word; then ${rest}, by what you found.`
+  );
+}
+
 export function describeSystem(game: ImpostorAgentGame, persona: Persona, tie: boolean): string {
   const language = LANGUAGE_NAMES[game.language];
   const unit = game.language === 'zh' ? 'Chinese characters' : 'characters';
@@ -203,7 +226,7 @@ export function describeSystem(game: ImpostorAgentGame, persona: Persona, tie: b
     `Write in ${language}, at most ${game.length} ${unit} a line, ${persona.tone}. Never use your word or any ` +
       'part of it, a character of it, its plural, its translation or its pinyin, and never repeat a line that was ' +
       'said before, or nearly so.',
-    'Answer in JSON: candidates, 3 different lines, the best first.',
+    answerIn(game, 'candidates, 3 different lines, the best first', tie),
   ].join('\n');
 }
 
@@ -229,7 +252,7 @@ export function voteSystem(game: ImpostorAgentGame, persona: Persona, candidates
     howToVote(game),
     `You may vote for one of the players ${candidates.join(', ')}, or answer 0 to abstain.`,
     reason(game, persona),
-    'Answer in JSON: number and reason.',
+    answerIn(game, 'number and reason'),
   ].join('\n');
 }
 
@@ -274,20 +297,21 @@ export function comebackSystem(game: ImpostorAgentGame): string {
 
 export const comebackUser = state;
 
-// The shapes of the answers, as JSON schemas that the model writes to (model.ts).
-export const DESCRIBE_SCHEMA = {
-  type: 'object',
-  properties: { candidates: { type: 'array', items: { type: 'string' } } },
-  required: ['candidates'],
-  additionalProperties: false,
-};
+// The shapes of the answers, as JSON schemas that the model writes to (model.ts), with the fields
+// in the order it writes them. A player who judges first (judges) writes the word that most
+// players seem to have and whether it is its own before its lines or its vote.
+const JUDGMENT = { majority: { type: 'string' }, mine: { type: 'boolean' } };
 
-export const VOTE_SCHEMA = {
-  type: 'object',
-  properties: { number: { type: 'integer' }, reason: { type: 'string' } },
-  required: ['number', 'reason'],
-  additionalProperties: false,
-};
+function shape(game: ImpostorAgentGame, tie: boolean, properties: Record<string, object>): object {
+  const all = { ...(judges(game, tie) ? JUDGMENT : {}), ...properties };
+  return { type: 'object', properties: all, required: Object.keys(all), additionalProperties: false };
+}
+
+export const describeSchema = (game: ImpostorAgentGame, tie: boolean): object =>
+  shape(game, tie, { candidates: { type: 'array', items: { type: 'string' } } });
+
+export const voteSchema = (game: ImpostorAgentGame): object =>
+  shape(game, false, { number: { type: 'integer' }, reason: { type: 'string' } });
 
 export const JUDGE_SCHEMA = {
   type: 'object',

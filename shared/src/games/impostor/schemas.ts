@@ -123,6 +123,7 @@ export const IMPOSTOR_NOTE = z.strictObject({
     .array(z.strictObject({ text: line, problem: z.string().max(64).nullable() }))
     .max(10)
     .optional(),
+  majority: z.strictObject({ word: term, mine: z.boolean() }).optional(),
 });
 
 const reason = z.string().max(MAX_AGENT_REASON);

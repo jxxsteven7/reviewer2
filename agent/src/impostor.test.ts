@@ -44,6 +44,26 @@ describe('a description', () => {
     expect(reply.note?.candidates).toHaveLength(6);
   });
 
+  test("notes what the model took most players' word to be, and whether its own, from its last answer", async () => {
+    const first = { majority: '  Pear \n tree ', mine: false, candidates: ['apples'] };
+    const second = { majority: 'p'.repeat(150), mine: true, candidates: ['round and red'] };
+    const model = new ScriptedModel({ describe: [first, second] });
+    const reply = allowed(await describeWord(impostorRequest('describe'), turn(model)));
+    if (!reply.ok || reply.kind !== 'describe') throw new Error('no line');
+    expect(reply.note.majority).toEqual({ word: 'p'.repeat(100), mine: true });
+    // A judgment that the model didn't write, or wrote in the wrong shape, is none.
+    for (const answer of [
+      { candidates: ['round and red'] },
+      { majority: 'pear', mine: 'no', candidates: ['round and red'] },
+    ]) {
+      const none = allowed(
+        await describeWord(impostorRequest('describe'), turn(new ScriptedModel({ describe: [answer] }))),
+      );
+      if (!none.ok || none.kind !== 'describe') throw new Error('no line');
+      expect(none.note.majority).toBeUndefined();
+    }
+  });
+
   test('of the PI, who has no word, can be anything that is not said yet', async () => {
     const model = new ScriptedModel({ describe: [{ candidates: ['an apple a day'] }] });
     const reply = allowed(await describeWord(impostorRequest('describe', { word: null }), turn(model)));
@@ -87,6 +107,13 @@ describe('a vote', () => {
     expect([...reply.reason]).toHaveLength(MAX_AGENT_REASON);
     expect(reply.note.reason).toBe(reply.reason);
     expect(model.asked[0]?.system).toContain('You may vote for one of the players 1, 3, 5, or answer 0 to abstain.');
+  });
+
+  test("notes what the model took most players' word to be, and whether its own", async () => {
+    const model = new ScriptedModel({ vote: [{ majority: 'pear', mine: false, number: 5, reason: 'Odd one.' }] });
+    const reply = allowed(await vote(impostorRequest('vote'), turn(model)));
+    if (!reply.ok || reply.kind !== 'vote') throw new Error('no vote');
+    expect(reply.note).toMatchObject({ majority: { word: 'pear', mine: false }, reason: 'Odd one.' });
   });
 
   test('for anyone else, or for nobody, is an abstention', async () => {

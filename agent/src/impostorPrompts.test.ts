@@ -13,18 +13,27 @@ const ANSWERS: Record<Asked, Record<string, unknown>> = {
   judge: { verdict: 'disagree', reason: 'Vague.' },
 };
 
-// What the model is told for a line, a vote or a verdict, asked by the agent itself with a model
-// that answers from a script, in the game of five of testing.ts, changed as given.
-async function told<Kind extends Asked>(
+// What the model is asked for a line, a vote or a verdict, by the agent itself with a model that
+// answers from a script, in the game of five of testing.ts, changed as given: what it is told,
+// and the fields of its answer, in the order it writes them.
+async function asked<Kind extends Asked>(
   kind: Kind,
   changes: Partial<Extract<ImpostorRequest, { kind: Kind }>> = {},
-): Promise<string> {
+): Promise<{ system: string; fields: string[] }> {
   const model = new ScriptedModel({ [kind]: [ANSWERS[kind]] });
   const turn = { model, persona: PERSONAS.reviewer1, signal: AbortSignal.timeout(10_000), now: Date.now };
   const reply = allowed(await playImpostor(impostorRequest(kind, changes), turn));
   expect(reply).toMatchObject({ ok: true, note: { prompt: PROMPT_VERSION } });
-  return model.asked[0]?.system ?? '';
+  const question = model.asked[0];
+  const schema = question?.schema as { properties: Record<string, unknown>; required: string[] };
+  expect(schema.required).toEqual(Object.keys(schema.properties));
+  return { system: question?.system ?? '', fields: schema.required };
 }
+
+const told = async <Kind extends Asked>(
+  kind: Kind,
+  changes: Partial<Extract<ImpostorRequest, { kind: Kind }>> = {},
+): Promise<string> => (await asked(kind, changes)).system;
 
 const seats = (players: number, out: Record<number, ImpostorRole> = {}) =>
   Array.from({ length: players }, (_, index) => index + 1).map((number) => ({
@@ -51,12 +60,19 @@ const FIRST_ROUND =
   /This is the first round, so there is little to hold your word against yet, if anything: stay broad\./;
 const BROAD =
   /Say only what your word shares with the words closest to it, never a detail that tells it apart from them, so that your line fits whichever of two close words the others have\./;
-const LEAN_FIRST = /If most of the lines so far fit another word better than yours, lean toward that word\./;
+const LEAN_FIRST = /If the word that most players seem to have so far is not yours, lean toward it\./;
 const TOO_FEW = /Too few have spoken yet to tell which word most players have, so lean toward no other word\./;
 const LEAN =
-  /If most of the lines fit another word better than yours, yours is probably the odd one: say only what your word shares with that word, leaning toward it, as vaguely as you can, and never anything that only your word has\./;
+  /If the word that most players seem to have is not yours, yours is probably the odd one: say only what your word shares with it, leaning toward it, as vaguely as you can, and never anything that only your word has\./;
 const AS_USUAL =
-  /If they fit your word, a good line is true of your word but vague: specific enough that the players who share your word recognize it/;
+  /If it is yours, a good line is true of your word but vague: specific enough that the players who share your word recognize it/;
+// The answer of a player who judges first, and of one who doesn't.
+const JUDGED_LINE =
+  /\nAnswer in JSON: majority, the word that most players seem to have, from their lines alone, in a word or a short phrase of your own; mine, whether that is your word; then candidates, 3 different lines, the best first, by what you found\.$/;
+const JUDGED_VOTE =
+  /\nAnswer in JSON: majority, the word that most players seem to have, from their lines alone, in a word or a short phrase of your own; mine, whether that is your word; then number and reason, by what you found\.$/;
+const PLAIN_LINE = /\nAnswer in JSON: candidates, 3 different lines, the best first\.$/;
+const PLAIN_VOTE = /\nAnswer in JSON: number and reason\.$/;
 const MAJORITY = /First work out from the lines alone the word that most players seem to have: it may not be yours\./;
 const NOT_THE_STUDENTS =
   /If it is not, you are probably a Reviewer 2, and your side wins only while one of you is still in the game\. The players whose lines fit that word are probably students: never vote for one of them, which would give you away\./;
@@ -104,6 +120,37 @@ describe('the prompts of the hidden word game', () => {
     // A line that was not said in time is no line to go by.
     const missed = await told('describe', firstRound([null, 'sweet and crisp']));
     expect(missed).toMatch(TOO_FEW);
+  });
+
+  test('ask a player with a word, with lines to go by, to write first which word most players have and whether it is its own', async () => {
+    // After the first round, for a line and for a vote, and for a line that breaks a tie.
+    const line = await asked('describe');
+    expect(line.fields).toEqual(['majority', 'mine', 'candidates']);
+    expect(line.system).toMatch(JUDGED_LINE);
+    expect(line.system).toMatch(LEAN);
+    const vote = await asked('vote');
+    expect(vote.fields).toEqual(['majority', 'mine', 'number', 'reason']);
+    expect(vote.system).toMatch(JUDGED_VOTE);
+    expect(vote.system).toMatch(NOT_THE_STUDENTS);
+    const tie = await asked('describe', { ...firstRound(['grows on a tree']), tie: true });
+    expect(tie.fields).toEqual(['majority', 'mine', 'candidates']);
+    // In the first round, only once half of the other players have spoken.
+    const lines = ['grows on a tree', 'sweet and crisp'];
+    for (const spoken of [0, 1]) {
+      const early = await asked('describe', firstRound(lines.slice(0, spoken)));
+      expect(early.fields).toEqual(['candidates']);
+      expect(early.system).toMatch(PLAIN_LINE);
+    }
+    const later = await asked('describe', firstRound(lines));
+    expect(later.fields).toEqual(['majority', 'mine', 'candidates']);
+    expect(later.system).toMatch(JUDGED_LINE);
+    // Never the PI, who has no word to hold against them.
+    const pi = await asked('describe', { word: null });
+    expect(pi.fields).toEqual(['candidates']);
+    expect(pi.system).toMatch(PLAIN_LINE);
+    const piVote = await asked('vote', { word: null });
+    expect(piVote.fields).toEqual(['number', 'reason']);
+    expect(piVote.system).toMatch(PLAIN_VOTE);
   });
 
   test('after it, or for a tie, ask for a line that leans toward the word most players seem to have, when it is not its own', async () => {
