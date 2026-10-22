@@ -3,6 +3,7 @@ import { MATCH_GAMES, type MatchRules } from '@reviewer2/shared';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
+import { gameInfo } from '../../games/info';
 import { points } from '../points';
 import type { ShownMatch, ShownRoom } from '../room';
 import { act } from '../socket';
@@ -14,10 +15,11 @@ import UiButton from './UiButton.vue';
 import UiSheet from './UiSheet.vue';
 
 // The end of a match: everyone's place and total, the Best Paper Award for the first and the
-// game's black hole for the last, with what the reviewers would say to them. A match that the chair
-// ended early has places but no titles, and a tap on a title says what it is (TitleInfo.vue),
-// except on a screen, which nobody taps. The chair starts another match, with rules that they may
-// change, or makes the room an ordinary one again.
+// game's black hole for the last, with what the reviewers would say to them. A match that ended
+// early has places but no titles, and a tap on a title says what it is (TitleInfo.vue), except on a
+// screen, which nobody taps. A match of a game that awards no titles yet, as the second game in its
+// beta, has places alone, and says nothing of titles. The chair starts another match, with rules
+// that they may change, or makes the room an ordinary one again.
 const props = defineProps<{ room: ShownRoom }>();
 // A line's player while they are still in the room, whose panel a tap on the avatar opens.
 const inRoom = (id: string | null) =>
@@ -27,6 +29,7 @@ const { busy, run } = useBusy();
 
 const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
+const titles = computed(() => gameInfo(props.room.game)?.matchTitles !== false);
 
 const choosing = ref(false);
 // The rules of the match that ended, for the form to start from, as the room's game reads them.
@@ -52,7 +55,7 @@ async function next(nextRules: MatchRules | null) {
     <h2 class="heading">{{ match.status === 'over' ? t('match.over') : t('match.stopped') }}</h2>
     <p class="note">
       {{ t('match.gamesPlayed', { played: match.played, games: match.rules.games }) }}
-      <template v-if="match.status === 'stopped'"> &middot; {{ t('match.stoppedNote') }}</template>
+      <template v-if="match.status === 'stopped' && titles"> &middot; {{ t('match.stoppedNote') }}</template>
     </p>
     <ol class="ranking">
       <li

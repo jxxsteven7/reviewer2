@@ -88,3 +88,12 @@ export function pointsOf(role: ImpostorRole, won: boolean, fate: Fate, detail: I
   points += detail.failedReports * POINTS.failedReport;
   return points;
 }
+
+// Where a player's points in a game came from, as a match's table shows them between two games
+// (MatchScore.detail on the server): how their game went, with their role, whether their side won
+// with them in the room, and how their game ended.
+export interface ImpostorScoreDetail extends ImpostorDetail {
+  role: ImpostorRole;
+  won: boolean;
+  fate: Fate;
+}

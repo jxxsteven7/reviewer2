@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
-import type { RoomView } from '@reviewer2/shared';
+import type { GameCounts, MatchView, RoomView, StandingView } from '@reviewer2/shared';
 import {
   defaultSettings,
   type BallotView,
   type ImpostorReplay,
   type ImpostorRoomData,
+  type ImpostorScoreDetail,
   type ImpostorView,
   type ReportView,
   type SeatView,
@@ -27,6 +28,7 @@ import SeatPanel from './SeatPanel.vue';
 import { ballotRows, reportRows } from './rows';
 import { needed, seatState, voteRows } from './seats';
 import SetterForm from './SetterForm.vue';
+import { recordStats } from './stats';
 
 const send = vi.hoisted(() =>
   vi.fn<(event: string, payload?: object) => Promise<{ ok: boolean }>>(async () => ({ ok: true })),
@@ -656,6 +658,234 @@ describe('ImpostorLobby', () => {
     await offline.chip.trigger('click');
     expect(send).not.toHaveBeenCalledWith('room:addAgent', expect.anything());
     expect(toasts.map((shown) => shown.key)).toEqual(['errors.agents_offline']);
+  });
+});
+
+// A match of three games, its second being played or just over, and its standings: Ann and Bob
+// have played the first game, and Cat, who has left the room, too; Dan is offline.
+const standing = (name: string, overrides: Partial<StandingView> = {}): StandingView => ({
+  playerId: name.toLowerCase(),
+  name,
+  total: 0,
+  delta: null,
+  games: 1,
+  rank: 1,
+  left: false,
+  ...overrides,
+});
+const scoreDetail = (overrides: Partial<ImpostorScoreDetail> = {}): ImpostorScoreDetail => ({
+  out: null,
+  rounds: 3,
+  votes: 2,
+  hits: 0,
+  wrong: 0,
+  abstained: 0,
+  missedVotes: 0,
+  missedLines: 0,
+  reported: 0,
+  reports: 0,
+  failedReports: 0,
+  comeback: null,
+  role: 'student',
+  won: false,
+  fate: 'alive',
+  ...overrides,
+});
+function inMatch(base: RoomView, overrides: Partial<MatchView> = {}): RoomView {
+  return {
+    ...base,
+    players: base.players.map((player) => (player.id === 'dan' ? { ...player, online: false } : player)),
+    match: {
+      id: 'm1',
+      rules: { games: 3 },
+      played: 1,
+      status: 'on',
+      game: 2,
+      standings: [
+        standing('Ann', { total: 5, rank: 1 }),
+        standing('Bob', { total: 3, rank: 2 }),
+        standing('Dan', { total: -1, rank: 3 }),
+        standing('Cat', { total: 4, rank: null, left: true, playerId: null }),
+      ],
+      ...overrides,
+    },
+  };
+}
+
+describe('the second game in a match', () => {
+  test("opens the match's table from the bar, without the points of the game, and says nobody's presence in an anonymous game", async () => {
+    const playing = inMatch(room(view(), 'bob'));
+    const wrapper = mount(ImpostorGame, { props: { room: playing }, global: global() });
+    const button = wrapper.findAll('.buttons button').find((one) => one.text() === 'Match');
+    await button!.trigger('click');
+    const table = wrapper.get('.match-table');
+    expect(table.text()).toContain('Game 2 of 3');
+    expect(table.findAll('thead th')).toHaveLength(3);
+    // Cat, who has left, and Dan, who is offline, look like everyone else, and Cat is ranked by her
+    // total.
+    const rows = table.findAll('tbody tr').map((row) => row.findAll('td').map((cell) => cell.text()));
+    expect(rows).toEqual([
+      ['1', 'Ann', '5'],
+      ['2', 'Cat', '4'],
+      ['3', 'Bobyou', '3'],
+      ['4', 'Dan', '\u22121'],
+    ]);
+    expect(table.find('.veiled').exists()).toBe(false);
+    expect(table.text()).toContain('Scores in a match, as in any game');
+    // Where the numbers aren't anonymous, the table says who is offline or gone.
+    const open = inMatch(room(view(), 'bob', { settings: { ...defaultSettings('en'), anonymous: false } }));
+    const named = mount(ImpostorGame, { props: { room: open }, global: global() });
+    await named
+      .findAll('.buttons button')
+      .find((one) => one.text() === 'Match')!
+      .trigger('click');
+    expect(
+      named
+        .get('.match-table')
+        .findAll('tbody tr .rank')
+        .map((cell) => cell.text()),
+    ).toEqual(['1', '2', '3', '\u2013']);
+    expect(named.get('.match-table').text()).toContain('left');
+    expect(named.get('.match-table').find('.veiled').exists()).toBe(true);
+  });
+
+  test('lets the chair end the match beside the game, saying nothing of titles', async () => {
+    const player = mount(ImpostorGame, { props: { room: inMatch(room(view(), 'bob')) }, global: global() });
+    expect(player.text()).not.toContain('End the match');
+    const chair = mount(ImpostorGame, { props: { room: inMatch(room(view())) }, global: global() });
+    const end = chair.findAll('.foot button').find((one) => one.text() === 'End the match');
+    await end!.trigger('click');
+    expect(chair.text()).toContain('The match ends now, with the scores as they stand.');
+    expect(chair.text()).not.toContain('title');
+    await chair
+      .findAll('button')
+      .find((one) => one.classes().includes('danger') && one.text() === 'End the match')!
+      .trigger('click');
+    await flushPromises();
+    expect(send).toHaveBeenCalledWith('room:matchEnd', { matchId: 'm1' });
+  });
+
+  test("says under the result where each player's points came from, with their role", () => {
+    const over = view({ phase: 'over', speaker: null, clock: null, result: { winner: 'student', reason: 'caught' } });
+    const scored = inMatch(
+      { ...room(over, 'bob'), phase: 'ended' },
+      {
+        standings: [
+          standing('Ann', {
+            total: 10,
+            delta: 5,
+            rank: 1,
+            detail: scoreDetail({ won: true, hits: 2 }),
+          }),
+          standing('Bob', {
+            total: 0,
+            delta: -3,
+            rank: 2,
+            detail: scoreDetail({ role: 'reviewer2', fate: 'voted_out', out: 1, missedLines: 1 }),
+          }),
+        ],
+        played: 2,
+        game: 2,
+      },
+    );
+    const wrapper = mount(ImpostorGame, { props: { room: scored }, global: global() });
+    const table = wrapper.get('.match-table');
+    expect(table.findAll('thead th').at(3)?.text()).toBe('This');
+    expect(table.findAll('.detail.below').map((detail) => detail.text())).toEqual([
+      'Student \u00b7 won \u00b7 lasted \u00b7 2 hits',
+      'Reviewer 2 \u00b7 out in round 1 \u00b7 line out of time \u00d71',
+    ]);
+    expect(table.find('.note').exists()).toBe(false);
+    // The chair goes on to the next game from the letter; the others wait for them.
+    expect(wrapper.text()).toContain('Waiting for the chair');
+  });
+
+  test("says why a game that has just ended doesn't count, which the match plays again", () => {
+    const cases = [
+      [null, 'Game 2 was withdrawn'],
+      [{ winner: null, reason: 'reviewer2_left' }, 'since Reviewer 2 left it'],
+      [{ winner: 'student', reason: 'caught' }, 'since the chair removed a player'],
+    ] as const;
+    for (const [result, note] of cases) {
+      const over = view({ phase: 'over', speaker: null, clock: null, result });
+      const wrapper = mount(ImpostorGame, {
+        props: { room: inMatch({ ...room(over, 'bob'), phase: 'ended' }) },
+        global: global(),
+      });
+      expect(wrapper.get('.match-table .note').text()).toContain(note);
+    }
+  });
+
+  test('ends with the final ranking, which awards no titles in the beta', () => {
+    const over = view({ phase: 'over', speaker: null, clock: null, result: { winner: 'student', reason: 'caught' } });
+    const stopped = inMatch({ ...room(over, 'bob'), phase: 'ended' }, { status: 'stopped' });
+    const wrapper = mount(ImpostorGame, { props: { room: stopped }, global: global() });
+    expect(wrapper.find('.match-table').exists()).toBe(false);
+    expect(wrapper.get('.match-results').text()).toContain('The match was ended early');
+    expect(wrapper.get('.match-results').text()).not.toContain('title');
+  });
+});
+
+describe('ImpostorLobby in a match', () => {
+  test('puts the table first, and leaves Reviewer 1 out of the footnote on numbers', () => {
+    const wrapper = mount(ImpostorLobby, { props: { room: inMatch(room(null, 'bob')) }, global: global() });
+    const sections = wrapper.findAll('section').map((section) => section.classes());
+    expect(sections[1]).toContain('match-table');
+    expect(wrapper.text()).toContain('every avatar turns into a number, and who had which number shows at the end');
+    expect(wrapper.text()).not.toContain("Reviewer 1's too");
+  });
+
+  test('keeps the settings as they are once a game has counted, and shows the chair the rules', async () => {
+    const chair = mount(ImpostorLobby, { props: { room: inMatch(room(null)) }, global: global() });
+    await flushPromises();
+    expect(chair.find('.settings-form').exists()).toBe(false);
+    expect(chair.get('.desk').text()).toContain('stay as they are until the match is over');
+    expect(chair.find('.rules').exists()).toBe(true);
+    const first = mount(ImpostorLobby, {
+      props: { room: inMatch(room(null), { played: 0, game: 1 }) },
+      global: global(),
+    });
+    await flushPromises();
+    expect(first.find('.settings-form').exists()).toBe(true);
+    expect(first.find('.rules').exists()).toBe(false);
+  });
+
+  // The server refuses to start a game of a match that is over (match_over): the chair is offered
+  // another match or an ordinary room instead.
+  test('offers no start once the match is over, also when it was ended early', async () => {
+    for (const status of ['over', 'stopped'] as const) {
+      const chair = mount(ImpostorLobby, { props: { room: inMatch(room(null), { status }) }, global: global() });
+      await flushPromises();
+      expect(chair.findAll('button').some((button) => button.text() === 'Start')).toBe(false);
+      expect(chair.find('.desk').exists()).toBe(false);
+      expect(chair.get('.match-results').text()).toContain('Another match');
+      const player = mount(ImpostorLobby, {
+        props: { room: inMatch(room(null, 'bob'), { status }) },
+        global: global(),
+      });
+      expect(player.find('.waiting').exists()).toBe(false);
+    }
+  });
+});
+
+describe('the records of the second game', () => {
+  test('count the matches finished, and those finished first', () => {
+    const counts: GameCounts = {
+      ordinary: { games: 4, wins: 2 },
+      inMatches: { games: 6, wins: 3 },
+      roles: {},
+      matches: { played: 2, won: 1 },
+    };
+    const t = i18n().global.t as Parameters<typeof recordStats>[0];
+    const blocks = recordStats(t, counts, 'en').map(({ label, value }) => [label, value]);
+    expect(blocks.slice(0, 2)).toEqual([
+      ['Games', '10'],
+      ['Win rate', '50%'],
+    ]);
+    expect(blocks.slice(-2)).toEqual([
+      ['Matches', '2'],
+      ['Won', '1'],
+    ]);
   });
 });
 

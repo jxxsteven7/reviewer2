@@ -264,6 +264,26 @@ export interface MatchHooks<Data> {
   setup(data: Data, ctx: GameContext, rules: MatchRules | null): Data;
   // The players who play in the game, by player ID, which the match lists from its start.
   lineup(data: Data): string[];
+  // The numbers of games that a match of the game may have, where it takes only some, as the second
+  // game's 3, 5 or 7; the room refuses others with bad_match. Without this, any from MATCH_GAMES.
+  games?: readonly number[];
+  // Whether a match that runs its course awards its titles (docs/architecture.md#matches): false for
+  // a game that awards none yet, as the second game in its beta. Without this, it does.
+  titles?: boolean;
+  // Whether the match's table shows each player's points in a game in progress, as they stand:
+  // false for a game whose points would tell the players what they may not know yet, as the second
+  // game's, in which a vote for a Reviewer 2 scores once it is revealed. Without this, it does.
+  live?: boolean;
+  // Whether the pair of terms that the room may draw for the next game (GameModule.words) is one
+  // that the match hasn't had yet, for a game that never plays a pair twice in a match: the room
+  // draws among those alone, and can't start the game (no_words) when none is left. Without this,
+  // the room draws as in any game.
+  fresh?(data: Data, words: readonly BoardWord[]): boolean;
+  // Whether the match stands or falls with its chair, as one whose chair sets the words of every game
+  // and plays in none. Once a game of the match has started, the chair passing to anyone else, as
+  // when the chair has been away too long, leaves or hands it over, ends the match early, as the
+  // chair would (Room.endMatch), but after the game in progress, which counts. Without this, never.
+  chairBound?(data: Data): boolean;
 }
 
 export interface GameModule<Data = unknown, View = unknown> {
