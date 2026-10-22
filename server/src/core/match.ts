@@ -233,6 +233,7 @@ export class Match {
         name,
         ...(guest !== null ? { guest } : {}),
         ...(avatar ? { avatar } : {}),
+        number: entry.number,
         // Once the match is over, the total is the one the player was ranked with: a guest's line
         // that joins an account's afterwards (rekey) changes the account's total, not the ranking.
         total: placing?.total ?? entry.total,

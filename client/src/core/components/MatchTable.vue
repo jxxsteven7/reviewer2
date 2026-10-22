@@ -26,7 +26,8 @@ import TitleLine from './TitleLine.vue';
 // ended doesn't count (`note`); no column of the game in focus during a game whose points come
 // only at its end (`delta`); and, during a game whose players are only numbers, nobody as offline
 // or gone, which could tell whose number had let time run out (`presence`): everyone who has
-// played a game that counted is ranked then, and no avatar opens a panel.
+// played a game that counted is ranked then, the lines keep their order whoever leaves, and no
+// avatar opens a panel.
 const props = withDefaults(
   defineProps<{
     room: ShownRoom;
@@ -52,8 +53,9 @@ const { unfolded, setOpen, fold } = useTitleFolds();
 const match = computed(() => props.room.match as ShownMatch);
 const isChair = computed(() => props.room.me !== null && props.room.chairId === props.room.me);
 // The lines as the server ranked them, or, where the table shows nobody as gone, ranked again over
-// everyone who has played a game that counted, as the server ranks those still in the room, the
-// others after them by total.
+// everyone who has played a game that counted, as the server ranks those still in the room, with
+// ties in the order the players entered the match. The server lists those who have left after the
+// others, so their lines would move when they left, which would tell who they are.
 const lines = computed(() => {
   const { standings } = match.value;
   if (props.presence) return standings;
@@ -61,7 +63,7 @@ const lines = computed(() => {
   const rankOf = (total: number) => 1 + ranked.filter((other) => other.total > total).length;
   return standings
     .map((line) => ({ ...line, left: false, rank: line.games > 0 ? rankOf(line.total) : null }))
-    .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity) || b.total - a.total);
+    .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity) || a.number - b.number);
 });
 // In the waiting room the points are those of the last game; otherwise of the game on or just
 // ended.

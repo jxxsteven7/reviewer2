@@ -35,6 +35,9 @@ export interface StandingView {
   // A guest's number in the room, by which the client names them (PlayerView.guest).
   guest?: number;
   avatar?: string;
+  // The player's number in the match, from 1 in the order the players entered it
+  // (docs/architecture.md#matches), which orders ties where the table ranks the lines itself.
+  number: number;
   total: number;
   // The points of the game in focus: the one being played, as they stand; the one that has just
   // ended; or, in the waiting room, the last one scored. Null for someone who had no part in it.

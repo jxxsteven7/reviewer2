@@ -2891,6 +2891,7 @@ describe('KeywordsGame', () => {
     const line = (playerId: string, total: number, rank: number | null): StandingView => ({
       playerId,
       name: playerId,
+      number: ['ann', 'bob', 'dan', 'eve'].indexOf(playerId) + 1,
       total,
       delta: null,
       games: rank === null ? 0 : 1,
@@ -2963,6 +2964,7 @@ describe('KeywordsGame', () => {
     const standing = (playerId: string, rank: number): StandingView => ({
       playerId,
       name: playerId,
+      number: rank,
       total: 0,
       delta: 0,
       games: 1,
@@ -3007,6 +3009,7 @@ describe('KeywordsGame', () => {
     const standing = (name: string, detail: object): StandingView => ({
       playerId: name.toLowerCase(),
       name,
+      number: ['Ann', 'Dan', 'Fay'].indexOf(name) + 1,
       total: 0,
       delta: 0,
       games: 1,

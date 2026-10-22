@@ -43,8 +43,9 @@ import { useImpostor } from './useImpostor';
 // are, or as the game starts.
 //
 // In a match, as in the first game's waiting room, the match's table comes first, or its final
-// ranking once it is over, which takes the place of the start bar, the desk and the line that the
-// room waits for the chair; once a game of the match has counted, the settings stay as they are,
+// ranking once it is over, which takes the place of the start bar, the desk, the setter's form and
+// the line that the room waits for the chair, since no game can start until the chair has chosen
+// what comes next; once a game of the match has counted, the settings stay as they are,
 // and the chair sees the rules under their desk. A match has no AI players, which the footnote
 // on numbers leaves out then.
 const props = defineProps<{ room: RoomView }>();
@@ -167,7 +168,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
     <div class="sections">
       <div class="column">
         <MatchTable v-if="match && !finished" :room="room" />
-        <SetterForm v-if="isSetter" :words="data.setterWords" :language="room.language" />
+        <SetterForm v-if="isSetter && !finished" :words="data.setterWords" :language="room.language" />
 
         <section class="players panel">
           <h2 class="section-title">
