@@ -8,16 +8,18 @@ import { recordStats as keywordsStats } from './keywords/stats';
 // What the pages around the games know of each of them, without their screens (index.ts), so that
 // the site's own modules, such as the titles, can read it without loading a game: the games in the
 // order the home page shows them, whether a game is still in beta (docs/games/impostor.md#beta),
-// the titles that its games bring, the roles that its records name, which the locale files name
-// under games.<id>, how a word list serves it, the roles a practice room offers, whether a room may
-// be listed, and its record as counts on blocks (RecordStats.vue), laid out as the first game's six
-// or three to a line. The words of each game are under games.<id> in the locale files.
+// the titles that its games bring, whether its matches award theirs (MatchHooks.titles on the
+// server), the roles that its records name, which the locale files name under games.<id>, how a
+// word list serves it, the roles a practice room offers, whether a room may be listed, and its
+// record as counts on blocks (RecordStats.vue), laid out as the first game's six or three to a
+// line. The words of each game are under games.<id> in the locale files.
 type Translate = (key: string, named?: Record<string, unknown>, plural?: number) => string;
 
 export interface GameInfo {
   id: string;
   beta: boolean;
   titles: readonly string[];
+  matchTitles: boolean;
   roles: readonly string[];
   // Whether its sides are groups, which its records tint (the first game's red and blue), rather
   // than its roles.
@@ -44,6 +46,7 @@ const keywords: GameInfo = {
   id: 'keywords',
   beta: false,
   titles: KEYWORDS_TITLES,
+  matchTitles: true,
   roles: ['captain', 'guesser'],
   groups: true,
   pairs: false,
@@ -60,6 +63,7 @@ const impostor: GameInfo = {
   id: 'impostor',
   beta: true,
   titles: [],
+  matchTitles: false,
   roles: ['student', 'reviewer2', 'pi'],
   groups: false,
   pairs: true,

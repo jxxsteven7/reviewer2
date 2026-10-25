@@ -232,6 +232,29 @@
       "rating": "How were the words of this game?"
     },
     "impostor": {
+      "match": {
+        "note": "The settings stay the same for the whole match. Every game deals the numbers and the roles anew, so a number tells nothing about the game before, and no pair of terms comes twice. A match has no AI players.",
+        "scoring": "Scores in a match, as in any game (beta): {points}",
+        "detail": {
+          "won": "won",
+          "lasted": "lasted",
+          "outIn": "out in round {round}",
+          "violation": "out for breaking the rules",
+          "left": "left",
+          "hits": "1 hit | {count} hits",
+          "wrong": "put a student out ×{count}",
+          "comebackRight": "guessed the term",
+          "comebackWrong": "guessed wrong",
+          "missedLines": "line out of time ×{count}",
+          "missedVotes": "vote out of time ×{count}",
+          "failedReports": "report rejected ×{count}"
+        },
+        "unscored": {
+          "withdrawn": "Game {game} was withdrawn, so it doesn't count: it is played again.",
+          "reviewer2_left": "Game {game} doesn't count, since Reviewer 2 left it: it is played again.",
+          "removed": "Game {game} doesn't count, since the chair removed a player: it is played again."
+        }
+      },
       "name": "Who's Reviewer 2?",
       "summary": "The students share one term. Reviewer 2 gets a similar one and doesn't know it; the PI gets none.",
       "players": "4–12 players",
@@ -346,7 +369,8 @@
         "play": "Play",
         "setter": "Setter",
         "setterNote": "The setter sets the two terms here and watches the game.",
-        "numbersNote": "As the game starts, every avatar turns into a number, Reviewer 1's too, and who had which number shows at the end."
+        "numbersNote": "As the game starts, every avatar turns into a number, Reviewer 1's too, and who had which number shows at the end.",
+        "numbersNoteMatch": "As the game starts, every avatar turns into a number, and who had which number shows at the end."
       },
       "problems": {
         "needs_players": "A game needs at least 4 players online: {count} more to go.",
@@ -639,6 +663,7 @@
     "leave": "Leave the room",
     "leaveConfirm": "Leave this room? Your seat will be given up.",
     "leaveChair": "Leave this room? Your seat will be given up, and {name} will chair the room.",
+    "leaveChairMatch": "Leave this room? Your seat will be given up, {name} will chair the room, and this match, which is bound to its chair, ends early.",
     "leaveLast": "Leave this room? You're the last one in it, so it will close.",
     "closeInstead": "Close the room for everyone",
     "closeRoom": "Close the room",
@@ -714,6 +739,7 @@
     "games": "Games in the match",
     "gamesRange": "{min} to {max}",
     "gamesProblem": "A whole number from {min} to {max}.",
+    "gamesChoice": "{count} games",
     "teams": "Groups",
     "teamsChoice": {
       "fixed": "Stay the same",
@@ -750,6 +776,8 @@
     "none": "Everyone who plays is listed here once the game starts.",
     "end": "End the match",
     "endConfirm": "The match ends now, with the scores as they stand, and nobody is awarded a title. A game in progress is withdrawn.",
+    "endConfirmUntitled": "The match ends now, with the scores as they stand. A game in progress is withdrawn.",
+    "chairEnds": "Make {name} the chair? This match is bound to its chair, so it then ends early, ranked as it stands; a game in progress is finished first.",
     "next": "Next game",
     "waitNext": "Waiting for the chair to go on to the next game.",
     "over": "Final ranking",
@@ -1253,6 +1281,7 @@
     "words_missing": "Fill in both terms.",
     "words_too_long": "A term must fit on a card: up to 5 Chinese characters or 14 letters.",
     "words_same": "The two terms must differ, and not be forms of each other.",
+    "words_played": "This match has had this pair already.",
     "guess_first": "Guess who the AI players were, or skip it, before you talk."
   },
   "footer": {

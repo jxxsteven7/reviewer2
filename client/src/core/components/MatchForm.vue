@@ -3,18 +3,29 @@ import { MATCH_GAMES, matchGamesValid, type MatchRules } from '@reviewer2/shared
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
+import PillChoice from './PillChoice.vue';
 import UiField from './UiField.vue';
 
 // The rules of a match of a game, for the room setup and for the chair's next match: how many
 // games, and the game's own options, in the game's form (GameScreens.match), such as whether the
-// first game's groups stay the same. The number is typed, so it can be wrong while it is being
-// typed: the form says so, and `valid` says whether the rules can be sent. The server checks them
-// again.
+// first game's groups stay the same. A game that takes only a few numbers of games, as the second
+// game's 3, 5 or 7, offers them as pills to pick (PillChoice.vue); otherwise the number is typed,
+// so it can be wrong while it is being typed: the form says so, and `valid` says whether the rules
+// can be sent. The server checks them again.
 const props = defineProps<{ game: string }>();
 const model = defineModel<MatchRules>({ required: true });
 const valid = defineModel<boolean>('valid', { default: true });
 const { t } = useI18n();
 const Options = computed(() => games[props.game]?.match?.Options);
+const choices = computed(
+  () =>
+    games[props.game]?.match?.choices?.map((count) => ({ value: count, label: t('match.gamesChoice', { count }) })) ??
+    null,
+);
+const games_ = computed({
+  get: () => model.value.games,
+  set: (count: number) => (model.value = { ...model.value, games: count }),
+});
 
 // A whole number as it is typed, full-width digits from a Chinese keyboard included, or NaN.
 function parse(text: string): number {
@@ -31,7 +42,11 @@ watch(model, (rules) => {
   if (!Object.is(parse(typed.value), rules.games)) typed.value = String(rules.games);
 });
 
-const gamesValid = computed(() => matchGamesValid(model.value.games));
+const gamesValid = computed(() =>
+  choices.value
+    ? choices.value.some((choice) => choice.value === model.value.games)
+    : matchGamesValid(model.value.games),
+);
 watch(gamesValid, (ok) => (valid.value = ok), { immediate: true });
 
 const options = computed({
@@ -42,7 +57,8 @@ const options = computed({
 
 <template>
   <div class="match-form">
-    <div class="number">
+    <PillChoice v-if="choices" v-model="games_" :legend="t('match.games')" :options="choices" />
+    <div v-else class="number">
       <UiField
         :model-value="typed"
         :label="t('match.games')"

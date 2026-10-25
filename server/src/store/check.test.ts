@@ -824,6 +824,22 @@ describe('the check of the data', () => {
     expect(checked()).toEqual([{ rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] }]);
   });
 
+  test('takes only the numbers of games that a game takes for its matches, where it takes only some', () => {
+    const some = {
+      ...ratedGame,
+      match: { setup: (data: unknown) => data, score: () => null, lineup: () => [], games: [3, 5] },
+    };
+    const checked = () => checkData(db, { games: [keywordsGame, some], now: () => NOW });
+    const rules = (games: number) =>
+      db.exec(
+        `UPDATE accounts SET room_setup = json_set(room_setup, '$.test.room.match', json('{"games":${games}}')) WHERE id = 1`,
+      );
+    rules(5);
+    expect(checked()).toEqual([]);
+    rules(4);
+    expect(checked()).toEqual([{ rule: 'accounts whose last room setup is not in its shape', count: 1, ids: ['1'] }]);
+  });
+
   test('finds a game whose language is none', () => {
     expect(brokenBy("UPDATE replays SET language = 'xx' WHERE game_id = 'g1'")).toEqual([
       { rule: 'games whose language is not one there is', count: 1, ids: ['g1'] },

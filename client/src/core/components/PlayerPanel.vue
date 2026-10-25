@@ -34,9 +34,10 @@ import UiSheet from './UiSheet.vue';
 // that may (docs/architecture.md#friends), by how the two stand, what the search's panel and a
 // public page offer too (FriendActions.vue): ask them to be friends, in a sheet of its own with a
 // line for them, see that the request went, answer theirs, or give a friend a name or part; the
-// chair's actions, which move them to the spectators, hand them the chair, or remove them after a
-// warning that says for how long, which is for good from a public room and two minutes from a
-// private one, or, for an AI player, remove it at once, since it may be invited again
+// chair's actions, which move them to the spectators, hand them the chair, after a warning where
+// that ends the match (MatchView.chairBound), or remove them after a warning that says for how
+// long, which is for good from a public room and two minutes from a private one, or, for an AI
+// player, remove it at once, since it may be invited again
 // (docs/architecture.md#ai-players); in a public room, the way for anyone with an account to report
 // them to the operator (docs/architecture.md#public-rooms). Last, for an account, the whole page,
 // a second sheet of its own height over the panel, which it hides meanwhile (UiSheet.vue), that
@@ -48,6 +49,7 @@ const emit = defineEmits<{ close: [] }>();
 const { t } = useI18n();
 const { busy, run } = useBusy();
 const removing = ref(false);
+const chairing = ref(false);
 const reporting = ref(false);
 const reading = ref(false);
 const note = ref('');
@@ -86,14 +88,15 @@ const noteProblem = computed(() => (checked.value.problem ? t(errorKey(checked.v
 const count = computed(() =>
   t('feedback.count', { count: textLength(checked.value.text ?? ''), max: MAX_REPORT_LENGTH }),
 );
-// The chair's warning and the report hide the panel; the sheets of what friends do lie over it.
-const over = computed(() => removing.value || reporting.value);
+// The chair's warnings and the report hide the panel; the sheets of what friends do lie over it.
+const over = computed(() => removing.value || chairing.value || reporting.value);
 
 // The sheets close with the panel, and a new player starts afresh.
 watch(
   () => props.playerId,
   () => {
     removing.value = false;
+    chairing.value = false;
     reporting.value = false;
     reading.value = false;
     note.value = '';
@@ -146,7 +149,9 @@ async function report() {
         </UiButton>
         <template v-else-if="isChair">
           <UiButton :disabled="busy" @click="manage('room:spectate')">{{ t('lobby.manage.spectate') }}</UiButton>
-          <UiButton :disabled="busy" @click="manage('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
+          <UiButton :disabled="busy" @click="room.match?.chairBound ? (chairing = true) : manage('room:chair')">
+            {{ t('lobby.manage.chair') }}
+          </UiButton>
           <UiButton variant="danger" :disabled="busy" @click="removing = true">{{ t('lobby.manage.remove') }}</UiButton>
         </template>
         <UiButton v-if="canReport" variant="quiet" @click="reporting = true">{{ t('lobby.manage.report') }}</UiButton>
@@ -184,6 +189,18 @@ async function report() {
         t('lobby.manage.remove')
       }}</UiButton>
       <UiButton variant="quiet" @click="removing = false">{{ t('lobby.manage.cancel') }}</UiButton>
+    </div>
+  </UiSheet>
+
+  <UiSheet :open="player !== null && chairing" :title="t('lobby.manage.chair')" @close="chairing = false">
+    <div class="actions">
+      <i18n-t keypath="match.chairEnds" tag="p" scope="global">
+        <template #name
+          >{{ player?.name ?? '' }}<small v-if="username" class="username-after">{{ ` ${username}` }}</small></template
+        >
+      </i18n-t>
+      <UiButton variant="danger" :disabled="busy" @click="manage('room:chair')">{{ t('lobby.manage.chair') }}</UiButton>
+      <UiButton variant="quiet" @click="chairing = false">{{ t('lobby.manage.cancel') }}</UiButton>
     </div>
   </UiSheet>
 

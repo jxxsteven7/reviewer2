@@ -83,6 +83,27 @@ describe('a match', () => {
     );
   });
 
+  test('of a game that awards no titles yet ranks everyone with none', () => {
+    const match = new Match({ games: 1 }, false);
+    match.score('g1', scores({ ann: 5, bob: 2, cat: -1 }), presentOnly('ann', 'bob', 'cat'));
+    expect(match.final).toEqual(
+      new Map([
+        ['ann', { rank: 1, total: 5, title: null }],
+        ['bob', { rank: 2, total: 2, title: null }],
+        ['cat', { rank: 3, total: -1, title: null }],
+      ]),
+    );
+  });
+
+  test('counts the games that start, whether they are scored or not', () => {
+    const match = new Match(RULES);
+    expect(match.started).toBe(0);
+    match.begin();
+    match.begin();
+    match.score('g2', scores({ ann: 1 }), presentOnly('ann'));
+    expect(match).toMatchObject({ started: 2, played: 1 });
+  });
+
   test('scores a game once, however often its end is reported, and nothing once it is over', () => {
     const match = new Match({ ...RULES, games: 1 });
     const here = presentOnly('ann');
@@ -149,10 +170,21 @@ describe('the table of a match', () => {
     const view = match.view('playing', 'g1', scores({ ann: 2, bob: -1 }), here);
     expect(view).toMatchObject({ game: 1, played: 0, status: 'on' });
     expect(view.standings).toEqual([
-      { playerId: 'id-ann', name: 'ann', total: 0, delta: 2, detail: { value: 2 }, games: 0, rank: null, left: false },
+      {
+        playerId: 'id-ann',
+        name: 'ann',
+        number: 1,
+        total: 0,
+        delta: 2,
+        detail: { value: 2 },
+        games: 0,
+        rank: null,
+        left: false,
+      },
       {
         playerId: 'id-bob',
         name: 'bob',
+        number: 2,
         total: 0,
         delta: -1,
         detail: { value: -1 },
@@ -363,6 +395,25 @@ describe("the rules of a room's match", () => {
     if (!created.ok) throw new Error(created.error);
     expect(created.room.startMatch({ games: 2 })).toEqual({ ok: false, error: 'bad_match' });
     expect(created.room.match).toBeNull();
+  });
+
+  test('of a game that takes only some numbers of games are refused with any other', () => {
+    const rooms = new Rooms(testWords(), seededRng(3), () => 0);
+    const match: MatchHooks<FakeData> = { setup: (data) => data, lineup: (data) => data.players, games: [3, 5] };
+    const created = rooms.create({
+      game: { ...fakeGame, match } as typeof fakeGame,
+      language: 'en',
+      fields: ['general'],
+      key: 'k',
+      play: true,
+    });
+    if (!created.ok) throw new Error(created.error);
+    expect(created.room.startMatch({ games: 4 })).toEqual({ ok: false, error: 'bad_match' });
+    expect(created.room.startMatch({ games: 5 })).toEqual({ ok: true });
+    const id = created.room.match?.id as string;
+    expect(created.room.endMatch(id)).toEqual({ ok: true });
+    expect(created.room.nextMatch(id, { games: 1 })).toEqual({ ok: false, error: 'bad_match' });
+    expect(created.room.nextMatch(id, { games: 3 })).toEqual({ ok: true });
   });
 
   test('of a game without options of its own are the number of games alone', () => {

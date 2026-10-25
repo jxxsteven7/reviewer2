@@ -25,7 +25,14 @@ import {
 } from '@reviewer2/shared';
 import { AgentLog, certifiedPlay, type AgentLogData, type AgentStep } from './agentLog';
 import { done, fail, refusalOf } from './answers';
-import type { GameContext, GameModule, GameOutcome, PlayerResult, Viewer } from './game';
+import {
+  matchAwardsTitles,
+  type GameContext,
+  type GameModule,
+  type GameOutcome,
+  type PlayerResult,
+  type Viewer,
+} from './game';
 import {
   GameLog,
   type GameEnding,
@@ -349,6 +356,9 @@ export class Room {
   // of a game of pairs, by key, which the next game avoids too (drawPair).
   #usedWords: ReadonlySet<string> = new Set();
   readonly #usedPairs = new Set<string>();
+  // Whether the chair of a match bound to its chair passed during the game in progress, which ends
+  // the match once the game has ended (MatchHooks.chairBound).
+  #chairGone = false;
   // The ratings of the game that has just ended, by player ID: an option of the game's, or null for
   // a player who dismissed the question (docs/architecture.md#ratings), until the room leaves the
   // game behind.
@@ -933,6 +943,7 @@ export class Room {
     this.#duos.clear();
     // Whoever plays in a match's game is in its table from the start, with no points if new.
     if (this.match && this.game.match) {
+      this.match.begin();
       for (const id of this.game.match.lineup(this.data)) {
         const member = this.members.get(id);
         if (member) this.match.enter(member.key, this.#who(member));
@@ -972,7 +983,11 @@ export class Room {
       } catch {
         // A record that can't be read leaves the draw to the room's own memory.
       }
-      const pair = drawPair(this.#words.pairs(fields, this.language), records, this.#usedPairs, this.#rng);
+      // A match may play no pair twice (MatchHooks.fresh).
+      const pairs = this.#words
+        .pairs(fields, this.language)
+        .filter((pair) => !this.match || (this.game.match?.fresh?.(this.data, pair.words) ?? true));
+      const pair = drawPair(pairs, records, this.#usedPairs, this.#rng);
       if (!pair) return fail('no_words');
       return {
         ok: true,
@@ -1004,6 +1019,7 @@ export class Room {
     this.#ended('withdrawn');
     this.data = result.data;
     this.phase = 'ended';
+    this.#endOrphanedMatch();
     this.changed();
     return done;
   }
@@ -1052,7 +1068,8 @@ export class Room {
     // A match has no AI players (docs/architecture.md#ai-players).
     if (this.hasAgents()) return fail('agents_in_room');
     this.data = this.game.match.setup(this.data, this.context, checked);
-    this.match = new Match(checked);
+    this.match = new Match(checked, matchAwardsTitles(this.game.match));
+    this.#chairGone = false;
     this.changed();
     return done;
   }
@@ -1062,7 +1079,7 @@ export class Room {
   // that come with some.
   #matchRules(rules: MatchRules): MatchRules | null {
     const hooks = this.game.match;
-    if (!hooks) return null;
+    if (!hooks || (hooks.games && !hooks.games.includes(rules.games))) return null;
     if (!hooks.options) return rules.options === undefined ? { games: rules.games } : null;
     const options = hooks.options(rules.options);
     return options === null ? null : { games: rules.games, options };
@@ -1082,6 +1099,7 @@ export class Room {
       this.phase = 'ended';
     }
     this.match.finish('stopped', this.#present);
+    this.#chairGone = false;
     this.changed();
     return done;
   }
@@ -1098,7 +1116,8 @@ export class Room {
     const data = hooks.setup(ended ? this.game.again(this.data, this.context) : this.data, this.context, checked);
     this.data = data;
     if (ended) this.#toLobby();
-    this.match = checked && new Match(checked);
+    this.match = checked && new Match(checked, matchAwardsTitles(hooks));
+    this.#chairGone = false;
     this.changed();
     return done;
   }
@@ -1117,11 +1136,22 @@ export class Room {
   });
 
   // A game of a match has ended by itself: the match adds up its score. A game that the chair
-  // withdrew ends without this, and counts for nothing.
+  // withdrew ends without this, and counts for nothing, and so does one that brought nobody points
+  // (#scoresNothing), as one in which the chair removed a player of the second game: the match
+  // plays it again.
   #scoreGame(): void {
     if (!this.match || this.match.status !== 'on' || !this.game.match || this.gameId === null) return;
+    if (this.#scoresNothing()) return;
     const scores = this.game.score?.(this.data, this.context) ?? null;
     if (scores) this.match.score(this.gameId, scores, this.#present);
+  }
+
+  // The game in progress has ended: a match bound to its chair whose chair passed during the game
+  // ends now (MatchHooks.chairBound).
+  #endOrphanedMatch(): void {
+    if (!this.#chairGone) return;
+    this.#chairGone = false;
+    this.match?.finish('stopped', this.#present);
   }
 
   // A game may have nothing to shuffle, as a match's game whose groups are drawn when it starts.
@@ -1198,11 +1228,24 @@ export class Room {
   }
 
   // The chair passes to a member, or to nobody, from the chair who handed it on, or from the room
-  // itself. The log notes it during a game.
+  // itself. The log notes it during a game. A match bound to its chair, once a game of it has
+  // started, ends with it (MatchHooks.chairBound): at once, or after the game in progress.
   #passChair(id: string | null, by: string | null = null): void {
     if (id === this.chairId) return;
+    const bound = this.#boundToChair();
     this.chairId = id;
     if (id !== null) this.#note(by, 'chair', { player: id });
+    if (!bound) return;
+    if (this.phase === 'playing') this.#chairGone = true;
+    else this.match?.finish('stopped', this.#present);
+  }
+
+  // Whether the chair passing to anyone else would end the match now: one bound to its chair
+  // (MatchHooks.chairBound), once a game of it has started. The view tells the client, which asks
+  // the chair before they hand the chair on or leave (MatchView.chairBound).
+  #boundToChair(): boolean {
+    const { match } = this;
+    return match?.status === 'on' && match.started > 0 && (this.game.match?.chairBound?.(this.data) ?? false);
   }
 
   // A game message from a member. Whatever the game had due by now happens first, so that a
@@ -1353,6 +1396,7 @@ export class Room {
     this.#ended('finished');
     this.phase = 'ended';
     this.#scoreGame();
+    this.#endOrphanedMatch();
   }
 
   // Takes what a module answered to a message or to the chair's bench. A module that gives back
@@ -1806,8 +1850,9 @@ export class Room {
     // part is, since it asks the game for the scores of a game in progress.
     const matchView = (): RoomView['match'] => {
       if (!this.match) return null;
-      const live = this.phase === 'playing' ? (this.game.score?.(this.data, context) ?? null) : null;
-      return this.match.view(this.phase, this.gameId, live, this.#present);
+      const shown = this.phase === 'playing' && this.game.match?.live !== false;
+      const live = shown ? (this.game.score?.(this.data, context) ?? null) : null;
+      return { ...this.match.view(this.phase, this.gameId, live, this.#present), chairBound: this.#boundToChair() };
     };
     // The chair's own words go to the chair alone, and only in the waiting room, where the chair
     // edits them: the players hear only how many there are, so that none of them knows the words

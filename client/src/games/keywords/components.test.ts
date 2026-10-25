@@ -1922,6 +1922,7 @@ describe('GameRosters', () => {
       played: 1,
       status: 'on',
       game: 2,
+      chairBound: false,
       standings: [],
     };
     const wrapper = mount(GameRosters, {
@@ -2890,6 +2891,7 @@ describe('KeywordsGame', () => {
     const line = (playerId: string, total: number, rank: number | null): StandingView => ({
       playerId,
       name: playerId,
+      number: ['ann', 'bob', 'dan', 'eve'].indexOf(playerId) + 1,
       total,
       delta: null,
       games: rank === null ? 0 : 1,
@@ -2902,6 +2904,7 @@ describe('KeywordsGame', () => {
       played: 1,
       status: 'on',
       game: 2,
+      chairBound: false,
       standings: [line('ann', 4, 1), line('bob', 1, 2), line('dan', -1, 3), line('eve', 0, null)],
     };
     const game = (me: string) =>
@@ -2961,6 +2964,7 @@ describe('KeywordsGame', () => {
     const standing = (playerId: string, rank: number): StandingView => ({
       playerId,
       name: playerId,
+      number: rank,
       total: 0,
       delta: 0,
       games: 1,
@@ -2973,6 +2977,7 @@ describe('KeywordsGame', () => {
       played: 1,
       status: 'on',
       game: 1,
+      chairBound: false,
       standings: [standing('ann', 1), standing('bob', 2)],
     };
     const between = mount(KeywordsGame, {
@@ -3004,6 +3009,7 @@ describe('KeywordsGame', () => {
     const standing = (name: string, detail: object): StandingView => ({
       playerId: name.toLowerCase(),
       name,
+      number: ['Ann', 'Dan', 'Fay'].indexOf(name) + 1,
       total: 0,
       delta: 0,
       games: 1,
@@ -3017,6 +3023,7 @@ describe('KeywordsGame', () => {
       played: 1,
       status: 'on',
       game: 1,
+      chairBound: false,
       standings: [
         // With the PI's stakes: a PI with a big clue, the opening record and the heavenly hand, and
         // a student who pays for what another revealed.

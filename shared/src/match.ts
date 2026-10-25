@@ -22,8 +22,8 @@ export interface MatchRules {
 export const matchGamesValid = (games: unknown): boolean =>
   Number.isInteger(games) && (games as number) >= MATCH_GAMES.min && (games as number) <= MATCH_GAMES.max;
 
-// 'on' while games are left to play, 'over' once the last has been scored, and 'stopped' when the
-// chair ended it early, which awards no titles.
+// 'on' while games are left to play, 'over' once the last has been scored, and 'stopped' when it
+// ended early, as when the chair ended it, which awards no titles.
 export type MatchStatus = 'on' | 'over' | 'stopped';
 
 // One line of the match's table. Everyone who has played in it is listed, also after leaving the
@@ -35,6 +35,9 @@ export interface StandingView {
   // A guest's number in the room, by which the client names them (PlayerView.guest).
   guest?: number;
   avatar?: string;
+  // The player's number in the match, from 1 in the order the players entered it
+  // (docs/architecture.md#matches), which orders ties where the table ranks the lines itself.
+  number: number;
   total: number;
   // The points of the game in focus: the one being played, as they stand; the one that has just
   // ended; or, in the waiting room, the last one scored. Null for someone who had no part in it.
@@ -63,4 +66,8 @@ export interface MatchView {
   game: number;
   // Best first; ties keep the order in which the players entered the match.
   standings: StandingView[];
+  // Whether the chair passing to anyone else would end the match early, as in a match bound to its
+  // chair once a game of it has started (MatchHooks.chairBound on the server): the chair is asked
+  // before handing the chair on or leaving the room.
+  chairBound: boolean;
 }

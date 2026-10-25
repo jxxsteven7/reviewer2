@@ -14,6 +14,8 @@ import FieldFold from '../../core/components/FieldFold.vue';
 import InviteFriends from '../../core/components/InviteFriends.vue';
 import InvitedFriends from '../../core/components/InvitedFriends.vue';
 import LobbyHead from '../../core/components/LobbyHead.vue';
+import MatchResults from '../../core/components/MatchResults.vue';
+import MatchTable from '../../core/components/MatchTable.vue';
 import PlayerName from '../../core/components/PlayerName.vue';
 import StartDock from '../../core/components/StartDock.vue';
 import UiButton from '../../core/components/UiButton.vue';
@@ -39,10 +41,20 @@ import { useImpostor } from './useImpostor';
 // who sets them, and whether they have. The chair's desk chooses where the words come from, the
 // word lists while the game draws from them, and the settings, which are saved as the first game's
 // are, or as the game starts.
+//
+// In a match, as in the first game's waiting room, the match's table comes first, or its final
+// ranking once it is over, which takes the place of the start bar, the desk, the setter's form and
+// the line that the room waits for the chair, since no game can start until the chair has chosen
+// what comes next; once a game of the match has counted, the settings stay as they are,
+// and the chair sees the rules under their desk. A match has no AI players, which the footnote
+// on numbers leaves out then.
 const props = defineProps<{ room: RoomView }>();
 const { t } = useI18n();
 const room = toRef(props, 'room');
 const { data, isChair, setterId, isSetter, seated, spectators, isSeated, sit } = useImpostor(room);
+const match = computed(() => props.room.match);
+const finished = computed(() => match.value !== null && match.value.status !== 'on');
+const locked = computed(() => match.value?.status === 'on' && match.value.played > 0);
 
 const setter = computed(() => props.room.players.find((player) => player.id === setterId.value) ?? null);
 const left = computed(() => Math.max(MAX_PLAYERS - seated.value.length, 0));
@@ -90,7 +102,7 @@ const fieldsChanged = computed(
       chosenRandom.value !== (props.room.randomFields ?? false)),
 );
 
-const unsaved = computed(() => settingsChanged.value || fieldsChanged.value);
+const unsaved = computed(() => !locked.value && (settingsChanged.value || fieldsChanged.value));
 const savable = computed(
   () => settingsValid.value && (!drawsWords.value || chosenFields.value.length > 0 || chosenRandom.value),
 );
@@ -133,7 +145,12 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
     </Teleport>
     <LobbyHead :room="room" :is-chair="isChair" />
 
-    <StartDock v-if="isChair || mayInviteFriends" :readiness="readiness" :ready="ready" :member="!isChair">
+    <StartDock
+      v-if="(isChair || mayInviteFriends) && !finished"
+      :readiness="readiness"
+      :ready="ready"
+      :member="!isChair"
+    >
       <template #line>
         <InvitedFriends v-if="mayInviteFriends" :room="room" @open="invitingFriends = true" />
       </template>
@@ -146,9 +163,12 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
     </StartDock>
     <InviteFriends :open="invitingFriends" :room="room" @close="invitingFriends = false" />
 
+    <MatchResults v-if="finished" :room="room" />
+
     <div class="sections">
       <div class="column">
-        <SetterForm v-if="isSetter" :words="data.setterWords" :language="room.language" />
+        <MatchTable v-if="match && !finished" :room="room" />
+        <SetterForm v-if="isSetter && !finished" :words="data.setterWords" :language="room.language" />
 
         <section class="players panel">
           <h2 class="section-title">
@@ -194,27 +214,32 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
           </p>
         </section>
 
-        <p v-if="data.settings.anonymous" class="footnote">{{ t('games.impostor.lobby.numbersNote') }}</p>
+        <p v-if="data.settings.anonymous" class="footnote">
+          {{ t(match ? 'games.impostor.lobby.numbersNoteMatch' : 'games.impostor.lobby.numbersNote') }}
+        </p>
         <template v-if="room.agents || hasAgents">
           <p class="footnote">{{ t('lobby.agentLevel') }}</p>
           <p class="footnote">{{ t('lobby.agentNote') }}</p>
         </template>
       </div>
       <div class="column">
-        <section v-if="isChair" class="desk panel">
+        <section v-if="isChair && !finished" class="desk panel">
           <h2 class="section-title">{{ t('lobby.desk') }}</h2>
-          <SourceChoice v-model="chosenSettings" />
-          <FieldFold
-            v-if="drawsWords"
-            v-model="chosenFields"
-            v-model:random="chosenRandom"
-            :fields="fields"
-            :language="room.language"
-            game="impostor"
-            each-game
-          />
-          <h3 class="label">{{ t('settings.title') }}</h3>
-          <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+          <p v-if="locked" class="hint">{{ t('match.locked') }}</p>
+          <template v-else>
+            <SourceChoice v-model="chosenSettings" />
+            <FieldFold
+              v-if="drawsWords"
+              v-model="chosenFields"
+              v-model:random="chosenRandom"
+              :fields="fields"
+              :language="room.language"
+              game="impostor"
+              each-game
+            />
+            <h3 class="label">{{ t('settings.title') }}</h3>
+            <SettingsForm v-model="chosenSettings" v-model:valid="settingsValid" :language="room.language" />
+          </template>
           <div v-if="unsaved" class="save">
             <UiButton size="small" :disabled="!savable" @click="save">{{ t('lobby.save') }}</UiButton>
             <p class="hint">{{ t('lobby.saveHint') }}</p>
@@ -223,11 +248,11 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
             <li v-for="item in problems" :key="item.problem">{{ problemText(item) }}</li>
           </ul>
         </section>
-        <section v-else class="rules panel">
+        <section v-if="!isChair || locked" class="rules panel">
           <h2 class="section-title">{{ t('settings.title') }}</h2>
           <SettingsSummary :settings="data.settings" :language="room.language" />
         </section>
-        <section v-if="!isChair" class="waiting panel">
+        <section v-if="!isChair && !finished" class="waiting panel">
           <ul class="problems">
             <li v-for="item in problems" :key="item.problem">{{ problemText(item) }}</li>
           </ul>
