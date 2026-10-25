@@ -810,12 +810,27 @@ export class Accounts {
     return { sessions: this.sessions.prune(), links: this.mailTokens.prune(), declined: this.friends.prune() };
   }
 
+  // The account's own record, which alone lists the latest games it set the words of, with the
+  // words as the setter gave them (GameModule.content) and how players rated them
+  // (GameRecords.wordsSetRecent); its public profile has the counts alone.
   recordsOf(login: Login): RecordsView {
-    return this.#withGameCounts<GameRecords>(login.account.id, this.records.view(login.account.id), () => ({
+    const accountId = login.account.id;
+    const view = this.#withGameCounts<GameRecords>(accountId, this.records.view(accountId), () => ({
       ...emptyGameCounts(),
       recent: [],
       matches: { played: 0, won: 0, recent: [] },
     }));
+    for (const game of this.#games) {
+      const path = game.setupPaths?.setter;
+      const records = view[game.id];
+      if (path === undefined || !records?.wordsSet) continue;
+      records.wordsSetRecent = this.ratings.setterGames(game.id, path, accountId).map(({ setup, ...row }) => ({
+        game: game.id,
+        ...row,
+        words: game.content?.(setup)?.content.words ?? [],
+      }));
+    }
+    return view;
   }
 
   // The counts of each game, with, for each game in which a setter gives the words, the games the

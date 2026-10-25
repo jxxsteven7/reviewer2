@@ -1499,6 +1499,10 @@
       "recentMatches": "The last 20 matches",
       "matchLine": "{rank}/{players} · {score} pt | {rank}/{players} · {score} pts",
       "matchGames": "{count} game | {count} games",
+      "wordsSet": "Pairs you set",
+      "liked": "Liked {good}/{rated}",
+      "noRatings": "No ratings",
+      "setWords": "{0} / {1}",
       "logout": "Log out",
       "delete": "Delete the account",
       "deleteWarning": {
@@ -1800,7 +1804,7 @@
   "privacy": {
     "recordsTitle": "Game records",
     "guestNotice": "Games are recorded, the chats included, to train AI players and for research; nothing published carries names.",
-    "records": "Games are recorded, with what the players say in their chats, the reports they make in them, how they rate a game or guess its AI players, and the words they give for one, which may be adopted into the word library. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. The players with accounts can watch a finished game again, without the chats. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
+    "records": "Games are recorded, with what the players say in their chats, the reports they make in them, how they rate a game or guess its AI players, and the words they give for one, which may be adopted into the word library. The records are used to train and test the game's AI players, and may be used for research and published as a dataset, without names or accounts. Whoever set the terms of a game sees how many of its players rated it good, of how many rated it. The players with accounts can watch a finished game again, without the chats. A replay keeps no name: it shows each account as it is now, with its username and avatar, a deleted account as a deleted player, and guests by their numbers in the room. If you delete your account, the replays show you as a deleted player, and what you said in the games stays, anonymous like the rest of the records and no longer linked to you."
   },
   "guide": {
     "title": "Tutorial",
@@ -2191,6 +2195,7 @@
   },
   "rating": {
     "dismiss": "Don't rate",
+    "close": "Close, keeping your rating",
     "options": {
       "good": "Good",
       "hard": "Too hard",
@@ -2198,6 +2203,7 @@
       "problem": "Something's wrong"
     },
     "hint": "Tap × not to rate; you can change it before you leave.",
+    "noted": "Noted, thanks for the feedback. You can change it before you leave.",
     "say": "Say something"
   }
 }

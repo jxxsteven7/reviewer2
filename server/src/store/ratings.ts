@@ -1,3 +1,4 @@
+import { RECENT_RECORDS } from '@reviewer2/shared';
 import type { DatabaseSync, StatementSync } from 'node:sqlite';
 import type { PairRecord } from '../core/words';
 
@@ -8,12 +9,24 @@ import type { PairRecord } from '../core/words';
 // What is worked out of them, and of the records of the games, is never kept: how often the
 // players in a room have had a pair of related terms, and how players rated it, for the next draw
 // of a pair (drawPair in core/words.ts); and how many games an account set the words of, and how
-// many of those players rated good, for its page. A game says where its setup keeps the key of its
-// pair and its setter (GameModule.setupPaths).
+// many of those players rated good, for its page, with the latest of them and their ratings, for
+// its own page alone. A game says where its setup keeps the key of its pair and its setter
+// (GameModule.setupPaths).
 
 export interface SetterCounts {
   games: number;
   good: number;
+}
+
+// One of the latest games that finished whose words an account set: its ID, when it ended, how it
+// began, as the record of the game keeps it, and how many players rated it good, of how many rated
+// it at all.
+export interface SetterGame {
+  gameId: string;
+  endedAt: string;
+  setup: unknown;
+  good: number;
+  rated: number;
 }
 
 export class RatingStore {
@@ -22,6 +35,7 @@ export class RatingStore {
   readonly #pairsSeen: StatementSync;
   readonly #pairsRated: StatementSync;
   readonly #setter: StatementSync;
+  readonly #setterGames: StatementSync;
 
   constructor(
     db: DatabaseSync,
@@ -66,6 +80,16 @@ export class RatingStore {
         "WHERE g.game = ? AND g.ending = 'finished' AND p.account_id = ?) " +
         'SELECT (SELECT count(*) FROM words_set) AS games, (SELECT count(*) FROM ratings ' +
         "WHERE game_id IN (SELECT game_id FROM words_set) AND rating = 'good') AS good",
+    );
+    // The latest of them, the latest first, each with the good ratings and all the ratings of it,
+    // which leave out the players who dismissed the question (null).
+    this.#setterGames = db.prepare(
+      'SELECT g.game_id AS gameId, g.ended_at AS endedAt, g.setup, ' +
+        "(SELECT count(*) FROM ratings WHERE game_id = g.game_id AND rating = 'good') AS good, " +
+        '(SELECT count(rating) FROM ratings WHERE game_id = g.game_id) AS rated FROM replays AS g ' +
+        'JOIN game_players AS p ON p.game_id = g.game_id AND p.player_id = json_extract(g.setup, ?) ' +
+        "WHERE g.game = ? AND g.ending = 'finished' AND p.account_id = ? " +
+        'ORDER BY g.ended_at DESC, g.rowid DESC LIMIT ?',
     );
   }
 
@@ -129,5 +153,15 @@ export class RatingStore {
   setterCounts(game: string, path: string, accountId: number): SetterCounts {
     const row = this.#setter.get(path, game, accountId) as unknown as SetterCounts;
     return { games: row.games, good: row.good };
+  }
+
+  // The latest games that finished whose words an account set, the latest first, and how players
+  // rated them.
+  setterGames(game: string, path: string, accountId: number, limit = RECENT_RECORDS): SetterGame[] {
+    type Row = Omit<SetterGame, 'setup'> & { setup: string };
+    return (this.#setterGames.all(path, game, accountId, limit) as Row[]).map((row) => ({
+      ...row,
+      setup: JSON.parse(row.setup) as unknown,
+    }));
   }
 }

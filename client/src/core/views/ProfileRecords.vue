@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { ACCOUNT_API, emptyGameCounts, type GameRecord, type GameRecords, type RecordsView } from '@reviewer2/shared';
+import {
+  ACCOUNT_API,
+  emptyGameCounts,
+  type GameRecord,
+  type GameRecords,
+  type RecordsView,
+  type WordsSetRecord,
+} from '@reviewer2/shared';
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { games } from '../../games';
@@ -26,12 +33,15 @@ import { useBusy } from '../useBusy';
 // a chip, in the group's tint in a game of groups and in ink in one where everyone plays alone, and
 // what the game made of it: the decision that the group got, by its short English name in every
 // language, or how the player's game went; with a round button on the right to watch it again;
-// then the last 20 matches, in
-// the same look, each with its games, its place and total, and its title on the right. The columns
-// of a list line up from one line to the next where the browser has subgrids. What doesn't fit, a
-// long decision or title, is cut short with an ellipsis; a tap on it says what it means, in full
-// (TitleInfo.vue). A record that can't be fetched says so, with a way to try again. A game that
-// the server kept to watch again opens in a sheet, in the game's own replay viewer.
+// then the last 20 matches, in the same look, each with its games, its place and total, and its
+// title on the right; then, for an account that has set the words of a game that finished, the last
+// 20 of those, in the same look again, each with how many of the players who rated it liked it, the
+// words as the setter gave them, and the round button. The columns of a list line up from one line
+// to the next where the browser has subgrids. A decision, how a game went or a setter's words that
+// don't fit beside the rest go on to a second line; a match's title is cut short with an ellipsis,
+// and a tap on it says it in full (TitleInfo.vue). A record that can't be fetched says so, with a
+// way to try again. A game that the server kept to watch again opens in a sheet, in the game's own
+// replay viewer.
 const { t, te } = useI18n();
 const records = ref<RecordsView | null>(null);
 const game = ref('keywords');
@@ -50,7 +60,7 @@ const { busy, run } = useBusy();
 // The replay that is open, with the game it is of.
 const replay = ref<{ game: string; data: unknown } | null>(null);
 
-async function watchAgain(record: GameRecord): Promise<void> {
+async function watchAgain(record: { game: string; gameId: string }): Promise<void> {
   const reply = await run(() => request<{ replay: unknown }>(ACCOUNT_API.replay, { gameId: record.gameId }));
   if (!reply) return;
   if (!reply.ok) {
@@ -95,6 +105,11 @@ const side = (record: GameRecord) =>
 
 // Whether the locale files explain the decision, as they do for every decision of the first game.
 const explained = (record: GameRecord) => te(`games.${record.game}.letter.explain.${record.verdict}`);
+
+// How many of the players who rated a game whose words the account set liked it, of how many rated
+// it, those who dismissed the question left out.
+const liked = (set: WordsSetRecord) =>
+  set.rated === 0 ? t('account.profile.noRatings') : t('account.profile.liked', { good: set.good, rated: set.rated });
 </script>
 
 <template>
@@ -178,6 +193,30 @@ const explained = (record: GameRecord) => te(`games.${record.game}.letter.explai
         </li>
       </ol>
     </template>
+    <template v-if="shown.wordsSetRecent?.length">
+      <h3>{{ t('account.profile.wordsSet') }}</h3>
+      <ol class="list words-set">
+        <li v-for="(set, index) in shown.wordsSetRecent" :key="`set-${index}`" class="record">
+          <span class="when num"
+            ><span>{{ stamp(set.endedAt).day }}</span> <span>{{ stamp(set.endedAt).time }}</span></span
+          >
+          <span class="tag">{{ liked(set) }}</span>
+          <span class="outcome"
+            ><span class="words">{{ t('account.profile.setWords', set.words) }}</span></span
+          >
+          <button
+            v-if="games[set.game]"
+            type="button"
+            class="watch press press-small"
+            :disabled="busy"
+            :aria-label="t('account.profile.watchAgainOf', { when: moment(set.endedAt) })"
+            @click="watchAgain(set)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" /></svg>
+          </button>
+        </li>
+      </ol>
+    </template>
   </div>
   <div v-else-if="failed" class="records">
     <p class="problem" role="alert">{{ failed }}</p>
@@ -253,14 +292,16 @@ h3 {
    same place on every line, each column as wide as its widest entry. The decision follows its role
    on the same line, rather than in a column of its own: that lines the decisions up where the roles
    are as wide as each other, as in Chinese, and leaves the decision its room where they aren't, as
-   in English, where "Student" is far wider than "PI". */
+   in English, where "Student" is far wider than "PI". The words a setter gave take the place of the
+   role and the decision. */
 @supports (grid-template-columns: subgrid) {
   .list {
     display: grid;
     column-gap: var(--space-2);
   }
 
-  .list.games {
+  .list.games,
+  .list.words-set {
     grid-template-columns: auto auto minmax(0, 1fr) auto;
   }
 
@@ -328,12 +369,14 @@ h3 {
   inset: calc(50% - 22px) 0;
 }
 
-/* The role and the decision, together on the line, the decision cut short where they have no room. */
+/* The role and the decision, together on the line, the decision under the role where they have no
+   room side by side. */
 .outcome {
   display: flex;
   flex: 1 1 auto;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 2px 6px;
   min-width: 0;
 }
 
@@ -364,21 +407,28 @@ h3 {
   color: var(--on-ink);
 }
 
-/* The decision, after the rest, and a match's title, on the right; either is cut short where the
-   line has no room for it. */
-.verdict {
+/* The decision, after the rest, and the words a setter gave go on to a second line where the line
+   has no room for them, and are never cut short (docs/rules/display.md#panels-rows-and-tags). */
+.verdict,
+.words {
   flex: 0 1 auto;
   justify-self: start;
   min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
   font-weight: var(--weight-bold);
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
+/* A match's title, on the right, is cut short where the line has no room for it, and a tap on it
+   says it in full. */
 .verdict.award {
   justify-self: end;
+  max-width: 100%;
   margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* A decision that a tap explains reaches 44px high to tap, out of sight. */
