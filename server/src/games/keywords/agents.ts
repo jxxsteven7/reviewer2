@@ -1,4 +1,4 @@
-import { MAX_AGENT_REQUEST, type AgentAnswer } from '@reviewer2/shared';
+import { type AgentAnswer } from '@reviewer2/shared';
 import {
   emptyKeywordsFeats,
   TEAMS,
@@ -71,11 +71,14 @@ export const STEP_PACE_MS = 1_500;
 export const RETHINK = { settleMs: 3_000, gapMs: 10_000, max: 3 };
 const MAX_LINES = 1 + RETHINK.max;
 
-// How much of a request the board and the group's talk may take at most, which leaves the rest of
-// MAX_AGENT_REQUEST to what the driver adds. The twenty lines that a group keeps may take 60 KB, as
-// long as a line may be in characters of three bytes (MAX_CHAT_INPUT), which together with a board
-// is too much for a request, so in such a chat the oldest lines give way (fitted()).
-const TALK_REQUEST_BYTES = MAX_AGENT_REQUEST - 1024;
+// How much of a request the group's chat may take, as JSON in bytes, so that the chat of a student's
+// question stays a small part of what the model reads: a model reads a prompt up to a length that
+// its service sets, and past it drops the start of the prompt, where the rules and the board are. A
+// group's usual chat fits whole: twenty lines of short sentences, or a dozen of 200 Chinese
+// characters. A line may be 3 KB, as long as the rules read it (MAX_CHAT_INPUT) and in characters
+// of three bytes, so in a chat of such lines the oldest give way (fitted()). The rest of
+// MAX_AGENT_REQUEST is many times what the board and the driver add.
+export const CHAT_REQUEST_BYTES = 8 * 1024;
 
 // Each group has at most one AI PI and one AI student.
 export function agentLimitReached(seating: Seating, ctx: GameContext, playerId: string, team: string, role: string) {
@@ -149,14 +152,11 @@ function talkOf(view: KeywordsView, playerId: string): AgentTalk {
   };
 }
 
-// A student's question, within what a request may take: the oldest lines of the chat give way, which
-// only a chat of the longest lines comes to.
+// A student's question with its chat within CHAT_REQUEST_BYTES: the oldest lines give way.
 function fitted<Question extends AgentTalk>(question: Question): Question {
-  let kept = question;
-  while (kept.chat.length > 0 && Buffer.byteLength(JSON.stringify(kept)) > TALK_REQUEST_BYTES) {
-    kept = { ...kept, chat: kept.chat.slice(1) };
-  }
-  return kept;
+  let chat = question.chat;
+  while (chat.length > 0 && Buffer.byteLength(JSON.stringify(chat)) > CHAT_REQUEST_BYTES) chat = chat.slice(1);
+  return chat === question.chat ? question : { ...question, chat };
 }
 
 // How far the people of a seat's group have talked in the turn: the ID of the latest line that one

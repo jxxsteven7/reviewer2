@@ -509,9 +509,15 @@ describe('a guess', () => {
 
   test('asked again, may give no reason, which the protocol allows', async () => {
     const model = new ScriptedModel({ guess: [{ picks: [6], reason: '  ' }] });
-    const reply = allowed(await guess(guessRequest({ rethink: true, chat: [line] }), turn(model)));
+    const said = { turn: 1, by: 'you', text: 'The protein.' };
+    const reply = allowed(await guess(guessRequest({ rethink: true, chat: [said, line] }), turn(model)));
     expect(reply).toMatchObject({ ok: true, kind: 'guess', picks: [6], reason: '' });
     expect(model.asked[0]?.system).toMatch(/Otherwise leave reason empty/);
+    // One that hasn't said why in the turn is asked for a reason as the first time.
+    const quiet = new ScriptedModel({ guess: [{ picks: [6], reason: 'Proteins.' }] });
+    allowed(await guess(guessRequest({ rethink: true, chat: [line] }), turn(quiet)));
+    expect(quiet.asked[0]?.system).toContain('Give your reason in one short sentence in English');
+    expect(quiet.asked[0]?.system).not.toMatch(/Otherwise leave reason empty/);
   });
 
   test('is thought of for less time when it is asked again', async () => {

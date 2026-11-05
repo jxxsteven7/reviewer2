@@ -11,7 +11,7 @@ import { AGENT_REQUEST } from '@reviewer2/shared/schemas';
 import { describe, expect, test } from 'vitest';
 import type { AgentTask, GameContext } from '../../core/game';
 import { seededRng } from '../../core/random';
-import { agentMove, agentProblems, agentTask, featsOf, RETHINK, totalsOf } from './agents';
+import { agentMove, agentProblems, agentTask, CHAT_REQUEST_BYTES, featsOf, RETHINK, totalsOf } from './agents';
 import type { KeywordsData } from './index';
 import { emptySeating, shuffleGroups } from './seats';
 import type { KeywordsState } from './state';
@@ -193,7 +193,10 @@ describe("what an AI student is told of its group's talk", () => {
     expect(task?.rethink).toBeUndefined();
   });
 
-  test('keeps a request within what the agent takes: the oldest lines give way to the longest', () => {
+  test('keeps the chat within its share of a request: the oldest lines give way to the longest', () => {
+    const chatBytes = (task: AgentTask | null) =>
+      Buffer.byteLength(JSON.stringify((task?.question as { chat: unknown[] }).chat));
+    const chatOf = (task: AgentTask | null) => (task?.question as { chat: { text: string }[] }).chat;
     // As long as a line may be, in characters of three bytes: the twenty of them alone take 60 KB.
     const long = Array.from({ length: CHAT_KEPT }, (_, i) =>
       line(i + 1, 'rob', `${i}`.padEnd(MAX_CHAT_INPUT, '\u4e00')),
@@ -210,18 +213,21 @@ describe("what an AI student is told of its group's talk", () => {
       expect(Buffer.byteLength(JSON.stringify(request))).toBeLessThanOrEqual(MAX_AGENT_REQUEST);
       expect(AGENT_REQUEST.safeParse(request).success).toBe(true);
     }
-    const { chat } = task.question as { chat: { text: string }[] };
-    expect(chat.length).toBeGreaterThan(10);
-    expect(chat.length).toBeLessThan(CHAT_KEPT);
-    expect(chat.at(-1)?.text).toBe(long.at(-1)?.text);
-    // A group's usual talk is told whole.
+    expect(chatBytes(task)).toBeLessThanOrEqual(CHAT_REQUEST_BYTES);
+    expect(chatOf(task)).toHaveLength(2);
+    expect(chatOf(task).at(-1)?.text).toBe(long.at(-1)?.text);
+    expect(chatBytes(task) + Buffer.byteLength(JSON.stringify(long[0]))).toBeGreaterThan(CHAT_REQUEST_BYTES);
+    // Twenty lines of 200 Chinese characters take more than the share, and the newest dozen are told.
+    const chinese = Array.from({ length: CHAT_KEPT }, (_, i) => line(i + 1, 'rob', `${i}`.padEnd(200, '\u4e09')));
+    const told = advised(talking({ cards, chat: { red: chinese, blue: [] } }));
+    expect(chatBytes(told)).toBeLessThanOrEqual(CHAT_REQUEST_BYTES);
+    expect(chatOf(told).length).toBeGreaterThanOrEqual(12);
+    expect(chatOf(told).at(-1)?.text).toBe(chinese.at(-1)?.text);
+    // A group's usual talk, of short lines, is told whole.
     const short = Array.from({ length: CHAT_KEPT }, (_, i) => line(i + 1, 'rob', 'x'.repeat(200)));
-    expect(advised(talking({ cards, chat: { red: short, blue: [] } }))?.question).toMatchObject({
-      chat: expect.arrayContaining([expect.objectContaining({ text: 'x'.repeat(200) })]),
-    });
-    expect(
-      (advised(talking({ cards, chat: { red: short, blue: [] } }))?.question as { chat: unknown[] }).chat,
-    ).toHaveLength(CHAT_KEPT);
+    expect(chatOf(advised(talking({ cards, chat: { red: short, blue: [] } })))).toEqual(
+      short.map(({ turn, text }) => ({ turn, by: 'Student A', text })),
+    );
   });
 });
 

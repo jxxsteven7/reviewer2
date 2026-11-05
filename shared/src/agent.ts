@@ -138,7 +138,7 @@ export const MAX_AGENT_THINKING = 60_000;
 
 // The longest request and answer, as a line of JSON in bytes. A request carries the board with
 // every term's translations and other forms, and a student's its group's chat, of which the oldest
-// lines give way when it would be too long. An answer takes up to 16 KB, and what the model
+// lines give way past the chat's share of a request. An answer takes up to 16 KB, and what the model
 // thought up to six bytes a character more, as JSON writes a control character.
 export const MAX_AGENT_REQUEST = 64 * 1024;
 export const MAX_AGENT_REPLY = 16 * 1024 + 6 * MAX_AGENT_THINKING;

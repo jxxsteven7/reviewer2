@@ -41,10 +41,11 @@ const PING_MS = 5_000;
 // asked again, once or twice, which is rare, and may make a waiting one late.
 const QUICK_MS = 3_000;
 
-// Whether a request hurries the requests with the model when it would be late otherwise (hurryAt):
-// every one but a student of the first game asked again what it advises (`rethink`, keywords.ts),
-// whose group has its advice already. That one waits its turn, and is busy if its turn doesn't
-// come, rather than cut short what the AI players of other rooms think.
+// Whether a request hurries the requests with the model when it would be late otherwise (hurryAt),
+// and goes before those that don't in the queue: every one but a student of the first game asked
+// again what it advises (`rethink`, keywords.ts), whose group has its advice already. That one waits
+// behind every other request, and is busy if its turn doesn't come, rather than take the model from
+// the AI players of other rooms or cut short what they think.
 function hurriesOthers(request: Exclude<AgentRequest, { kind: 'ping' }>): boolean {
   return !(request.game === 'keywords' && request.kind === 'guess' && request.rethink === true);
 }
@@ -85,7 +86,7 @@ export function createAgent({
   // after the stop, and needs it QUICK_MS before its wait ends. One that would be late even if the
   // requests with the model stopped at once, as a request asked again late in a phase is, hurries
   // nobody: it is busy whatever they do, and their thinking would be lost for nothing. Neither does
-  // one whose answer isn't waited for (hurriesOthers()), though it keeps its place in the line.
+  // one whose answer isn't waited for (hurriesOthers()), which waits behind every one that is.
   function hurryAt(): number {
     return waiting.reduce((at, { until, urgent }, place) => {
       const turns = Math.floor(place / concurrency) + 1;
@@ -106,9 +107,10 @@ export function createAgent({
   }
 
   // Waits for a turn with the model, or says that there is none to be had: the queue is full, or
-  // the request's wait ran out before its turn came, when nobody needs its answer any more. A
-  // request leaves the queue as soon as its wait is over, so that the server hears `busy` while it
-  // still listens, rather than nothing at all: nothing would read as the agent being gone.
+  // the request's wait ran out before its turn came, when nobody needs its answer any more. An
+  // urgent request goes before every one that isn't, which waits at the end. A request leaves the
+  // queue as soon as its wait is over, so that the server hears `busy` while it still listens,
+  // rather than nothing at all: nothing would read as the agent being gone.
   function turnWith(until: number, urgent: boolean): Promise<boolean> {
     if (running < concurrency) {
       running += 1;
@@ -129,7 +131,8 @@ export function createAgent({
         clearTimeout(timer);
         resolve(true);
       };
-      waiting.push({ until, take, urgent });
+      const behind = urgent ? waiting.findIndex((one) => !one.urgent) : -1;
+      waiting.splice(behind === -1 ? waiting.length : behind, 0, { until, take, urgent });
       hurryWhenDue();
     });
   }

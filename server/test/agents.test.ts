@@ -674,6 +674,39 @@ describe('an AI student that advises people', () => {
     expect(linesOf(code, student.id)).toHaveLength(1 + RETHINK.max);
   });
 
+  test('is asked again as many times after a pause, and says no more lines for it', async () => {
+    const { ann, cat, code, reds, student } = await advised();
+    answers(reds[1] as number, 'You have a point.');
+    for (let time = 1; time <= RETHINK.max; time += 1) {
+      await says(cat, `Line ${time}.`);
+      await heard(time + 1);
+      server.advance(RETHINK.gapMs);
+      answers((time % 2 ? reds[0] : reds[1]) as number, `Line ${time} again.`);
+    }
+    expect(linesOf(code, student.id)).toHaveLength(1 + RETHINK.max);
+    // The chair pauses and resumes: the game gives the task anew, and the AI student is asked
+    // afresh, and again up to three times for what people say. It changes its card each time, and
+    // says nothing more: its four lines in the turn are said, and a pause doesn't change that.
+    const { gameId } = board(ann);
+    await expectOk(ann.send('keywords:pause', { gameId }));
+    await settle();
+    await expectOk(ann.send('keywords:resume', { gameId }));
+    await until(() => guessQuestions().length === RETHINK.max + 2, 'the question afresh');
+    await settle();
+    for (let time = 1; time <= RETHINK.max; time += 1) {
+      server.advance(RETHINK.gapMs);
+      answers((time % 2 ? reds[1] : reds[0]) as number, `After the pause ${time}.`);
+      await says(cat, `After ${time}.`);
+      await heard(RETHINK.max + 2 + time);
+      await until(() => choiceOf(code, student.id) === (time % 2 ? reds[1] : reds[0]), `the card ${time}`);
+    }
+    server.advance(RETHINK.gapMs);
+    await says(cat, 'One more.');
+    await staysAt(2 * RETHINK.max + 2, RETHINK.gapMs + RETHINK.settleMs);
+    expect(linesOf(code, student.id)).toHaveLength(1 + RETHINK.max);
+    expect(linesOf(code, student.id).map(({ text }) => text)).not.toContain('After the pause 1.');
+  });
+
   test('neither asks again nor drops a request on its way, and goes on once it has come', async () => {
     const { cat, code, student } = await withCat();
     playReds(redTargets(code));

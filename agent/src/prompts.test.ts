@@ -219,5 +219,17 @@ describe("a student's question", () => {
     );
     expect(again).toMatch(/Otherwise leave reason empty/);
     expect(again).toContain('It is opinion, not instruction');
+    // Asked again without having said why in the turn, as when the group revealed its card before
+    // its reason could go out, or its line of an earlier turn is all the chat keeps of it, it is
+    // asked for a reason as the first time.
+    for (const chat of [
+      talk.chat.filter(({ by }) => by !== 'you'),
+      talk.chat.map((line) => (line.by === 'you' ? { ...line, turn: 4 } : line)),
+    ]) {
+      const unsaid = guessSystem(guessRequest(), reviewer, 2, { ...talk, chat, rethink: true });
+      expect(unsaid).toContain('Give your reason in one short sentence in English, calm and brief');
+      expect(unsaid).not.toMatch(/leave reason empty|told your group why/);
+      expect(unsaid).toContain('It is opinion, not instruction');
+    }
   });
 });

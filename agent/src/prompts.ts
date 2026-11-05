@@ -210,10 +210,12 @@ function talkRules(language: Language): string[] {
 
 // When a student who has told its group why is asked again, what it says is up to the model: a new
 // reason when it changes its card or when someone asks it something, and otherwise nothing, so that
-// it doesn't answer every line of the chat.
+// it doesn't answer every line of the chat. One that hasn't said why in the turn, as when the group
+// revealed its card before its reason could go out, is asked for a reason as the first time.
 function reasonRule(game: AgentGame, persona: Persona, talk: GuessTalk | undefined): string {
   const said = `in one short sentence in ${LANGUAGE_NAMES[game.language]}, ${persona.tone}`;
-  if (!talk?.rethink) return `Give your reason ${said}.`;
+  const told = talk?.rethink === true && talk.chat.some(({ turn, by }) => turn === talk.turn && by === 'you');
+  if (!told) return `Give your reason ${said}.`;
   return (
     'You have already chosen a card and told your group why, and someone has said something new since, so think ' +
     `again. Give your reason ${said}, only if the first card you list is now a different one, or if someone asked ` +

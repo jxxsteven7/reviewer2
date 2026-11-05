@@ -304,6 +304,43 @@ describe('the queue', () => {
     }
   });
 
+  test('lets every other request go before a student asked again, which thinks once they are done', async () => {
+    vi.useFakeTimers();
+    try {
+      const model = new ThinkingModel();
+      const { handle } = agent(model, { concurrency: 1, now: Date.now });
+      const started = Date.now();
+      const asked: { name: string; think: boolean; at: number }[] = [];
+      const ask = model.ask.bind(model);
+      model.ask = (question, signal) => {
+        if (question.think) asked.push({ name: question.name, think: true, at: Date.now() - started });
+        return ask(question, signal);
+      };
+      // The AI PI of one room thinks of its clue, with 40 seconds; a second later an AI student of
+      // another room is asked again what it advises, with 87; a second after that the AI PI of a
+      // third room asks for its clue, with 87. The PI stops thinking 15 seconds before its wait
+      // ends, and the third room's PI has the model then, for as long as it may think, before the
+      // student, which thinks for what is left of its 10 seconds and answers in time all the same.
+      const first = handle(JSON.stringify(clueRequest({ waitMs: 40_000 })));
+      await vi.advanceTimersByTimeAsync(1_000);
+      const again = handle(JSON.stringify(guessRequest({ waitMs: 87_000, rethink: true })));
+      await vi.advanceTimersByTimeAsync(1_000);
+      const third = handle(JSON.stringify(clueRequest({ waitMs: 87_000 })));
+      await vi.advanceTimersByTimeAsync(85_000);
+      expect(asked).toEqual([
+        { name: 'clue', think: true, at: 0 },
+        { name: 'clue', think: true, at: expect.closeTo(25_000, -3) },
+        { name: 'guess', think: true, at: expect.closeTo(74_000, -3) },
+      ]);
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(allowed(await again)).toMatchObject({ ok: true, kind: 'guess', picks: [6], note: { fellBack: true } });
+      for (const reply of await Promise.all([first, third]))
+        expect(allowed(reply)).toMatchObject({ ok: true, kind: 'clue' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("leaves the thinking alone for a request that couldn't be answered in time anyway", async () => {
     vi.useFakeTimers();
     try {
