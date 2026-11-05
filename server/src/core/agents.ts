@@ -14,10 +14,11 @@ import type { Timers } from './socket';
 //
 // The driver looks at a room every time it changes (poke(), from the socket layer's broadcast), and
 // otherwise only when a timer it set comes due: a move that waits for its pace, a request to ask
-// again after one that brought no answer, a player who has been offline long enough to be played
-// for or to be counted as gone by the AI players, or the agent to be asked whether it is back. The
-// game says what a seat is to do (GameModule.agentTask) and what message an answer makes
-// (GameModule.agentMove); the driver knows nothing of any game.
+// again after one that brought no answer, or after people answered what it said (AgentTask.rethink),
+// a player who has been offline long enough to be played for or to be counted as gone by the AI
+// players, or the agent to be asked whether it is back. The game says what a seat is to do
+// (GameModule.agentTask) and what message an answer makes (GameModule.agentMove); the driver knows
+// nothing of any game.
 //
 // What the agent answers is a suggestion that has to get past the rules like any message. An
 // answer that comes after the game has moved on is dropped. When the agent can't be reached or its
@@ -64,9 +65,12 @@ const STATS_MS = 60 * 60_000;
 const DOWN_ERRORS = new Set(['unreachable', 'timeout', 'bad_reply', 'model_failed']);
 
 // A task that is under way in a seat: what it is, when it came up, the game it belongs to, the
-// agent's answer once it has come, the messages sent for it so far and when the last went, the
-// timer of the next move or of the next request, and how many times the request has been made
-// again.
+// agent's answer once it has come, the messages sent for that answer so far and when the last went,
+// the timer of the next move or of the next request, and how many times the request has been made
+// again. For a task that may be asked again when there is something new (AgentTask.rethink): whether
+// a request is on its way, when the last answer came, the mark that the agent was last asked with,
+// the latest mark and when it was first seen, how many times it has been asked again, and the timer
+// of the next time.
 interface Running {
   task: AgentTask;
   persona: AgentPersona;
@@ -78,6 +82,13 @@ interface Running {
   lastMove: number;
   timer: unknown;
   retries: number;
+  asking: boolean;
+  answeredAt: number;
+  told: number;
+  mark: number;
+  markedAt: number;
+  rethinks: number;
+  rethinkTimer: unknown;
   // Done, by a move that the rules refused or by too many moves: nothing more is sent for the task.
   done: boolean;
   cancelled: boolean;
@@ -150,6 +161,7 @@ export class AgentDriver {
       const run = running.get(id);
       if (run && run.task.moment === task.moment) {
         this.#next(room, id, run);
+        this.#heed(room, id, run, task);
         continue;
       }
       if (run) this.#cancel(running, id, run);
@@ -164,6 +176,13 @@ export class AgentDriver {
         lastMove: 0,
         timer: null,
         retries: 0,
+        asking: false,
+        answeredAt: -Infinity,
+        told: 0,
+        mark: 0,
+        markedAt: -Infinity,
+        rethinks: 0,
+        rethinkTimer: null,
         done: false,
         cancelled: false,
       };
@@ -309,46 +328,92 @@ export class AgentDriver {
   }
 
   // Asks the agent what to do in a seat, for as long as the phase leaves, and notes what came of it in
-  // the AI's log of the game it was asked for.
-  #ask(room: Room, id: string, run: Running): void {
+  // the AI's log of the game it was asked for. Asked again about a task that it has answered
+  // (`rethink`, AgentTask.rethink), the answer it gave stands when there is too little time left to
+  // ask or the request brings none: it isn't made again, and counts all the same.
+  #ask(room: Room, id: string, run: Running, rethink?: AgentTask['rethink']): void {
     const { channel, now, log } = this.#options;
     const deadline = room.deadline();
     const waitMs = Math.min(MAX_WAIT_MS, deadline === null ? MAX_WAIT_MS : deadline - now() - MARGIN_MS);
     if (waitMs < 1_000) {
-      run.done = true;
+      if (!rethink) run.done = true;
       return;
     }
     const asked = now();
     this.#steps.push(asked);
     this.#forgetOld();
-    const request = { v: 1 as const, persona: run.persona, waitMs: Math.round(waitMs), ...run.task.question };
+    const { kind, question } = rethink ?? run.task;
+    run.asking = true;
+    run.told = run.task.rethink?.mark ?? 0;
+    if (rethink) run.rethinks += 1;
+    const request = { v: 1 as const, persona: run.persona, waitMs: Math.round(waitMs), ...question };
     void channel.ask(request, waitMs).then((outcome) =>
       this.#safely(room, () => {
         const late = run.cancelled;
+        run.asking = false;
+        run.answeredAt = now();
         room.noteAgent(run.gameId, asked, {
           by: id,
           persona: run.persona,
           ...(run.takeover ? { takeover: true as const } : {}),
-          kind: run.task.kind,
+          kind,
           ...answerOf(outcome),
           ...(late ? { late: true as const } : {}),
         });
         if (!outcome.ok) {
           this.#failures.push(now());
-          log('agent_failed', { code: room.code, kind: run.task.kind, error: outcome.error });
+          log('agent_failed', { code: room.code, kind, error: outcome.error });
           if (DOWN_ERRORS.has(outcome.error)) {
             this.#down();
             return;
           }
           this.#heard = now();
-          if (!late) this.#retry(room, id, run);
+          if (!late && !rethink) this.#retry(room, id, run);
+          if (!late) this.#rethinkWhenDue(room, id, run);
           return;
         }
         this.#heard = now();
         if (late || outcome.kind === 'ping') return;
         run.answer = outcome;
+        run.made = [];
         this.#next(room, id, run);
+        this.#rethinkWhenDue(room, id, run);
       }),
+    );
+  }
+
+  // Takes note of what the game says is new for a task that may be asked again (AgentTask.rethink).
+  #heed(room: Room, id: string, run: Running, task: AgentTask): void {
+    const mark = task.rethink?.mark ?? 0;
+    if (mark <= run.mark) return;
+    run.mark = mark;
+    run.markedAt = this.#options.now();
+    this.#rethinkWhenDue(room, id, run);
+  }
+
+  // Sets the timer of the next time a task is asked again, when there is something new that the
+  // agent hasn't heard, up to as many times as the task allows. Something newer restarts the wait.
+  // Nothing is asked before the request on its way has been answered, and that request isn't dropped
+  // either: the model is shared, and would go on working on it, taking up another request's place.
+  #rethinkWhenDue(room: Room, id: string, run: Running): void {
+    const { timers, now } = this.#options;
+    if (run.rethinkTimer !== null) timers.stop(run.rethinkTimer);
+    run.rethinkTimer = null;
+    const rethink = run.task.rethink;
+    if (!rethink || run.done || run.cancelled || !run.answer || run.asking) return;
+    if (run.mark <= run.told || run.rethinks >= rethink.max) return;
+    const at = Math.max(run.markedAt + rethink.settleMs, run.answeredAt + rethink.gapMs);
+    run.rethinkTimer = timers.start(
+      () =>
+        this.#safely(room, () => {
+          run.rethinkTimer = null;
+          if (run.done || run.cancelled) return;
+          const task = this.#task(room, id);
+          if (task?.moment !== run.task.moment || !task.rethink) return;
+          run.task = task;
+          this.#ask(room, id, run, task.rethink);
+        }),
+      Math.max(0, at - now()),
     );
   }
 
@@ -409,7 +474,9 @@ export class AgentDriver {
   #cancel(running: Map<string, Running>, id: string, run: Running): void {
     run.cancelled = true;
     if (run.timer !== null) this.#options.timers.stop(run.timer);
+    if (run.rethinkTimer !== null) this.#options.timers.stop(run.rethinkTimer);
     run.timer = null;
+    run.rethinkTimer = null;
     running.delete(id);
   }
 

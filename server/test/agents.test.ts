@@ -12,7 +12,7 @@ import { FRESH_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
 import type { GameLogData } from '../src/core/gameLog';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame, type KeywordsData } from '../src/games/keywords';
-import { CLUE_PACE_MS, GUESS_PACE_MS, STEP_PACE_MS } from '../src/games/keywords/agents';
+import { CLUE_PACE_MS, GUESS_PACE_MS, RETHINK, STEP_PACE_MS } from '../src/games/keywords/agents';
 import {
   Browser,
   createRoom,
@@ -545,6 +545,268 @@ describe('the AI players of a group', () => {
     await ann.waitFor((state) => roomData(state).game?.clue?.word === 'zebra', 'the clue');
     expect(truth(code).phase).toBe('guess');
     expect(server.app.sockets.agents()).toMatchObject({ up: true, steps: 3, failures: 1 });
+  });
+});
+
+describe('an AI student that advises people', () => {
+  // The AI student of withCat() has chosen its card, the first of two, and said why, and the wait
+  // since it answered is over, unless `waited` is false: what Cat says now takes only the wait of
+  // RETHINK.settleMs.
+  async function advised(waited = true) {
+    const setup = await withCat();
+    const reds = redTargets(setup.code);
+    playReds(reds);
+    server.advance(CLUE_PACE_MS);
+    await until(() => guessQuestions().length === 1, 'the advice question');
+    await setup.cat.waitFor(
+      (state) => roomData(state).game?.chat?.some((line) => line.text === 'Both are stripy.') === true,
+      'the reason',
+    );
+    if (waited) server.advance(RETHINK.gapMs);
+    return { ...setup, reds };
+  }
+  const says = async (client: TestClient, text: string) => {
+    const state = await client.waitFor((view) => roomData(view).game !== null, 'the game');
+    await expectOk(client.send('keywords:say', { gameId: roomData(state).game?.gameId, text }));
+  };
+  const linesOf = (code: string, id: string) => truth(code).chat.red.filter((line) => line.player === id);
+  const choiceOf = (code: string, id: string) => truth(code).selections.find((choice) => choice.player === id)?.card;
+  // The model answers with this card and this reason from now on.
+  const answers = (card: number, reason: string) => {
+    agent.play = () => ({ ok: true, kind: 'guess', picks: [card], reason, note: SCRIPT_NOTE });
+  };
+  // Lets the wait of a line pass, for the question that comes of it.
+  const heard = async (questions: number) => {
+    server.advance(RETHINK.settleMs);
+    await until(() => guessQuestions().length === questions, `question ${questions}`);
+    await settle();
+  };
+  const staysAt = async (questions: number, ms: number) => {
+    server.advance(ms);
+    await settle();
+    expect(guessQuestions()).toHaveLength(questions);
+  };
+
+  test('is asked again once a person has said something and the talk has settled, with all of it', async () => {
+    const { cat, reds } = await advised();
+    await says(cat, 'Not that one.');
+    await staysAt(1, RETHINK.settleMs - 1);
+    server.advance(1);
+    await until(() => guessQuestions().length === 2, 'the question again');
+    const [first, again] = guessQuestions();
+    expect(first).not.toHaveProperty('rethink');
+    expect(first).toMatchObject({ chat: [], choices: [] });
+    expect(again).toMatchObject({
+      kind: 'guess',
+      rethink: true,
+      chat: [
+        { by: 'you', text: 'Both are stripy.' },
+        { by: 'Student A', text: 'Not that one.' },
+      ],
+      choices: [{ by: 'you', card: reds[0] }],
+    });
+  });
+
+  test('takes several lines in a row as one', async () => {
+    const { cat } = await advised();
+    await says(cat, 'Not that one.');
+    await staysAt(1, RETHINK.settleMs - 1);
+    await says(cat, 'Or is it?');
+    await staysAt(1, RETHINK.settleMs - 1);
+    await says(cat, 'Hm.');
+    await heard(2);
+    expect(guessQuestions()[1]).toMatchObject({ chat: [{}, {}, {}, {}] });
+    await staysAt(2, RETHINK.gapMs + RETHINK.settleMs);
+  });
+
+  test('is not asked again for its own lines, for a choice of a card, or for what it has heard', async () => {
+    const { bob, cat, code, reds } = await advised();
+    expect(guessQuestions()).toHaveLength(1);
+    await staysAt(1, 2 * (RETHINK.gapMs + RETHINK.settleMs));
+    const game = board(cat);
+    const other = truth(code).cards.findIndex((card, i) => !card.revealed && i !== reds[0]);
+    await expectOk(cat.send('keywords:select', { gameId: game.gameId, turn: game.turn, card: other }));
+    await staysAt(1, RETHINK.gapMs + RETHINK.settleMs);
+    // A line of the other group is none of its business.
+    await says(bob, 'Good luck to them.');
+    await staysAt(1, RETHINK.gapMs + RETHINK.settleMs);
+    // The AI PI is asked for its clue once, whatever is said.
+    expect(agent.questions.filter((request) => request.kind === 'clue')).toHaveLength(1);
+  });
+
+  test('takes what was said before its first question as heard', async () => {
+    const { cat, code } = await withCat();
+    playReds(redTargets(code));
+    await says(cat, 'What will the clue be?');
+    server.advance(CLUE_PACE_MS);
+    await until(() => guessQuestions().length === 1, 'the advice question');
+    expect(guessQuestions()[0]).toMatchObject({ chat: [{ by: 'Student A', text: 'What will the clue be?' }] });
+    await settle();
+    await staysAt(1, 2 * (RETHINK.gapMs + RETHINK.settleMs));
+    expect(agent.questions.filter((request) => request.kind === 'clue')).toHaveLength(1);
+  });
+
+  test('waits a while after its last answer', async () => {
+    const { cat } = await advised(false);
+    await says(cat, 'Not that one.');
+    await staysAt(1, RETHINK.gapMs - 1);
+    server.advance(1);
+    await until(() => guessQuestions().length === 2, 'the question again');
+    // The next answer has just come: the wait is from then, however soon the talk has settled.
+    await settle();
+    await says(cat, 'Still no.');
+    await staysAt(2, RETHINK.gapMs - 1);
+    server.advance(1);
+    await until(() => guessQuestions().length === 3, 'the question once more');
+  });
+
+  test('is asked again three times in a turn at most, and says four lines at most', async () => {
+    const { cat, code, reds, student } = await advised();
+    answers(reds[1] as number, 'You have a point.');
+    for (let time = 1; time <= RETHINK.max; time += 1) {
+      await says(cat, `Line ${time}.`);
+      await staysAt(time, RETHINK.settleMs - 1);
+      await heard(time + 1);
+      server.advance(RETHINK.gapMs);
+    }
+    await says(cat, 'One more.');
+    await staysAt(RETHINK.max + 1, RETHINK.gapMs + RETHINK.settleMs);
+    expect(linesOf(code, student.id)).toHaveLength(1 + RETHINK.max);
+  });
+
+  test('neither asks again nor drops a request on its way, and goes on once it has come', async () => {
+    const { cat, code, student } = await withCat();
+    playReds(redTargets(code));
+    agent.hold();
+    server.advance(CLUE_PACE_MS);
+    await until(() => guessQuestions().length === 1, 'the advice question');
+    await says(cat, 'Well?');
+    await staysAt(1, 2 * (RETHINK.gapMs + RETHINK.settleMs));
+    agent.release();
+    await until(() => linesOf(code, student.id).length === 1, 'the advice');
+    expect(choiceOf(code, student.id)).toBe(redTargets(code)[0]);
+    // What Cat said while it thought is new to it: it hears that once the wait after its answer is
+    // over, and a request on its way holds up another line as well.
+    agent.hold();
+    await staysAt(1, RETHINK.gapMs - 1);
+    server.advance(1);
+    await until(() => guessQuestions().length === 2, 'the question again');
+    expect(guessQuestions()[1]).toMatchObject({ rethink: true, chat: [{ text: 'Well?' }, {}] });
+    await says(cat, 'Well, well?');
+    await staysAt(2, 2 * (RETHINK.gapMs + RETHINK.settleMs));
+    agent.release();
+    await settle();
+    await staysAt(2, RETHINK.gapMs - 1);
+    server.advance(1);
+    await until(() => guessQuestions().length === 3, 'the question once more');
+    expect(guessQuestions()[2]).toMatchObject({ chat: [{ text: 'Well?' }, {}, { text: 'Well, well?' }, {}] });
+  });
+
+  test('keeps its advice when it has no answer the next time, which counts and is not made again', async () => {
+    const { cat, code, reds, student } = await advised();
+    agent.play = () => ({ ok: false, error: 'busy' });
+    await says(cat, 'Not that one.');
+    await heard(2);
+    expect(server.logs).toContainEqual({
+      event: 'agent_failed',
+      fields: expect.objectContaining({ kind: 'rethink', error: 'busy' }),
+    });
+    expect(server.logs.some(({ event }) => event === 'agent_down')).toBe(false);
+    await staysAt(2, 3 * RETRY_MS);
+    expect(choiceOf(code, student.id)).toBe(reds[0]);
+    expect(linesOf(code, student.id)).toHaveLength(1);
+    // It counts: three such, and it isn't asked again.
+    agent.play = () => ({ ok: false, error: 'no_answer', note: SCRIPT_NOTE });
+    await says(cat, 'Well?');
+    await heard(3);
+    server.advance(RETHINK.gapMs);
+    await says(cat, 'Hello?');
+    await heard(4);
+    server.advance(RETHINK.gapMs);
+    answers(reds[1] as number, 'You have a point.');
+    await says(cat, 'Anyone?');
+    await staysAt(4, RETHINK.gapMs + RETHINK.settleMs);
+    expect(choiceOf(code, student.id)).toBe(reds[0]);
+  });
+
+  test('goes offline with the agent, when it is asked again and the agent is gone', async () => {
+    const { ann, cat } = await advised();
+    agent.up = false;
+    await says(cat, 'Not that one.');
+    await heard(2);
+    await ann.waitFor((state) => aiOf(state).every((player) => !player.online), 'offline');
+    expect(server.logs.some(({ event }) => event === 'agent_down')).toBe(true);
+    await staysAt(2, RETHINK.gapMs + RETHINK.settleMs);
+  });
+
+  test('forgets what it was to hear once the turn is over, or the person has gone', async () => {
+    const { ann, bob, cat, code } = await advised();
+    const waiting = server.timers();
+    await says(cat, 'Not that one.');
+    expect(server.timers()).toBe(waiting + 1);
+    // Cat ends the turn on a paper of nobody's, and the wait stops with it.
+    const game = board(cat);
+    const paper = truth(code).cards.findIndex((card) => card.color === 'neutral' && !card.revealed);
+    await expectOk(cat.send('keywords:reveal', { gameId: game.gameId, turn: game.turn, card: paper }));
+    await until(() => truth(code).team === 'blue', 'the blue turn');
+    expect(server.timers()).toBe(waiting);
+    await staysAt(1, RETHINK.settleMs);
+    // In the next red turn, Cat says something and goes: the AI student is asked as one who plays
+    // alone, and not again.
+    await peopleTurn(code, ann, bob);
+    await until(() => truth(code).team === 'red', 'the red turn');
+    server.advance(CLUE_PACE_MS);
+    await until(() => guessQuestions().length === 2, 'the advice question');
+    await settle();
+    server.advance(RETHINK.gapMs);
+    await says(cat, 'Bye.');
+    await goes(cat, ann);
+    server.advance(TAKEOVER_MS);
+    await until(() => guessQuestions().length === 3, 'the question of the student alone');
+    expect(guessQuestions()[2]).not.toHaveProperty('rethink');
+  });
+
+  test('moves its choice when it changes its mind, and says something only if it gave a reason', async () => {
+    const { cat, code, reds, student } = await advised();
+    answers(reds[1] as number, 'You have a point.');
+    await says(cat, 'Not that one.');
+    await heard(2);
+    await until(() => choiceOf(code, student.id) === reds[1], 'the new choice');
+    await until(() => linesOf(code, student.id).length === 2, 'the new reason');
+    expect(linesOf(code, student.id)[1]?.text).toBe('You have a point.');
+    // Nothing to add: the card stands and it says nothing.
+    server.advance(RETHINK.gapMs);
+    answers(reds[1] as number, '');
+    await says(cat, 'Good.');
+    await heard(3);
+    expect(choiceOf(code, student.id)).toBe(reds[1]);
+    expect(linesOf(code, student.id)).toHaveLength(2);
+    // A new card without a reason moves its choice all the same.
+    server.advance(RETHINK.gapMs);
+    answers(reds[0] as number, '');
+    await says(cat, 'Sure?');
+    await heard(4);
+    await until(() => choiceOf(code, student.id) === reds[0], 'the choice back');
+    expect(linesOf(code, student.id)).toHaveLength(2);
+  });
+
+  test('is told the game as it is when it is asked again, and its log tells the times apart', async () => {
+    const { ann, cat, code, reds } = await advised();
+    await says(cat, 'Not that one.');
+    server.advance(RETHINK.settleMs - 1);
+    const game = board(cat);
+    await expectOk(cat.send('keywords:reveal', { gameId: game.gameId, turn: game.turn, card: reds[0] }));
+    server.advance(1);
+    await until(() => guessQuestions().length === 2, 'the question again');
+    expect(guessQuestions()[1]?.cards[reds[0] as number]).toMatchObject({ revealed: true, color: 'red' });
+    await settle();
+    // Cat ends the game by revealing Reviewer 2, and the record tells the two questions apart.
+    const reviewer2 = truth(code).cards.findIndex((card) => card.color === 'reviewer2');
+    await expectOk(cat.send('keywords:reveal', { gameId: game.gameId, turn: game.turn, card: reviewer2 }));
+    await ann.waitFor((state) => state.phase === 'ended', 'the end');
+    const [row] = server.db.prepare('SELECT agent_log AS agentLog FROM replays').all() as { agentLog: string }[];
+    const { steps } = JSON.parse(row?.agentLog ?? '{}') as AgentLogData;
+    expect(steps.map(({ kind }) => kind)).toEqual(['clue', 'advise', 'rethink']);
   });
 });
 

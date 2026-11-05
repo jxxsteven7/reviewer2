@@ -341,6 +341,7 @@ const isChairOf = (player: PlayerView) => player.id === props.room.chairId;
         </p>
         <template v-if="room.agents || hasAgents">
           <p class="footnote">{{ t('lobby.agentLevel') }}</p>
+          <p class="footnote">{{ t('games.keywords.lobby.agentReadsChat') }}</p>
           <p class="footnote">{{ t('lobby.agentNote') }}</p>
         </template>
         <p v-if="room.agents" class="footnote">{{ t('lobby.takeoverNote') }}</p>
