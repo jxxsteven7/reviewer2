@@ -223,8 +223,9 @@ export interface AgentTask {
   // (AgentDriver): `mark` goes up whenever there is something new for it to hear, in the game's own
   // count, and the driver then waits until `settleMs` have passed with nothing newer, and `gapMs`
   // since the last answer came, and asks `question`, which goes on the AI's log as `kind`, at most
-  // `max` times for the moment, and never while a request of the seat is on its way. A task without
-  // this is asked once, and again only when the request brought no answer.
+  // `max` times for the task, and never while a request of the seat is on its way; a task that the
+  // game gives anew at the same moment, as after a pause, is asked as many times again. A task
+  // without this is asked once, and again only when the request brought no answer.
   rethink?: { mark: number; settleMs: number; gapMs: number; max: number; kind: string; question: AgentQuestion };
 }
 

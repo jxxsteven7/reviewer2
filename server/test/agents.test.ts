@@ -8,7 +8,7 @@ import {
 } from '@reviewer2/shared/keywords';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { AgentLogData } from '../src/core/agentLog';
-import { FRESH_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
+import { FRESH_MS, MARGIN_MS, PING_MS, RETRY_MS, TAKEOVER_MS } from '../src/core/agents';
 import type { GameLogData } from '../src/core/gameLog';
 import { WordLibrary } from '../src/core/words';
 import { keywordsGame, type KeywordsData } from '../src/games/keywords';
@@ -727,6 +727,24 @@ describe('an AI student that advises people', () => {
     await says(cat, 'Anyone?');
     await staysAt(4, RETHINK.gapMs + RETHINK.settleMs);
     expect(choiceOf(code, student.id)).toBe(reds[0]);
+  });
+
+  test('is not asked again with too little time left, which counts for nothing, and chooses the next card still', async () => {
+    const { cat, code, reds, student } = await advised();
+    // The time for the guesses is nearly up: what Cat says now would be asked with less than a
+    // second to wait, once the talk has settled, and isn't.
+    const room = roomOf(code);
+    const left = (room.deadline() ?? 0) - room.context.now();
+    server.advance(left - MARGIN_MS - 2_000);
+    await says(cat, 'Not that one.');
+    await staysAt(1, RETHINK.settleMs);
+    expect(truth(code).phase).toBe('guess');
+    expect(server.logs.some(({ event }) => event === 'agent_failed')).toBe(false);
+    // Its advice stands: when Cat reveals the card it chose, it chooses the next of its answer.
+    const game = board(cat);
+    await expectOk(cat.send('keywords:reveal', { gameId: game.gameId, turn: game.turn, card: reds[0] as number }));
+    await until(() => choiceOf(code, student.id) === reds[1], 'the next card');
+    expect(guessQuestions()).toHaveLength(1);
   });
 
   test('goes offline with the agent, when it is asked again and the agent is gone', async () => {

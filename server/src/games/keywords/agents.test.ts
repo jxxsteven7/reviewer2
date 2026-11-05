@@ -341,6 +341,28 @@ describe('the moves of an answer', () => {
     });
   });
 
+  test('of a student say nothing about a card that the group revealed while it was asked', () => {
+    const playing = gameState({ phase: 'guess', clue: { word: 'zebra', count: 2 } });
+    const revealed = {
+      ...playing,
+      cards: playing.cards.map((card, i) => (i === 3 ? { ...card, revealed: true } : card)),
+    };
+    // The reason is about card 3, which Rob revealed meanwhile: it chooses card 4, and says nothing.
+    const answer: AgentAnswer = { ok: true, kind: 'guess', picks: [3, 4], reason: 'That one fits.', note: NOTE };
+    expect(agentMove(data(revealed), 'ai-student', task(true), answer, [])).toMatchObject({
+      type: 'keywords:select',
+      payload: { card: 4 },
+    });
+    const moved = { ...revealed, selections: [{ player: 'ai-student', card: 4 }] };
+    expect(agentMove(data(moved), 'ai-student', task(true), answer, ['keywords:select'])).toBeNull();
+    // About card 4, it says it.
+    const about: AgentAnswer = { ...answer, picks: [4] };
+    expect(agentMove(data(moved), 'ai-student', task(true), about, ['keywords:select'])).toEqual({
+      type: 'keywords:say',
+      payload: { gameId: 'game-1', text: 'That one fits.' },
+    });
+  });
+
   test('of a student say no more than four lines in a turn', () => {
     const line = (id: number, turn: number, player = 'ai-student') => ({ id, player, turn, text: 'Hm.' });
     const answer: AgentAnswer = { ok: true, kind: 'guess', picks: [3], reason: 'Once more.', note: NOTE };

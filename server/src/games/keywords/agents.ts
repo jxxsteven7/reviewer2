@@ -75,7 +75,7 @@ const MAX_LINES = 1 + RETHINK.max;
 // MAX_AGENT_REQUEST to what the driver adds. The twenty lines that a group keeps may take 60 KB, as
 // long as a line may be in characters of three bytes (MAX_CHAT_INPUT), which together with a board
 // is too much for a request, so in such a chat the oldest lines give way (fitted()).
-export const TALK_REQUEST_BYTES = MAX_AGENT_REQUEST - 1024;
+const TALK_REQUEST_BYTES = MAX_AGENT_REQUEST - 1024;
 
 // Each group has at most one AI PI and one AI student.
 export function agentLimitReached(seating: Seating, ctx: GameContext, playerId: string, team: string, role: string) {
@@ -249,7 +249,9 @@ export function agentTask(data: KeywordsData, ctx: GameContext, playerId: string
 // - A student that advises chooses the first card of the answer that is still face down, for the
 //   group to see, and says why, once an answer, if the answer gives a reason, and for no more than
 //   MAX_LINES lines in a turn, however often it was asked; when the group reveals that card, it
-//   chooses the next.
+//   chooses the next. The reason is about the first card of the answer: once the group has revealed
+//   that one, as while the agent was asked, the reason would read as being about the next, and
+//   isn't said.
 export function agentMove(
   data: KeywordsData,
   playerId: string,
@@ -274,7 +276,8 @@ export function agentMove(
     const chosen = game.selections.find(({ player }) => player === playerId)?.card;
     if (chosen !== next) return { type: 'keywords:select', payload: { ...moment, card: next } };
     const lines = game.chat[game.team].filter(({ turn, player }) => turn === game.turn && player === playerId);
-    if (answer.reason && !made.includes('keywords:say') && lines.length < MAX_LINES) {
+    const about = answer.picks[0] === next;
+    if (answer.reason && about && !made.includes('keywords:say') && lines.length < MAX_LINES) {
       return { type: 'keywords:say', payload: { gameId: game.gameId, text: answer.reason } };
     }
     return null;

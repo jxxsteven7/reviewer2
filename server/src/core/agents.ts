@@ -329,8 +329,9 @@ export class AgentDriver {
 
   // Asks the agent what to do in a seat, for as long as the phase leaves, and notes what came of it in
   // the AI's log of the game it was asked for. Asked again about a task that it has answered
-  // (`rethink`, AgentTask.rethink), the answer it gave stands when there is too little time left to
-  // ask or the request brings none: it isn't made again, and counts all the same.
+  // (`rethink`, AgentTask.rethink), the answer it gave stands when the request brings none, which
+  // isn't made again and counts all the same, and when there is too little time left to ask, which
+  // isn't counted, as nothing was asked, and leaves the task as it is.
   #ask(room: Room, id: string, run: Running, rethink?: AgentTask['rethink']): void {
     const { channel, now, log } = this.#options;
     const deadline = room.deadline();
