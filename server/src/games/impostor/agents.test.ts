@@ -54,6 +54,7 @@ describe('the AI players', () => {
     const data = dataOf(game, agents);
     const task = agentTask(data, context(agents), 'p1');
     expect(task).toMatchObject({ kind: 'describe', moment: 'g1:1:describe:p1', advice: false });
+    expect(task?.rethink).toBeUndefined();
     expect(task?.pace).toEqual({ first: DESCRIBE_PACE_MS, step: 0 });
     expect(task?.question).toMatchObject({
       kind: 'describe',

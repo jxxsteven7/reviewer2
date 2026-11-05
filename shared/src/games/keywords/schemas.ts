@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { MAX_AGENT_REASON } from '../../agent';
+import { MAX_CHAT_INPUT } from '../../chat';
 import { LANGUAGES } from '../../language';
+import { MAX_PLAYERS } from '../../protocol';
 import { AGENT_ASKED, AGENT_NOTE_FIELDS, gameId, term } from '../../schemaParts';
 import { MAX_REHEARSALS } from './agent';
 import { CLUE_RULES, GUESS_RULES } from './settings';
-import { BOARD_SIZE, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './types';
+import { BOARD_SIZE, CHAT_KEPT, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './types';
 
 // The schemas of the team word guessing game's own messages, which the server checks every one of
 // them against, and of what the server and the agent say to each other in its games
@@ -18,7 +20,8 @@ import { BOARD_SIZE, MARKS, MAX_CLUE_NUMBER, ROLES, TEAMS } from './types';
 // or a count that isn't one, gets the game's own answer from them, such as clue_too_long or
 // bad_count, and not bad_request from here. The rules refuse a long text before looking at it,
 // and the server takes no message of more than 16 KB at all (server.ts).
-const moment = { gameId, turn: z.number().int().min(1).max(10_000) };
+const turn = z.number().int().min(1).max(10_000);
+const moment = { gameId, turn };
 
 export const KEYWORDS_MESSAGES = {
   'keywords:seat': z.object({ team: z.enum(TEAMS).nullable(), role: z.enum(ROLES) }),
@@ -95,6 +98,10 @@ const agentGame = {
   clues: z.array(z.strictObject({ team: z.enum(TEAMS), word: term, count })).max(200),
 };
 
+// Who said or chose something: the seat itself or a label, so that no name or player ID can reach
+// the agent (AgentChatLine in agent.ts).
+const speaker = z.string().regex(/^(you|Student [A-Z]{1,2})$/);
+
 export const KEYWORDS_AGENT_REQUESTS = [
   z.strictObject({ ...AGENT_ASKED, kind: z.literal('clue'), ...agentGame }),
   z.strictObject({
@@ -103,6 +110,10 @@ export const KEYWORDS_AGENT_REQUESTS = [
     ...agentGame,
     clue: z.strictObject({ word: term, count }),
     guessesLeft: z.number().int().min(0).max(BOARD_SIZE).nullable(),
+    rethink: z.literal(true).optional(),
+    turn,
+    chat: z.array(z.strictObject({ turn, by: speaker, text: z.string().max(MAX_CHAT_INPUT) })).max(CHAT_KEPT),
+    choices: z.array(z.strictObject({ by: speaker, card: cardIndex })).max(MAX_PLAYERS),
   }),
 ] as const;
 

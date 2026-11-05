@@ -11,7 +11,9 @@ import type { AgentNote } from '@reviewer2/shared';
 // The largest log that is kept, as JSON, in bytes, apart from the game's own log, so that the AI's
 // notes never crowd out what happened. A step takes a few hundred bytes, and a few tens of
 // thousands more with what the model thought, mostly before a clue, so a game with two AI PIs
-// fits. Past it, the log keeps no more steps, and says so once.
+// fits, and so does an AI student asked four times in each of its turns, for what the model thinks
+// in the 10 or 20 seconds it has for each. A game that has all of these at their longest may not:
+// past it, the log keeps no more steps, and says so once.
 export const MAX_AGENT_LOG_BYTES = 1024 * 1024;
 
 // The versions of the AI that are certified, each as the version of the prompts and the model, as
@@ -42,8 +44,8 @@ export function certifiedPlay(log: AgentLogData | null, certified = CERTIFIED_AG
 // One step: when it was asked for, in milliseconds from the start of the game on the room's clock;
 // the seat, by player ID; the persona that played it, and whether it played for a player who was
 // offline rather than as an AI player of its own; what it was to do, as the game names it (such as
-// "clue", "guess" or "advise"); either the answer, as the agent gave it, or why there was none; and
-// whether the answer came too late to be of use, once the game had moved on.
+// "clue", "guess", "advise" or "rethink"); either the answer, as the agent gave it, or why there was
+// none; and whether the answer came too late to be of use, once the game had moved on.
 export interface AgentStep {
   t: number;
   by: string;

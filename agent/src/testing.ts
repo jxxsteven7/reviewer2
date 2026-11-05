@@ -84,6 +84,9 @@ export const guessRequest = (changes: Partial<GuessRequest> = {}): GuessRequest 
   clues: [{ team: 'red', word: 'Biology', count: 2 }],
   clue: { word: 'Biology', count: 2 },
   guessesLeft: null,
+  turn: 1,
+  chat: [],
+  choices: [],
   ...changes,
 });
 

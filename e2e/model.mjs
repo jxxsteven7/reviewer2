@@ -6,8 +6,9 @@
 // whose color it doesn't know; a test names the card by its word, with the words of its board, so
 // that the rooms of tests that run at the same time, whose boards may share a word, keep apart. The
 // PI's rehearsals of its clues, which the agent asks without thinking, while a student's guesses
-// think, reveal the first card face down and leave the card a test told of to the student. Asked
-// to think, it says what it thought, for the AI's log. It lists one model, `e2e-model`.
+// think, reveal the first card face down and leave the card a test told of to the student. A student
+// whose group has written "switch to <word>" in the group's talk names that card. Asked to think, it
+// says what it thought, for the AI's log. It lists one model, `e2e-model`.
 import { createServer } from 'node:http';
 
 export const MODEL = 'e2e-model';
@@ -43,6 +44,9 @@ function answer(body) {
     // More than one clue, for when the first was given before in the game, which the agent refuses.
     return { candidates: CLUES.map((clue) => ({ targets, clue, count: targets.length })) };
   }
+  const talked = [...question.matchAll(/^- .*: "switch to (.*)"$/gm)].at(-1)?.[1];
+  const switched = board.find((card) => card.word === talked);
+  if (switched) return { picks: [switched.number], reason: 'You have a point.' };
   const words = new Set(cards(question).map((card) => card.word));
   const place = thinks(body) ? told.findIndex((pick) => pick.board.every((word) => words.has(word))) : -1;
   const wanted = place === -1 ? undefined : board.find((card) => card.word === told[place].word);

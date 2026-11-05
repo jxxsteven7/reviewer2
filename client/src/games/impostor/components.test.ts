@@ -648,6 +648,9 @@ describe('ImpostorLobby', () => {
       return { wrapper, chip: wrapper.findAll('button').find((button) => button.text() === 'Invite Reviewer 1')! };
     };
     const online = invitation(true);
+    // The AI of this game reads no chat, so the first game's sentence about that isn't here.
+    expect(online.wrapper.text()).toContain('Reviewer 1 is still new at this');
+    expect(online.wrapper.text()).not.toContain("your group's chat");
     expect(online.chip.classes()).toContain('press-host');
     await online.chip.trigger('click');
     expect(send).toHaveBeenCalledWith('room:addAgent', { persona: 'reviewer1', seat: null });

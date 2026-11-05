@@ -219,6 +219,14 @@ export interface AgentTask {
   // How long the moves wait, in milliseconds: the first from when the task came up, each one after
   // from the one before, so that an AI plays at a pace that people can follow.
   pace: { first: number; step: number };
+  // When the agent is to be asked again at the same moment, because people answered what it said
+  // (AgentDriver): `mark` goes up whenever there is something new for it to hear, in the game's own
+  // count, and the driver then waits until `settleMs` have passed with nothing newer, and `gapMs`
+  // since the last answer came, and asks `question`, which goes on the AI's log as `kind`, at most
+  // `max` times for the task, and never while a request of the seat is on its way; a task that the
+  // game gives anew at the same moment, as after a pause, is asked as many times again. A task
+  // without this is asked once, and again only when the request brought no answer.
+  rethink?: { mark: number; settleMs: number; gapMs: number; max: number; kind: string; question: AgentQuestion };
 }
 
 // What a kept game holds that its players gave the word library (GameModule.content).
@@ -503,7 +511,7 @@ export interface GameModule<Data = unknown, View = unknown> {
   agentTask?(data: Data, ctx: GameContext, playerId: string): AgentTask | null;
   // The next message that the agent's answer to a task makes for the seat, with the game as it is
   // now, or null when the answer has nothing more to give. `made` are the types of the messages
-  // sent for the task so far, in order. Each move goes through handle() as a player's would, so a
+  // sent for that answer so far, in order. Each move goes through handle() as a player's would, so a
   // move that the game has meanwhile made impossible is refused there; the room then stops the task.
   agentMove?(
     data: Data,
