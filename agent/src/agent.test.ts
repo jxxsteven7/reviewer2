@@ -178,6 +178,24 @@ describe('the queue', () => {
     expect(await second).toMatchObject({ ok: true });
   });
 
+  test('when it is full, gives the place of a student asked again to a request that is waited for', async () => {
+    const { model, release } = held();
+    const { handle } = agent(model, { concurrency: 1, queue: 1 });
+    const first = handle(JSON.stringify(clueRequest()));
+    const again = handle(JSON.stringify(guessRequest({ rethink: true })));
+    // A clue of another room finds the queue full, and takes the place: the student is busy then.
+    const clue = handle(JSON.stringify(clueRequest()));
+    expect(await again).toEqual({ ok: false, error: 'busy' });
+    // A student asked again finds no place of its own in a full queue, nor one held by a request
+    // that is waited for.
+    expect(await handle(JSON.stringify(guessRequest({ rethink: true })))).toEqual({ ok: false, error: 'busy' });
+    expect(await handle(JSON.stringify(clueRequest()))).toEqual({ ok: false, error: 'busy' });
+    release();
+    expect(await first).toMatchObject({ ok: true });
+    expect(await clue).toMatchObject({ ok: true });
+    expect(model.asked.map(({ name }) => name)).toEqual(['clue', 'clue']);
+  });
+
   test('answers busy to a request as soon as its wait runs out before its turn came', async () => {
     const { model, release } = held();
     const { handle } = agent(model, { concurrency: 1, queue: 4 });

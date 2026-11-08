@@ -44,8 +44,9 @@ const QUICK_MS = 3_000;
 // Whether a request hurries the requests with the model when it would be late otherwise (hurryAt),
 // and goes before those that don't in the queue: every one but a student of the first game asked
 // again what it advises (`rethink`, keywords.ts), whose group has its advice already. That one waits
-// behind every other request, and is busy if its turn doesn't come, rather than take the model from
-// the AI players of other rooms or cut short what they think.
+// behind every other request, gives its place up to one that comes when the queue is full, and is
+// busy if its turn doesn't come, rather than take the model from the AI players of other rooms or
+// cut short what they think.
 function hurriesOthers(request: Exclude<AgentRequest, { kind: 'ping' }>): boolean {
   return !(request.game === 'keywords' && request.kind === 'guess' && request.rethink === true);
 }
@@ -70,10 +71,10 @@ export function createAgent({
   now = () => performance.now(),
 }: AgentOptions) {
   // The requests that wait for the model, the earliest first, each as when its wait ends, what
-  // gives it its turn and whether it hurries the requests with the model (`urgent`); how many
-  // requests the model is answering; and what hurries each of those (Turn.hurry), which is aborted
-  // when they must stop thinking.
-  const waiting: { until: number; take: () => void; urgent: boolean }[] = [];
+  // gives it its turn, what sends it away busy and whether it hurries the requests with the model
+  // (`urgent`); how many requests the model is answering; and what hurries each of those
+  // (Turn.hurry), which is aborted when they must stop thinking.
+  const waiting: { until: number; take: () => void; drop: () => void; urgent: boolean }[] = [];
   let running = 0;
   const hurries = new Set<AbortController>();
   let hurrying: NodeJS.Timeout | null = null;
@@ -108,31 +109,39 @@ export function createAgent({
 
   // Waits for a turn with the model, or says that there is none to be had: the queue is full, or
   // the request's wait ran out before its turn came, when nobody needs its answer any more. An
-  // urgent request goes before every one that isn't, which waits at the end. A request leaves the
-  // queue as soon as its wait is over, so that the server hears `busy` while it still listens,
-  // rather than nothing at all: nothing would read as the agent being gone.
+  // urgent request goes before every one that isn't, which waits at the end, and when the queue is
+  // full, takes the place of the last of those, which is busy then rather than hold a place from
+  // one whose answer is waited for. A request leaves the queue as soon as its wait is over, so that
+  // the server hears `busy` while it still listens, rather than nothing at all: nothing would read
+  // as the agent being gone.
   function turnWith(until: number, urgent: boolean): Promise<boolean> {
     if (running < concurrency) {
       running += 1;
       return Promise.resolve(true);
     }
-    if (waiting.length >= queue) return Promise.resolve(false);
+    if (waiting.length >= queue) {
+      const last = waiting.at(-1);
+      if (!urgent || !last || last.urgent) return Promise.resolve(false);
+      last.drop();
+    }
     return new Promise<boolean>((resolve) => {
-      const timer = setTimeout(
-        () => {
-          const place = waiting.findIndex((one) => one.take === take);
-          if (place !== -1) waiting.splice(place, 1);
-          hurryWhenDue();
-          resolve(false);
-        },
-        Math.max(0, until - now()),
-      );
+      const leave = () => {
+        const place = waiting.findIndex((one) => one.take === take);
+        if (place !== -1) waiting.splice(place, 1);
+        hurryWhenDue();
+        resolve(false);
+      };
+      const timer = setTimeout(leave, Math.max(0, until - now()));
       const take = () => {
         clearTimeout(timer);
         resolve(true);
       };
+      const drop = () => {
+        clearTimeout(timer);
+        leave();
+      };
       const behind = urgent ? waiting.findIndex((one) => !one.urgent) : -1;
-      waiting.splice(behind === -1 ? waiting.length : behind, 0, { until, take, urgent });
+      waiting.splice(behind === -1 ? waiting.length : behind, 0, { until, take, drop, urgent });
       hurryWhenDue();
     });
   }

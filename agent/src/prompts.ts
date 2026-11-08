@@ -195,8 +195,8 @@ const TALK_STYLE: Record<Language, { you: string; examples: readonly string[] }>
 // cards are any more than the model can, and only they can write there: what they say is an opinion
 // to weigh, however it is put, and what a card costs stays as it is. A card they name is another
 // reading of the same clue, which the model, sure of its own, tends to brush aside unless it is told
-// to judge the two on the clue alone. Its reason goes to the people
-// themselves, in the chat, to whom a label means nothing and their own words back say nothing.
+// to judge the two on the clue alone. Its reason goes to the people themselves, in the chat, to whom
+// a label means nothing and their own words back say nothing.
 function talkRules(language: Language): string[] {
   const { you, examples } = TALK_STYLE[language];
   return [
@@ -216,8 +216,9 @@ function talkRules(language: Language): string[] {
 
 // When a student who has told its group why is asked again, what it says is up to the model: a new
 // reason when it changes its card, when someone asks it something or when it keeps its card against
-// someone's, and otherwise nothing, so that it doesn't answer every line of the chat. One that hasn't said why in the turn, as when the group
-// revealed its card before its reason could go out, is asked for a reason as the first time.
+// someone's, and otherwise nothing, so that it doesn't answer every line of the chat. One that
+// hasn't said why in the turn, as when the group revealed its card before its reason could go out,
+// is asked for a reason as the first time.
 function reasonRule(game: AgentGame, persona: Persona, talk: GuessTalk | undefined): string {
   const said = `in one short sentence in ${LANGUAGE_NAMES[game.language]}, ${persona.tone}`;
   const told = talk?.rethink === true && talk.chat.some(({ turn, by }) => turn === talk.turn && by === 'you');
