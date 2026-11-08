@@ -229,7 +229,10 @@
         },
         "alone": "The game starts at once, and Reviewer\u00a01 takes the other three seats."
       },
-      "rating": "How were the words of this game?"
+      "rating": "How were the words of this game?",
+      "lobby": {
+        "agentReadsChat": "It reads your group's chat, so tell it when you think it's wrong."
+      }
     },
     "impostor": {
       "match": {

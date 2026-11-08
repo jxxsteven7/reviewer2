@@ -3,8 +3,11 @@ import {
   emptyKeywordsFeats,
   TEAMS,
   type AgentGame,
+  type AgentTalk,
   type KeywordsAgentFeats,
+  type KeywordsView,
   type StartProblem,
+  type Team,
 } from '@reviewer2/shared/keywords';
 import { KEYWORDS_MESSAGES } from '@reviewer2/shared/keywords/schemas';
 import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
@@ -61,6 +64,22 @@ export const CLUE_PACE_MS = 3_000;
 export const GUESS_PACE_MS = 2_000;
 export const STEP_PACE_MS = 1_500;
 
+// An AI student that advises people is asked again (AgentTask.rethink) once a person in its group
+// has said something new in the turn: settleMs after the newest line, so that several in a row count
+// as one, and gapMs after its last answer came, so that it doesn't talk over them, and max times in
+// a turn at most. It says one line at first and at most one more for each of those.
+export const RETHINK = { settleMs: 3_000, gapMs: 10_000, max: 3 };
+const MAX_LINES = 1 + RETHINK.max;
+
+// How much of a request the group's chat may take, as JSON in bytes, so that the chat of a student's
+// question stays a small part of what the model reads: a model reads a prompt up to a length that
+// its service sets, and past it drops the start of the prompt, where the rules and the board are. A
+// group's usual chat fits whole: twenty lines of short sentences, or a dozen of 200 Chinese
+// characters. A line may be 3 KB, as long as the rules read it (MAX_CHAT_INPUT) and in characters
+// of three bytes, so in a chat of such lines the oldest give way (fitted()). The rest of
+// MAX_AGENT_REQUEST is many times what the board and the driver add.
+export const CHAT_REQUEST_BYTES = 8 * 1024;
+
 // Each group has at most one AI PI and one AI student.
 export function agentLimitReached(seating: Seating, ctx: GameContext, playerId: string, team: string, role: string) {
   return [...seating.seats].some(
@@ -111,6 +130,45 @@ export function practiceSeats(role: string): PracticeSeats | null {
   };
 }
 
+// What a student is told of its group's talk: what has been said in the game and which cards have
+// been chosen, as its seat's own view has them, so that another group's never comes in. The seat
+// itself is "you", and the others go by labels in the order they come up, so that the agent is told
+// no name and no player ID (AgentChatLine).
+function talkOf(view: KeywordsView, playerId: string): AgentTalk {
+  const labels = new Map<string, string>([[playerId, 'you']]);
+  const labelOf = (id: string): string => {
+    const known = labels.get(id);
+    if (known !== undefined) return known;
+    const place = labels.size - 1;
+    const letter = String.fromCharCode(0x41 + (place % 26));
+    const label = `Student ${place < 26 ? letter : `A${letter}`}`;
+    labels.set(id, label);
+    return label;
+  };
+  return {
+    turn: view.turn,
+    chat: (view.chat ?? []).map(({ turn, player, text }) => ({ turn, by: labelOf(player), text })),
+    choices: (view.selections ?? []).map(({ player, card }) => ({ by: labelOf(player), card })),
+  };
+}
+
+// A student's question with its chat within CHAT_REQUEST_BYTES: the oldest lines give way.
+function fitted<Question extends AgentTalk>(question: Question): Question {
+  let chat = question.chat;
+  while (chat.length > 0 && Buffer.byteLength(JSON.stringify(chat)) > CHAT_REQUEST_BYTES) chat = chat.slice(1);
+  return chat === question.chat ? question : { ...question, chat };
+}
+
+// How far the people of a seat's group have talked in the turn: the ID of the latest line that one
+// of them wrote in it, or 0, which an AI's own lines leave as it is. An ID, rather than a count,
+// since a group keeps only its latest lines.
+function latestLine(game: KeywordsState, team: Team, ctx: GameContext, playerId: string): number {
+  const lines = game.chat[team].filter(
+    ({ turn, player }) => turn === game.turn && player !== playerId && ctx.agentOf(player) === null,
+  );
+  return lines.at(-1)?.id ?? 0;
+}
+
 // What a seat is to do now: the group's PI gives the clue in its turn, and a student plays the
 // turn's guesses, or, while a person of the group is there as a student too, advises them. Nothing
 // while the game is paused or over, or in the other group's turn. Who is there is as the context
@@ -152,15 +210,34 @@ export function agentTask(data: KeywordsData, ctx: GameContext, playerId: string
         seatOf(data.seating, id).team === seat.team &&
         seatOf(data.seating, id).role === 'guesser',
     );
+  const question = fitted({
+    kind: 'guess' as const,
+    ...base,
+    clue: { ...game.clue },
+    guessesLeft: view.guessesLeft,
+    ...talkOf(view, playerId),
+  });
   return {
     // Whether the AI advises or plays is part of the moment: when the last person of the group goes
     // offline, or one comes back, the AI asks again for what it does now. The moment names no seat:
     // every student of the group would do the same, and the driver has one of them do it.
     moment: `${game.gameId}:${game.turn}:guess:${advice ? 'advise' : 'play'}`,
     kind: advice ? 'advise' : 'guess',
-    question: { kind: 'guess', ...base, clue: { ...game.clue }, guessesLeft: view.guessesLeft },
+    question,
     advice,
     pace: advice ? { first: 0, step: 0 } : { first: GUESS_PACE_MS, step: STEP_PACE_MS },
+    ...(advice
+      ? {
+          // Beside people, it hears them out: asked again, with the game as it is then, when they
+          // have said something new. Its answers go on the AI's log apart from the first.
+          rethink: {
+            ...RETHINK,
+            mark: latestLine(game, seat.team, ctx, playerId),
+            kind: 'rethink',
+            question: { ...question, rethink: true as const },
+          },
+        }
+      : {}),
   };
 }
 
@@ -170,7 +247,11 @@ export function agentTask(data: KeywordsData, ctx: GameContext, playerId: string
 // - A student that plays reveals the cards of the answer that are still face down, in order, and
 //   then ends the turn, if the group has revealed a card in it; a wrong card ends the turn anyway.
 // - A student that advises chooses the first card of the answer that is still face down, for the
-//   group to see, and says why, once; when the group reveals that card, it chooses the next.
+//   group to see, and says why, once an answer, if the answer gives a reason, and for no more than
+//   MAX_LINES lines in a turn, however often it was asked; when the group reveals that card, it
+//   chooses the next. The reason is about the first card of the answer: once the group has revealed
+//   that one, as while the agent was asked, the reason would read as being about the next, and
+//   isn't said.
 export function agentMove(
   data: KeywordsData,
   playerId: string,
@@ -194,7 +275,9 @@ export function agentMove(
     if (next === undefined) return null;
     const chosen = game.selections.find(({ player }) => player === playerId)?.card;
     if (chosen !== next) return { type: 'keywords:select', payload: { ...moment, card: next } };
-    if (answer.reason && !made.includes('keywords:say')) {
+    const lines = game.chat[game.team].filter(({ turn, player }) => turn === game.turn && player === playerId);
+    const about = answer.picks[0] === next;
+    if (answer.reason && about && !made.includes('keywords:say') && lines.length < MAX_LINES) {
       return { type: 'keywords:say', payload: { gameId: game.gameId, text: answer.reason } };
     }
     return null;

@@ -174,6 +174,7 @@ describe('KeywordsLobby', () => {
       'A game that an AI plays in brings nobody points, a streak, a title or a friend title.',
     );
     expect(player.text()).toContain('A player who is offline for 20 seconds in their turn is played for by an AI');
+    expect(player.text()).toContain("It reads your group's chat, so tell it when you think it's wrong.");
     const alone = mount(KeywordsLobby, { props: { room: { ...view('bob', 0), agents: true } }, global: global() });
     expect(alone.text()).toContain('A player who is offline for 20 seconds in their turn is played for by an AI');
     // With AI players in a room whose chair may no longer invite them, nobody is played for.
@@ -184,6 +185,7 @@ describe('KeywordsLobby', () => {
     const barred = mount(KeywordsLobby, { props: { room: view('ann', 0) }, global: global() });
     expect(barred.text()).not.toContain('Invite Reviewer 1');
     expect(barred.text()).not.toContain('an AI');
+    expect(barred.text()).not.toContain("your group's chat");
   });
 
   test('offers to invite AI players only once a person sits in a group', () => {

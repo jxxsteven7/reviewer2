@@ -1,6 +1,7 @@
 import { MAX_AGENT_REASON, type AgentNote, type AgentReply, type AgentRequest } from '@reviewer2/shared';
 import {
   AGENT_GUESS_THINKING_MS,
+  AGENT_RETHINK_THINKING_MS,
   checkClue,
   cleanClue,
   clueCounts,
@@ -16,7 +17,16 @@ import {
 } from '@reviewer2/shared/keywords';
 import { ModelError, type Model, type Question } from './model';
 import type { Persona } from './personas';
-import { CLUE_SCHEMA, clueSystem, clueUser, GUESS_SCHEMA, guessSystem, guessUser, PROMPT_VERSION } from './prompts';
+import {
+  CLUE_SCHEMA,
+  clueSystem,
+  clueUser,
+  GUESS_SCHEMA,
+  guessSystem,
+  guessUser,
+  PROMPT_VERSION,
+  type GuessTalk,
+} from './prompts';
 import { thinker } from './thinking';
 
 // How the agent plays a turn of the team word guessing game (docs/games/keywords.md): a clue as a
@@ -51,11 +61,12 @@ const OPEN_LIMIT = 3;
 // How long the model thinks (thinking.ts). A PI thinks of a clue until this long before the end of
 // its wait, which leaves time to ask again without thinking, a second or two, and for the
 // rehearsals, about six seconds, with a margin. A student thinks for no longer than
-// AGENT_GUESS_THINKING_MS, which the whose-turn strip tells the players, and stops this long before
-// the end of its wait: measured on fixed boards at the low level, nearly every guess took less than
-// ten seconds, and every one less than fifteen. The rehearsals stop this long before the end of
-// the wait, so that the clue still goes out in time, and one is asked for only with about the
-// time it takes left, a second.
+// AGENT_GUESS_THINKING_MS, which the whose-turn strip tells the players, or
+// AGENT_RETHINK_THINKING_MS when it is asked again what it advises, and stops this long before the
+// end of its wait: measured on fixed boards at the low level, nearly every guess took less than ten
+// seconds, and every one less than fifteen. The rehearsals stop this long before the end of the
+// wait, so that the clue still goes out in time, and one is asked for only with about the time it
+// takes left, a second.
 const CLUE_AFTER_THINKING_MS = 15_000;
 const GUESS_AFTER_THINKING_MS = 5_000;
 const REHEARSALS_END_MS = 1_000;
@@ -187,11 +198,18 @@ function failure(error: unknown, note: AgentNote, signal: AbortSignal): AgentRep
   throw error;
 }
 
-// What a student is asked: the cards it would reveal for the clue, at most `limit`, and why.
-function guessQuestion(game: AgentGame, clue: { word: string; count: ClueCount }, limit: number, persona: Persona) {
+// What a student is asked: the cards it would reveal for the clue, at most `limit`, and why, with
+// what its group has said, except in a rehearsal of a clue, whose student has no group to hear.
+function guessQuestion(
+  game: AgentGame,
+  clue: { word: string; count: ClueCount },
+  limit: number,
+  persona: Persona,
+  talk?: GuessTalk,
+) {
   return {
-    system: guessSystem(game, persona, limit),
-    user: guessUser(game, clue),
+    system: guessSystem(game, persona, limit, talk),
+    user: guessUser(game, clue, talk),
     name: 'guess',
     schema: GUESS_SCHEMA,
     temperature: persona.temperature,
@@ -220,8 +238,9 @@ export async function guess(request: GuessRequest, turn: Turn): Promise<AgentRep
   });
   try {
     const limit = limitFor(request.clue, request.guessesLeft);
-    const by = Math.min(started + AGENT_GUESS_THINKING_MS, turn.until - GUESS_AFTER_THINKING_MS);
-    const answer = await thought.think(guessQuestion(request, request.clue, limit, turn.persona), by);
+    const thinking = request.rethink ? AGENT_RETHINK_THINKING_MS : AGENT_GUESS_THINKING_MS;
+    const by = Math.min(started + thinking, turn.until - GUESS_AFTER_THINKING_MS);
+    const answer = await thought.think(guessQuestion(request, request.clue, limit, turn.persona, request), by);
     const found = picksOf(request, answer, limit);
     // A model that named no card that is still covered gave no answer to go by.
     if (!found) return failed(note(), 'no_answer');

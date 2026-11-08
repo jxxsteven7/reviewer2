@@ -26,8 +26,8 @@ import {
 // the operator lets an account have them, its chair invites Reviewer 1 as the red group's PI and
 // student, who play their turn against two people, and when the chair goes offline in her turn as
 // the blue PI, an AI gives the clue for her, which everyone sees, until she is back. Beside a
-// person of its group, the AI student only advises. The operator's command runs on the server's
-// data directory, as in public-rooms.spec.ts.
+// person of its group, the AI student only advises, and reads what they say. The operator's command
+// runs on the server's data directory, as in public-rooms.spec.ts.
 const own = (name: string) => `${name}${Math.random().toString(36).slice(2, 7)}`;
 const dataDir = process.env.E2E_DATA_DIR as string;
 const modelUrl = `http://127.0.0.1:${Number(process.env.E2E_PORT) + 1}`;
@@ -86,6 +86,7 @@ test('Reviewer 1 plays a group, and gives the clue of a PI who is offline until 
   const red = ann.locator('.group.red');
   await sit(ann, 'blue', 'captain', 'en');
   await expect(ann.locator('.lobby')).toContainText(text.lobby.agentLevel);
+  await expect(ann.locator('.lobby')).toContainText(text.games.keywords.lobby.agentReadsChat);
   await expect(ann.locator('.lobby')).toContainText(text.lobby.agentNote);
   await red.locator('.seat-line').getByRole('button', { name: invite }).click();
   await expect(red.locator('.seat-line').getByText(text.room.agent, { exact: true })).toBeVisible();
@@ -201,7 +202,19 @@ test('Reviewer 1 advises a student of its group, who reveals the cards', async (
   const chat = await chatOf(bob);
   await expect(chat.locator('.message .name')).toHaveText(reviewer);
   await expect(chat.locator('.message .text')).toHaveText('It fits the clue.');
+  // It reads the chat: Bob tells it which card he means, and it moves its choice there and answers
+  // in the chat, once the talk has settled and a while has passed since it last answered.
+  const cards = gameOf(snapshotsOf(ann).at(-1))?.cards ?? [];
+  const other = cards.findIndex((one, place) => one.color === 'red' && !one.revealed && place !== index);
+  const asked = `switch to ${cards[other]?.word}`;
+  await bob.getByLabel(text.game.chat.input).fill(asked);
+  await bob.getByLabel(text.game.chat.input).press('Enter');
+  await expect(chat.locator('.message .text')).toHaveText(['It fits the clue.', asked, 'You have a point.'], {
+    timeout: 30_000,
+  });
   await closeSheet(bob);
+  await expect(card(bob, other)).toHaveAttribute('aria-label', new RegExp(`, chosen by ${reviewer}$`));
+  await expect(card(bob, index)).not.toHaveAttribute('aria-label', new RegExp(`, chosen by ${reviewer}$`));
   await expect(card(bob, index)).not.toHaveClass(/revealed/);
   expect(records(bob).find(({ team }) => team === 'red')?.guesses).toEqual([]);
   // Bob reveals it himself.
