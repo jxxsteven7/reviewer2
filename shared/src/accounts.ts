@@ -324,7 +324,8 @@ export interface MatchRecord {
 // have a verdict, such as the votes and the times out for breaking the rules in the second game.
 // `agentGuesses` is, for a game in which players guess who the AI players were, how many games the
 // account guessed them in, skips left out, and in how many it named them all and nobody else
-// (docs/architecture.md#guessing-the-ai); it isn't there for an account that has played none.
+// (docs/architecture.md#guessing-the-ai); it isn't there for an account that has played none, and
+// on a public page not for one with no record of the game.
 export interface GameCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };

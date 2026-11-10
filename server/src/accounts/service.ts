@@ -838,9 +838,23 @@ export class Accounts {
     }
     for (const game of this.#games) {
       const offRecord = this.#offRecord(game, accountId);
-      if (offRecord.length > 0) view[game.id] = { ...(view[game.id] ?? empty()), offRecord };
+      if (offRecord.length === 0) continue;
+      const records = { ...(view[game.id] ?? empty()), offRecord };
+      // A game not on the record may be guessed in too, as one that a Reviewer 2 left: an account
+      // with such games alone has its guesses counted as well.
+      if (game.guessedRight && !records.agentGuesses) records.agentGuesses = this.#agentGuesses(game, accountId);
+      view[game.id] = records;
     }
     return view;
+  }
+
+  // How often the account guessed the AI players of a game right, as the game judges a guess
+  // (GameModule.guessedRight), over the games it guessed in, skips left out.
+  #agentGuesses(game: GameModule, accountId: number): GameCounts['agentGuesses'] {
+    const right = game.guessedRight?.bind(game);
+    if (!right) return undefined;
+    const guesses = this.ratings.guesses(game.id, accountId);
+    return { games: guesses.length, right: guesses.filter(({ setup, guess }) => right(setup, guess)).length };
   }
 
   // The latest games of a game that finished, RECENT_RECORDS at most, that the account played in
@@ -870,8 +884,9 @@ export class Accounts {
   // The counts of each game, with, for each game in which a setter gives the words, the games the
   // account set the words of and their good ratings, if it set any (GameCounts.wordsSet), for each
   // game that asks for them, what its records add up, if it played any (GameCounts.sums), and for
-  // each game in which players guess the AI players, how often it guessed them right, if it played
-  // any (GameCounts.agentGuesses). A game it has set the words of but played none of is there with
+  // each game in which players guess the AI players, how often it guessed them right, if it has a
+  // record of any (GameCounts.agentGuesses; its own page counts them for one with games off the
+  // record alone too, recordsOf). A game it has set the words of but played none of is there with
   // nothing else.
   #withGameCounts<Counts extends GameCounts>(
     accountId: number,
@@ -881,14 +896,7 @@ export class Accounts {
     for (const game of this.#games) {
       const played = counts[game.id];
       if (game.recordSums && played) played.sums = this.records.sums(accountId, game.id, game.recordSums);
-      const right = game.guessedRight?.bind(game);
-      if (right && played) {
-        const guesses = this.ratings.guesses(game.id, accountId);
-        played.agentGuesses = {
-          games: guesses.length,
-          right: guesses.filter(({ setup, guess }) => right(setup, guess)).length,
-        };
-      }
+      if (game.guessedRight && played) played.agentGuesses = this.#agentGuesses(game, accountId);
       const path = game.setupPaths?.setter;
       if (path === undefined) continue;
       const set = this.ratings.setterCounts(game.id, path, accountId);

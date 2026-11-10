@@ -945,7 +945,7 @@ describe('the records of the second game', () => {
     ]);
   });
 
-  // The last block completes the fourth line of three: the share of the games guessed in in which
+  // The last block completes the fourth line of three: of the games guessed in, the share in which
   // the guess named the AI players right, over how many games, and the empty rate before any.
   test('end with the share of the guesses of the AI players that were right', () => {
     const counts: GameCounts = {

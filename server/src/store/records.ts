@@ -531,17 +531,20 @@ export class ReplayStore {
     );
     // The games of a game that finished, that an account took part in and has no record of, but
     // for those whose words it set, by the player ID that the setup names the setter by, if the
-    // game has one: the latest first, with the IDs it had in each.
+    // game has one: the latest first, with the IDs it had in each. The latest are picked by their
+    // IDs first, so that the logs of those alone are read.
     this.#unrecorded = db.prepare(
-      'SELECT g.game_id AS gameId, g.ended_at AS endedAt, g.match_game AS matchGame, g.match_games AS matchGames, ' +
-        '(g.agents > 0 OR g.takeover = 1) AS agents, g.setup, g.log, g.language, ' +
-        'json_group_array(p.player_id) AS playerIds FROM game_players AS p ' +
+      'WITH latest AS (SELECT DISTINCT g.game_id, g.ended_at, g.rowid AS row FROM game_players AS p ' +
         'JOIN replays AS g ON g.game_id = p.game_id ' +
         "WHERE p.account_id = ? AND g.game = ? AND g.ending = 'finished' " +
         'AND NOT EXISTS (SELECT 1 FROM game_records AS r WHERE r.account_id = p.account_id AND r.game_id = g.game_id) ' +
         'AND NOT EXISTS (SELECT 1 FROM game_players AS s WHERE s.game_id = g.game_id ' +
         'AND s.account_id = p.account_id AND s.player_id = json_extract(g.setup, ?)) ' +
-        'GROUP BY g.game_id ORDER BY g.ended_at DESC, g.rowid DESC LIMIT ?',
+        'ORDER BY g.ended_at DESC, g.rowid DESC LIMIT ?) ' +
+        'SELECT g.game_id AS gameId, g.ended_at AS endedAt, g.match_game AS matchGame, g.match_games AS matchGames, ' +
+        '(g.agents > 0 OR g.takeover = 1) AS agents, g.setup, g.log, g.language, ' +
+        '(SELECT json_group_array(player_id) FROM game_players WHERE game_id = g.game_id AND account_id = ?) AS playerIds ' +
+        'FROM latest JOIN replays AS g ON g.game_id = latest.game_id ORDER BY latest.ended_at DESC, latest.row DESC',
     );
     this.#setLog = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
     this.#log = db.prepare('SELECT game, log FROM replays WHERE game_id = ?');
@@ -686,7 +689,7 @@ export class ReplayStore {
       log: string;
       playerIds: string;
     };
-    const rows = this.#unrecorded.all(accountId, game, setterPath, limit) as Row[];
+    const rows = this.#unrecorded.all(accountId, game, setterPath, limit, accountId) as Row[];
     return rows.map(({ matchGame, matchGames, agents, setup, log, playerIds, ...row }) => ({
       ...row,
       match: matchGame === null || matchGames === null ? null : { game: matchGame, games: matchGames },

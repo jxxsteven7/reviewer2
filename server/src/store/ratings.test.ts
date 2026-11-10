@@ -369,6 +369,66 @@ describe('the guesses of the AI players', () => {
     expect(service.recordsOf(cats).impostor?.agentGuesses).toEqual({ games: 0, right: 0 });
     expect(service.recordsOf({ account: accounts.byId(bob) as never, hash: Buffer.alloc(0) }).impostor).toBeUndefined();
   });
+
+  // A game that a Reviewer 2 left is on nobody's record, and may still be guessed in: an account
+  // whose only games are such counts its guesses on its own page, as one with a record does, while
+  // its public page, which has no record to show, has none.
+  test('count the guesses of an account whose only games are not on its record', () => {
+    const dee = account('Dee');
+    const service = new Accounts({ db, now: () => 0, clock: () => NOW, games: [impostorGame] });
+    const over = { winner: null, reason: 'reviewer2_left', round: 1 };
+    const row = replays.add({
+      game: 'impostor',
+      gameId: 'g-left',
+      ending: 'finished',
+      outcome: over,
+      durationMs: 1000,
+      setup: {
+        words: { student: 'Apple', reviewer2: 'Pear' },
+        source: { pair: 'fruit:apple+pear' },
+        players: [1, 2, 3, 4, 5].map((number) => ({
+          id: `p${number}`,
+          number,
+          role: number === 5 ? 'reviewer2' : 'student',
+          agent: number === 2,
+        })),
+      },
+      log: {
+        v: 2,
+        game: 'impostor',
+        gameId: 'g-left',
+        start: null,
+        entries: [
+          { t: 1, by: null, type: 'impostor:over', data: over },
+          { t: 2, by: null, type: 'end' },
+        ],
+      },
+      agentLog: null,
+      players: [{ playerId: 'p1', accountId: dee }],
+      counts: { accounts: 1, guests: 3, agents: 1 },
+      takeover: false,
+      scoresNothing: true,
+      agentPlays: [],
+      match: null,
+      inMatch: false,
+      practice: false,
+      language: 'en',
+      fields: ['fruit'],
+      version: 'v',
+      rules: 1,
+      words: 'w',
+    });
+    expect(row).toBe(true);
+    ratings.guess('impostor', 'g-left', 'p1', [2]);
+    const login = { account: accounts.byId(dee) as never, hash: Buffer.alloc(0) };
+    expect(service.recordsOf(login).impostor).toMatchObject({
+      recent: [],
+      offRecord: [{ gameId: 'g-left', why: 'reviewer2_left' }],
+      agentGuesses: { games: 1, right: 1 },
+    });
+    accounts.setProfile(dee, { link: null, bio: null, showRecord: true, showThanks: false });
+    expect(service.profileOf(accounts.byId(dee)?.handle as string, null)?.record).toEqual({});
+  });
 });
 
 describe('the words adopted from the games', () => {
