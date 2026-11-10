@@ -68,7 +68,13 @@ describe('the AI players', () => {
     });
     expect(agentTask(data, context(agents), 'p3')).toBeNull();
     expect(agentTask(data, context([]), 'p1')).toBeNull();
-    const move = agentMove(data, task!, { ok: true, kind: 'describe', text: 'grows on a tree', note: NOTE }, []);
+    const move = agentMove(
+      data,
+      'p1',
+      task!,
+      { ok: true, kind: 'describe', texts: ['grows on a tree'], note: NOTE },
+      [],
+    );
     expect(move).toEqual({ type: 'impostor:describe', payload: { gameId: 'g1', round: 1, text: 'grows on a tree' } });
     game = accepted(rules.describe(game, 'p1', { ...at(game), text: 'grows on a tree' }, 0));
     expect(agentTask(dataOf(game, agents), context(agents), 'p1')).toBeNull();
@@ -78,6 +84,33 @@ describe('the AI players', () => {
       word: { word: 'pear' },
       seats: expect.arrayContaining([{ number: 1, fate: 'alive', role: null }]),
     });
+  });
+
+  // The agent holds its lines against the rounds it was told, which in a long game are the latest
+  // alone, and answers with every one that its check took.
+  it('say the first line of the answer that the rules take against the whole game, or else the first', () => {
+    const agents = ['p2'];
+    const game = accepted(rules.describe(dealt('SSSR'), 'p1', { ...at(dealt('SSSR')), text: 'grows on a tree' }, 0));
+    const data = dataOf(game, agents);
+    const task = agentTask(data, context(agents), 'p2');
+    expect(task).toMatchObject({ kind: 'describe' });
+    const said = (texts: string[]) =>
+      agentMove(data, 'p2', task!, { ok: true, kind: 'describe', texts, note: NOTE }, [])?.payload;
+    expect(said(['Grows on a tree!', 'red apples', 'round and red'])).toMatchObject({ text: 'round and red' });
+    expect(said(['Grows on a tree!', 'red apples'])).toMatchObject({ text: 'Grows on a tree!' });
+    expect(said(['round and red'])).toMatchObject({ text: 'round and red' });
+    // The Reviewer 2's word is its own: its line may say the students'.
+    const r2 = accepted(rules.describe(game, 'p2', { ...at(game), text: 'round and red' }, 0));
+    const r3 = accepted(rules.describe(r2, 'p3', { ...at(r2), text: 'sweet in autumn' }, 0));
+    const pear = agentTask(dataOf(r3, ['p4']), context(['p4']), 'p4');
+    const line = agentMove(
+      dataOf(r3, ['p4']),
+      'p4',
+      pear!,
+      { ok: true, kind: 'describe', texts: ['a pear', 'apples'], note: NOTE },
+      [],
+    );
+    expect(line?.payload).toMatchObject({ text: 'apples' });
   });
 
   // Each of the 144 long lines is checked against every line before it, which takes a few seconds,
@@ -144,11 +177,11 @@ describe('the AI players', () => {
     expect(fourth?.question).toMatchObject({ kind: 'vote', candidates: [1, 2, 3], word: { word: 'pear' } });
     expect(second?.question).toMatchObject({ lines: [1, 2, 3, 4].map((number) => ({ round: 1, number, tie: false })) });
     const answer: AgentAnswer = { ok: true, kind: 'vote', number: 3, reason: 'vague', note: NOTE };
-    expect(agentMove(data, second!, answer, [])).toEqual({
+    expect(agentMove(data, 'p2', second!, answer, [])).toEqual({
       type: 'impostor:vote',
       payload: { gameId: 'g1', round: 1, number: 3 },
     });
-    expect(agentMove(data, second!, answer, ['impostor:vote'])).toBeNull();
+    expect(agentMove(data, 'p2', second!, answer, ['impostor:vote'])).toBeNull();
     const after = accepted(rules.vote(game, 'p2', { ...at(game), number: 3 }, 0));
     expect(agentTask(dataOf(after, agents), context(agents), 'p2')).toBeNull();
     // In a revote, the tied don't vote, and the others only for one of them.
@@ -171,12 +204,13 @@ describe('the AI players', () => {
     expect(agentTask(data, context(agents), 'p3')).toBeNull();
     const move = agentMove(
       data,
+      'p2',
       task!,
       { ok: true, kind: 'judge', verdict: 'disagree', reason: 'fine', note: NOTE },
       [],
     );
     expect(move).toEqual({ type: 'impostor:judge', payload: { gameId: 'g1', verdict: 'disagree' } });
-    expect(agentMove(data, task!, { ok: true, kind: 'vote', number: 1, reason: '', note: NOTE }, [])).toBeNull();
+    expect(agentMove(data, 'p2', task!, { ok: true, kind: 'vote', number: 1, reason: '', note: NOTE }, [])).toBeNull();
   });
 
   it("guess the students' word once voted out, if the room allows it", () => {
@@ -189,7 +223,7 @@ describe('the AI players', () => {
       word: { word: 'pear' },
       seats: expect.arrayContaining([{ number: 1, fate: 'voted_out', role: 'reviewer2' }]),
     });
-    expect(agentMove(data, task!, { ok: true, kind: 'comeback', word: 'apple', note: NOTE }, [])).toEqual({
+    expect(agentMove(data, 'p1', task!, { ok: true, kind: 'comeback', word: 'apple', note: NOTE }, [])).toEqual({
       type: 'impostor:comeback',
       payload: { gameId: 'g1', word: 'apple' },
     });

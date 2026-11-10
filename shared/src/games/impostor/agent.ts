@@ -63,11 +63,17 @@ export interface ImpostorJudgment {
 
 export type ImpostorNote = AgentNote<ImpostorCandidate> & { judgment?: ImpostorJudgment };
 
-// The line, the vote, by number or null to abstain, the verdict or the guess, null to make none,
-// each with the reason in a sentence. When the agent has no line that the checks take, it answers
-// `no_legal_move`.
+// How many lines the agent answers with at most: those of the model's answer that its checks took,
+// the best first. It holds them against the rounds it was told, which in a long game are the latest
+// alone, so the server takes the first that its own check takes against the whole game (agentMove
+// in the server's games/impostor/agents.ts).
+export const AGENT_LINES = 3;
+
+// The lines, one to AGENT_LINES of them, the vote, by number or null to abstain, the verdict or the
+// guess, null to make none, the vote and the verdict with the reason in a sentence. When the agent
+// has no line that the checks take, it answers `no_legal_move`.
 export type ImpostorAgentReply =
-  | { ok: true; kind: 'describe'; text: string; note: ImpostorNote }
+  | { ok: true; kind: 'describe'; texts: string[]; note: ImpostorNote }
   | { ok: true; kind: 'vote'; number: number | null; reason: string; note: ImpostorNote }
   | { ok: true; kind: 'judge'; verdict: ReportVerdict; reason: string; note: ImpostorNote }
   | { ok: true; kind: 'comeback'; word: string | null; note: ImpostorNote };

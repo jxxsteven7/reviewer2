@@ -1,5 +1,5 @@
 import { MAX_AGENT_REQUEST, type AgentAnswer } from '@reviewer2/shared';
-import type { ImpostorAgentGame, ImpostorStartProblem } from '@reviewer2/shared/impostor';
+import { checkDescription, type ImpostorAgentGame, type ImpostorStartProblem } from '@reviewer2/shared/impostor';
 import type { AgentMove, AgentTask, GameContext, PracticeSeats } from '../../core/game';
 import { playerOf, votersOf, wordOf } from './rules';
 import type { ImpostorData, ImpostorGame } from './state';
@@ -48,7 +48,9 @@ export function practiceSeats(role: string): PracticeSeats | null {
 // the newest round back, as many whole rounds as fit in the history's share of the request, which
 // leaves the rest of it, the words and the seats, what it needs. The agent then holds its lines
 // against the rounds it was told alone, so in such a game it may write one all but the same as a
-// line of a round it wasn't, which the rules refuse (docs/games/impostor.md#ai-players).
+// line of a round it wasn't, which the rules refuse: it answers with every line its check took, and
+// the move is the first that the rules take against the whole game (agentMove,
+// docs/games/impostor.md#ai-players).
 export const HISTORY_BYTES = MAX_AGENT_REQUEST - 8 * 1024;
 
 function fitted(game: ImpostorAgentGame): ImpostorAgentGame {
@@ -179,9 +181,21 @@ export function agentTask(data: ImpostorData, ctx: GameContext, playerId: string
   return null;
 }
 
+// The line of the agent's answer that the AI player says: the first that the check of the rules
+// takes against every line of the game (checkDescription, as describe() in rules.ts runs it), or,
+// when none does, the first, which the rules then refuse, as they would have before.
+function lineOf(game: ImpostorGame, playerId: string, texts: readonly string[]): string {
+  const me = playerOf(game, playerId);
+  const word = me ? wordOf(game, me.role) : null;
+  const earlier = game.lines.flatMap((line) => (line.text === null ? [] : [line.text]));
+  const taken = texts.find((text) => checkDescription(text, word, earlier, game.settings.length).problem === null);
+  return taken ?? texts[0] ?? '';
+}
+
 // The message that the agent's answer makes: one for each task.
 export function agentMove(
   data: ImpostorData,
+  playerId: string,
   task: AgentTask,
   answer: AgentAnswer,
   made: readonly string[],
@@ -190,7 +204,7 @@ export function agentMove(
   if (!game || game.phase === 'over' || made.length > 0) return null;
   const { gameId, round } = game;
   if (answer.kind === 'describe' && task.kind === 'describe') {
-    return { type: 'impostor:describe', payload: { gameId, round, text: answer.text } };
+    return { type: 'impostor:describe', payload: { gameId, round, text: lineOf(game, playerId, answer.texts) } };
   }
   if (answer.kind === 'vote' && task.kind === 'vote') {
     return { type: 'impostor:vote', payload: { gameId, round, number: answer.number } };

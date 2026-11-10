@@ -10,10 +10,13 @@ type Translate = (key: string, named?: Record<string, unknown>, plural?: number)
 // the share won as a student, as a Reviewer 2 and as the PI, each over how many games; and the
 // rounds lasted on average, to one decimal place, the times out for breaking the rules, and the
 // games the account set the words of, with their good ratings (docs/games/impostor.md#the-setter);
-// and the matches finished, and those finished first, as the first game has them. What the records
-// add up comes from the server (GameCounts.sums).
+// and the matches finished, and those finished first, as the first game has them, and the share of
+// the games in which the account guessed who the AI players were that it guessed right, all of them
+// and no one else, over how many games it guessed in, skips left out. What the records add up comes
+// from the server (GameCounts.sums, GameCounts.agentGuesses).
 export function recordStats(t: Translate, counts: GameCounts, locale: string): StatBlock[] {
-  const { ordinary, inMatches, roles, matches, sums = {}, wordsSet } = counts;
+  const { ordinary, inMatches, roles, matches, sums = {}, wordsSet, agentGuesses } = counts;
+  const guessed = agentGuesses ?? { games: 0, right: 0 };
   const total = { games: ordinary.games + inMatches.games, wins: ordinary.wins + inMatches.wins };
   const sum = (key: string) => sums[key] ?? 0;
   const role = (key: string): StatBlock => {
@@ -45,5 +48,10 @@ export function recordStats(t: Translate, counts: GameCounts, locale: string): S
     },
     { label: t('account.profile.recordStats.matches'), value: String(matches.played) },
     { label: t('account.profile.recordStats.won'), value: String(matches.won) },
+    {
+      label: t('games.impostor.stats.agentGuesses'),
+      value: winRate(guessed.right, guessed.games, locale),
+      detail: t('account.profile.recordStats.gameCount', { count: guessed.games }, guessed.games),
+    },
   ];
 }

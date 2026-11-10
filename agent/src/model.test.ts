@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createModel, ModelError } from './model';
+import { createModel, ModelError, REASON_SCHEMA } from './model';
 
 const question = { system: 'You play.', user: 'Board', name: 'clue', schema: { type: 'object' }, temperature: 0.6 };
 
@@ -141,5 +141,38 @@ describe('the model', () => {
       AbortSignal.timeout(1000),
     );
     expect(calls[0]?.url).toBe('http://model.test/v1/models');
+  });
+});
+
+describe('the schema of a reason', () => {
+  // As a JSON schema's `pattern` reads it, which is as a regular expression of JavaScript does.
+  const fits = (reason: string) => new RegExp(REASON_SCHEMA.pattern, 'u').test(reason);
+
+  test('takes a sentence that ends as one does, in Chinese or in English, or nothing', () => {
+    expect(REASON_SCHEMA.type).toBe('string');
+    for (const reason of [
+      '',
+      'Proteins and enzymes.',
+      "I keep 'Gradient'!",
+      'Why not the comet?',
+      '\u6211\u9009\u300c\u86cb\u767d\u8d28\u300d\u3002',
+      '\u4e3a\u4ec0\u4e48\uff1f',
+      '\u5c31\u662f\u5b83\uff01',
+    ]) {
+      expect(fits(reason), reason).toBe(true);
+    }
+  });
+
+  test('refuses a straight double quote anywhere, and a sentence that breaks off', () => {
+    for (const reason of [
+      'I keep "Gradient".',
+      '"',
+      'Proteins and',
+      '\u6211\u9009"\u86cb\u767d\u8d28"\u3002',
+      '\u6211\u9009\u300c\u86cb\u767d\u8d28',
+      ' ',
+    ]) {
+      expect(fits(reason), reason).toBe(false);
+    }
   });
 });

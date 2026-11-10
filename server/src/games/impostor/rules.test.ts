@@ -316,6 +316,36 @@ describe('reports', () => {
     expect(rules.votersOf(game).map((player) => player.id)).toEqual(['p1', 'p2', 'p4', 'p5', 'p6', 'p7']);
   });
 
+  // A tied player who added a line before a report that passed adds none again when the vote that
+  // begins again ties again; one who hadn't yet does, and a revote tied again puts nobody out.
+  it('starts the vote again after one passes in a tie, which may tie and be revoted again', () => {
+    let game = playRound(dealt('SSSSSSSR'), { p1: 2, p2: 1, p3: 1, p4: 2 });
+    expect(game).toMatchObject({ phase: 'tie', tied: ['p1', 'p2'], speaker: 'p1' });
+    game = accepted(write(game, 'p1', 'it hangs on a branch'));
+    expect(game.speaker).toBe('p2');
+    game = accepted(rules.report(game, 'p4', { ...at(game), number: 3, line: null, reason }, 0));
+    for (const id of ['p1', 'p2', 'p4', 'p5', 'p6', 'p7', 'p8']) {
+      game = accepted(rules.judge(game, id, { gameId: 'g1', verdict: 'agree' }, 0));
+    }
+    expect(game.players[2]?.fate).toBe('violation');
+    expect(game).toMatchObject({ phase: 'vote', round: 1, tied: [], pending: {} });
+    // The same two tie again: only the one who hasn't added a line this round adds one.
+    game = voteAll(game, { p1: 2, p2: 1, p4: 1, p5: 2 });
+    expect(game.ballots.map(({ ballot, tied }) => [ballot, tied])).toEqual([
+      ['vote', ['p1', 'p2']],
+      ['vote', ['p1', 'p2']],
+    ]);
+    expect(game).toMatchObject({ phase: 'tie', tied: ['p1', 'p2'], speaker: 'p2' });
+    game = accepted(write(game, 'p2', 'a gift for a teacher'));
+    expect(game.lines.filter((line) => line.tie).map((line) => line.by)).toEqual(['p1', 'p2']);
+    expect(game.phase).toBe('revote');
+    // The revote ties again, and nobody goes out that round.
+    game = voteAll(game, { p4: 1, p5: 2 });
+    expect(game.ballots[2]).toMatchObject({ ballot: 'revote', out: null, tied: ['p1', 'p2'] });
+    expect(game).toMatchObject({ phase: 'describe', round: 2, tied: [] });
+    expect(game.players.filter((player) => player.fate !== 'alive').map((player) => player.id)).toEqual(['p3']);
+  });
+
   it('passes over the reported player who was describing', () => {
     let game = accepted(write(dealt('SSSSR', { describeTime: 60 }, 0), 'p1', 'grows on a tree', 0));
     game = accepted(rules.report(game, 'p1', { ...at(game), number: 2, line: null, reason }, 5_000));

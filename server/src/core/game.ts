@@ -376,6 +376,14 @@ export interface GameModule<Data = unknown, View = unknown> {
   // rules change (store/recount.ts), and the check of the data holds the records against it. A game
   // without this keeps its records as they were counted.
   recount?(kept: KeptCount): Recount | null;
+  // Why an account that took part in a kept game that finished has no record of it, for its own
+  // records page (docs/architecture.md#replays), from how the game began and its log, with the
+  // player IDs that the account had in it: `left` when it played in the game and wasn't in it at
+  // the end, or a reason of the game's own why the game brought it no record although it stayed,
+  // which the locale files name under the game (games.<game>.offRecord); null when it didn't play
+  // in the game, as one who only gave its words, or the game can't say. A game without this lists
+  // none.
+  offRecord?(kept: KeptGame, playerIds: ReadonlySet<string>): string | null;
   // The shapes of the game's own in its data, for the check of the data. A game without this has
   // them unchecked.
   shapes?: GameShapes;
@@ -410,6 +418,10 @@ export interface GameModule<Data = unknown, View = unknown> {
   // game's own shape (GameShapes.guess), or a refusal, as from someone who has no guess to make. A
   // game without this takes no guesses.
   guessAgents?(data: Data, ctx: GameContext, playerId: string, guess: unknown): Ack<{ data: Data; guess: unknown }>;
+  // Whether a guess as guessAgents() gave it named every AI player of a kept game, by how the game
+  // began (setup()), and nobody else, for the account's record (GameCounts.agentGuesses). A game
+  // with guessAgents() has this.
+  guessedRight?(setup: unknown, guess: unknown): boolean;
   // Whether a person who played in the game that has just ended still has to guess the AI players
   // of it before they see who they were (docs/architecture.md#guessing-the-ai): the replay of the
   // game waits for them too (Room.guessing). Without this, nobody does.

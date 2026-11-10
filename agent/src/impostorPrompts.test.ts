@@ -230,7 +230,7 @@ describe('the prompts of the hidden word game', () => {
   // The prompts tell the points as the rules set them now, so a change to the points changes what
   // the model is told, and takes a new version of the prompts with it.
   test('are noted with a new version of the prompts, which tell the points of the rules', () => {
-    expect(PROMPT_VERSION).toBe('impostor-2');
+    expect(PROMPT_VERSION).toBe('impostor-3');
     expect({ ...WIN_POINTS, hit: POINTS.hit, wrong: POINTS.wrong, lasted: POINTS.lasted }).toEqual({
       student: 3,
       reviewer2: 5,

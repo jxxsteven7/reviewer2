@@ -11,7 +11,7 @@ import {
   type ShownReplay,
   type Team,
 } from '@reviewer2/shared/keywords';
-import { peopleOf, type KeptCount, type KeptReplay, type Recount } from '../../core/game';
+import { peopleOf, type KeptCount, type KeptGame, type KeptReplay, type Recount } from '../../core/game';
 import type { GameLogData } from '../../core/gameLog';
 import { featsOf } from './agents';
 import { scoreGame } from './match';
@@ -181,6 +181,20 @@ export function shownReplay({ setup, log, language, accounts, viewer }: KeptRepl
   const people = peopleOf(log, accounts, [...groupIds(replay.groups), ...historyIds(replay.history)]);
   const me = groupIds(replay.groups).find((id) => viewer.has(id)) ?? [...viewer].find((id) => people[id]) ?? null;
   return { ...replay, people, me };
+}
+
+// Why an account that took part in a kept game that finished has no record of it
+// (GameModule.offRecord), with the player IDs it had in the game: `left` when it sat in a group
+// during the game and was in none at the end, having left the room or the group, or been benched.
+// Null for one who never sat in a group, as the member who gave the chair's own words and only
+// watched, and for one in a group at the end, who has a record of it.
+export function offRecordOf({ setup, log, language }: KeptGame, playerIds: ReadonlySet<string>): string | null {
+  const { state, seating } = playThrough(setup as KeywordsSetup, log, language);
+  if (!state.result || state.result.winner === null) return null;
+  const ids = [...playerIds];
+  const sat = ids.some((id) => seating.sides.has(id));
+  const stayed = ids.some((id) => (seating.seats.get(id)?.team ?? null) !== null);
+  return sat && !stayed ? 'left' : null;
 }
 
 // What a kept game that finished counts under the rules of today (GameModule.recount): everyone's

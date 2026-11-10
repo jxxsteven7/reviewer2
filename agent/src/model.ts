@@ -67,6 +67,15 @@ export class ModelError extends Error {
   }
 }
 
+// The schema of the reason that an answer gives in a sentence, in either game. A straight double
+// quote in it would end the JSON string that the model writes it to, and the rest of the sentence
+// with it, as models do far more often in Chinese than in English, so the schema allows none; and a
+// reason that isn't empty ends as a sentence does, with a full stop, an exclamation mark or a
+// question mark, in Chinese (the escapes) or in English. It may be empty, as when a student asked
+// again has nothing new to say. A service that doesn't hold the model to `pattern` passes it over:
+// the agent takes the reason as the model wrote it, as it always did.
+export const REASON_SCHEMA = { type: 'string', pattern: '^([^"]*[\u3002\uff01\uff1f.!?])?$' } as const;
+
 // The longest answer the model may write, in tokens, without thinking and with it. An answer is a
 // few candidates or a few card numbers with a sentence; what the model thinks before it at the low
 // level is up to about 15,000 tokens. The limits only stop a model that has lost its way from

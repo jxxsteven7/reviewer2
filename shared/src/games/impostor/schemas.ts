@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { MAX_AGENT_REASON } from '../../agent';
 import { LANGUAGES } from '../../language';
 import { AGENT_ASKED, AGENT_NOTE_FIELDS, gameId, term } from '../../schemaParts';
-import { FITS } from './agent';
+import { AGENT_LINES, FITS } from './agent';
 import { FATES, IMPOSTOR_ROLES, MAX_LINE_INPUT, MAX_PLAYERS, VERDICTS } from './types';
 
 // The schemas of the hidden word game's own messages, which the server checks every one of them
@@ -130,7 +130,12 @@ export const IMPOSTOR_NOTE = z.strictObject({
 const reason = z.string().max(MAX_AGENT_REASON);
 
 export const IMPOSTOR_AGENT_REPLIES = [
-  z.strictObject({ ok: z.literal(true), kind: z.literal('describe'), text: line, note: IMPOSTOR_NOTE }),
+  z.strictObject({
+    ok: z.literal(true),
+    kind: z.literal('describe'),
+    texts: z.array(line).min(1).max(AGENT_LINES),
+    note: IMPOSTOR_NOTE,
+  }),
   z.strictObject({
     ok: z.literal(true),
     kind: z.literal('vote'),

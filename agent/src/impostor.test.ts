@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { comeback, describe as describeWord, judge, vote } from './impostor';
 import { PROMPT_VERSION } from './impostorPrompts';
 import type { Turn } from './keywords';
-import { ModelError } from './model';
+import { ModelError, REASON_SCHEMA } from './model';
 import { PERSONAS } from './personas';
 import { allowed, impostorRequest, ScriptedModel, THOUGHT } from './testing';
 
@@ -17,12 +17,12 @@ const turn = (model: ScriptedModel, signal = AbortSignal.timeout(10_000), waitMs
 });
 
 describe('a description', () => {
-  test('is the first line that the rules of the room take', async () => {
+  test('is the lines of the first 3 that the rules of the room take', async () => {
     const model = new ScriptedModel({
       describe: [{ candidates: ['an apple a day', 'grows on a tree!', 'round and red', 'never asked for'] }],
     });
     const reply = allowed(await describeWord(impostorRequest('describe'), turn(model)));
-    expect(reply).toMatchObject({ ok: true, kind: 'describe', text: 'round and red' });
+    expect(reply).toMatchObject({ ok: true, kind: 'describe', texts: ['round and red'] });
     if (!reply.ok || reply.kind !== 'describe') throw new Error('no line');
     expect(reply.note).toMatchObject({ model: 'scripted', prompt: PROMPT_VERSION });
     expect(reply.note.candidates).toEqual([
@@ -30,6 +30,17 @@ describe('a description', () => {
       { text: 'grows on a tree!', problem: 'line_repeated' },
       { text: 'round and red', problem: null },
     ]);
+    expect(model.asked).toHaveLength(1);
+  });
+
+  // The agent is told the latest rounds alone of a long game, and the server holds the lines
+  // against the whole game, so it gets every line that the agent's check took, the best first.
+  test('is every line that the rules of the room take, in the order the model gave them', async () => {
+    const model = new ScriptedModel({
+      describe: [{ candidates: ['  round \n and red ', 'an apple a day', 'crisp in autumn'] }],
+    });
+    const reply = allowed(await describeWord(impostorRequest('describe'), turn(model)));
+    expect(reply).toMatchObject({ ok: true, kind: 'describe', texts: ['round and red', 'crisp in autumn'] });
     expect(model.asked).toHaveLength(1);
   });
 
@@ -82,7 +93,7 @@ describe('a description', () => {
   test('of the PI, who has no word, can be anything that is not said yet', async () => {
     const model = new ScriptedModel({ describe: [{ candidates: ['an apple a day'] }] });
     const reply = allowed(await describeWord(impostorRequest('describe', { word: null }), turn(model)));
-    expect(reply).toMatchObject({ ok: true, text: 'an apple a day' });
+    expect(reply).toMatchObject({ ok: true, texts: ['an apple a day'] });
     expect(model.asked[0]?.system).toContain('You are the PI: you have no word.');
   });
 
@@ -131,6 +142,17 @@ describe('a vote', () => {
     expect(reply.note).toMatchObject({ judgment: { closest: 'pear', fit: 'closest' }, reason: 'Odd one.' });
   });
 
+  // A service that doesn't hold the model to the pattern of the schema passes it over, and the
+  // reason is taken as the model wrote it.
+  test('asks for a reason with no straight double quote that ends as a sentence does, and takes any', async () => {
+    for (const request of [impostorRequest('vote'), impostorRequest('vote', { word: null })]) {
+      const model = new ScriptedModel({ vote: [{ closest: 'pear', fit: 'mine', number: 5, reason: 'Said "red' }] });
+      const reply = allowed(await vote(request, turn(model)));
+      expect(reply).toMatchObject({ ok: true, kind: 'vote', number: 5, reason: 'Said "red' });
+      expect(model.asked[0]?.schema).toMatchObject({ properties: { number: {}, reason: REASON_SCHEMA } });
+    }
+  });
+
   test('for anyone else, or for nobody, is an abstention', async () => {
     const model = new ScriptedModel({ vote: [{ number: 2, reason: 'Me.' }, { number: 0, reason: 'Unsure.' }, {}] });
     for (let ask = 0; ask < 3; ask += 1) {
@@ -146,6 +168,13 @@ describe('a verdict on a report', () => {
     expect(reply).toMatchObject({ ok: true, kind: 'judge', verdict: 'disagree', reason: 'It is vague.' });
     expect(model.asked[0]?.system).toContain('Player 3 has reported player 5 for breaking the rules');
     expect(model.asked[0]?.system).toContain('this line of theirs: "often eaten raw"');
+  });
+
+  test('asks for a reason with no straight double quote that ends as a sentence does, and takes any', async () => {
+    const model = new ScriptedModel({ judge: [{ verdict: 'agree', reason: 'It says "apple' }] });
+    const reply = allowed(await judge(impostorRequest('judge'), turn(model)));
+    expect(reply).toMatchObject({ ok: true, kind: 'judge', verdict: 'agree', reason: 'It says "apple' });
+    expect(model.asked[0]?.schema).toMatchObject({ properties: { verdict: {}, reason: REASON_SCHEMA } });
   });
 
   test('that is none of agree, disagree and abstain is an abstention', async () => {
@@ -259,7 +288,7 @@ describe('thinking', () => {
     );
     expect(reply).toMatchObject({
       ok: true,
-      text: 'round and red',
+      texts: ['round and red'],
       note: { reasoning: 'low', thinking: THOUGHT, fellBack: true },
     });
     expect(model.asked.map(({ think }) => think)).toEqual([true, undefined]);

@@ -9,6 +9,7 @@ import {
   joinByLink,
   newPlayer,
   register,
+  roomMenu,
   setSetting,
   snapshotsOf,
   test,
@@ -181,6 +182,62 @@ test('four players describe, judge a report, come back after a reload, vote Revi
     await expect(verdict).toHaveText(impostor.letter.short[caught ? 'voted_out' : 'alive']);
     expect(await verdict.evaluate((part) => part.scrollWidth <= part.clientWidth)).toBe(true);
   }
+});
+
+// A game that a Reviewer 2 leaves is on nobody's record (docs/games/impostor.md#leaving): each
+// player finds it last on their records page, under the games not on their record, with why, and
+// may watch it again from there.
+test('a game that Reviewer 2 leaves is listed as not on the record, with why, to watch again', async ({ browser }) => {
+  const chair = await newPlayer(browser);
+  await register(chair, own('Ann'));
+  const url = await createGameRoom(chair, 'impostor', 'en', async (page) => {
+    await setSetting(page, impostor.settings.boxes.describeTime, 0);
+    await setSetting(page, impostor.settings.boxes.voteTime, 0);
+  });
+  const players = [chair];
+  for (const name of ['Bob', 'Cat', 'Dan']) {
+    const page = await newPlayer(browser);
+    await register(page, own(name));
+    await joinByLink(page, url, 'en');
+    players.push(page);
+  }
+  await chair.getByRole('button', { name: text.lobby.start, exact: true }).click();
+  for (const page of players) await expect(page.locator('.impostor-game')).toBeVisible();
+  await expect.poll(() => new Set(players.map(numberOf).filter(Boolean)).size).toBe(4);
+  const termOf = (page: Page) => latest(page)?.you?.word?.word ?? null;
+  const terms = players.map(termOf);
+  const reviewer2 = players.find((page) => terms.filter((term) => term === termOf(page)).length === 1);
+  if (!reviewer2) throw new Error('no player has a term of their own');
+  const stayed = players.filter((page) => page !== reviewer2);
+
+  // Reviewer 2 leaves the room, and takes the game along.
+  await (await roomMenu(reviewer2)).getByRole('button', { name: text.room.leave }).click();
+  await reviewer2.getByRole('dialog', { name: text.room.leave }).getByRole('button', { name: text.room.leave }).click();
+  await reviewer2.waitForURL(/\/$/);
+  for (const page of stayed) {
+    await expect.poll(() => latest(page)?.result ?? null).toEqual({ winner: null, reason: 'reviewer2_left' });
+  }
+
+  const profile = text.account.profile;
+  for (const page of players) {
+    await page.goto('/account');
+    await page.locator('.game-tabs label').filter({ hasText: impostor.name }).click();
+    // No game on the record, and the games not on it last, with the share of AI spotted empty.
+    await expect(page.locator('.records')).toContainText(profile.noRecords);
+    await expect(page.locator('.records .stat-blocks')).toContainText(impostor.stats.agentGuesses);
+    await expect(page.locator('.records h3').last()).toHaveText(profile.offRecord);
+    const line = page.locator('.records .off-record .record');
+    await expect(line).toHaveCount(1);
+    await expect(line.locator('.tag')).toHaveText(profile.ordinaryTag);
+    await expect(line.locator('.why')).toHaveText(
+      page === reviewer2 ? profile.offRecordWhy.left : impostor.offRecord.reviewer2_left,
+    );
+  }
+  // Its round button opens the game to watch again.
+  await chair.locator('.records .off-record .record button.watch').click();
+  const replay = chair.getByRole('dialog', { name: text.replay.title });
+  await expect(replay).toBeVisible();
+  await expect(replay.locator('.replay')).toBeVisible();
 });
 
 // A room of four for a match, with no time limits, so that the test sets the pace: the chair picks

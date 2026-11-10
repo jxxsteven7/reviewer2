@@ -7,6 +7,7 @@ import {
   type ImpostorAgentGame,
   type ImpostorRole,
 } from '@reviewer2/shared/impostor';
+import { REASON_SCHEMA } from './model';
 import type { Persona } from './personas';
 
 // What the agent tells the model and asks it, for the hidden word game (docs/games/impostor.md).
@@ -18,7 +19,7 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'impostor-2';
+export const PROMPT_VERSION = 'impostor-3';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 
@@ -340,11 +341,11 @@ export const describeSchema = (game: ImpostorAgentGame, tie: boolean): object =>
   shape(judges(game, linesToGoBy(game, tie)), { candidates: { type: 'array', items: { type: 'string' } } });
 
 export const voteSchema = (game: ImpostorAgentGame): object =>
-  shape(judges(game, true), { number: { type: 'integer' }, reason: { type: 'string' } });
+  shape(judges(game, true), { number: { type: 'integer' }, reason: REASON_SCHEMA });
 
 export const JUDGE_SCHEMA = {
   type: 'object',
-  properties: { verdict: { type: 'string', enum: ['agree', 'disagree', 'abstain'] }, reason: { type: 'string' } },
+  properties: { verdict: { type: 'string', enum: ['agree', 'disagree', 'abstain'] }, reason: REASON_SCHEMA },
   required: ['verdict', 'reason'],
   additionalProperties: false,
 };
