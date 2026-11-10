@@ -21,7 +21,7 @@ import type { GameContext, GameLogNote, GameModule, GameShapes, GameUpdate, LogN
 import { pinyinOf } from '../../core/pinyin';
 import { pairKey } from '../../core/words';
 import { agentMove, agentProblems, agentTask, practiceSeats } from './agents';
-import { recountOf, shownReplay } from './replay';
+import { guessedRightOf, offRecordOf, recountOf, shownReplay } from './replay';
 import { factsOf, LOGGED, outcomeOf, resultsFrom, scoresFrom, setupOf, type ImpostorSetup } from './results';
 import {
   describe,
@@ -464,9 +464,11 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
     return { ok: true, data: { ...data, game: made.game }, guess: made.guess ?? null };
   },
   guessing: (data, playerId) => data.game !== null && guessing(data.game, playerId),
+  guessedRight: guessedRightOf,
 
   showReplay: shownReplay,
   recount: recountOf,
+  offRecord: offRecordOf,
   shapes,
 
   // What each member is in the game being played, for its log, as it begins and for whoever comes
@@ -535,7 +537,7 @@ export const impostorGame: GameModule<ImpostorData, ImpostorRoomData> = {
 
   practice: practiceSeats,
   agentTask,
-  agentMove: (data, _ctx, _playerId, task, answer, made) => agentMove(data, task, answer, made),
+  agentMove: (data, _ctx, playerId, task, answer, made) => agentMove(data, playerId, task, answer, made),
 
   views(data, ctx) {
     const at = ctx.now();

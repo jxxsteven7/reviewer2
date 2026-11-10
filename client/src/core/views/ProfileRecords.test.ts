@@ -3,6 +3,7 @@ import {
   ACCOUNT_API,
   type GameRecord,
   type GameRecords,
+  type OffRecordGame,
   type RecordsView,
   type WordsSetRecord,
 } from '@reviewer2/shared';
@@ -14,8 +15,9 @@ import en from '../../locales/en.json';
 import zh from '../../locales/zh.json';
 import ProfileRecords from './ProfileRecords.vue';
 
-// The account's record, a line for each of its latest games, and for each of the latest games whose
-// words it set (docs/architecture.md#accounts).
+// The account's record, a line for each of its latest games, for each of the latest games whose
+// words it set, and for each of the latest games it played in that aren't on its record
+// (docs/architecture.md#accounts).
 
 vi.mock('../account', () => ({ request: vi.fn() }));
 vi.mock('../toast', () => ({ toast: vi.fn(), toastError: vi.fn() }));
@@ -57,6 +59,19 @@ const wordsSet = (gameId: string, more: Partial<WordsSetRecord> = {}): WordsSetR
   words: ['Journal', 'Conference'],
   good: 2,
   rated: 3,
+  adopted: false,
+  ...more,
+});
+
+// A game that finished which the account played in but isn't on its record, as it left before the
+// end.
+const offRecord = (gameId: string, more: Partial<OffRecordGame> = {}): OffRecordGame => ({
+  game: 'keywords',
+  gameId,
+  endedAt: '2026-10-16T12:05:00.000Z',
+  match: null,
+  agents: false,
+  why: 'left',
   ...more,
 });
 
@@ -153,6 +168,83 @@ describe('ProfileRecords', () => {
     const rows = wrapper.findAll('.words-set .record');
     expect(rows.map((row) => row.find('.tag').text())).toEqual(['好评 2/3', '没人评']);
     expect(rows[0]?.find('.words').text()).toBe('挂科 / 及格');
+  });
+
+  test('marks the games of which words were adopted with an ink tag after the words', async () => {
+    const set = [wordsSet('set-2', { adopted: true }), wordsSet('set-1')];
+    const wrapper = await mountRecords('en', { impostor: impostor(set) });
+    await wrapper.find('input[value="impostor"]').setValue(true);
+    const [adopted, other] = wrapper.findAll('.words-set .record');
+    // In the outcome, after the words, so that it goes on to the next line with them.
+    const outcome = adopted?.find('.outcome').element;
+    expect(outcome?.lastElementChild?.className).toBe('tag-pill');
+    expect(outcome?.lastElementChild?.textContent).toBe('Adopted');
+    expect(outcome?.firstElementChild?.className).toBe('words');
+    expect(other?.find('.tag-pill').exists()).toBe(false);
+    const zh = await mountRecords('zh', { impostor: impostor(set) });
+    await zh.find('input[value="impostor"]').setValue(true);
+    expect(zh.get('.words-set .tag-pill').text()).toBe('已采纳');
+  });
+
+  test('lists last the games that finished but are not on the record, with why and the button', async () => {
+    const off = [
+      offRecord('left-2', { agents: true }),
+      offRecord('left-1', { endedAt: '2026-10-14T12:05:00.000Z', match: { game: 1, games: 3 } }),
+    ];
+    const wrapper = await mountRecords('en', { keywords: { ...records.keywords!, offRecord: off } });
+    expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual([
+      'The last 20 games',
+      'Games not on your record',
+    ]);
+    const rows = wrapper.findAll('.off-record .record');
+    expect(rows).toHaveLength(2);
+    // The tag as on the record: the robot and "AI", or which game of a match.
+    expect(rows[0]?.find('button.tag .agent-icon').exists()).toBe(true);
+    expect(rows[1]?.find('.tag').text()).toBe('Match 1/3');
+    expect(rows.map((row) => row.find('.why').text())).toEqual(['You left during it', 'You left during it']);
+    expect(rows[0]?.find('.role').exists()).toBe(false);
+    vi.mocked(request).mockResolvedValueOnce({ ok: false, error: 'no_replay' } as never);
+    await rows[1]?.find('button.watch').trigger('click');
+    expect(request).toHaveBeenLastCalledWith(ACCOUNT_API.replay, { gameId: 'left-1' });
+  });
+
+  test("says why in the game's own words where it has them, in Chinese too", async () => {
+    const off = [
+      offRecord('r2-left', { game: 'impostor', why: 'reviewer2_left' }),
+      offRecord('left', { game: 'impostor', match: null }),
+    ];
+    const view = { impostor: { ...impostor(), offRecord: off } };
+    const wrapper = await mountRecords('en', view);
+    await wrapper.find('input[value="impostor"]').setValue(true);
+    expect(wrapper.findAll('.off-record .why').map((why) => why.text())).toEqual([
+      'A Reviewer 2 left',
+      'You left during it',
+    ]);
+    const zh = await mountRecords('zh', view);
+    await zh.find('input[value="impostor"]').setValue(true);
+    expect(zh.findAll('h3').at(-1)?.text()).toBe('没计入战绩的对局');
+    expect(zh.findAll('.off-record .why').map((why) => why.text())).toEqual(['有二号审稿人中途离开', '你中途离开了']);
+    expect(zh.get('.off-record .tag').text()).toBe('普通');
+  });
+
+  test('shows them to an account with no game on its record, and has no such list without them', async () => {
+    const empty = mountRecords('en', {
+      keywords: {
+        ordinary: { games: 0, wins: 0 },
+        inMatches: { games: 0, wins: 0 },
+        roles: {},
+        matches: { played: 0, won: 0, recent: [] },
+        recent: [],
+        offRecord: [offRecord('left-1')],
+      },
+    });
+    const wrapper = await empty;
+    expect(wrapper.text()).toContain('No games yet.');
+    expect(wrapper.findAll('h3').map((heading) => heading.text())).toEqual(['Games not on your record']);
+    expect(wrapper.findAll('.off-record .record')).toHaveLength(1);
+    const none = await mountRecords('en');
+    expect(none.find('.off-record').exists()).toBe(false);
+    expect(none.text()).not.toContain('Games not on your record');
   });
 
   test('has no such list for an account that has set the words of no game', async () => {

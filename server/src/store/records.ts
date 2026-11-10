@@ -461,6 +461,21 @@ export interface NewReplay {
   words: string;
 }
 
+// A kept game that finished that an account took part in and has no record of
+// (ReplayStore.offRecord): its ID, when it ended, what the record of the game says of the match
+// and the AI, as for a record, how it began, its log and its language, and the player IDs that the
+// account had in it.
+export interface UnrecordedGame {
+  gameId: string;
+  endedAt: string;
+  match: { game: number; games: number } | null;
+  agents: boolean;
+  setup: unknown;
+  log: GameLogData;
+  language: Language;
+  playerIds: string[];
+}
+
 // A kept game for an account to watch again (ReplayStore.read): the game, how it began, its log,
 // its language, and which player ID was which account, for those still there.
 export interface StoredGame {
@@ -481,6 +496,7 @@ export class ReplayStore {
   readonly #log: StatementSync;
   readonly #has: StatementSync;
   readonly #agentPlay: StatementSync;
+  readonly #unrecorded: StatementSync;
 
   constructor(
     db: DatabaseSync,
@@ -512,6 +528,23 @@ export class ReplayStore {
       'SELECT replays.game_id AS gameId, log, json_group_array(player_id) AS playerIds FROM game_players ' +
         'JOIN replays ON replays.game_id = game_players.game_id ' +
         'WHERE account_id = ? GROUP BY replays.game_id',
+    );
+    // The games of a game that finished, that an account took part in and has no record of, but
+    // for those whose words it set, by the player ID that the setup names the setter by, if the
+    // game has one: the latest first, with the IDs it had in each. The latest are picked by their
+    // IDs first, so that the logs of those alone are read.
+    this.#unrecorded = db.prepare(
+      'WITH latest AS (SELECT DISTINCT g.game_id, g.ended_at, g.rowid AS row FROM game_players AS p ' +
+        'JOIN replays AS g ON g.game_id = p.game_id ' +
+        "WHERE p.account_id = ? AND g.game = ? AND g.ending = 'finished' " +
+        'AND NOT EXISTS (SELECT 1 FROM game_records AS r WHERE r.account_id = p.account_id AND r.game_id = g.game_id) ' +
+        'AND NOT EXISTS (SELECT 1 FROM game_players AS s WHERE s.game_id = g.game_id ' +
+        'AND s.account_id = p.account_id AND s.player_id = json_extract(g.setup, ?)) ' +
+        'ORDER BY g.ended_at DESC, g.rowid DESC LIMIT ?) ' +
+        'SELECT g.game_id AS gameId, g.ended_at AS endedAt, g.match_game AS matchGame, g.match_games AS matchGames, ' +
+        '(g.agents > 0 OR g.takeover = 1) AS agents, g.setup, g.log, g.language, ' +
+        '(SELECT json_group_array(player_id) FROM game_players WHERE game_id = g.game_id AND account_id = ?) AS playerIds ' +
+        'FROM latest JOIN replays AS g ON g.game_id = latest.game_id ORDER BY latest.ended_at DESC, latest.row DESC',
     );
     this.#setLog = db.prepare('UPDATE replays SET log = ? WHERE game_id = ?');
     this.#log = db.prepare('SELECT game, log FROM replays WHERE game_id = ?');
@@ -641,6 +674,30 @@ export class ReplayStore {
       language: row.language,
       players: this.#players.all(gameId) as { playerId: string; accountId: number }[],
     };
+  }
+
+  // The latest games of a game that finished, that the account took part in and has no record of,
+  // the latest first, `limit` at most, but for those whose words it set, by the setup's path to
+  // the setter (GameModule.setupPaths), for a game that has one: what it takes for the game to say
+  // why it isn't on the record (GameModule.offRecord).
+  offRecord(accountId: number, game: string, setterPath: string | null, limit: number): UnrecordedGame[] {
+    type Row = Omit<UnrecordedGame, 'match' | 'agents' | 'setup' | 'log' | 'playerIds'> & {
+      matchGame: number | null;
+      matchGames: number | null;
+      agents: number;
+      setup: string | null;
+      log: string;
+      playerIds: string;
+    };
+    const rows = this.#unrecorded.all(accountId, game, setterPath, limit, accountId) as Row[];
+    return rows.map(({ matchGame, matchGames, agents, setup, log, playerIds, ...row }) => ({
+      ...row,
+      match: matchGame === null || matchGames === null ? null : { game: matchGame, games: matchGames },
+      agents: agents === 1,
+      setup: setup === null ? null : (JSON.parse(setup) as unknown),
+      log: JSON.parse(log) as GameLogData,
+      playerIds: JSON.parse(playerIds) as string[],
+    }));
   }
 
   // Forgets who the account was in the games it played in, for an account that is being deleted:

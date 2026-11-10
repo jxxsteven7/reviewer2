@@ -54,7 +54,7 @@ function kept(
     ending: ending as 'finished',
     outcome: ending === 'finished' ? { winner: 'student', reason: 'caught' } : null,
     durationMs: 1000,
-    setup: { words: { student: words[0], reviewer2: words[1] }, source },
+    setup: { words: { student: words[0], reviewer2: words[1] }, source, players: [] },
     log: { v: 2, game, gameId, start: null, entries: [{ t: 1, by: null, type: 'end' }] },
     agentLog: null,
     players: players.map(([playerId, accountId]) => ({ playerId, accountId })),
@@ -198,10 +198,25 @@ describe('the ratings', () => {
     const setup = (student: string, reviewer2: string) => ({
       words: { student, reviewer2 },
       source: { kind: 'setter', setter: 's', field: 'fruit', named: true },
+      players: [],
     });
     expect(ratings.setterGames('impostor', PATHS.setter, ann)).toEqual([
-      { gameId: 'g2', endedAt: at(2), setup: setup('Cat', 'Dog'), good: 0, rated: 0 },
-      { gameId: 'g1', endedAt: at(1), setup: setup('Apple', 'Pear'), good: 2, rated: 3 },
+      { gameId: 'g2', endedAt: at(2), setup: setup('Cat', 'Dog'), good: 0, rated: 0, adopted: false },
+      { gameId: 'g1', endedAt: at(1), setup: setup('Apple', 'Pear'), good: 2, rated: 3, adopted: false },
+    ]);
+    // Once the operator adopts the words of g1, its line says so.
+    new ContentStore(db, () => NOW).adopt({
+      kind: 'pair',
+      game: 'impostor',
+      gameId: 'g1',
+      content: { words: ['Apple', 'Pear'], field: 'fruit' },
+      accountId: ann,
+      named: true,
+      summary: { zh: 'A pair', en: 'A pair' },
+    });
+    expect(ratings.setterGames('impostor', PATHS.setter, ann).map(({ gameId, adopted }) => [gameId, adopted])).toEqual([
+      ['g2', false],
+      ['g1', true],
     ]);
     expect(ratings.setterGames('impostor', PATHS.setter, bob).map((row) => row.gameId)).toEqual(['g4']);
     // The latest 20, the latest first.
@@ -248,6 +263,7 @@ describe("an account's page", () => {
             words: ['Apple', 'Pear'],
             good: 1,
             rated: 1,
+            adopted: false,
           },
         ],
       },
@@ -278,6 +294,140 @@ describe("an account's page", () => {
       rounds: 4,
       violation: 1,
     });
+  });
+});
+
+describe('the guesses of the AI players', () => {
+  // A game of five in which players 2 and 4 were AI players, and the guesses that Ann's player in
+  // it made, by the player ID `p1`.
+  const withAgents = (gameId: string, players: [string, number][]) =>
+    replays.add({
+      game: 'impostor',
+      gameId,
+      ending: 'finished',
+      outcome: { winner: 'student', reason: 'caught' },
+      durationMs: 1000,
+      setup: {
+        words: { student: 'Apple', reviewer2: 'Pear' },
+        source: { pair: 'fruit:apple+pear' },
+        players: [1, 2, 3, 4, 5].map((number) => ({
+          id: `p${number}`,
+          number,
+          role: number === 5 ? 'reviewer2' : 'student',
+          agent: number === 2 || number === 4,
+        })),
+      },
+      log: { v: 2, game: 'impostor', gameId, start: null, entries: [{ t: 1, by: null, type: 'end' }] },
+      agentLog: null,
+      players: players.map(([playerId, accountId]) => ({ playerId, accountId })),
+      counts: { accounts: players.length, guests: 1, agents: 2 },
+      takeover: false,
+      scoresNothing: true,
+      agentPlays: [],
+      match: null,
+      inMatch: false,
+      practice: false,
+      language: 'en',
+      fields: ['fruit'],
+      version: 'v',
+      rules: 1,
+      words: 'w',
+    });
+
+  test('count the games an account guessed them in, skips left out, and those it named exactly', () => {
+    const ann = account('Ann');
+    const bob = account('Bob');
+    const service = new Accounts({ db, now: () => 0, clock: () => NOW, games: [impostorGame] });
+    const record = { side: 'student', role: 'student', result: 'won' as const, place: 1, points: 0, verdict: 'alive' };
+    const guessed = [[2, 4], [2], [1, 2, 4], null, [4, 2]] as const;
+    for (const [index, guess] of guessed.entries()) {
+      const gameId = `g${index + 1}`;
+      withAgents(gameId, [
+        ['p1', ann],
+        ['p3', bob],
+      ]);
+      service.records.add(ann, { game: 'impostor', gameId, ...record, detail: {} });
+      ratings.guess('impostor', gameId, 'p1', guess === null ? null : [...guess]);
+    }
+    // Bob guessed right once, by another player ID of the same game.
+    ratings.guess('impostor', 'g1', 'p3', [2, 4]);
+    expect(ratings.guesses('impostor', ann)).toHaveLength(4);
+    const login = { account: accounts.byId(ann) as never, hash: Buffer.alloc(0) };
+    // Of the four games guessed, the first and the last named both AI players and nobody else.
+    expect(service.recordsOf(login).impostor?.agentGuesses).toEqual({ games: 4, right: 2 });
+    accounts.setProfile(ann, { link: null, bio: null, showRecord: true, showThanks: false });
+    expect(service.profileOf(accounts.byId(ann)?.handle as string, null)?.record?.impostor?.agentGuesses).toEqual({
+      games: 4,
+      right: 2,
+    });
+    // An account that played and guessed nothing has none to count, and one that played none of
+    // the game has no counts of it.
+    const cat = account('Cat');
+    withAgents('g9', [['p1', cat]]);
+    service.records.add(cat, { game: 'impostor', gameId: 'g9', ...record, detail: {} });
+    const cats = { account: accounts.byId(cat) as never, hash: Buffer.alloc(0) };
+    expect(service.recordsOf(cats).impostor?.agentGuesses).toEqual({ games: 0, right: 0 });
+    expect(service.recordsOf({ account: accounts.byId(bob) as never, hash: Buffer.alloc(0) }).impostor).toBeUndefined();
+  });
+
+  // A game that a Reviewer 2 left is on nobody's record, and may still be guessed in: an account
+  // whose only games are such counts its guesses on its own page, as one with a record does, while
+  // its public page, which has no record to show, has none.
+  test('count the guesses of an account whose only games are not on its record', () => {
+    const dee = account('Dee');
+    const service = new Accounts({ db, now: () => 0, clock: () => NOW, games: [impostorGame] });
+    const over = { winner: null, reason: 'reviewer2_left', round: 1 };
+    const row = replays.add({
+      game: 'impostor',
+      gameId: 'g-left',
+      ending: 'finished',
+      outcome: over,
+      durationMs: 1000,
+      setup: {
+        words: { student: 'Apple', reviewer2: 'Pear' },
+        source: { pair: 'fruit:apple+pear' },
+        players: [1, 2, 3, 4, 5].map((number) => ({
+          id: `p${number}`,
+          number,
+          role: number === 5 ? 'reviewer2' : 'student',
+          agent: number === 2,
+        })),
+      },
+      log: {
+        v: 2,
+        game: 'impostor',
+        gameId: 'g-left',
+        start: null,
+        entries: [
+          { t: 1, by: null, type: 'impostor:over', data: over },
+          { t: 2, by: null, type: 'end' },
+        ],
+      },
+      agentLog: null,
+      players: [{ playerId: 'p1', accountId: dee }],
+      counts: { accounts: 1, guests: 3, agents: 1 },
+      takeover: false,
+      scoresNothing: true,
+      agentPlays: [],
+      match: null,
+      inMatch: false,
+      practice: false,
+      language: 'en',
+      fields: ['fruit'],
+      version: 'v',
+      rules: 1,
+      words: 'w',
+    });
+    expect(row).toBe(true);
+    ratings.guess('impostor', 'g-left', 'p1', [2]);
+    const login = { account: accounts.byId(dee) as never, hash: Buffer.alloc(0) };
+    expect(service.recordsOf(login).impostor).toMatchObject({
+      recent: [],
+      offRecord: [{ gameId: 'g-left', why: 'reviewer2_left' }],
+      agentGuesses: { games: 1, right: 1 },
+    });
+    accounts.setProfile(dee, { link: null, bio: null, showRecord: true, showThanks: false });
+    expect(service.profileOf(accounts.byId(dee)?.handle as string, null)?.record).toEqual({});
   });
 });
 

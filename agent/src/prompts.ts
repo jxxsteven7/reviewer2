@@ -1,5 +1,6 @@
 import type { Language } from '@reviewer2/shared';
 import type { AgentGame, AgentTalk, CardColor, CardView, ClueCount, Team } from '@reviewer2/shared/keywords';
+import { REASON_SCHEMA } from './model';
 import type { Persona } from './personas';
 
 // What the agent tells the model and asks it, for the team word guessing game
@@ -9,7 +10,7 @@ import type { Persona } from './personas';
 
 // The version of the prompts, which every answer notes (AgentNote), so that the record of a game
 // says which prompts played it. Change it with any change to what the model is told.
-export const PROMPT_VERSION = 'keywords-7';
+export const PROMPT_VERSION = 'keywords-8';
 
 const LANGUAGE_NAMES: Record<Language, string> = { zh: 'Chinese', en: 'English' };
 
@@ -232,7 +233,9 @@ function reasonRule(game: AgentGame, persona: Persona, talk: GuessTalk | undefin
 }
 
 // A straight double quote in the reason ends the JSON string that the model writes it to, and the
-// rest of the sentence with it, which the model does in Chinese far more often than in English.
+// rest of the sentence with it, which the model does in Chinese far more often than in English. The
+// schema of the reason allows none (REASON_SCHEMA in model.ts), and this tells the model what to
+// quote with instead.
 const QUOTE_RULE = 'In the reason, quote a term with \u300c\u300d, never with straight double quotes.';
 
 export function guessSystem(game: AgentGame, persona: Persona, limit: number, talk?: GuessTalk): string {
@@ -317,7 +320,7 @@ export const GUESS_SCHEMA = {
   type: 'object',
   properties: {
     picks: { type: 'array', items: { type: 'integer' } },
-    reason: { type: 'string' },
+    reason: REASON_SCHEMA,
   },
   required: ['picks', 'reason'],
   additionalProperties: false,

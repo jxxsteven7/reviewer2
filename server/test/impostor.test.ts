@@ -1,3 +1,4 @@
+import type { RecordsView } from '@reviewer2/shared';
 import { defaultSettings } from '@reviewer2/shared/impostor';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 // The agent itself, which the server reaches over a socket in production: here it answers in the
@@ -184,7 +185,7 @@ describe('AI players', () => {
     expect(row.game).toBe('impostor');
     const steps = (JSON.parse(row.agentLog) as { steps: { kind: string; note?: { prompt: string } }[] }).steps;
     expect(new Set(steps.map(({ kind }) => kind))).toEqual(new Set(['describe', 'vote', 'judge', 'comeback']));
-    expect(steps.every(({ note }) => note?.prompt === 'impostor-2')).toBe(true);
+    expect(steps.every(({ note }) => note?.prompt === 'impostor-3')).toBe(true);
   });
 });
 
@@ -314,5 +315,38 @@ describe('the records of a game', () => {
     const stayed = browsers[table.findIndex((client) => client.me !== left)] as Browser;
     const shown = await stayed.request('/api/account/replay', { gameId });
     expect(shown.body).toMatchObject({ ok: true, replay: { gameId, result: outcome, points: [] } });
+    // Everyone's records page lists it among the games not on their record, with why: the
+    // Reviewer 2 left it, and the others stayed in a game that a Reviewer 2 left.
+    const listed = { game: 'impostor', gameId, match: null, agents: false };
+    expect((await stayed.request('/api/account/records')).body).toMatchObject({
+      ok: true,
+      records: { impostor: { recent: [], offRecord: [{ ...listed, why: 'reviewer2_left' }] } },
+    });
+    const leaver = browsers[table.findIndex((client) => client.me === left)] as Browser;
+    expect((await leaver.request('/api/account/records')).body).toMatchObject({
+      records: { impostor: { offRecord: [{ ...listed, why: 'left' }] } },
+    });
+  });
+
+  test("list a game left by a student on the student's records page alone, as not on their record", async () => {
+    let leaving: TestClient | undefined;
+    const { browsers, table, gameId } = await peopleGame(async (game, people) => {
+      const student = game().players.find((player) => player.role === 'student' && player.number !== 1);
+      leaving = people.find((client) => client.me === student?.id);
+      expect(await leaving?.send('room:leave')).toMatchObject({ ok: true });
+    });
+    expect(records()).toHaveLength(4);
+    const recordsOf = async (index: number) =>
+      ((await (browsers[index] as Browser).request('/api/account/records')).body as unknown as { records: RecordsView })
+        .records;
+    for (const [index, client] of table.entries()) {
+      const shown = (await recordsOf(index)).impostor;
+      if (client === leaving) {
+        expect(shown).toMatchObject({ recent: [], offRecord: [{ gameId, why: 'left', endedAt: expect.any(String) }] });
+      } else {
+        expect(shown?.recent).toHaveLength(1);
+        expect(shown?.offRecord).toBeUndefined();
+      }
+    }
   });
 });

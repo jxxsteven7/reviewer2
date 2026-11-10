@@ -7,6 +7,7 @@ import {
   type BoardWord,
 } from '@reviewer2/shared';
 import {
+  AGENT_LINES,
   checkDescription,
   FITS,
   type ImpostorCandidate,
@@ -40,14 +41,17 @@ import { thinker } from './thinking';
 // once it was voted out. The model only proposes; the agent holds every line against the rules of
 // the room, with the same check that the game server runs (checkDescription), and every vote
 // against the players it may vote for, so that what it answers is something the server takes. The
-// server checks it all again anyway. The agent never reports anyone and never talks off the field.
+// server checks it all again anyway: the agent holds the lines against the rounds it was told,
+// which in a long game are the latest alone, so it answers with every line of the model's answer
+// that its check took, and the server takes the first that its own check takes against the whole
+// game. The agent never reports anyone and never talks off the field.
 
 export type ImpostorRequest = Extract<AgentRequest, { game: 'impostor' }>;
 type Request<Kind extends ImpostorRequest['kind']> = Extract<ImpostorRequest, { kind: Kind }>;
 
 // How many lines the model is asked for at a time, and how many times: twice more, with the lines
 // that the rules refused, when none so far would do.
-const CANDIDATES = 3;
+const CANDIDATES = AGENT_LINES;
 const TRIES = 3;
 // The longest line and guess that a note keeps of what the model wrote (IMPOSTOR_NOTE).
 const MAX_NOTED = 200;
@@ -132,16 +136,17 @@ export async function describe(request: Request<'describe'>, turn: Turn): Promis
       const answer = attempt === 0 ? await ask(question) : await again(question);
       judged = judgment(answer) ?? judged;
       const proposed = Array.isArray(answer.candidates) ? answer.candidates.slice(0, CANDIDATES) : [];
+      // Every line of the answer that the check takes, the best first, as the model ordered them.
+      const taken: string[] = [];
       for (const text of proposed) {
         if (typeof text !== 'string') continue;
         const check = checkDescription(text, word, earlier, request.length);
         const shown = (check.text || cleanLine(text.slice(0, MAX_NOTED * 2))).slice(0, MAX_NOTED);
         considered.push({ text: shown, problem: check.problem });
-        if (check.problem === null) {
-          return { ok: true, kind: 'describe', text: check.text, note: note({ judgment: judged }) };
-        }
-        refused.push({ text: shown, why: WHY[check.problem] });
+        if (check.problem === null) taken.push(check.text);
+        else refused.push({ text: shown, why: WHY[check.problem] });
       }
+      if (taken.length > 0) return { ok: true, kind: 'describe', texts: taken, note: note({ judgment: judged }) };
     }
     return { ok: false, error: 'no_legal_move', note: note({ judgment: judged }) };
   } catch (error) {

@@ -12,6 +12,7 @@ import { ContentStore } from './store/content';
 import { ContributionStore } from './store/contributions';
 import { DATABASE_FILE, openDatabase, type Database } from './store/database';
 import { FeedbackStore, type NewFeedback } from './store/feedback';
+import { RatingStore } from './store/ratings';
 import { ReplayStore } from './store/records';
 
 // The operator's commands, on a data directory as the server leaves it.
@@ -1849,5 +1850,125 @@ describe('content', () => {
   test('says when nothing was adopted', () => {
     expect(run('content', 'list')).toBe(0);
     expect(printed).toEqual(['No words adopted from the games yet.']);
+  });
+});
+
+describe('ratings', () => {
+  // A kept game, which ended on the given day, with the accounts that played in it.
+  function kept(
+    gameId: string,
+    game: string,
+    setup: object,
+    players: { playerId: string; accountId: number }[],
+    on: string,
+  ) {
+    new ReplayStore(database.db, () => Date.parse(`${on}T08:00:00.000Z`)).add({
+      game,
+      gameId,
+      ending: 'finished',
+      outcome: { winner: game === 'keywords' ? 'red' : 'student', reason: 'caught' },
+      durationMs: 1000,
+      setup,
+      log: { v: 2, game, gameId, start: null, entries: [{ t: 1, by: null, type: 'end' }] },
+      agentLog: null,
+      players,
+      counts: { accounts: players.length, guests: 0, agents: 0 },
+      takeover: false,
+      scoresNothing: false,
+      agentPlays: [],
+      match: null,
+      inMatch: false,
+      practice: false,
+      language: 'en',
+      fields: ['biology', 'cs'],
+      version: 'v',
+      rules: 1,
+      words: 'w',
+    });
+  }
+  const pairGame = (pair: string) => ({
+    settings: {},
+    players: [],
+    words: { student: 'Apple', reviewer2: 'Pear' },
+    source: { kind: 'library', field: 'fruit', pair, student: 1, reviewer2: 2 },
+  });
+  const board = (custom: boolean) => ({
+    settings: {},
+    startingTeam: 'red',
+    cards: [{ word: 'Cell', custom }],
+    ...(custom ? { customAuthor: 'a' } : {}),
+  });
+
+  function games(): void {
+    const ann = accounts.store.create('Ann', 'ann', 'hash', RECORDS_NOTICE_VERSION)?.id ?? 0;
+    const bob = accounts.store.create('Bob', 'bob', 'hash', RECORDS_NOTICE_VERSION)?.id ?? 0;
+    // Two games of one pair, which Ann rated good in both, one of another, and one that a setter
+    // gave the pair of.
+    kept(
+      'i1',
+      'impostor',
+      pairGame('fruit:1+2'),
+      [
+        { playerId: 'a1', accountId: ann },
+        { playerId: 'b1', accountId: bob },
+      ],
+      '2026-10-20',
+    );
+    kept('i2', 'impostor', pairGame('fruit:1+2'), [{ playerId: 'a2', accountId: ann }], '2026-10-21');
+    kept('i3', 'impostor', pairGame('fruit:3+4'), [], '2026-10-21');
+    kept(
+      'i4',
+      'impostor',
+      { ...pairGame('x'), source: { kind: 'setter', setter: 's', field: 'fruit', named: true } },
+      [],
+      '2026-10-21',
+    );
+    kept('k1', 'keywords', board(false), [{ playerId: 'a', accountId: ann }], '2026-10-19');
+    kept('k2', 'keywords', board(true), [{ playerId: 'a', accountId: ann }], '2026-10-22');
+    kept('k3', 'keywords', board(false), [], '2026-10-23');
+    const ratings = new RatingStore(database.db);
+    ratings.rate('impostor', 'i1', 'a1', 'good');
+    ratings.rate('impostor', 'i1', 'b1', 'hard');
+    ratings.rate('impostor', 'i1', 'guest-1', null);
+    ratings.rate('impostor', 'i2', 'a2', 'good');
+    ratings.rate('impostor', 'i2', 'guest-2', 'problem');
+    ratings.rate('impostor', 'i4', 'guest-3', 'easy');
+    ratings.rate('keywords', 'k1', 'a', 'easy');
+    ratings.rate('keywords', 'k1', 'guest-1', 'easy');
+    ratings.rate('keywords', 'k2', 'a', 'problem');
+  }
+
+  test('counts how people rated each pair drawn from the library, and the latest rated games of the first game', () => {
+    games();
+    expect(run('ratings')).toBe(0);
+    expect(printed).toEqual([
+      'keywords: the latest 2 games rated, the latest first',
+      '     Ended  Good  Hard  Easy  Problem  Skipped  Game, language and fields',
+      '2026-10-22     0     0     0        1        0  k2  en  biology,cs + own words',
+      '2026-10-19     0     0     2        0        0  k1  en  biology,cs',
+      '',
+      // An account counts once for each count, however many games of the pair it rated so, and a
+      // guest once for each game; the setter's pair has no key, and a pair drawn but not rated
+      // counts nothing.
+      'impostor: 2 pairs of the word library, the most drawn first',
+      'Games  Good  Hard  Easy  Problem  Skipped  Pair',
+      '    2     1     1     0        1        1  fruit:1+2',
+      '    1     0     0     0        0        0  fruit:3+4',
+    ]);
+    printed.length = 0;
+    expect(run('ratings', 'impostor')).toBe(0);
+    expect(printed[0]).toBe('impostor: 2 pairs of the word library, the most drawn first');
+    expect(printed).toHaveLength(4);
+  });
+
+  test('says when there is nothing to count, refuses a game that takes no ratings, and only reads', () => {
+    expect(run('ratings')).toBe(0);
+    expect(printed).toEqual(['keywords: no game rated yet.', '', 'impostor: no pair of the word library drawn yet.']);
+    expect(run('ratings', 'chess')).toBe(1);
+    expect(printed.at(-1)).toBe('No game chess takes ratings: keywords, impostor do.');
+    expect(run('ratings', 'impostor', 'more')).toBe(2);
+    database.db.close();
+    expect(run('ratings')).toBe(0);
+    expect(readdirSync(dir).filter((name) => name.startsWith(DATABASE_FILE))).toEqual([DATABASE_FILE]);
   });
 });

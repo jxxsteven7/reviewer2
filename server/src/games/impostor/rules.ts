@@ -184,9 +184,11 @@ const putOut = (game: ImpostorGame, id: string, fate: GamePlayer['fate']): Impos
 });
 
 // The vote is revealed, once everyone has voted or their time has run out: whoever has the most
-// votes, alone, goes out; players tied for the most add a line each and the others vote again
-// among them, once; after a revote that is tied again, or a vote for nobody, nobody goes out. A
-// Reviewer 2 or a PI who goes out may then guess the students' word, if the room allows it.
+// votes, alone, goes out; players tied for the most add a line each, but for one who added a tie
+// line this round already, and the others vote again among them; after a revote that is tied
+// again, or a vote for nobody, nobody goes out. A report that passes during the round's votes
+// begins them again from a first vote (settle()), which may tie and be revoted again. A Reviewer 2
+// or a PI who goes out may then guess the students' word, if the room allows it.
 function reveal(game: ImpostorGame, now: number): ImpostorGame {
   const voters = votersOf(game);
   const votes: Ballot['votes'] = {};

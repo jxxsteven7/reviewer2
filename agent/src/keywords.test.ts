@@ -8,7 +8,7 @@ import {
 import { AGENT_REQUEST } from '@reviewer2/shared/schemas';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { giveClue, guess, type Turn } from './keywords';
-import { ModelError } from './model';
+import { ModelError, REASON_SCHEMA } from './model';
 import { PERSONAS, type Persona } from './personas';
 import { PROMPT_VERSION } from './prompts';
 import { allowed, captainCards, clueRequest, guessRequest, ScriptedModel, studentCards, THOUGHT } from './testing';
@@ -435,6 +435,15 @@ describe('a guess', () => {
     expect(model.asked[0]?.system).toContain('at most 2');
     expect(model.asked[0]?.user).toContain('3. Matrix [OURS] (revealed)');
     expect(model.asked[0]?.user).not.toContain('6. Protein [');
+  });
+
+  // A service that doesn't hold the model to the pattern of the schema passes it over, and the
+  // reason is taken as the model wrote it.
+  test('asks for a reason with no straight double quote that ends as a sentence does, and takes any', async () => {
+    const model = new ScriptedModel({ guess: [{ picks: [6], reason: 'Both are "Biology' }] });
+    const reply = allowed(await guess(guessRequest(), turn(model)));
+    expect(reply).toMatchObject({ ok: true, kind: 'guess', picks: [6], reason: 'Both are "Biology' });
+    expect(model.asked[0]?.schema).toMatchObject({ properties: { reason: REASON_SCHEMA } });
   });
 
   test('names no more cards than the group may still reveal, and a few for a number that says nothing', async () => {

@@ -939,10 +939,28 @@ describe('the records of the second game', () => {
       ['Games', '10'],
       ['Win rate', '50%'],
     ]);
-    expect(blocks.slice(-2)).toEqual([
+    expect(blocks.slice(-3, -1)).toEqual([
       ['Matches', '2'],
       ['Won', '1'],
     ]);
+  });
+
+  // The last block completes the fourth line of three: of the games guessed in, the share in which
+  // the guess named the AI players right, over how many games, and the empty rate before any.
+  test('end with the share of the guesses of the AI players that were right', () => {
+    const counts: GameCounts = {
+      ordinary: { games: 9, wins: 4 },
+      inMatches: { games: 0, wins: 0 },
+      roles: {},
+      matches: { played: 0, won: 0 },
+      agentGuesses: { games: 5, right: 3 },
+    };
+    const t = i18n().global.t as Parameters<typeof recordStats>[0];
+    const blocks = recordStats(t, counts, 'en');
+    expect(blocks).toHaveLength(12);
+    expect(blocks.at(-1)).toEqual({ label: 'AI spotted', value: '60%', detail: '5 games' });
+    const none = recordStats(t, { ...counts, agentGuesses: undefined }, 'en').at(-1);
+    expect(none).toEqual({ label: 'AI spotted', value: '—', detail: '0 games' });
   });
 });
 

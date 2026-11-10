@@ -322,6 +322,10 @@ export interface MatchRecord {
 // isn't there for an account that has set none. `sums` is what the records of a game that asks for
 // it add up, as the game names it: the totals of counts in the records' detail and how many records
 // have a verdict, such as the votes and the times out for breaking the rules in the second game.
+// `agentGuesses` is, for a game in which players guess who the AI players were, how many games the
+// account guessed them in, skips left out, and in how many it named them all and nobody else
+// (docs/architecture.md#guessing-the-ai); it isn't there for an account that has played none, and
+// on a public page not for one with no record of the game.
 export interface GameCounts {
   ordinary: { games: number; wins: number };
   inMatches: { games: number; wins: number };
@@ -329,6 +333,7 @@ export interface GameCounts {
   matches: { played: number; won: number };
   wordsSet?: { games: number; good: number };
   sums?: Record<string, number>;
+  agentGuesses?: { games: number; right: number };
 }
 
 // The counts of a game that the account has finished no game or match of.
@@ -346,8 +351,9 @@ export type RecordCounts = Record<string, GameCounts>;
 // A game that finished whose words the account set (docs/architecture.md#ratings): when it ended,
 // the words as the setter gave them, in the order the game keeps them (GameModule.content: in the
 // second game, the students' term, then the Reviewer 2s'), and how many of its players rated it
-// good, of how many rated it at all, leaving out those who dismissed the question. It can be
-// watched again, which the page asks for with the game's ID.
+// good, of how many rated it at all, leaving out those who dismissed the question, and whether the
+// operator adopted words of it into the word library (docs/architecture.md#content-contributions).
+// It can be watched again, which the page asks for with the game's ID.
 export interface WordsSetRecord {
   game: string;
   gameId: string;
@@ -355,15 +361,33 @@ export interface WordsSetRecord {
   words: string[];
   good: number;
   rated: number;
+  adopted: boolean;
 }
 
-// The account's own record of one game: the counts, the latest games, the latest matches and, for
-// an account that has set the words of any (`wordsSet`), the latest games whose words it set
-// (`wordsSetRecent`), the latest first. A public profile has the counts alone.
+// A game that finished which the account played in and has no record of
+// (docs/architecture.md#replays): when it ended, which game of a match it was, if any, and whether
+// an AI played in it, as a record has them, and why it isn't on the record: `left`, when the
+// account left it before the end, or a reason of the game's own why it brought the account no
+// record although it stayed, such as `reviewer2_left` in the second game. It can be watched
+// again, which the page asks for with the game's ID.
+export interface OffRecordGame {
+  game: string;
+  gameId: string;
+  endedAt: string;
+  match: { game: number; games: number } | null;
+  agents: boolean;
+  why: string;
+}
+
+// The account's own record of one game: the counts, the latest games, the latest matches, for an
+// account that has set the words of any (`wordsSet`), the latest games whose words it set
+// (`wordsSetRecent`), and, for one that has any, the latest games that it played in and has no
+// record of (`offRecord`), the latest first. A public profile has the counts alone.
 export interface GameRecords extends GameCounts {
   recent: GameRecord[];
   matches: GameCounts['matches'] & { recent: MatchRecord[] };
   wordsSetRecent?: WordsSetRecord[];
+  offRecord?: OffRecordGame[];
 }
 
 // The account's own record, of each game it has finished a game or a match of, by the game's ID.

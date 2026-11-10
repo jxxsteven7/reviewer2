@@ -11,6 +11,7 @@ import {
   MAIL_LINK_MS,
   MAX_ROOM_SETUP,
   rankFor,
+  RECENT_RECORDS,
   RECORDS_NOTICE_VERSION,
   usernameKey,
   type AccountError,
@@ -32,6 +33,7 @@ import {
   type Rank,
   type GameRoomSetup,
   type MatchTitle,
+  type OffRecordGame,
   type RecordsView,
   type RoomSetup,
   type Streak,
@@ -78,6 +80,12 @@ export type AccountFailure = AccountError | 'bad_request' | 'rate_limited' | 'in
 export type AccountResult<Data extends object = object> = ({ ok: true } & Data) | { ok: false; error: AccountFailure };
 
 const refuse = (error: AccountFailure): { ok: false; error: AccountFailure } => ({ ok: false, error });
+
+// How many of the latest games of a game that an account took part in without a record of it the
+// records page looks at for the games it played in (Accounts.#offRecord): those whose words it set
+// are left out before, so the few it didn't play in, as where it gave the chair's own words and
+// only watched, are all that may be passed over.
+const OFF_RECORD_LOOKED_AT = 2 * RECENT_RECORDS;
 
 // The setting that holds the fingerprint of this text, by which a change of the key is told.
 const KEY_SETTING = 'email_fingerprint_key';
@@ -811,15 +819,13 @@ export class Accounts {
   }
 
   // The account's own record, which alone lists the latest games it set the words of, with the
-  // words as the setter gave them (GameModule.content) and how players rated them
-  // (GameRecords.wordsSetRecent); its public profile has the counts alone.
+  // words as the setter gave them (GameModule.content), how players rated them and whether words of
+  // them were adopted (GameRecords.wordsSetRecent), and the latest games that it played in and has
+  // no record of, with why (GameRecords.offRecord); its public profile has the counts alone.
   recordsOf(login: Login): RecordsView {
     const accountId = login.account.id;
-    const view = this.#withGameCounts<GameRecords>(accountId, this.records.view(accountId), () => ({
-      ...emptyGameCounts(),
-      recent: [],
-      matches: { played: 0, won: 0, recent: [] },
-    }));
+    const empty = (): GameRecords => ({ ...emptyGameCounts(), recent: [], matches: { played: 0, won: 0, recent: [] } });
+    const view = this.#withGameCounts<GameRecords>(accountId, this.records.view(accountId), empty);
     for (const game of this.#games) {
       const path = game.setupPaths?.setter;
       const records = view[game.id];
@@ -830,13 +836,58 @@ export class Accounts {
         words: game.content?.(setup)?.content.words ?? [],
       }));
     }
+    for (const game of this.#games) {
+      const offRecord = this.#offRecord(game, accountId);
+      if (offRecord.length === 0) continue;
+      const records = { ...(view[game.id] ?? empty()), offRecord };
+      // A game not on the record may be guessed in too, as one that a Reviewer 2 left: an account
+      // with such games alone has its guesses counted as well.
+      if (game.guessedRight && !records.agentGuesses) records.agentGuesses = this.#agentGuesses(game, accountId);
+      view[game.id] = records;
+    }
     return view;
   }
 
+  // How often the account guessed the AI players of a game right, as the game judges a guess
+  // (GameModule.guessedRight), over the games it guessed in, skips left out.
+  #agentGuesses(game: GameModule, accountId: number): GameCounts['agentGuesses'] {
+    const right = game.guessedRight?.bind(game);
+    if (!right) return undefined;
+    const guesses = this.ratings.guesses(game.id, accountId);
+    return { games: guesses.length, right: guesses.filter(({ setup, guess }) => right(setup, guess)).length };
+  }
+
+  // The latest games of a game that finished, RECENT_RECORDS at most, that the account played in
+  // and has no record of, with why, as the game says (GameModule.offRecord), the latest first. Of
+  // the games it took part in without a record, those whose words it set are left out at once, and
+  // the game passes over those it didn't play in, as one where it only gave the chair's own words,
+  // among the latest OFF_RECORD_LOOKED_AT.
+  #offRecord(game: GameModule, accountId: number): OffRecordGame[] {
+    const why = game.offRecord?.bind(game);
+    if (!why) return [];
+    const games: OffRecordGame[] = [];
+    for (const kept of this.replays.offRecord(
+      accountId,
+      game.id,
+      game.setupPaths?.setter ?? null,
+      OFF_RECORD_LOOKED_AT,
+    )) {
+      const reason = why(kept, new Set(kept.playerIds));
+      if (reason === null) continue;
+      const { gameId, endedAt, match, agents } = kept;
+      games.push({ game: game.id, gameId, endedAt, match, agents, why: reason });
+      if (games.length === RECENT_RECORDS) break;
+    }
+    return games;
+  }
+
   // The counts of each game, with, for each game in which a setter gives the words, the games the
-  // account set the words of and their good ratings, if it set any (GameCounts.wordsSet), and for
-  // each game that asks for them, what its records add up, if it played any (GameCounts.sums). A
-  // game it has set the words of but played none of is there with nothing else.
+  // account set the words of and their good ratings, if it set any (GameCounts.wordsSet), for each
+  // game that asks for them, what its records add up, if it played any (GameCounts.sums), and for
+  // each game in which players guess the AI players, how often it guessed them right, if it has a
+  // record of any (GameCounts.agentGuesses; its own page counts them for one with games off the
+  // record alone too, recordsOf). A game it has set the words of but played none of is there with
+  // nothing else.
   #withGameCounts<Counts extends GameCounts>(
     accountId: number,
     counts: Record<string, Counts>,
@@ -845,6 +896,7 @@ export class Accounts {
     for (const game of this.#games) {
       const played = counts[game.id];
       if (game.recordSums && played) played.sums = this.records.sums(accountId, game.id, game.recordSums);
+      if (game.guessedRight && played) played.agentGuesses = this.#agentGuesses(game, accountId);
       const path = game.setupPaths?.setter;
       if (path === undefined) continue;
       const set = this.ratings.setterCounts(game.id, path, accountId);

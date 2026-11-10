@@ -1,5 +1,5 @@
 import type { BallotView, ImpostorReplay, LineView, ReportView, ReportVerdict } from '@reviewer2/shared/impostor';
-import { peopleOf, type KeptCount, type KeptReplay, type Recount } from '../../core/game';
+import { peopleOf, type KeptCount, type KeptGame, type KeptReplay, type Recount } from '../../core/game';
 import type { GameLogEntry } from '../../core/gameLog';
 import { factsFrom, LOGGED, outcomeOf, pointsShown, resultsFrom, scoresFrom, type ImpostorSetup } from './results';
 
@@ -33,6 +33,30 @@ export function recountOf({ setup, log, keyOf }: KeptCount): Recount | null {
     outcome: outcomeOf(facts.result),
     scoresNothing: facts.removed,
   };
+}
+
+// Why an account that took part in a kept game that finished has no record of it
+// (GameModule.offRecord), with the player IDs it had in the game: `left` when it left the game, the
+// room or by the chair's hand, before the end, whatever else happened, and `reviewer2_left` when it
+// stayed in a game that a Reviewer 2 left, which counts for nobody's record. Null for one who only
+// set the words, who isn't a player of the game, and for a player who stayed in a game that a
+// side won, who has a record of it.
+export function offRecordOf({ setup, log }: KeptGame, playerIds: ReadonlySet<string>): string | null {
+  const kept = setup as ImpostorSetup;
+  const mine = kept.players.filter((player) => playerIds.has(player.id));
+  const facts = mine.length === 0 ? null : factsFrom(kept, played(log.entries));
+  if (!facts?.result) return null;
+  if (mine.some((player) => facts.outs[player.id]?.fate === 'left')) return 'left';
+  return facts.result.winner === null ? facts.result.reason : null;
+}
+
+// Whether a guess of who the AI players were, as the game took it (guessAgents() in rules.ts), the
+// numbers in order, named every one of them and nobody else (GameModule.guessedRight).
+export function guessedRightOf(setup: unknown, guess: unknown): boolean {
+  if (!Array.isArray(guess)) return false;
+  const agents = (setup as ImpostorSetup).players.filter((player) => player.agent).map((player) => player.number);
+  const named = new Set(guess);
+  return named.size === guess.length && named.size === agents.length && agents.every((number) => named.has(number));
 }
 
 // A kept game that finished as an account watches it again, with who everyone was: one that a

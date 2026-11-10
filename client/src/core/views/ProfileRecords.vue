@@ -4,6 +4,7 @@ import {
   emptyGameCounts,
   type GameRecord,
   type GameRecords,
+  type OffRecordGame,
   type RecordsView,
   type WordsSetRecord,
 } from '@reviewer2/shared';
@@ -32,16 +33,19 @@ import { useBusy } from '../useBusy';
 // never one of a match, the robot's head and "AI" in their place, which a tap explains, the role on
 // a chip, in the group's tint in a game of groups and in ink in one where everyone plays alone, and
 // what the game made of it: the decision that the group got, by its short English name in every
-// language, or how the player's game went; with a round button on the right to watch it again;
-// then the last 20 matches, in the same look, each with its games, its place and total, and its
-// title on the right; then, for an account that has set the words of a game that finished, the last
-// 20 of those, in the same look again, each with how many of the players who rated it liked it, the
-// words as the setter gave them, and the round button. The columns of a list line up from one line
-// to the next where the browser has subgrids. A decision, how a game went or a setter's words that
-// don't fit beside the rest go on to a second line; a match's title is cut short with an ellipsis,
-// and a tap on it says it in full (TitleInfo.vue). A record that can't be fetched says so, with a
-// way to try again. A game that the server kept to watch again opens in a sheet, in the game's own
-// replay viewer.
+// language, or how the player's game went; with a round button on the right to watch it again; then
+// the last 20 matches, in the same look, each with its games, its place and total, and its title on
+// the right; then, for an account that has set the words of a game that finished, the last 20 of
+// those, in the same look again, each with how many of the players who rated it liked it, the words
+// as the setter gave them, followed by "Adopted" in an ink tag where the operator adopted words of
+// the game, and the round button; last, for an account that played in games that finished but
+// aren't on its record, as it left before the end, the last 20 of those, in the same look, each
+// with its tag, why it isn't on the record and the round button. The columns of a list line up from
+// one line to the next where the browser has subgrids. A decision, how a game went or a setter's
+// words that don't fit beside the rest go on to a second line, the ink tag with the words; a
+// match's title is cut short with an ellipsis, and a tap on it says it in full (TitleInfo.vue). A
+// record that can't be fetched says so, with a way to try again. A game that the server kept to
+// watch again opens in a sheet, in the game's own replay viewer.
 const { t, te } = useI18n();
 const records = ref<RecordsView | null>(null);
 const game = ref('keywords');
@@ -110,6 +114,11 @@ const explained = (record: GameRecord) => te(`games.${record.game}.letter.explai
 // it, those who dismissed the question left out.
 const liked = (set: WordsSetRecord) =>
   set.rated === 0 ? t('account.profile.noRatings') : t('account.profile.liked', { good: set.good, rated: set.rated });
+
+// Why a game isn't on the record: in the game's own words, for a reason of the game's own, or in the
+// words every game shares, for one such as leaving before the end.
+const why = (off: OffRecordGame) =>
+  label(`games.${off.game}.offRecord.${off.why}`, label(`account.profile.offRecordWhy.${off.why}`, off.why));
 </script>
 
 <template>
@@ -202,7 +211,8 @@ const liked = (set: WordsSetRecord) =>
           >
           <span class="tag">{{ liked(set) }}</span>
           <span class="outcome"
-            ><span class="words">{{ t('account.profile.setWords', set.words) }}</span></span
+            ><span class="words">{{ t('account.profile.setWords', set.words) }}</span
+            ><span v-if="set.adopted" class="tag-pill">{{ t('account.profile.adopted') }}</span></span
           >
           <button
             v-if="games[set.game]"
@@ -211,6 +221,36 @@ const liked = (set: WordsSetRecord) =>
             :disabled="busy"
             :aria-label="t('account.profile.watchAgainOf', { when: moment(set.endedAt) })"
             @click="watchAgain(set)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" /></svg>
+          </button>
+        </li>
+      </ol>
+    </template>
+    <template v-if="shown.offRecord?.length">
+      <h3>{{ t('account.profile.offRecord') }}</h3>
+      <ol class="list games off-record">
+        <li v-for="(off, index) in shown.offRecord" :key="`off-${index}`" class="record">
+          <span class="when num"
+            ><span>{{ stamp(off.endedAt).day }}</span> <span>{{ stamp(off.endedAt).time }}</span></span
+          >
+          <TitleInfo v-if="off.agents" :title="{ kind: 'agents' }" class="tag agents press press-small"
+            ><AgentIcon /><span aria-hidden="true">{{ t('room.agent') }}</span
+            ><span class="sr-only">{{ t('account.profile.agentsTag') }}</span></TitleInfo
+          >
+          <span v-else class="tag">{{
+            off.match ? t('account.profile.matchTag', off.match) : t('account.profile.ordinaryTag')
+          }}</span>
+          <span class="outcome"
+            ><span class="why">{{ why(off) }}</span></span
+          >
+          <button
+            v-if="games[off.game]"
+            type="button"
+            class="watch press press-small"
+            :disabled="busy"
+            :aria-label="t('account.profile.watchAgainOf', { when: moment(off.endedAt) })"
+            @click="watchAgain(off)"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" /></svg>
           </button>
@@ -407,10 +447,12 @@ h3 {
   color: var(--on-ink);
 }
 
-/* The decision, after the rest, and the words a setter gave go on to a second line where the line
-   has no room for them, and are never cut short (docs/rules/display.md#panels-rows-and-tags). */
+/* The decision, after the rest, the words a setter gave and why a game isn't on the record go on to
+   a second line where the line has no room for them, and are never cut short
+   (docs/rules/display.md#panels-rows-and-tags). An ink tag after the words goes with them. */
 .verdict,
-.words {
+.words,
+.why {
   flex: 0 1 auto;
   justify-self: start;
   min-width: 0;
@@ -444,6 +486,11 @@ button.verdict::before {
 
 .won .verdict {
   font-weight: var(--weight-black);
+}
+
+/* Why a game isn't on the record, a fact about the game rather than an outcome, in grey. */
+.why {
+  color: var(--ink-2);
 }
 
 /* A game's decision takes the deep shade of the player's group, as the decision letter's heading

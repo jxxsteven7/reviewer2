@@ -112,6 +112,7 @@ DATA_DIR=data node server/dist/admin.cjs github forget <issue>|--advisory <GHSA>
 DATA_DIR=data node server/dist/admin.cjs github list                       # every contribution from GitHub
 DATA_DIR=data node server/dist/admin.cjs content adopt <game id> [--anonymous] --zh <sentence> --en <sentence>  # the words a player gave in a game
 DATA_DIR=data node server/dist/admin.cjs content list                      # every adoption of words from the games
+DATA_DIR=data node server/dist/admin.cjs ratings [<game>]                  # how players rated the pairs or the games
 DATA_DIR=data node server/dist/admin.cjs reports list                      # the latest reports of players
 DATA_DIR=data node server/dist/admin.cjs data check                        # every row against the rules of the data
 ```
@@ -134,6 +135,8 @@ DATA_DIR=data node server/dist/admin.cjs feedback issue <id> <number>         # 
 The `github` commands are the contributions from GitHub: the issues that developers open with the repository's forms and the maintainers adopt, and the security advisories published once a problem reported privately was fixed ([architecture.md](architecture.md#feedback-contributions), [maintainers.md](maintainers.md#adopting-a-contribution)). `github adopt` takes the issue's number, or `--advisory` with the advisory's id, the kind (`idea`, `game`, `bug`, `words` or `code`), the author's GitHub username and account id, as GitHub reports them, `--anonymous` when the author asked to be listed as an anonymous player, and the two sentences, by the rules of `feedback adopt`; it refuses an issue that a player's feedback was published as, which `feedback adopt` adopts, and `feedback issue` refuses an issue adopted here. `github describe` rewrites the sentences; `github anonymous` and `github forget` are for an author who asks to be listed anonymously, or to have their username and id dropped; `github list` shows every one. No command deletes a contribution.
 
 The `content` commands are the words that players gave in their games, the setter's pair of a game of the second game or the chair's own words on a board of the first, which the record of the game keeps ([architecture.md](architecture.md#content-contributions)). Once you have added them to `words/` by hand, `content adopt` takes the game's ID and the two sentences, by the rules of `feedback adopt`, and keeps the words with the account that gave them, named as the player asked, or not with `--anonymous`; it refuses a game that isn't kept, one that holds no words a player gave and one whose words were adopted already. `content list` shows every adoption, the latest first. No command deletes or changes one.
+
+`ratings` shows how players rated the words of the games, of one game or of each that asks for ratings, for the maintainers to fix the word lists by ([maintainers.md](maintainers.md#ratings)); it only reads.
 
 ## Acknowledgments
 
@@ -178,7 +181,7 @@ Open `http://<your computer's address>:3000` on a phone on the same Wi-Fi, or in
 
 ## AI players
 
-AI players ([architecture.md](architecture.md#ai-players)) need the agent and a language model that answers OpenAI's chat completions, which the agent asks for JSON in a schema, letting it think at the low level unless `AGENT_REASONING` is `off`: a local one, such as one that [Ollama](https://ollama.com) runs, or a service's. Set `AGENT_SOCKET`, `AGENT_MODEL_URL` and `AGENT_MODEL` in `.env`, run `npm run dev:agent` beside `npm run dev`, and let your account have AI players with `admin.cjs agents allow <username>`: in the private rooms it chairs, the waiting room offers to invite Reviewer 1. The agent's prompts are in `agent/src/prompts.ts` for the first game and `agent/src/impostorPrompts.ts` for the second; change the file's `PROMPT_VERSION` with them.
+AI players ([architecture.md](architecture.md#ai-players)) need the agent and a language model that answers OpenAI's chat completions, which the agent asks for JSON in a schema, letting it think at the low level unless `AGENT_REASONING` is `off`: a local one, such as one that [Ollama](https://ollama.com) runs, or a service's. The service must hold the model to the `pattern` of a string in the schema, as Ollama does: it keeps the reason that an AI player gives for a move whole, which a service that passes `pattern` over may end at a straight double quote that the model writes in it. Set `AGENT_SOCKET`, `AGENT_MODEL_URL` and `AGENT_MODEL` in `.env`, run `npm run dev:agent` beside `npm run dev`, and let your account have AI players with `admin.cjs agents allow <username>`: in the private rooms it chairs, the waiting room offers to invite Reviewer 1. The agent's prompts are in `agent/src/prompts.ts` for the first game and `agent/src/impostorPrompts.ts` for the second; change the file's `PROMPT_VERSION` with them.
 
 ## Running in production
 

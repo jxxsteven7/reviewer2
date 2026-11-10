@@ -21,7 +21,7 @@ import {
 import { KEYWORDS_MESSAGES, KEYWORDS_SETTINGS, type KeywordsMessage } from '@reviewer2/shared/keywords/schemas';
 import type { z } from 'zod';
 import { fail } from '../../core/answers';
-import { recountOf, shownReplay, type KeywordsSetup } from './replay';
+import { offRecordOf, recountOf, shownReplay, type KeywordsSetup } from './replay';
 import { resultsOf, titlesOf } from './results';
 import {
   agentLimitReached,
@@ -649,6 +649,7 @@ export const keywordsGame: GameModule<KeywordsData, KeywordsRoomData> = {
   // (replay.ts).
   showReplay: shownReplay,
   recount: recountOf,
+  offRecord: offRecordOf,
 
   views(data, ctx) {
     const members = ctx.playerIds();

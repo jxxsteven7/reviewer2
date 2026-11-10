@@ -1,3 +1,4 @@
+import type { RecordsView } from '@reviewer2/shared';
 import type { KeywordsRoomData, KeywordsView, ShownReplay, Team } from '@reviewer2/shared/keywords';
 import { afterEach, describe, expect, test } from 'vitest';
 import type { GameLogData } from '../src/core/gameLog';
@@ -25,8 +26,9 @@ const board = (client: TestClient) => (client.state?.data as KeywordsRoomData).g
 const kept = () => server.db.prepare('SELECT game_id AS gameId, log FROM replays').all() as { log: string }[];
 
 // Ann and Bob, with accounts, are red's PI and student; two guests are blue's. Red gives a clue,
-// and Bob reveals Reviewer 2, which ends the game.
-async function finished() {
+// and Bob reveals Reviewer 2, which ends the game. With `before`, which runs as the game has
+// started, someone may join and leave meanwhile.
+async function finished(before: (code: string) => Promise<void> = async () => {}) {
   server = await startServer({ games: [keywordsGame] });
   const anns = new Browser(server.url);
   const bobs = new Browser(server.url);
@@ -57,6 +59,7 @@ async function finished() {
   // Red starts, whichever group the deal gave the first turn: blue lets its time run out otherwise.
   expect(await ann.send('room:start', { round: ann.state?.round })).toEqual({ ok: true });
   for (const client of everyone) await client.waitFor((state) => state.phase === 'playing', 'the game');
+  await before(reply.code as string);
   const team = board(ann).team;
   const [pi, student] = team === 'red' ? [ann, bob] : [cat, dan];
   const cards = board(pi).cards;
@@ -75,7 +78,7 @@ async function finished() {
   const ids = Object.fromEntries(
     everyone.map((client, index) => [['ann', 'bob', 'cat', 'dan'][index], client.state?.me]),
   );
-  return { anns, bobs, ids: ids as Record<'ann' | 'bob' | 'cat' | 'dan', string>, gameId, seen: board(ann) };
+  return { anns, bobs, ids: ids as Record<'ann' | 'bob' | 'cat' | 'dan', string>, gameId, seen: board(ann), ann };
 }
 
 const open = async (browser: Browser, gameId: string) => {
@@ -83,6 +86,57 @@ const open = async (browser: Browser, gameId: string) => {
   expect(reply.body.ok).toBe(true);
   return reply.body.replay as ShownReplay;
 };
+
+describe('a game left before the end', () => {
+  // Eve, with an account, sits down in blue as a student once the game has started, and leaves.
+  test("is listed on the records page of whoever left it, as not on their record, and on nobody else's", async () => {
+    let eves: Browser | undefined;
+    let eveId = '';
+    const { anns, ann, gameId } = await finished(async (code) => {
+      eves = new Browser(server.url);
+      expect((await eves.register('Eve')).body).toEqual({ ok: true });
+      const eve = track(await eves.connect());
+      // Who comes to play during a game sits down as a student of a group at once.
+      expect(await eve.send('room:join', { code, play: true })).toMatchObject({ ok: true });
+      await eve.waitFor((state) => board(eve) !== null && state.me !== null, 'a seat');
+      eveId = eve.state?.me ?? '';
+      const seat = (eve.state?.data as KeywordsRoomData).seats?.[eveId];
+      expect(seat?.team).not.toBeNull();
+      expect(await eve.send('room:leave')).toMatchObject({ ok: true });
+    });
+    if (!eves) throw new Error('no Eve');
+    expect((await eves.request('/api/account/records')).body).toEqual({
+      ok: true,
+      records: {
+        keywords: expect.objectContaining({
+          recent: [],
+          offRecord: [
+            { game: 'keywords', gameId, endedAt: expect.any(String), match: null, agents: false, why: 'left' },
+          ],
+        }),
+      },
+    });
+    expect((await anns.request('/api/account/records')).body).toMatchObject({
+      records: { keywords: { recent: [{ gameId }] } },
+    });
+    expect(
+      ((await anns.request('/api/account/records')).body as unknown as { records: RecordsView }).records.keywords
+        ?.offRecord,
+    ).toBeUndefined();
+    // The game says so of a player who sat in a group and left it, and of nobody who stayed in
+    // one or never sat in one.
+    const row = server.db.prepare('SELECT setup, log, language FROM replays').get() as Record<string, string>;
+    const keptGame = {
+      setup: JSON.parse(row.setup as string),
+      log: JSON.parse(row.log as string),
+      language: 'en',
+    } as const;
+    const why = (ids: string[]) => keywordsGame.offRecord?.(keptGame, new Set(ids));
+    expect(why([eveId])).toBe('left');
+    expect(why([ann.me as string])).toBeNull();
+    expect(why(['nobody'])).toBeNull();
+  });
+});
 
 describe('a replay', () => {
   test('is kept as the record of the game, which names no account, and the guests by number', async () => {

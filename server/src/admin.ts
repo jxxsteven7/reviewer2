@@ -13,6 +13,7 @@ import {
   isContent,
   isGuestName,
   MAX_SUMMARY_LENGTH,
+  RATINGS,
   REPOSITORY_URL,
   usernameKey,
   type ContributionKind,
@@ -22,6 +23,7 @@ import {
 import { AVATAR_DIR, DirectoryAvatars } from './accounts/avatars';
 import { Accounts } from './accounts/service';
 import { loadConfig } from './config';
+import type { GameModule } from './core/game';
 import { GAMES } from './games';
 import { AccountStore } from './store/accounts';
 import { checkData } from './store/check';
@@ -30,6 +32,7 @@ import { ContributionStore, type GithubContribution, type GithubRef } from './st
 import { BUSY_TIMEOUT_MS, DATABASE_FILE, schemaVersion } from './store/database';
 import { FeedbackStore, type Feedback, type FeedbackView, type Report } from './store/feedback';
 import { MIGRATIONS } from './store/migrations';
+import { RatingStore, type RatingCounts } from './store/ratings';
 import { describeBrowser } from './userAgent';
 
 // The operator's commands (docs/development.md), which run beside the server on its data:
@@ -64,6 +67,7 @@ import { describeBrowser } from './userAgent';
 //   node server/dist/admin.cjs github list
 //   node server/dist/admin.cjs content adopt <game id> [--anonymous] --zh <sentence> --en <sentence>
 //   node server/dist/admin.cjs content list
+//   node server/dist/admin.cjs ratings [<game>]
 //   node server/dist/admin.cjs reports list
 //   node server/dist/admin.cjs data check
 //
@@ -118,6 +122,16 @@ import { describeBrowser } from './userAgent';
 // in each language on what was adopted; a game's words are adopted once. `content list` shows
 // everything adopted. Like the contributions from GitHub, no command deletes one.
 //
+// `ratings` shows how players rated the games (docs/architecture.md#ratings), of one game or of
+// every game that asks for ratings: for a game of pairs, each pair that the word library gave, by
+// its key, the pair drawn most first, with how many kept games drew it, however they ended, and how
+// many people rated it good, too hard, too easy or something wrong, or dismissed the question; for
+// another game, its latest rated games, each with when it ended, its ID, language and fields,
+// whether a player gave words of their own on it, and the same counts. People are counted as the
+// draw of a pair counts them (drawPair in core/words.ts): an account once for each count, however
+// many games it rated so, and a guest once for each game. The pairs that a setter gave have no key,
+// and their setters see their ratings on their own pages.
+//
 // `accounts` prints statistics of the accounts, counted as AccountStore says (store/accounts.ts),
 // and never what the database keeps in place of passwords, email addresses and logins; `accounts
 // bar` keeps an account out of public rooms, as for a player others reported, and `accounts unbar`
@@ -126,8 +140,8 @@ import { describeBrowser } from './userAgent';
 // now. `data check` holds every row against the rules that the code takes for granted of the data
 // (store/check.ts, docs/rules/constraints.md#data), and prints each rule broken with the rows that
 // break it, by id alone, or that every check passed; it exits with 1 when any is broken.
-// `accounts`, `feedback list`, `feedback draft`, `trash`, `github list`, `content list`, `reports
-// list`, `profile list` and `data check` only read.
+// `accounts`, `feedback list`, `feedback draft`, `trash`, `github list`, `content list`, `ratings`,
+// `reports list`, `profile list` and `data check` only read.
 // DATA_DIR names the server's data, as it does for the server. The database is opened as it is,
 // never migrated, and the server may go on running meanwhile.
 
@@ -163,6 +177,7 @@ const USAGE = [
   '  github list',
   '  content adopt <game id> [--anonymous] --zh <sentence> --en <sentence>',
   '  content list',
+  '  ratings [<game>]',
   '  reports list',
   '  data check',
 ].join('\n');
@@ -270,6 +285,8 @@ function printAccountStats(store: AccountStore, print: Print): void {
 // How many reports `reports list` shows, and how much feedback `feedback trash` shows, the latest.
 const REPORTS_SHOWN = 100;
 const TRASH_SHOWN = 100;
+// How many of the latest rated games of a game without pairs `ratings` shows.
+const RATED_GAMES_SHOWN = 50;
 
 // "2026-10-09 13:05 UTC" from the ISO time that the database keeps, and "2026-10-09" alone.
 const when = (iso: string) => iso.replace('T', ' ').replace(/:\d{2}(\.\d+)?Z$/, ' UTC');
@@ -649,6 +666,63 @@ function contentLine(
 function printSummary(print: Print, zh: string | null, en: string | null): void {
   print(`  zh: ${zh ?? '(nothing yet)'}`);
   print(`  en: ${en ?? '(nothing yet)'}`);
+}
+
+// The columns of `ratings`: what is counted, and the numbers of each row, right-aligned, each column
+// as wide as its heading or its widest number.
+const RATING_COLUMNS = [...RATINGS, 'skipped'] as const;
+
+function printTable(print: Print, headings: readonly string[], rows: readonly (readonly (number | string)[])[]): void {
+  const widths = headings.map((heading, i) => Math.max(heading.length, ...rows.map((row) => String(row[i]).length)));
+  const line = (cells: readonly (number | string)[]) =>
+    cells
+      .map((cell, i) => (i === cells.length - 1 ? String(cell) : String(cell).padStart(widths[i] as number)))
+      .join('  ');
+  print(line(headings));
+  for (const row of rows) print(line(row));
+}
+
+const counts = (row: RatingCounts) => RATING_COLUMNS.map((key) => row[key]);
+const capital = (word: string) => word.charAt(0).toUpperCase() + word.slice(1);
+
+// How players rated one game's games, by pair or by game, as `ratings` prints it.
+function printRatings(store: RatingStore, game: GameModule, print: Print): void {
+  const path = game.setupPaths?.pair;
+  if (path !== undefined) {
+    const pairs = store.pairRatings(game.id, path);
+    if (pairs.length === 0) {
+      print(`${game.id}: no pair of the word library drawn yet.`);
+      return;
+    }
+    print(
+      `${game.id}: ${pairs.length === 1 ? '1 pair' : `${pairs.length} pairs`} of the word library, the most drawn first`,
+    );
+    printTable(
+      print,
+      ['Games', ...RATING_COLUMNS.map(capital), 'Pair'],
+      pairs.map((row) => [row.games, ...counts(row), row.pair]),
+    );
+    return;
+  }
+  const games = store.gameRatings(game.id, RATED_GAMES_SHOWN);
+  if (games.length === 0) {
+    print(`${game.id}: no game rated yet.`);
+    return;
+  }
+  print(`${game.id}: the latest ${games.length === 1 ? 'game' : `${games.length} games`} rated, the latest first`);
+  printTable(
+    print,
+    ['Ended', ...RATING_COLUMNS.map(capital), 'Game, language and fields'],
+    games.map((row) => {
+      const own = row.setup !== null && (game.content?.(row.setup) ?? null) !== null;
+      const fields = row.fields.length > 0 ? row.fields.join(',') : 'no fields';
+      return [
+        day(row.endedAt),
+        ...counts(row),
+        `${row.gameId}  ${row.language}  ${fields}${own ? ' + own words' : ''}`,
+      ];
+    }),
+  );
 }
 
 const COMMANDS: Record<string, Command> = {
@@ -1390,6 +1464,25 @@ const COMMANDS: Record<string, Command> = {
       for (const row of rows) {
         print(contentLine(row, row.accountId === null ? null : (store.byId(row.accountId)?.username ?? null)));
       }
+      return 0;
+    },
+  },
+  ratings: {
+    words: [0, 1],
+    flags: [],
+    readOnly: true,
+    run({ db }, [named], _flags, print) {
+      const rated = GAMES.filter((game) => (game.ratings?.length ?? 0) > 0);
+      const games = named === undefined ? rated : rated.filter((game) => game.id === named);
+      if (games.length === 0) {
+        print(`No game ${named} takes ratings: ${rated.map((game) => game.id).join(', ')} do.`);
+        return 1;
+      }
+      const store = new RatingStore(db);
+      games.forEach((game, index) => {
+        if (index > 0) print('');
+        printRatings(store, game, print);
+      });
       return 0;
     },
   },

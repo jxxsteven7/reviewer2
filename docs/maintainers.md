@@ -79,6 +79,15 @@ A maintainer with the Admin role may commit a change to nothing but `ACKNOWLEDGM
 
 A list that breaks the rules doesn't stop the server: a copy in `CONTENT_DIR` that breaks them leaves the one that the build bundled on the home page, and the log says why (`thanks_list_skipped`). The build takes the lists from `main` as they are, though: on `main`, the `Checks` job fails, and until another commit fixes the list, a build from `main` shows it without the entries that break the rules. Any other commit without ` (#N)`, of another file, of another type or with a version, fails `Landed commits and release`. The check reads only the title, so a commit that skipped its PR shows at once unless its title ends in ` (#N)` like a squash merge's. The bypass also puts a box on the merge form of every PR, for admins, that merges without the approval and the checks: never tick it; the bypass is for the lists alone.
 
+## Ratings
+
+How players rated the words of the games, to decide which pairs of terms or words to fix in `words/` or take out, is on the server's data: `DATA_DIR=data node server/dist/admin.cjs ratings [<game>]`, for one game or, without a game, for each game that asks for ratings ([development.md](development.md#accounts-and-email)). It only reads.
+
+- **The second game**, by pair: each pair that the word library gave, by its key, the field and the IDs of its two terms (`pairKey()`), the pair drawn most first, with how many kept games drew it, however they ended, and how many people rated it good, too hard, too easy or something wrong, or dismissed the question (`Skipped`). The pairs that a setter gave have no key and aren't listed: their setters see how players rated them on their own records page.
+- **The first game**, by game: its latest 50 rated games, the latest first, each with the day it ended, the counts, its ID, its language, its fields and `+ own words` where the chair gave words of their own on the board.
+
+People are counted as the draw of a pair counts them ([architecture.md](architecture.md#ratings)): an account once in each count, however many games it rated so, and a guest, who can't be told apart from game to game, once for each game. The draw itself already passes over a pair that 2 people or more rated as something wrong.
+
 ## Sponsors
 
 The Sponsors workflow (`.github/workflows/sponsors.yml`) needs the repository secret `SPONSOR_TOKEN`: a fine-grained personal access token of the sponsored maintainer.
